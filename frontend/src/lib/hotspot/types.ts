@@ -860,6 +860,137 @@ export interface VpnStatus {
   miniError?: string;
 }
 
+/* ─── N°301 — console plateforme « VPN & Vente directe » (le grossiste :
+       GET /api/admin/vpn/overview|peers|orders|reconcile, PUT module,
+       POST revoke/resolve) + vitrine B2C publique (/api/public/vpn/*) ─── */
+
+/** N°301 — répartition du pool wg0 par compte (vue grossiste). */
+export interface PlatformVpnAccountRow {
+  accountId: string;
+  accountName: string;
+  usage: string;
+  moduleOn: boolean;
+  locked: boolean;
+  peersActive: number;
+  peersTotal: number;
+}
+
+/** N°301 — statistiques B2C du canal « vente directe » (vue grossiste). */
+export interface PlatformVpnB2cStats {
+  pending: number;
+  paid: number;
+  provisioned: number;
+  cancelled: number;
+  expired: number;
+  revenueFcfa: number;
+  orders30d: number;
+  shopEnabled: boolean;
+}
+
+/** N°301 — GET /api/admin/vpn/overview : jauge pool + santé wg-mini + B2C. */
+export interface PlatformVpnOverview {
+  pool: {
+    slotsUsed: number;
+    slotsPool: number;
+    byAccount: PlatformVpnAccountRow[];
+  };
+  mini: { reachable: boolean; error?: string };
+  b2c: PlatformVpnB2cStats;
+}
+
+/** N°301 — peer du registre GLOBAL enrichi télémétrie VM (vue grossiste) :
+ * la conf ne sort JAMAIS (reveal = geste gérant / e-mail B2C). */
+export interface PlatformVpnPeerRow extends VpnPeer {
+  accountName: string;
+  b2c: boolean;
+  orderEmail?: string;
+  orderRef?: string;
+  expiresAt?: string;
+  handshake?: string;
+  transfer?: string;
+}
+
+/** N°301 — réponse GET /api/admin/vpn/peers. */
+export interface PlatformVpnPeersResponse {
+  peers: PlatformVpnPeerRow[];
+  vmReachable: boolean;
+}
+
+/** N°301 — commande B2C « vente directe » (GET /api/admin/vpn/orders) :
+ * cycle pending → paid → provisioned | cancelled | expired. Montants FCFA. */
+export interface PublicVpnOrder {
+  id: string;
+  ref: string;
+  email: string;
+  phone: string;
+  planId: string;
+  months: number;
+  baseAmountFcfa: number;
+  amountFcfa: number;
+  payMethod: string;
+  paidVia?: string;
+  gatewayRef: string;
+  status: string;
+  peerId: string;
+  peerName: string;
+  expiresAt: string;
+  errorMsg?: string;
+  resolvedBy?: string;
+  createdAt: string;
+  updatedAt: string;
+  paidAt?: string;
+}
+
+/** N°301 — GET /api/admin/vpn/reconcile : cloud ↔ wg-mini (manquants + fantômes). */
+export interface PlatformVpnReconcile {
+  reachable: boolean;
+  vmPeerCount: number;
+  cloudActive: number;
+  missing: string[];
+  ghosts: { name: string; ip: string }[];
+  verdictNote: string;
+}
+
+/** N°301 — formule de la vitrine publique (GET /api/public/vpn/offers). */
+export interface PublicVpnOfferPlan {
+  id: string;
+  label: string;
+  periodLabel: string;
+  months: number;
+  baseFcfa: number;
+  cardFcfa: number;
+  waveFcfa: number;
+}
+
+/** N°301 — réponse GET /api/public/vpn/offers. */
+export interface PublicVpnOffers {
+  enabled: boolean;
+  onlinePayment?: boolean;
+  plans: PublicVpnOfferPlan[];
+}
+
+/** N°301 — réponse POST /api/public/vpn/order (création). */
+export interface PublicVpnOrderCreated {
+  ref: string;
+  status: string;
+  amountFcfa: number;
+  payMethod: string;
+  paymentUrl: string;
+  online: boolean;
+}
+
+/** N°301 — réponse GET /api/public/vpn/order/{ref} (statut public minimal). */
+export interface PublicVpnOrderStatus {
+  ref: string;
+  status: string;
+  months: number;
+  planLabel?: string;
+  periodLabel?: string;
+  expiresAt?: string;
+  email?: string;
+  ipv4?: string;
+}
+
 /** N°294 — abonné PPPoE (GET/POST /api/routers/{id}/ppp/secrets) : un secret
  * du pppoe-server EXISTANT du routeur (D2 — le cloud gère l'existant, il ne
  * provisionne ni interface ni profil). Transport = canal AGENT (commandes
@@ -2013,6 +2144,10 @@ export type ViewId =
   | "platformSettings"
   | "platformAnnouncements" // N°152 — diffusion d'annonces aux clients (console plateforme)
   | "platformNotifications" // N°153 — notifications du compte principal (console plateforme) : règles d'alerte + canaux partagés (relais e-mail, bot Telegram)
+  // N°301 — console plateforme « VPN & Vente directe » : le grossiste —
+  // pool wg0 global, octroi du module de revente, commandes B2C de la
+  // vitrine publique /vpn, réconciliation cloud ↔ wg-mini.
+  | "platformVpn"
   | "billingRequests"
   | "accounts"
   | "notifications"
@@ -2124,6 +2259,8 @@ export interface PlatformSettingsResponse {
     registerOpen: boolean;
     /** true si une clé d'invitation est définie (jamais renvoyée en clair). */
     registerKeySet: boolean;
+    /** N°301 — la vitrine B2C MikCloud VPN (/vpn) est-elle ouverte ? */
+    publicVpnShopEnabled?: boolean;
   };
   /** Source du contrôle des inscriptions : "database" (console) ou "env" (REGISTER_KEY verrouillée). */
   registerSource: "database" | "env";
@@ -2135,6 +2272,8 @@ export interface PlatformSettingsUpdatePayload {
   registerOpen?: boolean;
   /** Nouvelle clé d'invitation — "" supprime la clé. */
   registerKey?: string;
+  /** N°301 — ouverture/fermeture de la vitrine B2C MikCloud VPN (/vpn). */
+  publicVpnShop?: boolean;
 }
 
 /* ─── Purge des données fusionnée (portée globale ou ciblée par compte) ─── */

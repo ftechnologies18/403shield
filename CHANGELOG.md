@@ -5,6 +5,95 @@ Historique des évolutions notables du projet. Format inspiré de
 aux dates de livraison — le déploiement est continu : chaque push `main` passe
 la CI puis se déploie automatiquement (frontend Vercel, backend Render).
 
+## 2026-10-11 — N°301 — **console plateforme « VPN & Vente directe » (le grossiste) + vitrine B2C publique /vpn (vente directe)**
+
+### Contexte (chantier ⑧ de la feuille de route VPN)
+- N°291 avait livré le VPN vendable CÔTÉ GÉRANT (module opt-in, peers sur le
+  wg0 de la VM) ; l'exploitant restait « grossiste en SSH » : le commentaire
+  handlers_vpn.go l'annonçait — « l'hygiène GLOBALE du pool est l'affaire des
+  ops (wg-peer.sh list en SSH), pas celle de chaque gérant ».
+- Arbitrage économique acté : le gérant vend en local (distribution, cash,
+  relation client), la plateforme vend la CAPACITÉ — et le canal direct B2C
+  vise UNIQUEMENT les clients hors zone hotspot (France entière), pour ne
+  jamais concurrencer les revendeurs (« le poison des marketplaces »).
+
+### Console plateforme « VPN & Vente directe » (vue `platformVpn`, /app/platform-vpn)
+- **Registre grossiste** (7 routes /api/admin/vpn/*, isPlatformAdmin doublé
+  dans chaque handler — discipline /api/admin/*) : overview (jauge pool wg0
+  TOUS comptes + santé wg-mini + stats B2C + répartition par compte), peers
+  GLOBAUX enrichis télémétrie VM (handshake/transfer, fusion registre ↔
+  wg-mini), orders B2C, reconcile GLOBALE (manquants + fantômes — le
+  « wg-peer.sh list en SSH » en un bouton).
+- **Octroi du module de revente** (PUT /api/admin/vpn/accounts/{id}/module) :
+  activer = le gérant vend ; retirer = désactivé ET **verrouillé** —
+  PUT /api/vpn/settings répond 403 `wg_vpn_locked` (Tenant.WgVpnLocked,
+  nouvelle colonne settings). Les peers actifs ne sont JAMAIS coupés par un
+  retrait (même doctrine que N°291). La table liste TOUS les comptes.
+- **Révocation plateforme** d'un peer de N'IMPORTE QUEL compte (levier ops,
+  commande B2C liée annulée APRÈS confirmation VM).
+- Vue 3 onglets (Aperçu & comptes / Peers / Commandes B2C) + carte vitrine
+  + dialog réconciliation ; nav `platformVpn`, i18n fr/en complet
+  (fragment platform-vpn), slug /app/platform-vpn, prefetch.
+
+### Vitrine B2C publique /vpn (vente directe)
+- **Nouvelle table `public_vpn_orders`** (registre de facturation B2C, ref
+  publique MCV-XXXXXXXX, montants FCFA avec frais répercutés
+  handlers_pricing.go — canal manual au net catalogue). Parité complète du
+  pattern d'ajout de table : specs/schema/load/sync/rebuildHashes/
+  syncstats + tests de concordance (42 tables).
+- **4 routes publiques** /api/public/vpn/* (whitelist middleware, quotas IP
+  dédiés — création 10/10 min, poll 120/10 min, recover 5/20 — honeypot
+  « website ») : offers (catalogue + frais par moyen, fermé → {enabled:
+  false}), order (création + initiation GeniusPay, metadata.ref=MCV-),
+  statut par ref (poll qui RE-VÉRIFIE GeniusPay et finalise — filet du
+  webhook retardé), recover (re-livraison self-service e-mail+ref,
+  réponse générique anti-énumération).
+- **Ouverture = flag plateforme** (PlatformConfig.PublicVpnShop, colonne
+  settings.public_vpn_shop, défaut FERMÉE — opt-in strict : l'exploitant
+  décide du canal direct) : toggle dans « VPN & Vente directe » + carte
+  dédiée dans Paramètres plateforme. La fermeture n'annule rien.
+- **Provisioning AUTOMATIQUE** (markPublicVpnOrderPaid → provision…) :
+  paiement confirmé (webhook GeniusPay signé — routage MCV- AVANT
+  BillingRequests, poll de retour, confirmation manuelle console) → peer
+  posé sur le wg0 au nom du compte principal (pattern N°291 : réservation
+  sous verrou, wg-mini HORS verrou, finalisation re-verrouillée) →
+  ExpiresAt = paid + mois → e-mail de livraison (relais plateforme N°150,
+  asynchrone, NotifLog sans secret). Échecs transitoires (wg-mini down,
+  pool épuisé) : la commande reste « paid », ErrorMsg visible, REJOUÉE par
+  le balayage.
+- **Balayage horaire** RunPublicVpnSweepForever (main.go) : termes révoqués
+  (peer retiré, commande « expired », historique conservé), pending stale
+  48 h annulés, retries provisioning — la promesse « auto » ne se perd jamais.
+- **Vitrine /vpn** (route publique SEO indexée + composant clay, copie
+  bilingue auto-contenue vpn-shop-copy) : hero, features, pricing 2
+  formules (mensuel 1 500 / annuel 15 000 FCFA — montants par moyen servis
+  par l'API), dialog d'achat (e-mail + téléphone Wave + moyen, honeypot,
+  redirection GeniusPay ou canal manuel avec référence), suivi de commande
+  ?order=MCV-… (poll 5 s, machine à états honnête), récupération
+  self-service, FAQ. VLM vitrine 7,5/10, console 8/10.
+- La conf ne sort JAMAIS en JSON public (elle vit sur le VpnPeer, D5-a) :
+  uniquement par e-mail (livraison/recover) ou reveal console gérant.
+
+### Validation locale (sandbox, mock wg-mini :4020)
+- E2E complet navigué : ouverture vitrine (console) → vitrine /vpn → achat
+  mensuel (canal manual, ref MCV-E9644014) → poll de statut → confirmation
+  console → **provisioning réel** (peer vpn-ae6737a77ed4 → 10.8.0.2,
+  télémétrie visible) → statut « Votre VPN est actif » + IP + terme →
+  recover (erreur honnête « envoi d'e-mail indisponible » sans expéditeur) ;
+  octroi → retrait → **403 wg_vpn_locked vérifié côté gérant** → ré-octroi ;
+  réconciliation « 0 manquants, 0 fantômes ». ESLint 0, tsgo 0,
+  `go test ./...` 11 packages OK, zéro erreur console navigateur, mobile
+  390 px OK.
+- ⚠️ Déploiement : backend + schéma DB changent → deploy-oracle (Render
+  resté gelé par la sentinel) ; DDL idempotent au boot (CREATE TABLE IF NOT
+  EXISTS + ALTER ADD COLUMN IF NOT EXISTS) puis répliques nocturnes.
+
+### Non-objectifs
+- Pas de plafond par formule (éditeur de formules ultérieur) ; le webhook
+  Wave direct n'apparie pas les MCV- (GeniusPay + confirmation manuelle
+  couvrent le canal) ; prix catalogue constants v1 (PublicVpnPlans, même
+  doctrine que SaasPlans avant éditeur).
+
 ## 2026-10-11 — N°300 — **verre des cartes Jour N°2 : sheen perceptible, corps givré teinté, orbes centrales sous la grille (retour utilisateur N°299)**
 
 ### Contexte (retour utilisateur sur la N°299)

@@ -25,6 +25,7 @@ import {
   UsersRound,
   Wifi,
   MessagesSquare,
+  Waypoints,
 } from "lucide-react";
 import { canView } from "./roles";
 import type { ViewId } from "./types";
@@ -221,6 +222,10 @@ export const NAV_PLATFORM_SECTIONS: { labelKey: string; items: NavItem[] }[] = [
       // cloche + e-mail optionnel) : le megaphone du super-admin.
       { id: "platformAnnouncements", labelKey: "nav.platformAnnouncements", icon: Megaphone },
       { id: "accounts", labelKey: "nav.accounts", icon: Building2 },
+      // N°301 — console « VPN & Vente directe » : le grossiste — pool wg0
+      // global, octroi du module de revente aux comptes, commandes B2C de la
+      // vitrine publique /vpn et réconciliation cloud ↔ wg-mini.
+      { id: "platformVpn", labelKey: "nav.platformVpn", icon: Waypoints },
       // File des demandes de renouvellement (facturation) — badge en attente.
       { id: "billingRequests", labelKey: "nav.billingRequests", icon: ReceiptText },
       { id: "platformLogs", labelKey: "nav.platformLogs", icon: ScrollText },

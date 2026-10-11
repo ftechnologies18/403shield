@@ -9,112 +9,117 @@ import "time"
 //   - Tenant/Settings : champs LEGACY mono-tenant, uniquement lus pour migrer
 //     un ancien db.json — vidés après migration puis ignorés.
 type DB struct {
-	Accounts          []Account           `json:"accounts"`
-	SettingsByAccount map[string]Settings `json:"settingsByAccount"`
-	Users             []AdminUser         `json:"users"`
-	Routers           []Router            `json:"routers"`
-	Profiles          []Profile           `json:"profiles"`
-	HotspotUsers      []HotspotUser       `json:"hotspotUsers"`
-	Batches           []Batch             `json:"batches"`
-	Resellers         []Reseller          `json:"resellers"`
-	Transactions      []Transaction       `json:"transactions"`
-	Sessions          []Session           `json:"sessions"`
-	Activity          []Activity          `json:"activity"`
-	Sales             []Sale              `json:"sales"`
-	Commands          []Command           `json:"commands"`
-	// P0/P1 (audit Mikhmon) — nouvelles collections.
-	Templates      []VoucherTemplate `json:"templates"`      // F2
-	UserLogs       []UserLog         `json:"userLogs"`       // F3
-	IPBindings     []IPBinding       `json:"ipBindings"`     // F7
-	SchedulerTasks []SchedulerTask   `json:"schedulerTasks"` // F10
-	Traffic        []RouterTraffic   `json:"traffic"`        // F6
-	// N°103 — agrégats quotidiens de qualité de ligne (mesure passive du
-	// débit FAI) : une ligne par (routeur, jour, interface), rétention
-	// 90 jours (PruneLineQuality). Cf. linequality.go.
-	LineQuality []LineQualityDay `json:"lineQuality"`
-	// N°199 — agrégats quotidiens du volume de données servi (une ligne par
-	// compte, routeur et jour au fuseau du compte) : la base honnête du KPI
-	// « Volume de données » de l'aperçu de période. Rétention 730 jours
-	// (PruneVolumeDays). Cf. volumeday.go.
-	VolumeDays []VolumeDay `json:"volumeDays"`
-	// N°200 — journaux MENSUELS GELÉS (décision D3) : une ligne par compte
-	// et mois calendaire au fuseau du compte, figée au bascule de mois
-	// (auto) ou par le bouton « Clôturer le mois maintenant » (manuel).
-	// AUCUNE rétention — c'est la mémoire comptable définitive du compte.
-	// Cf. monthlyjournal.go.
-	MonthlyJournals []MonthlyJournal `json:"monthlyJournals"`
-	// Tier 1 — notifications multi-canaux.
-	NotifSettings map[string]NotificationSettings `json:"notifSettings"` // accountId → réglages
-	NotifLog      []NotificationLog               `json:"notifLog"`
-	// Facturation (verrou du cycle) — file des demandes de souscription /
-	// renouvellement, actionnable depuis la console plateforme.
-	BillingRequests []BillingRequest `json:"billingRequests"`
-	// Tombstones de purge (audit purge/résurgence) — voir PurgeTombstone.
-	PurgeTombstones []PurgeTombstone `json:"purgeTombstones"`
-	// N°27 — inscriptions publiques par QR : liens d'invitation + demandes.
-	JoinLinks            []JoinLink            `json:"joinLinks"`
-	RegistrationRequests []RegistrationRequest `json:"registrationRequests"`
-	// N°28 — WiFi jetable : sites publics + registre marketing visiteurs.
-	WifiSites  []WifiSite  `json:"wifiSites"`
-	WifiGuests []WifiGuest `json:"wifiGuests"`
-	// N°56 — analytics du portail hospitalité (impressions/clics par promo).
-	// Journal borné : déduplication par (compte, promo, type, appareil, jour)
-	// + rétention 90 jours + plafond mémoire (voir prunePromoEvents).
-	PromoEvents []PromoEvent `json:"promoEvents"`
-	// Abonnement récurrent par carte (Stripe via GeniusPay) — prélèvements
-	// automatiques, synchronisés avec l'API abonnements GeniusPay.
-	GeniusPaySubs []GeniusPaySub `json:"geniuspaySubs"`
-	// N°66 — registre des sessions PIN Mode Vente (limite d'appareils
-	// simultanés par revendeur) — voir SellSession.
-	SellSessions []SellSession `json:"sellSessions"`
-	// N°101 — appareils des foyers HomeNet (bails DHCP rapportés par
-	// read_dhcp + noms affectés + pause dîner). Remplie UNIQUEMENT pour
-	// les routeurs agent de comptes homenet (le cadenceur du check-in
-	// garde la famille — les clics DHCP de la console hotspot restent
-	// du cache outil F9, jamais des lignes d'appareil).
-	Devices []Device `json:"devices"`
-	// N°290 — postes du module Cybercafé (registre des machines + pause
-	// poste + lien code-temps). Remplie UNIQUEMENT pour les comptes hotspot
-	// ayant activé le module (settings.Tenant.CyberEnabled) — cf. cyber.go.
-	CyberPostes []CyberPoste `json:"cyberPostes"`
-	// N°291 — peers VPN vendus (produit « VPN client final » sur le wg0 de
-	// la VM, via le mini-service wg-mini). Remplie UNIQUEMENT pour les
-	// comptes hotspot ayant activé le module (settings.Tenant.WgVpnEnabled)
-	// — cf. vpnpeer.go.
-	VpnPeers []VpnPeer `json:"vpnPeers"`
-	// N°293 — abonnés PPPoE (chantier ⑥, Phase A : gestion d'un
-	// pppoe-server EXISTANT via commandes agent ppp_* — D1/D2 de N°289).
-	// Segment ISP transverse (hotspot/homenet) : aucun garde d'usage.
-	// Cf. pppsecret.go.
-	PppSecrets []PppSecret `json:"pppSecrets"`
-	// N°68 — demandes de réinitialisation de mot de passe (« Mot de passe
-	// oublié ? ») : token hashé, expiration 60 min, usage unique — voir
-	// PasswordReset. Borné par prunePasswordResetsLocked.
-	PasswordResets []PasswordReset `json:"passwordResets"`
-	// N°127 — assistant conversationnel public de la vitrine :
-	// conversations visiteur ↔ bot ↔ support (la FAQ du landing
-	// est devenue un chatbot avec transmission humaine). Cf. chat.go.
-	ChatConversations []ChatConversation `json:"chatConversations"`
-	ChatMessages      []ChatMessage      `json:"chatMessages"`
-	// N°152 — annonces de la plateforme : messages diffusés par le
-	// super-admin aux comptes clients (collection GLOBALE — la visibilité
-	// par compte se calcule à la lecture : audience × expiration).
-	// Cf. announcement.go.
-	Announcements []Announcement `json:"announcements"`
-	// N°182 — sites physiques du compte : regroupement de routeurs portant
-	// une surcharge de branding du portail captif (chaîne ROUTEUR → SITE →
-	// COMPTE). Cf. sites.go.
-	Sites    []Site    `json:"sites"`
-	Tenant   Tenant    `json:"tenant"`   // legacy mono-tenant
-	Settings Settings  `json:"settings"` // legacy mono-tenant
-	LastTick time.Time `json:"lastTick"`
-	// LastSweep — N°64 — horodatage du dernier BALAYAGE PÉRIODIQUE de
-	// rétention (goroutine main.go, 1 h) : purge des journaux utilisateurs
-	// à 90 j + expirations/nettoyages, indépendamment des visites console
-	// (le Tick paresseux des handlers ne datait QUE ces lectures-là).
-	// Preuve d'audit exposée par GET / (lastSweepAt). Même mécanique de
-	// persistance que LastTick (colonne settings.last_sweep).
-	LastSweep time.Time `json:"lastSweep"`
+        Accounts          []Account           `json:"accounts"`
+        SettingsByAccount map[string]Settings `json:"settingsByAccount"`
+        Users             []AdminUser         `json:"users"`
+        Routers           []Router            `json:"routers"`
+        Profiles          []Profile           `json:"profiles"`
+        HotspotUsers      []HotspotUser       `json:"hotspotUsers"`
+        Batches           []Batch             `json:"batches"`
+        Resellers         []Reseller          `json:"resellers"`
+        Transactions      []Transaction       `json:"transactions"`
+        Sessions          []Session           `json:"sessions"`
+        Activity          []Activity          `json:"activity"`
+        Sales             []Sale              `json:"sales"`
+        Commands          []Command           `json:"commands"`
+        // P0/P1 (audit Mikhmon) — nouvelles collections.
+        Templates      []VoucherTemplate `json:"templates"`      // F2
+        UserLogs       []UserLog         `json:"userLogs"`       // F3
+        IPBindings     []IPBinding       `json:"ipBindings"`     // F7
+        SchedulerTasks []SchedulerTask   `json:"schedulerTasks"` // F10
+        Traffic        []RouterTraffic   `json:"traffic"`        // F6
+        // N°103 — agrégats quotidiens de qualité de ligne (mesure passive du
+        // débit FAI) : une ligne par (routeur, jour, interface), rétention
+        // 90 jours (PruneLineQuality). Cf. linequality.go.
+        LineQuality []LineQualityDay `json:"lineQuality"`
+        // N°199 — agrégats quotidiens du volume de données servi (une ligne par
+        // compte, routeur et jour au fuseau du compte) : la base honnête du KPI
+        // « Volume de données » de l'aperçu de période. Rétention 730 jours
+        // (PruneVolumeDays). Cf. volumeday.go.
+        VolumeDays []VolumeDay `json:"volumeDays"`
+        // N°200 — journaux MENSUELS GELÉS (décision D3) : une ligne par compte
+        // et mois calendaire au fuseau du compte, figée au bascule de mois
+        // (auto) ou par le bouton « Clôturer le mois maintenant » (manuel).
+        // AUCUNE rétention — c'est la mémoire comptable définitive du compte.
+        // Cf. monthlyjournal.go.
+        MonthlyJournals []MonthlyJournal `json:"monthlyJournals"`
+        // Tier 1 — notifications multi-canaux.
+        NotifSettings map[string]NotificationSettings `json:"notifSettings"` // accountId → réglages
+        NotifLog      []NotificationLog               `json:"notifLog"`
+        // Facturation (verrou du cycle) — file des demandes de souscription /
+        // renouvellement, actionnable depuis la console plateforme.
+        BillingRequests []BillingRequest `json:"billingRequests"`
+        // Tombstones de purge (audit purge/résurgence) — voir PurgeTombstone.
+        PurgeTombstones []PurgeTombstone `json:"purgeTombstones"`
+        // N°27 — inscriptions publiques par QR : liens d'invitation + demandes.
+        JoinLinks            []JoinLink            `json:"joinLinks"`
+        RegistrationRequests []RegistrationRequest `json:"registrationRequests"`
+        // N°28 — WiFi jetable : sites publics + registre marketing visiteurs.
+        WifiSites  []WifiSite  `json:"wifiSites"`
+        WifiGuests []WifiGuest `json:"wifiGuests"`
+        // N°56 — analytics du portail hospitalité (impressions/clics par promo).
+        // Journal borné : déduplication par (compte, promo, type, appareil, jour)
+        // + rétention 90 jours + plafond mémoire (voir prunePromoEvents).
+        PromoEvents []PromoEvent `json:"promoEvents"`
+        // Abonnement récurrent par carte (Stripe via GeniusPay) — prélèvements
+        // automatiques, synchronisés avec l'API abonnements GeniusPay.
+        GeniusPaySubs []GeniusPaySub `json:"geniuspaySubs"`
+        // N°66 — registre des sessions PIN Mode Vente (limite d'appareils
+        // simultanés par revendeur) — voir SellSession.
+        SellSessions []SellSession `json:"sellSessions"`
+        // N°101 — appareils des foyers HomeNet (bails DHCP rapportés par
+        // read_dhcp + noms affectés + pause dîner). Remplie UNIQUEMENT pour
+        // les routeurs agent de comptes homenet (le cadenceur du check-in
+        // garde la famille — les clics DHCP de la console hotspot restent
+        // du cache outil F9, jamais des lignes d'appareil).
+        Devices []Device `json:"devices"`
+        // N°290 — postes du module Cybercafé (registre des machines + pause
+        // poste + lien code-temps). Remplie UNIQUEMENT pour les comptes hotspot
+        // ayant activé le module (settings.Tenant.CyberEnabled) — cf. cyber.go.
+        CyberPostes []CyberPoste `json:"cyberPostes"`
+        // N°291 — peers VPN vendus (produit « VPN client final » sur le wg0 de
+        // la VM, via le mini-service wg-mini). Remplie UNIQUEMENT pour les
+        // comptes hotspot ayant activé le module (settings.Tenant.WgVpnEnabled)
+        // — cf. vpnpeer.go.
+        VpnPeers []VpnPeer `json:"vpnPeers"`
+        // N°301 — commandes VPN B2C « vente directe plateforme » (vitrine
+        // publique /vpn, cf. publicvpnorder.go) : le peer lié vit dans VpnPeers
+        // au nom du compte principal (AccountID = AccountMainID), cette table ne
+        // porte que la facturation et le cycle de vie B2C.
+        PublicVpnOrders []PublicVpnOrder `json:"publicVpnOrders"`
+        // N°293 — abonnés PPPoE (chantier ⑥, Phase A : gestion d'un
+        // pppoe-server EXISTANT via commandes agent ppp_* — D1/D2 de N°289).
+        // Segment ISP transverse (hotspot/homenet) : aucun garde d'usage.
+        // Cf. pppsecret.go.
+        PppSecrets []PppSecret `json:"pppSecrets"`
+        // N°68 — demandes de réinitialisation de mot de passe (« Mot de passe
+        // oublié ? ») : token hashé, expiration 60 min, usage unique — voir
+        // PasswordReset. Borné par prunePasswordResetsLocked.
+        PasswordResets []PasswordReset `json:"passwordResets"`
+        // N°127 — assistant conversationnel public de la vitrine :
+        // conversations visiteur ↔ bot ↔ support (la FAQ du landing
+        // est devenue un chatbot avec transmission humaine). Cf. chat.go.
+        ChatConversations []ChatConversation `json:"chatConversations"`
+        ChatMessages      []ChatMessage      `json:"chatMessages"`
+        // N°152 — annonces de la plateforme : messages diffusés par le
+        // super-admin aux comptes clients (collection GLOBALE — la visibilité
+        // par compte se calcule à la lecture : audience × expiration).
+        // Cf. announcement.go.
+        Announcements []Announcement `json:"announcements"`
+        // N°182 — sites physiques du compte : regroupement de routeurs portant
+        // une surcharge de branding du portail captif (chaîne ROUTEUR → SITE →
+        // COMPTE). Cf. sites.go.
+        Sites    []Site    `json:"sites"`
+        Tenant   Tenant    `json:"tenant"`   // legacy mono-tenant
+        Settings Settings  `json:"settings"` // legacy mono-tenant
+        LastTick time.Time `json:"lastTick"`
+        // LastSweep — N°64 — horodatage du dernier BALAYAGE PÉRIODIQUE de
+        // rétention (goroutine main.go, 1 h) : purge des journaux utilisateurs
+        // à 90 j + expirations/nettoyages, indépendamment des visites console
+        // (le Tick paresseux des handlers ne datait QUE ces lectures-là).
+        // Preuve d'audit exposée par GET / (lastSweepAt). Même mécanique de
+        // persistance que LastTick (colonne settings.last_sweep).
+        LastSweep time.Time `json:"lastSweep"`
 }
 
 // voucherExpired — expiration « calculée » d'un voucher : validité (ExpiresAt)
@@ -129,18 +134,18 @@ type DB struct {
 // voucher jamais connecté (validité ancrée au 1er login) : pas d'échéance
 // par date.
 func voucherExpired(u *HotspotUser, now time.Time) bool {
-	if u.Kind != "voucher" {
-		return false
-	}
-	if u.ExpiresAt != "" {
-		if exp, err := time.Parse(time.RFC3339, u.ExpiresAt); err == nil && now.After(exp) {
-			return true
-		}
-	}
-	if u.TimeLimitMin > 0 && u.UptimeUsedSec >= u.TimeLimitMin*60 {
-		return true
-	}
-	return false
+        if u.Kind != "voucher" {
+                return false
+        }
+        if u.ExpiresAt != "" {
+                if exp, err := time.Parse(time.RFC3339, u.ExpiresAt); err == nil && now.After(exp) {
+                        return true
+                }
+        }
+        if u.TimeLimitMin > 0 && u.UptimeUsedSec >= u.TimeLimitMin*60 {
+                return true
+        }
+        return false
 }
 
 // TimeLimitParityGraceSec — tolérance de parité (secondes) entre le cumul
@@ -186,28 +191,28 @@ const TimeLimitParityGraceSec = 60
 // dès le prochain affichage. Renvoie le nombre de vouchers realignés.
 // À appeler sous verrou.
 func RepairTimeLimitParity(db *DB) int {
-	live := make(map[string]bool, len(db.Sessions))
-	for _, s := range db.Sessions {
-		if s.UserID != "" {
-			live[s.UserID] = true // session en cours : le routeur n'a pas encore coupé
-		}
-	}
-	n := 0
-	for i := range db.HotspotUsers {
-		u := &db.HotspotUsers[i]
-		if u.Kind != "voucher" || u.TimeLimitMin <= 0 || live[u.ID] {
-			continue
-		}
-		if u.Status != "active" && u.Status != "used" {
-			continue // disabled/expired : déjà hors service côté stockage
-		}
-		limit := u.TimeLimitMin * 60
-		if u.UptimeUsedSec > 0 && u.UptimeUsedSec < limit && limit-u.UptimeUsedSec <= TimeLimitParityGraceSec {
-			u.UptimeUsedSec = limit
-			n++
-		}
-	}
-	return n
+        live := make(map[string]bool, len(db.Sessions))
+        for _, s := range db.Sessions {
+                if s.UserID != "" {
+                        live[s.UserID] = true // session en cours : le routeur n'a pas encore coupé
+                }
+        }
+        n := 0
+        for i := range db.HotspotUsers {
+                u := &db.HotspotUsers[i]
+                if u.Kind != "voucher" || u.TimeLimitMin <= 0 || live[u.ID] {
+                        continue
+                }
+                if u.Status != "active" && u.Status != "used" {
+                        continue // disabled/expired : déjà hors service côté stockage
+                }
+                limit := u.TimeLimitMin * 60
+                if u.UptimeUsedSec > 0 && u.UptimeUsedSec < limit && limit-u.UptimeUsedSec <= TimeLimitParityGraceSec {
+                        u.UptimeUsedSec = limit
+                        n++
+                }
+        }
+        return n
 }
 
 // AnchorVoucherValidity — ancre la validité d'un voucher à son PREMIER login :
@@ -226,20 +231,20 @@ func RepairTimeLimitParity(db *DB) int {
 // ou validité nulle : expiresAt reste vide (pas d'échéance par date).
 // À appeler sous verrou. Renvoie true si l'ancrage a été posé.
 func AnchorVoucherValidity(db *DB, u *HotspotUser, now time.Time) bool {
-	if u.Kind != "voucher" || u.ExpiresAt != "" {
-		return false
-	}
-	for i := range db.Profiles {
-		p := &db.Profiles[i]
-		if p.ID == u.ProfileID && p.AccountID == u.AccountID {
-			if v := p.ValidityMinutes(); v > 0 {
-				u.ExpiresAt = now.Add(time.Duration(v) * time.Minute).Format(time.RFC3339)
-				return true
-			}
-			return false
-		}
-	}
-	return false
+        if u.Kind != "voucher" || u.ExpiresAt != "" {
+                return false
+        }
+        for i := range db.Profiles {
+                p := &db.Profiles[i]
+                if p.ID == u.ProfileID && p.AccountID == u.AccountID {
+                        if v := p.ValidityMinutes(); v > 0 {
+                                u.ExpiresAt = now.Add(time.Duration(v) * time.Minute).Format(time.RFC3339)
+                                return true
+                        }
+                        return false
+                }
+        }
+        return false
 }
 
 // EffectiveStatus retourne le statut réel d'un utilisateur :
@@ -260,13 +265,13 @@ func AnchorVoucherValidity(db *DB, u *HotspotUser, now time.Time) bool {
 // Les autres statuts et les utilisateurs réguliers sont renvoyés tels quels.
 // Pour l'AFFICHAGE, utiliser ResolvedStatus (5 états priorisés).
 func EffectiveStatus(u *HotspotUser, now time.Time) string {
-	if u.Kind == "voucher" && u.Status != "disabled" && voucherExpired(u, now) {
-		return "expired"
-	}
-	if u.Status == "active" && u.UsedAt != "" {
-		return "used"
-	}
-	return u.Status
+        if u.Kind == "voucher" && u.Status != "disabled" && voucherExpired(u, now) {
+                return "expired"
+        }
+        if u.Status == "active" && u.UsedAt != "" {
+                return "used"
+        }
+        return u.Status
 }
 
 // ResolvedStatus — statut AFFICHÉ (5 états priorisés) :
@@ -289,22 +294,22 @@ func EffectiveStatus(u *HotspotUser, now time.Time) string {
 //
 // `online` provient de la carte des sessions live (voir onlineSessions, api).
 func ResolvedStatus(u *HotspotUser, online bool, now time.Time) string {
-	if u.Kind == "voucher" && voucherExpired(u, now) {
-		return "expired"
-	}
-	switch u.Status {
-	case "expired":
-		return "expired"
-	case "disabled":
-		return "disabled"
-	}
-	if online {
-		return "online"
-	}
-	if u.UsedAt != "" {
-		return "used"
-	}
-	return u.Status
+        if u.Kind == "voucher" && voucherExpired(u, now) {
+                return "expired"
+        }
+        switch u.Status {
+        case "expired":
+                return "expired"
+        case "disabled":
+                return "disabled"
+        }
+        if online {
+                return "online"
+        }
+        if u.UsedAt != "" {
+                return "used"
+        }
+        return u.Status
 }
 
 // ---------------------------------------------------------------------------
@@ -332,150 +337,151 @@ func ResolvedStatus(u *HotspotUser, online bool, now time.Time) string {
 // structurales, aucune sérialisation) — à comparer au re-hash JSON des 31
 // tables + transaction réseau que la synchro paiera HORS verrou.
 func (db *DB) CloneDeep() *DB {
-	clone := *db
-	clone.Accounts = append([]Account(nil), db.Accounts...)
-	clone.Users = append([]AdminUser(nil), db.Users...)
-	clone.Routers = append([]Router(nil), db.Routers...)
-	clone.Profiles = append([]Profile(nil), db.Profiles...)
-	clone.HotspotUsers = append([]HotspotUser(nil), db.HotspotUsers...)
-	clone.Batches = append([]Batch(nil), db.Batches...)
-	clone.Resellers = append([]Reseller(nil), db.Resellers...)
-	clone.Transactions = append([]Transaction(nil), db.Transactions...)
-	clone.Sessions = append([]Session(nil), db.Sessions...)
-	clone.Activity = append([]Activity(nil), db.Activity...)
-	clone.Sales = append([]Sale(nil), db.Sales...)
-	clone.Commands = cloneCommands(db.Commands)
-	clone.Templates = append([]VoucherTemplate(nil), db.Templates...)
-	clone.UserLogs = append([]UserLog(nil), db.UserLogs...)
-	clone.IPBindings = append([]IPBinding(nil), db.IPBindings...)
-	clone.SchedulerTasks = append([]SchedulerTask(nil), db.SchedulerTasks...)
-	clone.Traffic = cloneTrafficRows(db.Traffic)
-	clone.LineQuality = append([]LineQualityDay(nil), db.LineQuality...)
-	clone.VolumeDays = append([]VolumeDay(nil), db.VolumeDays...)
-	clone.MonthlyJournals = append([]MonthlyJournal(nil), db.MonthlyJournals...)
-	clone.NotifLog = append([]NotificationLog(nil), db.NotifLog...)
-	clone.BillingRequests = append([]BillingRequest(nil), db.BillingRequests...)
-	clone.PurgeTombstones = append([]PurgeTombstone(nil), db.PurgeTombstones...)
-	clone.JoinLinks = append([]JoinLink(nil), db.JoinLinks...)
-	clone.RegistrationRequests = append([]RegistrationRequest(nil), db.RegistrationRequests...)
-	clone.WifiSites = append([]WifiSite(nil), db.WifiSites...)
-	clone.WifiGuests = append([]WifiGuest(nil), db.WifiGuests...)
-	clone.PromoEvents = append([]PromoEvent(nil), db.PromoEvents...)
-	clone.GeniusPaySubs = append([]GeniusPaySub(nil), db.GeniusPaySubs...)
-	clone.SellSessions = append([]SellSession(nil), db.SellSessions...)
-	clone.Devices = append([]Device(nil), db.Devices...)
-	clone.CyberPostes = append([]CyberPoste(nil), db.CyberPostes...)
-	clone.VpnPeers = append([]VpnPeer(nil), db.VpnPeers...)
-	clone.PppSecrets = append([]PppSecret(nil), db.PppSecrets...)
-	clone.PasswordResets = append([]PasswordReset(nil), db.PasswordResets...)
-	clone.ChatConversations = append([]ChatConversation(nil), db.ChatConversations...)
-	clone.ChatMessages = append([]ChatMessage(nil), db.ChatMessages...)
-	clone.Announcements = append([]Announcement(nil), db.Announcements...)
-	clone.SettingsByAccount = cloneSettingsByAccount(db.SettingsByAccount)
-	clone.NotifSettings = cloneNotifSettings(db.NotifSettings)
-	return &clone
+        clone := *db
+        clone.Accounts = append([]Account(nil), db.Accounts...)
+        clone.Users = append([]AdminUser(nil), db.Users...)
+        clone.Routers = append([]Router(nil), db.Routers...)
+        clone.Profiles = append([]Profile(nil), db.Profiles...)
+        clone.HotspotUsers = append([]HotspotUser(nil), db.HotspotUsers...)
+        clone.Batches = append([]Batch(nil), db.Batches...)
+        clone.Resellers = append([]Reseller(nil), db.Resellers...)
+        clone.Transactions = append([]Transaction(nil), db.Transactions...)
+        clone.Sessions = append([]Session(nil), db.Sessions...)
+        clone.Activity = append([]Activity(nil), db.Activity...)
+        clone.Sales = append([]Sale(nil), db.Sales...)
+        clone.Commands = cloneCommands(db.Commands)
+        clone.Templates = append([]VoucherTemplate(nil), db.Templates...)
+        clone.UserLogs = append([]UserLog(nil), db.UserLogs...)
+        clone.IPBindings = append([]IPBinding(nil), db.IPBindings...)
+        clone.SchedulerTasks = append([]SchedulerTask(nil), db.SchedulerTasks...)
+        clone.Traffic = cloneTrafficRows(db.Traffic)
+        clone.LineQuality = append([]LineQualityDay(nil), db.LineQuality...)
+        clone.VolumeDays = append([]VolumeDay(nil), db.VolumeDays...)
+        clone.MonthlyJournals = append([]MonthlyJournal(nil), db.MonthlyJournals...)
+        clone.NotifLog = append([]NotificationLog(nil), db.NotifLog...)
+        clone.BillingRequests = append([]BillingRequest(nil), db.BillingRequests...)
+        clone.PurgeTombstones = append([]PurgeTombstone(nil), db.PurgeTombstones...)
+        clone.JoinLinks = append([]JoinLink(nil), db.JoinLinks...)
+        clone.RegistrationRequests = append([]RegistrationRequest(nil), db.RegistrationRequests...)
+        clone.WifiSites = append([]WifiSite(nil), db.WifiSites...)
+        clone.WifiGuests = append([]WifiGuest(nil), db.WifiGuests...)
+        clone.PromoEvents = append([]PromoEvent(nil), db.PromoEvents...)
+        clone.GeniusPaySubs = append([]GeniusPaySub(nil), db.GeniusPaySubs...)
+        clone.SellSessions = append([]SellSession(nil), db.SellSessions...)
+        clone.Devices = append([]Device(nil), db.Devices...)
+        clone.CyberPostes = append([]CyberPoste(nil), db.CyberPostes...)
+        clone.VpnPeers = append([]VpnPeer(nil), db.VpnPeers...)
+        clone.PublicVpnOrders = append([]PublicVpnOrder(nil), db.PublicVpnOrders...)
+        clone.PppSecrets = append([]PppSecret(nil), db.PppSecrets...)
+        clone.PasswordResets = append([]PasswordReset(nil), db.PasswordResets...)
+        clone.ChatConversations = append([]ChatConversation(nil), db.ChatConversations...)
+        clone.ChatMessages = append([]ChatMessage(nil), db.ChatMessages...)
+        clone.Announcements = append([]Announcement(nil), db.Announcements...)
+        clone.SettingsByAccount = cloneSettingsByAccount(db.SettingsByAccount)
+        clone.NotifSettings = cloneNotifSettings(db.NotifSettings)
+        return &clone
 }
 
 // cloneCommands — copie les lignes ET leurs maps JSON (Payload/Result).
 func cloneCommands(src []Command) []Command {
-	if src == nil {
-		return nil
-	}
-	out := make([]Command, len(src))
-	for i, c := range src {
-		c.Payload = cloneAnyMap(c.Payload)
-		c.Result = cloneAnyMap(c.Result)
-		out[i] = c
-	}
-	return out
+        if src == nil {
+                return nil
+        }
+        out := make([]Command, len(src))
+        for i, c := range src {
+                c.Payload = cloneAnyMap(c.Payload)
+                c.Result = cloneAnyMap(c.Result)
+                out[i] = c
+        }
+        return out
 }
 
 // cloneAnyMap — copie une map de valeurs JSON décodées (scalaires
 // immuables : string, float64, bool, nil — la copie de clés/valeurs suffit).
 func cloneAnyMap(src map[string]any) map[string]any {
-	if src == nil {
-		return nil
-	}
-	out := make(map[string]any, len(src))
-	for k, v := range src {
-		out[k] = v
-	}
-	return out
+        if src == nil {
+                return nil
+        }
+        out := make(map[string]any, len(src))
+        for k, v := range src {
+                out[k] = v
+        }
+        return out
 }
 
 // cloneTrafficRows — copie les lignes ET leurs slices d'interfaces/historique.
 func cloneTrafficRows(src []RouterTraffic) []RouterTraffic {
-	if src == nil {
-		return nil
-	}
-	out := make([]RouterTraffic, len(src))
-	for i, t := range src {
-		t.Interfaces = append([]IfaceTraffic(nil), t.Interfaces...)
-		t.History = append([]TrafficPoint(nil), t.History...)
-		out[i] = t
-	}
-	return out
+        if src == nil {
+                return nil
+        }
+        out := make([]RouterTraffic, len(src))
+        for i, t := range src {
+                t.Interfaces = append([]IfaceTraffic(nil), t.Interfaces...)
+                t.History = append([]TrafficPoint(nil), t.History...)
+                out[i] = t
+        }
+        return out
 }
 
 // cloneSettingsByAccount — copie la map ET détache les pointeurs de chaque
 // réglage (JoinButton, LogRetentionDays, Platform, AutoImportRouterUsers).
 func cloneSettingsByAccount(src map[string]Settings) map[string]Settings {
-	if src == nil {
-		return nil
-	}
-	out := make(map[string]Settings, len(src))
-	for k, s := range src {
-		if s.Tenant.JoinButton != nil {
-			v := *s.Tenant.JoinButton
-			s.Tenant.JoinButton = &v
-		}
-		if s.Tenant.CyberEnabled != nil {
-			v := *s.Tenant.CyberEnabled
-			s.Tenant.CyberEnabled = &v
-		}
-		if s.Tenant.WgVpnEnabled != nil {
-			v := *s.Tenant.WgVpnEnabled
-			s.Tenant.WgVpnEnabled = &v
-		}
-		if s.Tenant.LogRetentionDays != nil {
-			v := *s.Tenant.LogRetentionDays
-			s.Tenant.LogRetentionDays = &v
-		}
-		if s.Platform != nil {
-			p := *s.Platform
-			s.Platform = &p
-		}
-		if s.AutoImportRouterUsers != nil {
-			v := *s.AutoImportRouterUsers
-			s.AutoImportRouterUsers = &v
-		}
-		out[k] = s
-	}
-	return out
+        if src == nil {
+                return nil
+        }
+        out := make(map[string]Settings, len(src))
+        for k, s := range src {
+                if s.Tenant.JoinButton != nil {
+                        v := *s.Tenant.JoinButton
+                        s.Tenant.JoinButton = &v
+                }
+                if s.Tenant.CyberEnabled != nil {
+                        v := *s.Tenant.CyberEnabled
+                        s.Tenant.CyberEnabled = &v
+                }
+                if s.Tenant.WgVpnEnabled != nil {
+                        v := *s.Tenant.WgVpnEnabled
+                        s.Tenant.WgVpnEnabled = &v
+                }
+                if s.Tenant.LogRetentionDays != nil {
+                        v := *s.Tenant.LogRetentionDays
+                        s.Tenant.LogRetentionDays = &v
+                }
+                if s.Platform != nil {
+                        p := *s.Platform
+                        s.Platform = &p
+                }
+                if s.AutoImportRouterUsers != nil {
+                        v := *s.AutoImportRouterUsers
+                        s.AutoImportRouterUsers = &v
+                }
+                out[k] = s
+        }
+        return out
 }
 
 // cloneNotifSettings — copie la map ET les maps d'état d'alerte de chaque
 // réglage de notification (StockAlertState/PoolAlertState).
 func cloneNotifSettings(src map[string]NotificationSettings) map[string]NotificationSettings {
-	if src == nil {
-		return nil
-	}
-	out := make(map[string]NotificationSettings, len(src))
-	for k, v := range src {
-		v.StockAlertState = cloneStringMap(v.StockAlertState)
-		v.PoolAlertState = cloneStringMap(v.PoolAlertState)
-		out[k] = v
-	}
-	return out
+        if src == nil {
+                return nil
+        }
+        out := make(map[string]NotificationSettings, len(src))
+        for k, v := range src {
+                v.StockAlertState = cloneStringMap(v.StockAlertState)
+                v.PoolAlertState = cloneStringMap(v.PoolAlertState)
+                out[k] = v
+        }
+        return out
 }
 
 func cloneStringMap(src map[string]string) map[string]string {
-	if src == nil {
-		return nil
-	}
-	out := make(map[string]string, len(src))
-	for k, v := range src {
-		out[k] = v
-	}
-	return out
+        if src == nil {
+                return nil
+        }
+        out := make(map[string]string, len(src))
+        for k, v := range src {
+                out[k] = v
+        }
+        return out
 }

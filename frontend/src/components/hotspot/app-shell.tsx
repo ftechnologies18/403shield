@@ -103,6 +103,9 @@ const PlatformSettingsView = dynamic(() => import("./views/platform-settings-vie
 const PlatformTeamView = dynamic(() => import("./views/platform-team-view"), { loading: () => ViewFallback });
 // N°152 — diffusion d'annonces aux clients MikCloud (console plateforme).
 const PlatformAnnouncementsView = dynamic(() => import("./views/platform-announcements-view"), { loading: () => ViewFallback });
+// N°301 — console « VPN & Vente directe » : le grossiste (pool wg0 global,
+// octroi du module, commandes B2C de la vitrine /vpn, réconciliation).
+const PlatformVpnView = dynamic(() => import("./views/platform-vpn-view"), { loading: () => ViewFallback });
 const ProfilesView = dynamic(() => import("./views/profiles-view"), { loading: () => ViewFallback });
 // N°83 — vue Protection : l'état de sécurité du WiFi (verdict + 3 cartes
 // SafeWiFi/Shield/FamilyGuard) vit dans la navigation principale.
@@ -158,6 +161,7 @@ function viewTitle(view: ViewId, t: (key: string) => string): string {
     platformSettings: "platformSettings.title",
     platformAnnouncements: "ann.title",
     platformNotifications: "nav.platformNotifications", // N°153 — notifications du compte principal
+    platformVpn: "nav.platformVpn", // N°301 — VPN & Vente directe (grossiste)
     home: "nav.home",
     devices: "nav.devices",
   };
@@ -200,6 +204,8 @@ const VIEWS: Record<ViewId, React.ComponentType> = {
   platformTeam: PlatformTeamView,
   platformSettings: PlatformSettingsView,
   platformAnnouncements: PlatformAnnouncementsView,
+  // N°301 — console « VPN & Vente directe » (grossiste).
+  platformVpn: PlatformVpnView,
   // N°153 — même composant que la section client (le token super-admin
   // cible acc-main : la vue reçoit isPlatformAccount=true et se différencie
   // seule — bandeau compte principal + carte « E-mail plateforme »).

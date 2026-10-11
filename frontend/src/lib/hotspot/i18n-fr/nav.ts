@@ -49,6 +49,7 @@ export const frNav: Record<string, string> = {
   "nav.platformLogs": "Journal plateforme",
   "nav.platformTeam": "Équipe plateforme",
   "nav.platformSettings": "Paramètres plateforme",
+  "nav.platformVpn": "VPN & Vente directe", // N°301
 
   // — N°7 : équipe & rôles —
   "nav.team": "Équipe",

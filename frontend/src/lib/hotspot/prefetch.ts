@@ -47,6 +47,7 @@ const CHUNK_LOADERS: Partial<Record<ViewId, () => Promise<unknown>>> = {
   platformLogs: () => import("@/components/hotspot/views/platform-logs-view"),
   platformSettings: () => import("@/components/hotspot/views/platform-settings-view"),
   platformTeam: () => import("@/components/hotspot/views/platform-team-view"),
+  platformVpn: () => import("@/components/hotspot/views/platform-vpn-view"),
   profiles: () => import("@/components/hotspot/views/profiles-view"),
   protection: () => import("@/components/hotspot/views/protection-view"),
   // N°184 — le hub Hotspot se préchauffe par ses deux onglets adressables
@@ -112,6 +113,7 @@ const VIEW_QUERIES: Partial<Record<ViewId, readonly ViewQuery[]>> = {
   ],
   protection: [{ key: ["/api/routers"], path: "/api/routers" }],
   reports: [{ key: ["/api/routers"], path: "/api/routers" }],
+  platformVpn: [{ key: ["/api/admin/vpn/overview"], path: "/api/admin/vpn/overview" }],
   wifi: [
     { key: ["/api/wifi/sites"], path: "/api/wifi/sites" },
     { key: ["/api/routers"], path: "/api/routers" },
