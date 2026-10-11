@@ -5,6 +5,65 @@ Historique des évolutions notables du projet. Format inspiré de
 aux dates de livraison — le déploiement est continu : chaque push `main` passe
 la CI puis se déploie automatiquement (frontend Vercel, backend Render).
 
+## 2026-10-11 — N°302 — **correctif incident « Mode dégradé — persistance suspendue » (42703 settings) + parité fusion de récupération**
+
+### Incident (11/10, 10:32 UTC — dès le déploiement N°301)
+- Bandeau rouge en production : « PostgreSQL est injoignable… 83 tentatives…
+  lecture settings : ERROR: column "platform_public_vpn_shop" does not exist
+  (SQLSTATE 42703) ». Le backend vivait en MÉMOIRE SEULE depuis le boot 10:32
+  (aucune écriture base ; la boucle de récupération ne pouvait plus réussir).
+- Cause racine — **deux noms pour une même colonne** : la migration idempotente
+  (pg_schema.go) et l'UPSERT (pg_sync.go) portaient `public_vpn_shop`, le
+  SELECT de chargement (pg_load.go) lisait `platform_public_vpn_shop`
+  (conforme à la famille platform_*). Au boot : l'ALTER crée
+  `public_vpn_shop`, le SELECT échoue en 42703, le store classe l'erreur
+  « PG injoignable » → mode dégradé N°164, retry toutes les 15 s condamné.
+- **Latent découvert en diagnostiquant** : `mergeRecovered` (fusion
+  anti-écrasement de la récupération N°164) ne couvrait PAS les collections
+  `Sites`, `CyberPostes`, `VpnPeers`, `PublicVpnOrders`, `PppSecrets`
+  (N°182/290/291/293/301) alors que leurs empreintes sont posées par
+  `rebuildHashes` : guérir le schéma à chaud (ALTER manuel) aurait déclenché
+  la récupération… et le premier flush du syncreur aurait **SUPPRIMÉ toutes
+  les lignes de ces 5 tables de production** (« removed » = empreintes
+  chargées − mémoire vide). C'est pourquoi le correctif est livré par
+  RE-DÉPLOIEMENT (boot sain : ensure → load → sync normaux), jamais par
+  ALTER manuel sur la base.
+
+### Correctifs (backend, 5 fichiers)
+- `pg_schema.go` : ALTER renommé `platform_public_vpn_shop` (famille
+  platform_*) + `DROP COLUMN IF EXISTS public_vpn_shop` — nettoyage de la
+  colonne éphémère née du mauvais nom (valeurs toutes FALSE par défaut,
+  jamais écrite : la synchro n'a jamais tourné pendant la fenêtre).
+- `pg_sync.go` : INSERT + ON CONFLICT de syncSettings alignés sur
+  `platform_public_vpn_shop` (lecture et écriture décrivent désormais les
+  mêmes colonnes).
+- `recovery.go` : les 5 collections manquantes fusionnées (`Sites`,
+  `CyberPostes`, `VpnPeers`, `PublicVpnOrders`, `PppSecrets`) — la règle
+  documentée « toute table ajoutée à pg_load.go doit être ajoutée ici »
+  s'applique enfin.
+- `model/tenant.go` : commentaire aligné sur le nom réel de la colonne.
+
+### Gardes-fous CI (la classe de bug ne peut plus repasser)
+- `TestSettingsColonnesPariteSchemaLoadSync` (pg_settings_sql_test.go) :
+  croise les TROIS listes de colonnes settings — lues (loadSettings),
+  écrites (syncSettings) et garanties (CREATE + ALTER ADD de la migration).
+  Toute divergence de nom (l'incident N°302 exact) ou colonne non migrée
+  (42703 au boot) fait échouer la CI.
+- `TestMergeRecoveredParitePgLoad` (recovery_test.go) : toute collection
+  chargée par `loadInto` doit être fusionnée dans `mergeRecovered` — sinon,
+  après une fenêtre dégradée, le syncreur SUPPRIMERAIT ses lignes (invariant
+  transformé en test, dans le style des garde-fous statiques N°56/N°89).
+- `TestMergeRecoveredTablesRecentes` : comportemental — les 5 collections
+  reviennent bien de la base après une fenêtre dégradée.
+
+### Récupération de l'incident
+- Fenêtre dégradée 10:32 → redéploiement : le service est resté UP
+  (console/API/portail), les écritures base suspendues (marquages mémoire) ;
+  le redémarrage du correctif referme la fenêtre sans écrasement (les
+  données routeurs restent locales, l'historique base est intact — la
+  fenêtre n'a pas fusionné car la récupération n'a jamais réussi).
+- go test 11/11 packages OK ; le bannière disparaît au premier Load réussi.
+
 ## 2026-10-11 — N°301 — **console plateforme « VPN & Vente directe » (le grossiste) + vitrine B2C publique /vpn (vente directe)**
 
 ### Contexte (chantier ⑧ de la feuille de route VPN)

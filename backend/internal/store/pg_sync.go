@@ -477,7 +477,7 @@ func (p *PG) syncSettings(ctx context.Context, tx *sql.Tx, db *model.DB, pending
                                sub_router_slots, sub_last_paid_at, last_tick, last_sweep,
                                platform_name, platform_register_open, platform_register_key, auto_import_router_users, join_button, cyber_enabled,
                                portal_style, portal_welcome, portal_promos, portal_socials, portal_slides, portal_services, portal_ticker, portal_whatsapp, portal_key,
-                               log_retention_days, wg_vpn_enabled, wg_vpn_locked, public_vpn_shop)
+                               log_retention_days, wg_vpn_enabled, wg_vpn_locked, platform_public_vpn_shop)
                          VALUES ($1, $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33, $34, $35, $36, $37, $38, $39, $40, $41)
                          ON CONFLICT (id) DO UPDATE SET
                            account_id                = EXCLUDED.account_id,
@@ -520,7 +520,7 @@ func (p *PG) syncSettings(ctx context.Context, tx *sql.Tx, db *model.DB, pending
                            log_retention_days       = EXCLUDED.log_retention_days,
                            wg_vpn_enabled           = EXCLUDED.wg_vpn_enabled,
                            wg_vpn_locked            = EXCLUDED.wg_vpn_locked,
-                           public_vpn_shop          = EXCLUDED.public_vpn_shop`,
+                           platform_public_vpn_shop = EXCLUDED.platform_public_vpn_shop`,
 			accID, s.Tenant.Name, s.Tenant.Currency, s.Tenant.Timezone,
 			s.Plan.Name, s.Plan.MaxRouters, s.Plan.MaxUsers,
 			s.Tenant.WaveLink, s.Tenant.DNSName, s.Tenant.LogoURL, s.Tenant.BannerURL,

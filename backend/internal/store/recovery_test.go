@@ -9,6 +9,10 @@
 package store
 
 import (
+	"os"
+	"regexp"
+	"sort"
+	"strings"
 	"testing"
 	"time"
 
@@ -175,5 +179,88 @@ func TestDegradedBootAndClose(t *testing.T) {
 	// Idempotence du double Close.
 	if err := s.Close(); err != nil {
 		t.Fatalf("double Close doit être silencieux : %v", err)
+	}
+}
+
+// TestMergeRecoveredParitePgLoad — N°302 : toute collection chargée au boot
+// (loadInto dans pg_load.go) doit être fusionnée par mergeRecovered
+// (&dst.X dans recovery.go). Sinon, après une fenêtre dégradée, la
+// récupération laisse la collection VIDE en mémoire alors que ses
+// empreintes existent (rebuildHashes les pose toutes) : le premier flush du
+// syncreur tient ces lignes pour « disparues » et les SUPPRIME de la base.
+// Le commentaire de mergeRecovered l'exigeait déjà (« toute table ajoutée à
+// pg_load.go doit être ajoutée ici ») — ce garde-fou transforme la règle en
+// invariant CI. Découvert par l'incident du 11/10 : sites, postes cyber,
+// peers VPN, commandes B2C et secrets PPP (N°182/290/291/293/301)
+// manquaient à l'appel depuis leurs livraisons respectives.
+func TestMergeRecoveredParitePgLoad(t *testing.T) {
+	loadSrc, err := os.ReadFile("pg_load.go")
+	if err != nil {
+		t.Fatalf("lecture pg_load.go impossible : %v", err)
+	}
+	recSrc, err := os.ReadFile("recovery.go")
+	if err != nil {
+		t.Fatalf("lecture recovery.go impossible : %v", err)
+	}
+
+	loaded := map[string]bool{}
+	for _, m := range regexp.MustCompile(`loadInto\(p, &db\.(\w+),`).FindAllStringSubmatch(string(loadSrc), -1) {
+		loaded[m[1]] = true
+	}
+	if len(loaded) < 30 {
+		t.Fatalf("parseur cassé : seulement %d collections loadInto trouvées dans pg_load.go", len(loaded))
+	}
+
+	merged := map[string]bool{}
+	for _, m := range regexp.MustCompile(`&dst\.(\w+)`).FindAllStringSubmatch(string(recSrc), -1) {
+		merged[m[1]] = true
+	}
+
+	missing := []string{}
+	for field := range loaded {
+		if !merged[field] {
+			missing = append(missing, field)
+		}
+	}
+	sort.Strings(missing)
+	if len(missing) > 0 {
+		t.Fatalf("RÉGRESSION N°302 : collections chargées au boot mais NON fusionnées par mergeRecovered : %v — après une fenêtre dégradée, le syncreur SUPPRIMERAIT leurs lignes de la base au premier flush", missing)
+	}
+
+	// Les cartes par compte (settings, notif_settings) passent par des boucles
+	// dédiées, pas mergeSlice : simple vérification de présence.
+	for _, k := range []string{"SettingsByAccount", "NotifSettings"} {
+		if !strings.Contains(string(recSrc), "src."+k) {
+			t.Fatalf("la carte %s est chargée au boot mais absente de la fusion (boucle dédiée attendue)", k)
+		}
+	}
+}
+
+// TestMergeRecoveredTablesRecentes — N°302 : les cinq collections ajoutées à
+// la fusion à l'occasion de l'incident du 11/10 reviennent bien de la base
+// après une fenêtre dégradée (une ligne chacune, mémoire vide).
+func TestMergeRecoveredTablesRecentes(t *testing.T) {
+	dst := &model.DB{}
+	src := &model.DB{
+		Sites:           []model.Site{{ID: "site-1"}},
+		CyberPostes:     []model.CyberPoste{{ID: "poste-1"}},
+		VpnPeers:        []model.VpnPeer{{ID: "peer-1"}},
+		PublicVpnOrders: []model.PublicVpnOrder{{ID: "order-1"}},
+		PppSecrets:      []model.PppSecret{{ID: "ppp-1"}},
+	}
+
+	if n := mergeRecovered(dst, src); n != 5 {
+		t.Fatalf("5 lignes restaurées attendues (une par collection), obtenu %d", n)
+	}
+	for name, got := range map[string]int{
+		"sites":         len(dst.Sites),
+		"postes cyber":  len(dst.CyberPostes),
+		"peers VPN":     len(dst.VpnPeers),
+		"commandes B2C": len(dst.PublicVpnOrders),
+		"secrets PPP":   len(dst.PppSecrets),
+	} {
+		if got != 1 {
+			t.Fatalf("fusion %s : 1 ligne attendue après récupération, obtenu %d", name, got)
+		}
 	}
 }
