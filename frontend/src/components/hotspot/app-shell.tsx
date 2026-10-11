@@ -3,8 +3,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
+  BookOpenText,
   Check,
   ChevronDown,
   ChevronsUpDown,
@@ -411,6 +413,7 @@ function SidebarModeItems({ mode, onPick }: { mode: SidebarMode; onPick: (m: Sid
 
 function UserCard({ rail = false }: { rail?: boolean }) {
   const { t, lang } = useI18n();
+  const router = useRouter();
   const user = useHotspotStore((s) => s.user);
   const logout = useHotspotStore((s) => s.logout);
   const setView = useHotspotStore((s) => s.setView);
@@ -421,6 +424,10 @@ function UserCard({ rail = false }: { rail?: boolean }) {
   // I — en mode plateforme, « Paramètres » ouvre les paramètres plateforme
   // (la vue client serait immédiatement redirigée par le guard platformMode).
   const isPlatformMode = shellMode === "platform";
+  // N°304 — volet « Guides plateforme » : docs PRIVÉES de la console
+  // super-admin, entrée unique décidée par l'exploitant (menu profil).
+  // Réservé aux admins plateforme (même garde que ModeSwitch).
+  const isPlatformAdmin = user?.role === "admin" || user?.role === "platform_admin";
 
   function handleLogout() {
     logout();
@@ -476,6 +483,16 @@ function UserCard({ rail = false }: { rail?: boolean }) {
             <UserRound className="size-4" />
             {t("shell.profile")}
           </DropdownMenuItem>
+          {isPlatformAdmin ? (
+            <DropdownMenuItem
+              onClick={() => router.push("/docs/guides/plateforme")}
+              className="min-h-10"
+              title="Documentation privée de la console plateforme (guides + captures)"
+            >
+              <BookOpenText className="size-4" />
+              {t("shell.guidesPlatform")}
+            </DropdownMenuItem>
+          ) : null}
           <DropdownMenuItem
             onClick={() => setView(isPlatformMode ? "platformSettings" : settingsLandingView(user?.role, user?.usage))}
             className="min-h-10"

@@ -16,7 +16,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
-import { Eye, EyeOff, Loader2, ShieldCheck, Store, Ticket, Wifi } from "lucide-react";
+import Link from "next/link";
+import { BookOpenText, Eye, EyeOff, Loader2, ShieldCheck, Store, Ticket, Wifi } from "lucide-react";
 import { toast } from "sonner";
 
 import { FtciCredit } from "@/components/ftci-credit";
@@ -705,6 +706,18 @@ export default function LoginScreen({ onBack, onSignUp }: { onBack?: () => void;
                 </button>
               </p>
             )}
+
+            {/* N°304 — documentation publique d'exploitation : aide
+                permanente depuis l'écran de connexion (guides illustrés). */}
+            <p className="mik-rise mt-3 text-center text-xs text-muted-foreground/90" style={{ animationDelay: "0.36s" }}>
+              <Link
+                href="/docs/guides"
+                className="inline-flex items-center gap-1.5 rounded underline-offset-2 hover:text-foreground hover:underline"
+              >
+                <BookOpenText className="size-3.5" aria-hidden />
+                Guides d'exploitation illustrés
+              </Link>
+            </p>
 
             {SHOW_DEMO && (
               <div className="mik-fade glass-chip mt-6 flex items-center justify-between gap-3 rounded-xl px-3 py-2.5" style={{ animationDelay: "0.4s" }}>

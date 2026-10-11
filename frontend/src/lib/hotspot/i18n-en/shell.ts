@@ -8,6 +8,8 @@ export const enShell: Record<string, string> = {
   "shell.profileMenu": "Profile menu",
   "shell.userMenu": "User menu",
   "shell.profile": "Profile",
+  // N°304 — /docs/guides : private platform panel (profile menu only).
+  "shell.guidesPlatform": "Platform guides",
   "shell.settings": "Settings",
   "shell.logout": "Sign out",
   "shell.refreshed": "Refreshed",

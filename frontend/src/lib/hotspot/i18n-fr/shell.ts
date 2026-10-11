@@ -8,6 +8,8 @@ export const frShell: Record<string, string> = {
   "shell.profileMenu": "Menu du profil",
   "shell.userMenu": "Menu utilisateur",
   "shell.profile": "Profil",
+  // N°304 — docs /docs/guides : volet plateforme privé (menu profil).
+  "shell.guidesPlatform": "Guides plateforme",
   "shell.settings": "Paramètres",
   "shell.logout": "Se déconnecter",
   "shell.refreshed": "Actualisé",

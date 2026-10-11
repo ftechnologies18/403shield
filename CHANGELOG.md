@@ -6,6 +6,88 @@ aux dates de livraison — le déploiement est continu : chaque push `main` pass
 la CI puis se déploie automatiquement (frontend Vercel, backend Oracle E5
 depuis le T2 N°266 — Render suspendu N°303).
 
+## 2026-10-12 — N°304 — **DOCS /GUIDES/GUIDES : 36 guides d'exploitation illustrés (30 publics + 6 plateforme PRIVÉS, entrée unique menu profil) — captures production lerobuste/ProMax WIFI**
+
+### Périmètre livré (plan Tâche 4 validé par l'exploitant, avec sa modification)
+- **/docs/guides (public, SSG)** : 30 guides console gérant/propriétaire en
+  8 sections calquées sur la sidebar (Démarrer, Supervision, Hotspot,
+  Personnes, Infrastructure, Analyse, Paramètres, Annexes) — gabarit Q&A
+  validé : C'est quoi ? / Quelle différence avec… ? / Que recevez-vous ? /
+  Comment l'utiliser ? (étapes + captures) / Quels usages ? / Pièges &
+  astuces / FAQ.
+- **Volet plateforme (6 guides) — PRIVÉ, décision exploitant** : PAS
+  d'accessibilité publique, entrée UNIQUE = menu profil de la sidebar
+  (carte utilisateur, item « Guides plateforme » réservé rôles
+  admin/platform_admin, même garde que ModeSwitch) →
+  /docs/guides/plateforme. Route client gated (session zustand + rôle),
+  layout `noindex` strict, contenu complet importé DYNAMIQUEMENT
+  (content/plateforme.ts) uniquement APRÈS validation de la garde : le
+  chunk n'est jamais téléchargé par un visiteur non autorisé ; aucune
+  mention du volet dans le hub public. Guides : Cockpit & comptes SaaS
+  (impersonation), Flotte & MAJ RouterOS, VPN grossiste, Conversations &
+  annonces, Demandes de renouvellement, Journal/équipe/réglages.
+- **Captures d'écran** : 52 PNG production (compte lerobuste → ProMax
+  WIFI, rôle owner, usage hotspot) pris le 2026-10-12 via navigateur
+  headless — desktop 1440 + mobile 390 : hub console, sessions + détail,
+  vouchers + assistant 3 étapes, profils (grille FCFA réelle), routeurs +
+  fiche + script d'installation (token NON exposé — zone masquée,
+  VLM-vérifié), rapports ×4 onglets, utilisateurs/inscriptions,
+  revendeurs + dialogues, paramètres ×6, portail/modèles, revendeur
+  PIN (desktop+mobile), vitrine VPN, landing/login mobiles. Stockées
+  sous `frontend/public/docs/<section>/*.png` (~14 Mo), intégrées via
+  next/image (ratio réservé, lazy, zoom dialog). Captures des 6 guides
+  plateforme : À VENIR (compte super-admin requis — emplacements notés).
+- **Entrées docs** : lien footer vitrine (« Guides d'exploitation », FR+EN),
+  lien écran de connexion (« Guides d'exploitation illustrés »), hub
+  public auto-suffisant. Zéro modification backend, zéro API neuve.
+
+### Ingénierie
+- Nouveau module `src/lib/docs/` : types.ts (gabarit Guide), cap.ts,
+  catalog.ts (sections + agrégation + voisins), platform-meta.ts (titres
+  seuls — sûrs à bundler), content/×9 fichiers de contenus (30 publics
+  importés SSG, 6 plateforme en chunk dynamique gated).
+- Composants `src/components/docs/` : docs-shell (3 colonnes : nav
+  arborescente repliable + contenu + TOC scrollspy sticky ; mobile :
+  sheet + responsive), guide-view (gabarit Q&A, accordéon FAQ), capture
+  (zoom plein écran), hub-view (recherche instantanée + cartes),
+  platform-gate (garde session + rôle, états Connexion requise /
+  Accès réservé).
+- Routes App Router : `docs/guides/page.tsx` (hub),
+  `docs/guides/[slug]/page.tsx` (generateStaticParams 30 guides,
+  generateMetadata SEO + OG), `docs/guides/plateforme/layout.tsx`
+  (noindex), `plateforme/page.tsx` + `plateforme/[slug]/page.tsx`
+  (client, gated). Conflit de segment résolu : « plateforme » absent de
+  generateStaticParams, la route statique prime sur [slug].
+- Console : app-shell UserCard + item « Guides plateforme »
+  (BookOpenText, router.push), i18n `shell.guidesPlatform` FR/EN.
+- Vérifié localement (port 3100) : lint ✓, typecheck (tsgo) ✓, routes
+  200 (hub, guide, plateforme index, plateforme guide, captures), VLM ×6
+  (hub 3 colonnes, guide complet avec captures + TOC, gate « Connexion
+  requise » hors session, contenu rendu avec session admin + bandeau
+  « Section privée », mobile 390 hub + drawer nav), 0 erreur console ;
+  compte demo injection pour test de la voie admin puis retiré.
+
+### Vie privée & conformité (motif de la modification exploitant)
+- Le volet plateforme documente la console super-admin (comptes SaaS,
+  flotte globale, VPN grossiste, facturation) : rendu inaccessible au
+  public (garde client + noindex + chunk non référencé par les pages
+  publiques). Note d'honnêteté consignée : la confidentialité est au
+  niveau navigation/réseau (chunk chargé seulement après garde) — pour
+  une confidentialité cryptographique complète (assets servis via API
+  authentifiée), une évolution dédiée serait nécessaire.
+- Captures publics : données réelles du compte de captures fourni par
+  l'exploitant (grille tarifaire, prénoms d'équipe fictifs, pseudonymes
+  de sessions) — mots de passe vouchers masqués à l'écran (points),
+  token agent non exposé, AUCUN secret présent. Documentation FR
+  uniquement (décision validation).
+
+### Suites exploitant
+- Captures de la console super-admin à planifier (compte dédié à
+  transmettre) → intégration dans les 6 guides plateforme + page
+  /wifi/<slug> réelle + écran portail client final (session terrain).
+- Aucun schéma DB → rien à synchroniser. Frontend only : déploiement
+  Vercel automatique au push.
+
 ## 2026-10-11 — N°303 — **SUSPENSION VOLONTAIRE DU SERVICE RENDER (geste §9.1-3, T2 + 3 j 17 h) : fin du double-écrivain Supabase + découverte des déploiements miroir autoDeploy (voie native non couverte par le sentinel)**
 
 ### Arbitrage — suspendre maintenant via l'API vs laisser Render couper le 16/10

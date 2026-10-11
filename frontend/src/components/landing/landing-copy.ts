@@ -519,6 +519,8 @@ const fr: LandingCopy = {
           { label: "Se connecter", href: "/login" },
           { label: "Mode Vente", href: "/sell" },
           { label: "Connexion WiFi jetable", href: "/wifi" },
+          // N°304 — documentation publique d'exploitation.
+          { label: "Guides d'exploitation", href: "/docs/guides" },
         ],
       },
       {
@@ -881,6 +883,8 @@ const en: LandingCopy = {
           { label: "Sign in", href: "/login" },
           { label: "Sell Mode", href: "/sell" },
           { label: "Throwaway WiFi login", href: "/wifi" },
+          // N°304 — public operations documentation.
+          { label: "Operations guides", href: "/docs/guides" },
         ],
       },
       {
