@@ -47,6 +47,19 @@ export const enAccounts: Record<string, string> = {
   // P2 — client details + subscriptions (platform console)
   "accounts.openDetail": "Open account details",
   "accounts.openConsoleFull": "Open console",
+
+  // N°304 — account contact (platform correction)
+  "accounts.contact.edit": "Edit contact",
+  "accounts.contact.title": "Edit account contact",
+  "accounts.contact.desc": "Correct the owner's email, WhatsApp, country or city — for typos or a closed mailbox.",
+  "accounts.contact.emailLabel": "Email",
+  "accounts.contact.phoneLabel": "WhatsApp",
+  "accounts.contact.phoneHint": "Digits only, 8 to 15 (international format without +).",
+  "accounts.contact.countryLabel": "Country (code)",
+  "accounts.contact.cityLabel": "City",
+  "accounts.contact.warnRecovery": "This email receives announcements, reminders and password recovery links — double-check it before saving.",
+  "accounts.contact.save": "Save",
+  "accounts.contact.savedToast": "Account contact updated",
   "accounts.detailTitle": "Client account — {name}",
   "accounts.detailDesc": "Account information, subscription and usage.",
   "accounts.detail.manage": "Manage subscription",

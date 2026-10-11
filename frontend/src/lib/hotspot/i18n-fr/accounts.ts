@@ -47,6 +47,19 @@ export const frAccounts: Record<string, string> = {
   // P2 — fiche client + abonnements (console plateforme)
   "accounts.openDetail": "Ouvrir la fiche du compte",
   "accounts.openConsoleFull": "Ouvrir la console",
+
+  // N°304 — contact du compte (correction plateforme)
+  "accounts.contact.edit": "Modifier le contact",
+  "accounts.contact.title": "Modifier le contact du compte",
+  "accounts.contact.desc": "Corrigez l'e-mail, le WhatsApp, le pays ou la ville du propriétaire — en cas d'erreur de saisie ou de boîte e-mail fermée.",
+  "accounts.contact.emailLabel": "E-mail",
+  "accounts.contact.phoneLabel": "WhatsApp",
+  "accounts.contact.phoneHint": "Chiffres uniquement, 8 à 15 (format international sans +).",
+  "accounts.contact.countryLabel": "Pays (code)",
+  "accounts.contact.cityLabel": "Ville",
+  "accounts.contact.warnRecovery": "L'e-mail reçoit les annonces, les rappels et les liens de récupération de mot de passe — vérifiez-le avant d'enregistrer.",
+  "accounts.contact.save": "Enregistrer",
+  "accounts.contact.savedToast": "Contact du compte mis à jour",
   "accounts.detailTitle": "Fiche client — {name}",
   "accounts.detailDesc": "Informations, abonnement et usage du compte.",
   "accounts.detail.manage": "Gérer l'abonnement",

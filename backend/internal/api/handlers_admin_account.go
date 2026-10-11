@@ -207,6 +207,10 @@ func (a *API) handleAdminAccountDetail(w http.ResponseWriter, r *http.Request) {
 		"createdAt": acc.CreatedAt,
 		// N°98 — usage du compte (la fiche l'affiche et permet la bascule).
 		"usage": normalizeAccountUsage(acc.Usage),
+		// N°304 — contact propriétaire (affiché et corrigé par la plateforme).
+		"contact": map[string]string{
+			"email": acc.Email, "phone": acc.Phone, "country": acc.Country, "city": acc.City,
+		},
 		"owner": ownerOut,
 		"team":  team,
 		"subscription": subscriptionOut{
@@ -744,4 +748,116 @@ func (a *API) handleAdminAccountUsage(w http.ResponseWriter, r *http.Request) {
 	}
 	a.store.Unlock()
 	writeJSON(w, http.StatusOK, map[string]any{"ok": true, "usage": usage})
+}
+
+// ---------------------------------------------------------------------------
+// N°304 — contact d'un compte client : PUT /api/admin/accounts/{id}/contact
+// ---------------------------------------------------------------------------
+
+// handleAdminAccountContact — la plateforme corrige le contact propriétaire
+// d'un compte client (e-mail, WhatsApp, pays, ville) : erreur de saisie à
+// l'inscription, boîte e-mail fermée… C'est la voie officielle annoncée dès
+// le handler de création (« corriger son contact d'abord », handlers_admin.go)
+// — la console plateforme ne contourne JAMAIS le verrou anti-fermage : le
+// dédoublonnage S5 (accountContactTaken) s'applique à l'identique, le compte
+// modifié étant exclu de la comparaison (un contact inchangé ne se
+// dédoublonne pas contre lui-même).
+//
+// Le contact est la clef de plusieurs chaînes : récupération de mot de passe
+// (password_reset matche Account.Email), annonces plateforme, rappels PPPoE,
+// e-mails transactionnels, CustomerEmail des paiements. D'où :
+//   - e-mail OU WhatsApp doit rester renseigné (sinon ces chaînes perdent
+//     toute destination) ;
+//   - l'avertissement UI demande de vérifier l'e-mail avant enregistrement ;
+//   - la trace d'activité liste les champs changés (les contacts ne sont pas
+//     des secrets — le journal ne porte que des résumés lisibles).
+//
+// Idempotent : aucun changement → 200 sans écriture ni journal.
+func (a *API) handleAdminAccountContact(w http.ResponseWriter, r *http.Request) {
+	if !isPlatformAdmin(r) {
+		writeErrCode(w, http.StatusForbidden, "forbidden", "Réservé aux administrateurs de la plateforme", nil)
+		return
+	}
+	id := r.PathValue("id")
+	var req struct {
+		Email   string `json:"email"`
+		Phone   string `json:"phone"`
+		Country string `json:"country"`
+		City    string `json:"city"`
+	}
+	if err := decodeBody(r, &req); err != nil {
+		writeErrCode(w, http.StatusBadRequest, "bad_request", "Corps de requête invalide", nil)
+		return
+	}
+	email := strings.TrimSpace(req.Email)
+	phone := digitsOnly.ReplaceAllString(req.Phone, "")
+	country := strings.ToLower(strings.TrimSpace(req.Country))
+	city := strings.TrimSpace(req.City)
+	if email != "" && !emailRegexp.MatchString(email) {
+		writeErrCode(w, http.StatusBadRequest, "bad_email", "Format d'email invalide", nil)
+		return
+	}
+	if phone != "" && (len(phone) < 8 || len(phone) > 15) {
+		writeErrCode(w, http.StatusBadRequest, "bad_phone", "Numéro WhatsApp invalide (8 à 15 chiffres)", nil)
+		return
+	}
+	if email == "" && phone == "" {
+		writeErrCode(w, http.StatusBadRequest, "empty_contact",
+			"Au moins un canal de contact doit rester renseigné (e-mail ou WhatsApp)", nil)
+		return
+	}
+	a.store.Lock()
+	db := a.store.Data()
+	var acc *model.Account
+	for i := range db.Accounts {
+		if db.Accounts[i].ID == id {
+			acc = &db.Accounts[i]
+			break
+		}
+	}
+	if acc == nil {
+		a.store.Unlock()
+		writeErrCode(w, http.StatusNotFound, "not_found", "Compte introuvable", nil)
+		return
+	}
+	// Sécurité S5 — même dédoublonnage que la création et l'auto-inscription :
+	// la correction ne doit pas fusionner deux comptes.
+	if emailTaken, phoneTaken := accountContactTaken(db.Accounts, email, phone, id); emailTaken || phoneTaken {
+		a.store.Unlock()
+		if emailTaken {
+			writeErrCode(w, http.StatusConflict, "email_taken", "Un compte existe déjà avec cet email", nil)
+		} else {
+			writeErrCode(w, http.StatusConflict, "phone_taken", "Un compte existe déjà avec ce numéro WhatsApp", nil)
+		}
+		return
+	}
+	changed := make([]string, 0, 4)
+	if acc.Email != email {
+		changed = append(changed, "e-mail")
+	}
+	if acc.Phone != phone {
+		changed = append(changed, "WhatsApp")
+	}
+	if acc.Country != country {
+		changed = append(changed, "pays")
+	}
+	if acc.City != city {
+		changed = append(changed, "ville")
+	}
+	if len(changed) == 0 {
+		a.store.Unlock()
+		writeJSON(w, http.StatusOK, map[string]any{"ok": true})
+		return
+	}
+	acc.Email = email
+	acc.Phone = phone
+	acc.Country = country
+	acc.City = city
+	a.logActivityBy(r, db, acc.ID, "compte",
+		"Contact du compte « "+acc.Name+" » corrigé par la plateforme ("+strings.Join(changed, ", ")+")")
+	a.store.Save()
+	a.store.Unlock()
+	writeJSON(w, http.StatusOK, map[string]any{
+		"ok": true, "email": email, "phone": phone, "country": country, "city": city,
+	})
 }

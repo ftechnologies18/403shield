@@ -174,6 +174,67 @@ depuis le T2 N°266 — Render suspendu N°303).
 - CI/ops only — aucun code backend/frontend touché, aucun schéma DB →
   rien à synchroniser.
 
+## 2026-10-11 — N°304 — **correction du contact propriétaire par la plateforme** (e-mail, WhatsApp, pays, ville — PUT /api/admin/accounts/{id}/contact)
+
+### Contexte
+- `Account.Email` (contact propriétaire) n'était écrit qu'À LA CRÉATION (auto-inscription,
+  création plateforme) : aucune route ne permettait de le corriger. En cas d'erreur de
+  saisie ou de boîte e-mail fermée, aucune issue — et le contact est la clef de plusieurs
+  chaînes : **récupération de mot de passe** (password_reset matche `Account.Email`),
+  **annonces plateforme** (résolution des destinataires), **rappels PPPoE**,
+  **e-mails transactionnels**, **CustomerEmail** des paiements Stripe/GeniusPay.
+  Le commentaire du handler de création l'annonçait : « corriger son contact d'abord » —
+  la voie n'existait pas ; elle existe désormais.
+
+### Backend (3 fichiers + 1 test)
+- `handlers_admin_account.go` — `handleAdminAccountContact` : PUT rang 2 plateforme
+  (`isPlatformAdmin` doublé, discipline /api/admin/*). Normalisation identique à la
+  création (TrimSpace e-mail, `digitsOnly` WhatsApp, pays minuscule) + validations :
+  e-mail `emailRegexp` (400 `bad_email`), WhatsApp 8–15 chiffres (400 `bad_phone`),
+  **e-mail OU WhatsApp doit rester renseigné** (400 `empty_contact` — sinon récupération,
+  annonces et rappels perdent toute destination). **Sécurité S5 : le dédoublonnage
+  anti-fermage s'applique à l'identique** (`accountContactTaken`, le compte modifié exclu
+  de la comparaison — un contact inchangé ne se dédoublonne pas contre lui-même) :
+  409 `email_taken` / 409 `phone_taken` — la console plateforme ne contourne JAMAIS le
+  verrou. Trace d'activité listant les champs changés (« Contact du compte « X » corrigé
+  par la plateforme (e-mail, …) »). Idempotent : aucun changement → 200 sans écriture
+  ni journal. Le compte principal peut être corrigé (contact de l'exploitant) — seul
+  l'usage reste verrouillé (N°98).
+- `handleAdminAccountDetail` : la fiche expose désormais `contact` (email/phone/country/
+  city) — elle n'affichait AUCUN contact jusqu'ici.
+- `routes.go` : `PUT /api/admin/accounts/{id}/contact` → `requireRole(3, …)`.
+- `admin_contact_test.go` — garde-fou CI : correction valide (fiche à jour + trace
+  d'activité), 403 non-admin, 404 compte inconnu, 400 e-mail/WhatsApp/contact-vide,
+  409 e-mail pris / 409 WhatsApp pris (anti-fermage S5), idempotence par re-PUT de ses
+  propres valeurs (exclusion de soi du dédoublonnage).
+
+### Frontend (5 fichiers)
+- `account-detail-dialog.tsx` : champs E-mail + WhatsApp dans la carte Informations
+  (ils n'y figuraient pas) + bouton « Modifier le contact » + **ContactDialog**
+  (4 champs, pré-remplissage au montage — le parent ne le monte QUE ouvert, zéro
+  setState en effet discipline React Compiler ; avertissement : l'e-mail reçoit
+  annonces, rappels et liens de récupération — à vérifier avant enregistrement ;
+  invalidation fiche + liste). Canal plateforme uniquement en v1 : le gérant bloqué
+  appelle son exploitant, qui corrige en deux clics (phase 2 possible : self-service
+  avec confirmation par code envoyé au nouvel e-mail).
+- `api.ts` (`updateAccountContact`), `types.ts` (`contact` dans AccountDetail),
+  i18n FR/EN (`accounts.contact.*`, 11 clés × 2).
+
+### Impact
+- `backend/**` + `frontend/**` touchés : CI complète puis déploiement (backend Oracle,
+  frontend Vercel). **Aucun changement de schéma DB** (e-mail/WhatsApp/pays/ville
+  existent dans `accounts` et suivent la synchro différentielle depuis leur création) →
+  rien à synchroniser, les répliques nocturnes 03:00 UTC portent les valeurs corrigées
+  dès leur passage suivant.
+
+### Validation locale
+- gofmt 0 · go vet OK · go build OK · `go test ./...` 11/11 packages OK (api 54 s,
+  test contact inclus) ; tsgo 0 · eslint 0 · `next build` OK.
+
+### Non-objectifs
+- Self-service gérant (phase 2), re-vérification par code au nouvel e-mail, édition des
+  noms d'utilisateur console.
+
 ## 2026-10-11 — N°302 — **correctif incident « Mode dégradé — persistance suspendue » (42703 settings) + parité fusion de récupération**
 
 ### Incident (11/10, 10:32 UTC — dès le déploiement N°301)

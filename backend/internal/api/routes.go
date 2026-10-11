@@ -459,6 +459,7 @@ func (a *API) Handler() http.Handler {
 	// N°98 — usage du compte (Hotspot ⇄ HomeNet) : le SEUL point de bascule
 	// en Phase 1 (l'identité produit d'un compte ne se change pas côté client).
 	mux.HandleFunc("PUT /api/admin/accounts/{id}/usage", a.requireRole(3, a.handleAdminAccountUsage))
+	mux.HandleFunc("PUT /api/admin/accounts/{id}/contact", a.requireRole(3, a.handleAdminAccountContact))
 	mux.HandleFunc("DELETE /api/admin/accounts/{id}", a.requireRole(3, a.handleAdminAccountDelete))
 	// Bascule support : ouvrir la console d'un compte client à la demande
 	// (token scoping le compte, rôle plateforme conservé, action tracée).

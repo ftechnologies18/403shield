@@ -15,6 +15,7 @@ import {
   CreditCard,
   Loader2,
   LogIn,
+  Pencil,
   RefreshCcw,
   ShieldAlert,
   Trash2,
@@ -28,11 +29,12 @@ import {
   fetchAccountDetail,
   impersonateAccount,
   setAccountUsage,
+  updateAccountContact,
   updateAccountSubscription,
 } from "@/lib/hotspot/api";
 import { useI18n } from "@/lib/hotspot/i18n";
 import { useHotspotStore } from "@/lib/hotspot/store";
-import type { AccountSummary, AccountUsage, SubscriptionInfo } from "@/lib/hotspot/types";
+import type { AccountDetail, AccountSummary, AccountUsage, SubscriptionInfo } from "@/lib/hotspot/types";
 import { formatCurrency, formatDate, formatDateTime } from "@/lib/hotspot/format";
 import { useCurrency } from "@/components/hotspot/parts/sd-currency";
 import { StatusBadge } from "@/components/hotspot/status-badge";
@@ -155,6 +157,122 @@ function previewSubscription(
     ? plan.price * Math.max(slots, 1) * months
     : Math.floor((plan.price * months) / 12);
   return { amount, end: end.toISOString(), stacked: stackable };
+}
+
+// ---------------------------------------------------------------------------
+// N°304 — Dialog de correction du contact (e-mail, WhatsApp, pays, ville)
+// ---------------------------------------------------------------------------
+
+function ContactDialog({
+  accountId,
+  current,
+  onOpenChange,
+}: {
+  accountId: string;
+  current?: AccountDetail["contact"];
+  onOpenChange: (open: boolean) => void;
+}) {
+  const { t } = useI18n();
+  const queryClient = useQueryClient();
+
+  // Le parent ne monte ce dialog QUE lorsqu'il est ouvert : les useState
+  // pré-remplissent à partir des valeurs serveur du moment (font foi) sans
+  // aucun setState en effet (discipline React Compiler du dépôt).
+  const [email, setEmail] = useState(current?.email ?? "");
+  const [phone, setPhone] = useState(current?.phone ?? "");
+  const [country, setCountry] = useState(current?.country ?? "");
+  const [city, setCity] = useState(current?.city ?? "");
+
+  const digits = phone.replace(/[^\d]/g, "");
+  const hasContact = email.trim() !== "" || digits !== "";
+
+  const mutation = useMutation({
+    mutationFn: () =>
+      updateAccountContact(accountId, {
+        email: email.trim(),
+        phone: digits,
+        country: country.trim().toLowerCase(),
+        city: city.trim(),
+      }),
+    onSuccess: () => {
+      toast.success(t("accounts.contact.savedToast"));
+      onOpenChange(false);
+      void queryClient.invalidateQueries({ queryKey: accountDetailKey(accountId) });
+      void queryClient.invalidateQueries({ queryKey: ACCOUNTS_QUERY_KEY });
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
+
+  return (
+    <Dialog open onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>{t("accounts.contact.title")}</DialogTitle>
+          <DialogDescription>{t("accounts.contact.desc")}</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="contact-email">{t("accounts.contact.emailLabel")}</Label>
+            <Input
+              id="contact-email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="gerant@exemple.ci"
+              autoComplete="off"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="contact-phone">{t("accounts.contact.phoneLabel")}</Label>
+            <Input
+              id="contact-phone"
+              inputMode="numeric"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              placeholder="0701020304"
+              autoComplete="off"
+            />
+            <p className="text-xs text-muted-foreground">{t("accounts.contact.phoneHint")}</p>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <Label htmlFor="contact-country">{t("accounts.contact.countryLabel")}</Label>
+              <Input
+                id="contact-country"
+                value={country}
+                onChange={(e) => setCountry(e.target.value)}
+                placeholder="CI"
+                maxLength={2}
+                autoComplete="off"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="contact-city">{t("accounts.contact.cityLabel")}</Label>
+              <Input
+                id="contact-city"
+                value={city}
+                onChange={(e) => setCity(e.target.value)}
+                placeholder="Abidjan"
+                autoComplete="off"
+              />
+            </div>
+          </div>
+          <p className="rounded-md border border-amber-500/30 bg-amber-500/10 p-2.5 text-xs text-amber-700 dark:text-amber-400">
+            {t("accounts.contact.warnRecovery")}
+          </p>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={mutation.isPending}>
+            {t("common.cancel")}
+          </Button>
+          <Button onClick={() => mutation.mutate()} disabled={mutation.isPending || !hasContact}>
+            {mutation.isPending ? <Loader2 className="size-4 animate-spin" /> : <Check className="size-4" />}
+            {t("accounts.contact.save")}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -447,6 +565,7 @@ export function AccountDetailDialog({
   const impersonate = useHotspotStore((s) => s.impersonate);
   const [subOpen, setSubOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [contactOpen, setContactOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const [openingConsole, setOpeningConsole] = useState(false);
 
@@ -570,6 +689,12 @@ export function AccountDetailDialog({
                           {usageMutation.isPending && <Loader2 className="size-3.5 animate-spin text-muted-foreground" />}
                         </div>
                       </Field>
+                      <Field label={t("accounts.contact.emailLabel")}>
+                        {data.contact?.email || "—"}
+                      </Field>
+                      <Field label={t("accounts.contact.phoneLabel")}>
+                        {data.contact?.phone || "—"}
+                      </Field>
                       <Field label={t("accounts.detail.created")}>
                         {formatDate(data.createdAt, lang)}
                       </Field>
@@ -580,6 +705,15 @@ export function AccountDetailDialog({
                         </span>
                       </Field>
                     </div>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-9 w-full"
+                      onClick={() => setContactOpen(true)}
+                    >
+                      <Pencil className="size-4" />
+                      {t("accounts.contact.edit")}
+                    </Button>
                     <Button
                       size="sm"
                       variant="outline"
@@ -772,6 +906,13 @@ export function AccountDetailDialog({
         onOpenChange={setDeleteOpen}
         onDeleted={() => onOpenChange(false)}
       />
+      {contactOpen && (
+        <ContactDialog
+          accountId={account.id}
+          current={data?.contact}
+          onOpenChange={setContactOpen}
+        />
+      )}
     </>
   );
 }

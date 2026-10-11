@@ -145,6 +145,8 @@ export interface AccountDetail {
   createdAt: string;
   /** N°98 — usage du compte (la fiche l'affiche et permet la bascule). */
   usage?: AccountUsage;
+  /** N°304 — contact propriétaire (affiché et corrigé par la plateforme). */
+  contact?: { email: string; phone: string; country: string; city: string };
   owner: {
     id: string;
     name: string;
