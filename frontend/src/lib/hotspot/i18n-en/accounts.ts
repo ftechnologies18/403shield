@@ -48,7 +48,7 @@ export const enAccounts: Record<string, string> = {
   "accounts.openDetail": "Open account details",
   "accounts.openConsoleFull": "Open console",
 
-  // N°304 — account contact (platform correction)
+  // N°305 — account contact (platform correction)
   "accounts.contact.edit": "Edit contact",
   "accounts.contact.title": "Edit account contact",
   "accounts.contact.desc": "Correct the owner's email, WhatsApp, country or city — for typos or a closed mailbox.",

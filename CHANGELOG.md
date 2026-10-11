@@ -174,7 +174,7 @@ depuis le T2 N°266 — Render suspendu N°303).
 - CI/ops only — aucun code backend/frontend touché, aucun schéma DB →
   rien à synchroniser.
 
-## 2026-10-11 — N°304 — **correction du contact propriétaire par la plateforme** (e-mail, WhatsApp, pays, ville — PUT /api/admin/accounts/{id}/contact)
+## 2026-10-11 — N°305 — **correction du contact propriétaire par la plateforme** (e-mail, WhatsApp, pays, ville — PUT /api/admin/accounts/{id}/contact)
 
 ### Contexte
 - `Account.Email` (contact propriétaire) n'était écrit qu'À LA CRÉATION (auto-inscription,

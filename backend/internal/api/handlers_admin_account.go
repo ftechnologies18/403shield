@@ -207,7 +207,7 @@ func (a *API) handleAdminAccountDetail(w http.ResponseWriter, r *http.Request) {
 		"createdAt": acc.CreatedAt,
 		// N°98 — usage du compte (la fiche l'affiche et permet la bascule).
 		"usage": normalizeAccountUsage(acc.Usage),
-		// N°304 — contact propriétaire (affiché et corrigé par la plateforme).
+		// N°305 — contact propriétaire (affiché et corrigé par la plateforme).
 		"contact": map[string]string{
 			"email": acc.Email, "phone": acc.Phone, "country": acc.Country, "city": acc.City,
 		},
@@ -751,7 +751,7 @@ func (a *API) handleAdminAccountUsage(w http.ResponseWriter, r *http.Request) {
 }
 
 // ---------------------------------------------------------------------------
-// N°304 — contact d'un compte client : PUT /api/admin/accounts/{id}/contact
+// N°305 — contact d'un compte client : PUT /api/admin/accounts/{id}/contact
 // ---------------------------------------------------------------------------
 
 // handleAdminAccountContact — la plateforme corrige le contact propriétaire

@@ -8,7 +8,7 @@ import (
 	"testing"
 )
 
-// TestAdminAccountContact — PUT /api/admin/accounts/{id}/contact (N°304) :
+// TestAdminAccountContact — PUT /api/admin/accounts/{id}/contact (N°305) :
 // correction valide (fiche mise à jour, trace d'activité), validations 400
 // (e-mail mal formé, WhatsApp hors bornes, contact vide), dédoublonnage S5
 // (409 e-mail pris / 409 WhatsApp pris — l'anti-fermage n'est pas contourné),
@@ -54,7 +54,7 @@ func TestAdminAccountContact(t *testing.T) {
 	}
 	contact, _ := out["contact"].(map[string]any)
 	if contact == nil {
-		t.Fatalf("la fiche doit exposer le contact (N°304) : %v", out)
+		t.Fatalf("la fiche doit exposer le contact (N°305) : %v", out)
 	}
 	otherEmail, _ := contact["email"].(string)
 	otherPhone, _ := contact["phone"].(string)

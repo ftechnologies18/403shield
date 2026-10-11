@@ -160,7 +160,7 @@ function previewSubscription(
 }
 
 // ---------------------------------------------------------------------------
-// N°304 — Dialog de correction du contact (e-mail, WhatsApp, pays, ville)
+// N°305 — Dialog de correction du contact (e-mail, WhatsApp, pays, ville)
 // ---------------------------------------------------------------------------
 
 function ContactDialog({

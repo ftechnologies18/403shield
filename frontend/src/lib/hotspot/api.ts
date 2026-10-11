@@ -341,7 +341,7 @@ export async function setAccountUsage(id: string, usage: AccountUsage): Promise<
   return api<{ ok: boolean }>(`/api/admin/accounts/${id}/usage`, { method: "PUT", body: { usage } });
 }
 
-/** updateAccountContact — N°304 : corrige le contact propriétaire d'un compte
+/** updateAccountContact — N°305 : corrige le contact propriétaire d'un compte
  * client (e-mail, WhatsApp, pays, ville) — erreur de saisie, boîte fermée.
  * Plateforme uniquement ; erreurs exploitables : 400 bad_email / bad_phone /
  * empty_contact, 409 email_taken / phone_taken (anti-fermage S5). */

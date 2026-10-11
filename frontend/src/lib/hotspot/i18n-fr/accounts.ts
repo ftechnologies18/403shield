@@ -48,7 +48,7 @@ export const frAccounts: Record<string, string> = {
   "accounts.openDetail": "Ouvrir la fiche du compte",
   "accounts.openConsoleFull": "Ouvrir la console",
 
-  // N°304 — contact du compte (correction plateforme)
+  // N°305 — contact du compte (correction plateforme)
   "accounts.contact.edit": "Modifier le contact",
   "accounts.contact.title": "Modifier le contact du compte",
   "accounts.contact.desc": "Corrigez l'e-mail, le WhatsApp, le pays ou la ville du propriétaire — en cas d'erreur de saisie ou de boîte e-mail fermée.",
