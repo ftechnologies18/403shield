@@ -714,8 +714,24 @@ curl -X POST -H "Authorization: Bearer $RENDER_API_KEY" \
    (clé dans le coffre — résolution au pattern du `step5-render-flip.sh:64-69` ;
    équivalent clic : dashboard → Settings → Suspend. Réactivation : `POST
    …/resume`.)
+
+   > **EXÉCUTÉ — 11/10/2026 20:22:04 UTC (N°303)** : suspension VOLONTAIRE
+   > par l'API (`HTTP 202`, état `suspended`, `suspenders: ["user"]`,
+   > `mikcloud.onrender.com` → 503 « Service Suspended ») — arbitrage :
+   > geste sous notre contrôle tant que le compte répond à l'API, au lieu
+   > de l'extinction subie du 16/10 (facture ~16 €, §4bis) ; règle « T2 +
+   > 48 h » dépassée (T2 + 3 j 17 h). Double-écrivain Supabase éteint
+   > (health_checkpoint figé à 19:30:18). **Découverte corrélative** :
+   > l'autoDeploy natif Render (intégration GitHub directe — le workflow
+   > `deploy-render` n'existe plus, le sentinel ne couvrait que la voie CI)
+   > redéployait en miroir à chaque push (N°302 live à 11:30) ; la
+   > suspension coupe aussi cette chaîne. Rollback §9.2 INTACT (service
+   > conservé, §9.1-5) ; au `resume`, l'autoDeploy reprend — le désactiver
+   > d'abord si le plan B doit rester passif. Détails : CHANGELOG N°303.
+
 4. **La facture de septembre (~13 $) reste à traiter par le courrier
    support** — la migration ne l'annule pas (§4bis du RUNBOOK-HEBERGEMENT).
+   (NB N°303 : le `resume` du §9.2 la requerra.)
 5. **NE JAMAIS supprimer le service Render avant plusieurs semaines de
    stabilité** — c'est le plan B intégral (§9.2).
 

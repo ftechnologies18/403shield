@@ -21,3 +21,14 @@ LEVÉE DU GEL : supprimer ce fichier dans un commit de reprise
 consignée au CHANGELOG — ne JAMAIS le supprimer sans décision
 explicite (un push backend avec le sentinel retiré redéclencherait
 les déploiements Render en parallèle d'Oracle — piège n°12 §10).
+
+MISE À JOUR N°303 (11/10/2026 20:22 UTC) : le service Render a été
+suspendu VOLONTAIREMENT via l'API (geste §9.1-3 de
+docs/MIGRATION-ORACLE.md) plutôt que d'attendre l'extinction du
+16/10 — même état final, mais geste sous notre contrôle et fin
+immédiate du double-écrivain Supabase. Ce fichier sentinelle reste
+EN PLACE : le gel est maintenu (déploiement CI + sync §6.3). NB :
+l'autoDeploy natif Render redéployait en miroir à chaque push (voie
+GitHub directe, non couverte par ce sentinel) — suspendu, le service
+ne redéploie plus ; au resume, le désactiver d'abord si le plan B
+doit rester passif (rollback §9.2 : resume + paiement facture).

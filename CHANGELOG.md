@@ -3,7 +3,90 @@
 Historique des évolutions notables du projet. Format inspiré de
 [Keep a Changelog](https://keepachangelog.com/) ; les versions correspondent
 aux dates de livraison — le déploiement est continu : chaque push `main` passe
-la CI puis se déploie automatiquement (frontend Vercel, backend Render).
+la CI puis se déploie automatiquement (frontend Vercel, backend Oracle E5
+depuis le T2 N°266 — Render suspendu N°303).
+
+## 2026-10-11 — N°303 — **SUSPENSION VOLONTAIRE DU SERVICE RENDER (geste §9.1-3, T2 + 3 j 17 h) : fin du double-écrivain Supabase + découverte des déploiements miroir autoDeploy (voie native non couverte par le sentinel)**
+
+### Arbitrage — suspendre maintenant via l'API vs laisser Render couper le 16/10
+- Constat : OCI confirmé (T2 = 08/10 03:05:44 N°266 ; prod saine, N°302
+  corrigé le jour même, CI verte sur `0621074`) ; le 16/10, Render
+  suspendrait LUI-MÊME le service pour facture septembre ~16 € impayable
+  (confirmé par leur support — RUNBOOK-HEBERGEMENT §4bis).
+- Choix retenu : **suspension volontaire le 11/10 20:22:04 UTC** (geste
+  §9.1-3 de MIGRATION-ORACLE.md), parce que :
+  1. la règle §9.1 « T2 + 48 h de stabilité, PAS avant » est dépassée avec
+     3 j 17 h de recul (N°266 → N°303, incident N°302 corrigé par
+     redéploiement 11:28) ;
+  2. le geste passe sous NOTRE contrôle tant que le compte Render répond
+     encore à l'API — après le 16/10 (coupure pour facture), l'accès API
+     n'est plus garanti et le geste nous serait imposé, à date incertaine ;
+  3. arrêt IMMÉDIAT du double-écrivain Render → Supabase (sweep horaire,
+     dernière écriture 19:30:18) au lieu de 5 jours de pollution
+     supplémentaire (~144 sweeps) ;
+  4. le rollback §9.2 reste INTACT : suspendre ≠ supprimer (§9.1-5
+     respecté) — service, env, custom domain et données conservés ;
+     `resume` + paiement de la facture dans les DEUX scénarios (le 16/10
+     compris) ; seule perte vs attente : la « chaleur » du service
+     (réveil UptimeRobot) — marginale, le plan B reste exécutable en
+     minutes (TTL DNS 300 s).
+
+### Découverte corrélative — l'autoDeploy natif Render redéployait en MIROIR à chaque push
+- API Render (état avant geste) : `autoDeploy: "yes"`, trigger
+  `new_commit` — dernier déploiement du service : 11/10 11:28:54 → live
+  11:30:23 sur le commit `0621074` = **N°302, le même que la prod OCI** ;
+  précédent : N°301 10:31:46 (« deactivated », remplacé).
+- Le repo ne contient PLUS aucun workflow `deploy-render` : ces
+  déploiements viennent de l'intégration GitHub NATIVE de Render — le gel
+  N°165 par sentinel ne couvrait que la voie CI. Chaque push `main`
+  redéployait donc Render en parallèle d'Oracle (piège n°12 §10 de
+  MIGRATION-ORACLE.md, par la voie native).
+- La suspension coupe définitivement cette chaîne (un service suspendu ne
+  redéploie pas — vérifié après le push N°303 : aucun déploiement créé).
+- **Au `resume` (§9.2)** : l'autoDeploy natif reprend immédiatement — le
+  premier push re-déployerait Render en parallèle d'Oracle. Si le plan B
+  doit rester passif, désactiver l'autoDeploy (dashboard Render → Settings,
+  ou PATCH) AVANT tout resume ; si le rollback est assumé (Render redevient
+  primaire), l'autoDeploy actif est le comportement voulu.
+
+### Geste exécuté (20:22:04 UTC — §9.1-3, clé du coffre) et vérifications
+- `POST /v1/services/srv-da974o142hec73euul60/suspend` → HTTP 202 (0,8 s) ;
+  état vérifié : `suspended: "suspended"`, `suspenders: ["user"]`,
+  `updatedAt: 2026-10-11T20:22:04Z` ;
+- `mikcloud.onrender.com` → HTTP 503 « Service Suspended » (page officielle
+  Render, stable sur 3 re-essais) ;
+- Prod inchangée : `api.mikcloud.ftci.fr` GET / → `{"ok":true}` ; frontend
+  Vercel 200.
+
+### Fin du double-écrivain — vérifiée sur la réplique Supabase
+- Avant geste : Render vivant (GET / `ok:true`, `lastSweepAt 19:30:16Z`) ;
+  Supabase `health_checkpoint` : attempts=246791, last_success_at 19:30:18
+  (le sweep Render, pas celui de la VM — diagnostic du 11/10).
+- Après geste : le passage horaire Render de ~20:30 n'A PAS EU LIEU —
+  attempts et last_success_at FIGÉS à 246791 / 19:30:18 ; en parallèle, le
+  sweep horaire de la VM OCI a bien tourné sur le primaire local
+  (lastSweepAt 20:29:42Z confirmé à 20:30:40Z). La réplique Supabase ne
+  reflétera plus QUE les sync nocturnes 03:00 UTC — conforme DB-HYBRIDE.md.
+- Neon : inchangé (réalignement au reverse-sync nocturne comme avant).
+
+### Suites pour l'exploitant
+- **UptimeRobot** (keepalive externe, pings 5 min sur
+  mikcloud.onrender.com) : les pings reçoivent désormais 503 → le monitor
+  passera « down » ; le mettre EN PAUSE côté compte UptimeRobot (aucun
+  token fourni — geste exploitant), et s'assurer d'un monitor sur
+  `api.mikcloud.ftci.fr`.
+- Facture septembre (~16 €) : inchangée, à traiter par courrier support
+  (§4bis) — la suspension ne l'annule pas ; le `resume` du §9.2 la
+  requerra.
+- Service CONSERVÉ, jamais supprimé avant plusieurs semaines de stabilité
+  (§9.1-5) — plan B intégral §9.2 armé : Cloudflare A record → CNAME,
+  `POST …/resume`, `NEXT_PUBLIC_API_BASE` + Redeploy Vercel.
+- Sentinel `RENDER-DEPLOY-FROZEN` : FICHIER TOUJOURS EN PLACE (mécanisme
+  intact — lu par EXISTENCE par ci.yml « Gel du déploiement » et
+  deploy-oracle.yml « Gel du sync ») ; note de mise à jour ajoutée au
+  contenu (suspension effective le 11/10 au lieu du 16/10).
+- CI/ops only — aucun code backend/frontend touché, aucun schéma DB →
+  rien à synchroniser.
 
 ## 2026-10-11 — N°302 — **correctif incident « Mode dégradé — persistance suspendue » (42703 settings) + parité fusion de récupération**
 
