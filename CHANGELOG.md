@@ -36,11 +36,15 @@ depuis le T2 N°266 — Render suspendu N°303).
   `new_commit` — dernier déploiement du service : 11/10 11:28:54 → live
   11:30:23 sur le commit `0621074` = **N°302, le même que la prod OCI** ;
   précédent : N°301 10:31:46 (« deactivated », remplacé).
-- Le repo ne contient PLUS aucun workflow `deploy-render` : ces
-  déploiements viennent de l'intégration GitHub NATIVE de Render — le gel
-  N°165 par sentinel ne couvrait que la voie CI. Chaque push `main`
-  redéployait donc Render en parallèle d'Oracle (piège n°12 §10 de
-  MIGRATION-ORACLE.md, par la voie native).
+- Voies de déploiement Render au moment du geste : la voie CI (job
+  `deploy-render` de ci.yml, conditionné au sentinel N°165) est GELÉE
+  depuis N°244 ; mais la voie NATIVE — webhook Render sur push
+  (integration GitHub connectée au repo, `autoDeploy: "yes"`) — était
+  ACTIVE et produisait ces déploiements miroir (créés ~1 s après le
+  push, avant même le début du run CI : 11:28:54 vs 11:28:55). Chaque
+  push `main` redéployait donc Render en parallèle d'Oracle (piège n°12
+  §10 de MIGRATION-ORACLE.md, par la voie native, non couverte par le
+  sentinel).
 - La suspension coupe définitivement cette chaîne (un service suspendu ne
   redéploie pas — vérifié après le push N°303 : aucun déploiement créé).
 - **Au `resume` (§9.2)** : l'autoDeploy natif reprend immédiatement — le

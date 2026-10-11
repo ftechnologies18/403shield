@@ -722,12 +722,13 @@ curl -X POST -H "Authorization: Bearer $RENDER_API_KEY" \
    > de l'extinction subie du 16/10 (facture ~16 €, §4bis) ; règle « T2 +
    > 48 h » dépassée (T2 + 3 j 17 h). Double-écrivain Supabase éteint
    > (health_checkpoint figé à 19:30:18). **Découverte corrélative** :
-   > l'autoDeploy natif Render (intégration GitHub directe — le workflow
-   > `deploy-render` n'existe plus, le sentinel ne couvrait que la voie CI)
-   > redéployait en miroir à chaque push (N°302 live à 11:30) ; la
-   > suspension coupe aussi cette chaîne. Rollback §9.2 INTACT (service
-   > conservé, §9.1-5) ; au `resume`, l'autoDeploy reprend — le désactiver
-   > d'abord si le plan B doit rester passif. Détails : CHANGELOG N°303.
+   > l'autoDeploy natif Render (webhook GitHub sur push — la voie CI,
+   > job `deploy-render` de ci.yml, est gelée par le sentinel, mais pas
+   > la voie native) redéployait en miroir à chaque push (N°302 live à
+   > 11:30) ; la suspension coupe aussi cette chaîne. Rollback §9.2
+   > INTACT (service conservé, §9.1-5) ; au `resume`, l'autoDeploy
+   > reprend — le désactiver d'abord si le plan B doit rester passif.
+   > Détails : CHANGELOG N°303.
 
 4. **La facture de septembre (~13 $) reste à traiter par le courrier
    support** — la migration ne l'annule pas (§4bis du RUNBOOK-HEBERGEMENT).
