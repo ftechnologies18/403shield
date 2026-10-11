@@ -126,6 +126,12 @@ func main() {
 	// visibilité, elle, se calcule à la lecture — Active borne bandeau,
 	// cloche et listes clients, rien à balayer de ce côté).
 	go engine.RunAnnouncementSweepForever()
+	// N°301 — balayage horaire du canal B2C « vente directe » : termes des
+	// commandes provisionnées (révocation du peer wg0), annulation des
+	// pending stale (48 h) et REJOUES des « paid » non provisionnés (échec
+	// wg-mini transitoire) — la promesse « provisioning auto » de la vitrine
+	// ne se perd jamais.
+	go engine.RunPublicVpnSweepForever()
 	// N°150 — bootstrap Telegram plateforme : getMe (cache du @username
 	// pour le lien magique) + setWebhook (URL publique RENDER_EXTERNAL_URL
 	// ou PUBLIC_BASE_URL + secret d'env). Best-effort : un échec réseau au

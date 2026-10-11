@@ -40,8 +40,15 @@ type API struct {
 	// vitrine (session/message/handoff, par IP) : 30/10 min + 400/24 h —
 	// un humain en conversation active reste très loin du seuil, un
 	// script de spam est coupé.
-	chat   *signupLimiter
-	vitals *telemetry.Collector // B2 — Core Web Vitals (nil = collecte désactivée)
+	chat *signupLimiter
+	// N°301 — quotas du canal B2C public (vitrine /vpn, par IP) :
+	// création de commande et récupération de conf sont SERRÉS (des
+	// e-mails RÉELS partent — le flood est coupé avant Resend), le poll
+	// de statut est large (une page ouverte poll toutes les 5 s).
+	vpnOrder   *signupLimiter
+	vpnStatus  *signupLimiter
+	vpnRecover *signupLimiter
+	vitals     *telemetry.Collector // B2 — Core Web Vitals (nil = collecte désactivée)
 	// N°72 — bande passante sortante du jour (octets de corps de réponse
 	// par catégorie : agents / portail / medias / console / autre), exposée
 	// dans GET /api/admin/sync-status. Le quota Render (5 Go/mois gratuit)
@@ -147,7 +154,7 @@ func New(s *store.Store, jwtSecret string) *API {
 	// groupe serial rejoue l'inscription déjà passée — cf. signup_abuse.go.
 	// Les autres limiteurs S3 (join, reset) gardent les constantes : aucune
 	// suite E2E ne les traverse.
-	return &API{store: s, secret: jwtSecret, gws: map[string]routeros.Gateway{}, pinLock: newPinLimiter(), signup: signupLimiterFromEnv(os.Getenv), join: newSignupLimiter(), wifiClaim: newSignupLimiterLimits(20, 100), portalTrack: newSignupLimiterLimits(300, 3000), reset: newSignupLimiter(), chat: newSignupLimiterLimits(30, 400), egress: newEgressStats(), readStateDone: map[string]time.Time{}, readAcc: map[string]*readStateAccum{}, readStateChunks: map[string]int{}, readStateFreshAt: map[string]time.Time{}, readStateFreshPending: map[string]bool{}, devicesDone: map[string]time.Time{}, attn: map[string]time.Time{}, watcherFailN: map[string]int{}, watcherFailAt: map[string]time.Time{}, tgPairings: map[string]telegramPairing{}, tgAccountCode: map[string]string{}}
+	return &API{store: s, secret: jwtSecret, gws: map[string]routeros.Gateway{}, pinLock: newPinLimiter(), signup: signupLimiterFromEnv(os.Getenv), join: newSignupLimiter(), wifiClaim: newSignupLimiterLimits(20, 100), portalTrack: newSignupLimiterLimits(300, 3000), reset: newSignupLimiter(), chat: newSignupLimiterLimits(30, 400), vpnOrder: newSignupLimiterLimits(10, 40), vpnStatus: newSignupLimiterLimits(120, 3000), vpnRecover: newSignupLimiterLimits(5, 20), egress: newEgressStats(), readStateDone: map[string]time.Time{}, readAcc: map[string]*readStateAccum{}, readStateChunks: map[string]int{}, readStateFreshAt: map[string]time.Time{}, readStateFreshPending: map[string]bool{}, devicesDone: map[string]time.Time{}, attn: map[string]time.Time{}, watcherFailN: map[string]int{}, watcherFailAt: map[string]time.Time{}, tgPairings: map[string]telegramPairing{}, tgAccountCode: map[string]string{}}
 }
 
 // Handler — mux complet, protégé par le middleware d'authentification.
@@ -315,6 +322,14 @@ func (a *API) Handler() http.Handler {
 	mux.HandleFunc("POST /api/vpn/peers/{id}/email", a.requireUsage(model.AccountUsageHotspot, a.requireRole(2, a.handleVpnPeerEmail)))
 	mux.HandleFunc("POST /api/vpn/peers/{id}/telegram", a.requireUsage(model.AccountUsageHotspot, a.requireRole(2, a.handleVpnPeerTelegram)))
 	mux.HandleFunc("PUT /api/vpn/settings", a.requireUsage(model.AccountUsageHotspot, a.requireRole(3, a.handleVpnSettings)))
+	// N°301 — CANAL B2C « vente directe plateforme » (vitrine publique /vpn,
+	// cf. handlers_public_vpn.go) : routes PUBLIQUES (whitelist
+	// middleware.go + quotas IP dédiés + honeypot) — l'acheteur n'a PAS de
+	// compte SaaS, la référence MCV- et l'e-mail font l'appariement.
+	mux.HandleFunc("GET /api/public/vpn/offers", a.handlePublicVpnOffers)
+	mux.HandleFunc("POST /api/public/vpn/order", a.handlePublicVpnOrderCreate)
+	mux.HandleFunc("GET /api/public/vpn/order/{ref}", a.handlePublicVpnOrderStatus)
+	mux.HandleFunc("POST /api/public/vpn/recover", a.handlePublicVpnRecover)
 	// N°293 — PPPoE Phase A (chantier ⑥ de N°289, Option V lot 3) :
 	// abonnés PPPoE d'un pppoe-server EXISTANT (D2) pilotés par l'agent
 	// (D1 — commandes ppp_*, zéro cred, zéro port). Segment ISP TRANSVERSE
@@ -489,6 +504,17 @@ func (a *API) Handler() http.Handler {
 	// webhook d'encaissement Wave (public, authentifié par secret partagé).
 	mux.HandleFunc("GET /api/admin/billing-requests", a.requireRole(3, a.handleAdminBillingRequests))
 	mux.HandleFunc("POST /api/admin/billing-requests/{id}/resolve", a.requireRole(3, a.handleAdminBillingRequestResolve))
+	// N°301 — console plateforme « VPN & Vente directe » (le grossiste —
+	// cf. handlers_platform_vpn.go) : registre global, octroi du module,
+	// commandes B2C, réconciliation. Gardes doublées dans les handlers
+	// (isPlatformAdmin — discipline /api/admin/*).
+	mux.HandleFunc("GET /api/admin/vpn/overview", a.requireRole(3, a.handlePlatformVpnOverview))
+	mux.HandleFunc("GET /api/admin/vpn/peers", a.requireRole(3, a.handlePlatformVpnPeers))
+	mux.HandleFunc("POST /api/admin/vpn/peers/{id}/revoke", a.requireRole(3, a.handlePlatformVpnPeerRevoke))
+	mux.HandleFunc("PUT /api/admin/vpn/accounts/{id}/module", a.requireRole(3, a.handlePlatformVpnModule))
+	mux.HandleFunc("GET /api/admin/vpn/orders", a.requireRole(3, a.handlePlatformVpnOrders))
+	mux.HandleFunc("POST /api/admin/vpn/orders/{id}/resolve", a.requireRole(3, a.handlePlatformVpnOrderResolve))
+	mux.HandleFunc("GET /api/admin/vpn/reconcile", a.requireRole(3, a.handlePlatformVpnReconcile))
 	mux.HandleFunc("POST /api/webhooks/wave", a.handleWaveWebhook)
 	// webhook d'encaissement GeniusPay (public, authentifié par signature HMAC).
 	mux.HandleFunc("POST /api/webhooks/geniuspay", a.handleGeniusPayWebhook)

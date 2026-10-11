@@ -48,6 +48,8 @@ func (a *API) handlePlatformSettingsGet(w http.ResponseWriter, r *http.Request) 
 			// La clé n'est JAMAIS renvoyée en clair — seulement un indicateur
 			// de présence (l'admin la définit, il ne la relit pas).
 			"registerKeySet": cfg.RegisterKey != "",
+			// N°301 — état d'ouverture de la vitrine B2C MikCloud VPN.
+			"publicVpnShopEnabled": cfg.PublicVpnShopEnabled(),
 		},
 		"registerSource": source,
 	})
@@ -64,9 +66,10 @@ func (a *API) handlePlatformSettingsPut(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	var req struct {
-		Name         string  `json:"name"`
-		RegisterOpen *bool   `json:"registerOpen"`
-		RegisterKey  *string `json:"registerKey"`
+		Name          string  `json:"name"`
+		RegisterOpen  *bool   `json:"registerOpen"`
+		RegisterKey   *string `json:"registerKey"`
+		PublicVpnShop *bool   `json:"publicVpnShop"`
 	}
 	if err := decodeBody(r, &req); err != nil {
 		writeErr(w, http.StatusBadRequest, "Corps de requête invalide")
@@ -109,6 +112,14 @@ func (a *API) handlePlatformSettingsPut(w http.ResponseWriter, r *http.Request) 
 		}
 		cfg.RegisterKey = key
 	}
+	// N°301 — ouverture/fermeture de la vitrine B2C MikCloud VPN (vente
+	// directe) : geste d'exploitant, opt-in strict. La FERMETURE n'annule
+	// RIEN : les commandes provisionées restent en service jusqu'à leur
+	// terme (couper des clients payants sans geste explicite serait une
+	// trahison de confiance — même doctrine que le module gérant).
+	if req.PublicVpnShop != nil {
+		cfg.PublicVpnShop = req.PublicVpnShop
+	}
 	settings.Platform = cfg
 	db.SettingsByAccount[model.AccountMainID] = settings
 	a.logActivityBy(r, db, model.AccountMainID, "system", "Paramètres plateforme mis à jour")
@@ -117,9 +128,10 @@ func (a *API) handlePlatformSettingsPut(w http.ResponseWriter, r *http.Request) 
 
 	writeJSON(w, http.StatusOK, map[string]any{
 		"platform": map[string]any{
-			"name":           cfg.Name,
-			"registerOpen":   cfg.RegisterOpen,
-			"registerKeySet": cfg.RegisterKey != "",
+			"name":                 cfg.Name,
+			"registerOpen":         cfg.RegisterOpen,
+			"registerKeySet":       cfg.RegisterKey != "",
+			"publicVpnShopEnabled": cfg.PublicVpnShopEnabled(),
 		},
 	})
 }

@@ -604,6 +604,15 @@ func (a *API) handleGeniusPayWebhook(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// N°301 — VENTE DIRECTE B2C : les refs MCV- désignent des COMMANDES VPN
+	// (public_vpn_orders), pas des demandes d'abonnement — routage dédié AVANT
+	// l'appariement BillingRequests (la signature a déjà été vérifiée par
+	// l'appelant : les événements payment.* l'exigent).
+	if strings.HasPrefix(strings.TrimSpace(refMeta), "MCV-") {
+		a.handleGeniusPayWebhookVpnOrder(w, event, refMeta, gatewayRef, amount)
+		return
+	}
+
 	a.store.Lock()
 	db := a.store.Data()
 	idx := -1

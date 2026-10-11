@@ -178,6 +178,10 @@ func syncSteps(db *model.DB) []syncStep {
 		{vpnPeerSpec.table, func(hashes, pending map[string]map[string]uint64) tableApplier {
 			return diffTable(hashes, pending, vpnPeerSpec, db.VpnPeers)
 		}},
+		// N°301 — commandes VPN B2C « vente directe plateforme ».
+		{publicVpnOrderSpec.table, func(hashes, pending map[string]map[string]uint64) tableApplier {
+			return diffTable(hashes, pending, publicVpnOrderSpec, db.PublicVpnOrders)
+		}},
 		// N°293 — abonnés PPPoE (chantier ⑥ Phase A, unicité PAR ROUTEUR).
 		{pppSecretSpec.table, func(hashes, pending map[string]map[string]uint64) tableApplier {
 			return diffTable(hashes, pending, pppSecretSpec, db.PppSecrets)
@@ -462,8 +466,9 @@ func (p *PG) syncSettings(ctx context.Context, tx *sql.Tx, db *model.DB, pending
 		var platName string
 		var platOpen bool
 		var platKey string
+		var platShop bool
 		if s.Platform != nil {
-			platName, platOpen, platKey = s.Platform.Name, s.Platform.RegisterOpen, s.Platform.RegisterKey
+			platName, platOpen, platKey, platShop = s.Platform.Name, s.Platform.RegisterOpen, s.Platform.RegisterKey, s.Platform.PublicVpnShopEnabled()
 		}
 		_, err := tx.ExecContext(ctx,
 			`INSERT INTO settings (id, account_id, tenant_name, tenant_currency, tenant_timezone, plan_name, plan_max_routers, plan_max_users, wave_link,
@@ -472,8 +477,8 @@ func (p *PG) syncSettings(ctx context.Context, tx *sql.Tx, db *model.DB, pending
                                sub_router_slots, sub_last_paid_at, last_tick, last_sweep,
                                platform_name, platform_register_open, platform_register_key, auto_import_router_users, join_button, cyber_enabled,
                                portal_style, portal_welcome, portal_promos, portal_socials, portal_slides, portal_services, portal_ticker, portal_whatsapp, portal_key,
-                               log_retention_days, wg_vpn_enabled)
-                         VALUES ($1, $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33, $34, $35, $36, $37, $38, $39)
+                               log_retention_days, wg_vpn_enabled, wg_vpn_locked, public_vpn_shop)
+                         VALUES ($1, $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33, $34, $35, $36, $37, $38, $39, $40, $41)
                          ON CONFLICT (id) DO UPDATE SET
                            account_id                = EXCLUDED.account_id,
                            tenant_name               = EXCLUDED.tenant_name,
@@ -513,7 +518,9 @@ func (p *PG) syncSettings(ctx context.Context, tx *sql.Tx, db *model.DB, pending
                            portal_whatsapp          = EXCLUDED.portal_whatsapp,
                            portal_key               = EXCLUDED.portal_key,
                            log_retention_days       = EXCLUDED.log_retention_days,
-                           wg_vpn_enabled           = EXCLUDED.wg_vpn_enabled`,
+                           wg_vpn_enabled           = EXCLUDED.wg_vpn_enabled,
+                           wg_vpn_locked            = EXCLUDED.wg_vpn_locked,
+                           public_vpn_shop          = EXCLUDED.public_vpn_shop`,
 			accID, s.Tenant.Name, s.Tenant.Currency, s.Tenant.Timezone,
 			s.Plan.Name, s.Plan.MaxRouters, s.Plan.MaxUsers,
 			s.Tenant.WaveLink, s.Tenant.DNSName, s.Tenant.LogoURL, s.Tenant.BannerURL,
@@ -527,7 +534,7 @@ func (p *PG) syncSettings(ctx context.Context, tx *sql.Tx, db *model.DB, pending
 			s.Tenant.PortalServices,
 			s.Tenant.PortalTicker,
 			s.Tenant.PortalWhatsapp,
-			s.Tenant.PortalKey, s.Tenant.LogRetentionDaysEffective(), s.Tenant.WgVpnModuleEnabled())
+			s.Tenant.PortalKey, s.Tenant.LogRetentionDaysEffective(), s.Tenant.WgVpnModuleEnabled(), s.Tenant.WgVpnModuleLocked(), platShop)
 		if err != nil {
 			return false, fmt.Errorf("pg sync settings (%s) : %w", accID, err)
 		}
@@ -580,8 +587,9 @@ func settingsRowHash(accID string, s model.Settings) uint64 {
 	var platName string
 	var platOpen bool
 	var platKey string
+	var platShop bool
 	if s.Platform != nil {
-		platName, platOpen, platKey = s.Platform.Name, s.Platform.RegisterOpen, s.Platform.RegisterKey
+		platName, platOpen, platKey, platShop = s.Platform.Name, s.Platform.RegisterOpen, s.Platform.RegisterKey, s.Platform.PublicVpnShopEnabled()
 	}
 	return hashEntity(&[]any{
 		accID,
@@ -599,6 +607,10 @@ func settingsRowHash(accID string, s model.Settings) uint64 {
 		// autre champ settings ne changeait pas) + WgVpnModuleEnabled
 		// (même discipline dès la naissance).
 		s.Tenant.CyberModuleEnabled(), s.Tenant.WgVpnModuleEnabled(),
+		// N°301 — verrou grossiste + ouverture vitrine B2C : même
+		// discipline dès la naissance (sinon le retrait/ouverture seul
+		// ne répliquerait jamais la colonne).
+		s.Tenant.WgVpnModuleLocked(), platShop,
 		s.Tenant.PortalStyle, s.Tenant.PortalWelcome, s.Tenant.PortalPromos, s.Tenant.PortalSocials,
 		s.Tenant.PortalSlides, s.Tenant.PortalServices, s.Tenant.PortalTicker,
 		s.Tenant.PortalWhatsapp, s.Tenant.PortalKey, s.Tenant.LogRetentionDaysEffective(),
@@ -832,6 +844,7 @@ func (p *PG) rebuildHashes(db *model.DB) {
 		deviceSpec.table:           hashRows(db.Devices, deviceSpec),
 		cyberPosteSpec.table:       hashRows(db.CyberPostes, cyberPosteSpec),
 		vpnPeerSpec.table:          hashRows(db.VpnPeers, vpnPeerSpec),
+		publicVpnOrderSpec.table:   hashRows(db.PublicVpnOrders, publicVpnOrderSpec),
 		pppSecretSpec.table:        hashRows(db.PppSecrets, pppSecretSpec),
 	}
 	notifRows := make([]model.NotificationSettings, 0, len(db.NotifSettings))

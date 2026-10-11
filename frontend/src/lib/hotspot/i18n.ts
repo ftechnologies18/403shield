@@ -43,6 +43,7 @@ import { frPlatformLogs } from "./i18n-fr/platform-logs";
 import { frPlatformChat } from "./i18n-fr/platform-chat";
 import { frPlatformSettings } from "./i18n-fr/platform-settings";
 import { frPlatformTeam } from "./i18n-fr/platform-team";
+import { frPlatformVpn } from "./i18n-fr/platform-vpn";
 import { frPortal } from "./i18n-fr/portal";
 import { frPrint } from "./i18n-fr/print";
 import { frProfile } from "./i18n-fr/profile";
@@ -111,6 +112,7 @@ const fr: Record<string, string> = {
   ...frPlatformChat,
   ...frPlatformSettings,
   ...frPlatformTeam,
+  ...frPlatformVpn,
   ...frPortal,
   ...frPrint,
   ...frProfile,

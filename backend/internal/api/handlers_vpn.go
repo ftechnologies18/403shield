@@ -588,6 +588,12 @@ func (a *API) handleVpnReconcile(w http.ResponseWriter, r *http.Request) {
 // désactive le module. La DÉSACTIVATION ne révoque RIEN (les peers actifs
 // restent en service — cf. en-tête) : elle ferme seulement les nouveaux
 // gestes via le guard wg_vpn_disabled.
+//
+// N°301 — verrou grossiste : si la plateforme a RETIRÉ le module (console
+// « VPN & Vente directe »), le gérant ne peut plus le réactiver seul —
+// l'octroi est un geste de la plateforme (403 wg_vpn_locked, message clair
+// renvoyant vers le support). Nil = non verrouillé : comportement N°291
+// inchangé pour tous les comptes existants.
 func (a *API) handleVpnSettings(w http.ResponseWriter, r *http.Request) {
 	acc := accountScope(r)
 	var req struct {
@@ -599,6 +605,14 @@ func (a *API) handleVpnSettings(w http.ResponseWriter, r *http.Request) {
 	}
 	a.store.Lock()
 	db := a.store.Data()
+	if req.Enabled {
+		if s, ok := db.SettingsByAccount[acc]; ok && s.Tenant.WgVpnModuleLocked() {
+			a.store.Unlock()
+			writeErrCode(w, http.StatusForbidden, "wg_vpn_locked",
+				"Module VPN retiré par la plateforme MikCloud — contactez le support pour l'octroi", nil)
+			return
+		}
+	}
 	settings := ensureSettings(db, acc)
 	settings.Tenant.WgVpnEnabled = &req.Enabled
 	db.SettingsByAccount[acc] = settings

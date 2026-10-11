@@ -102,6 +102,16 @@ type Tenant struct {
 	// settings.wg_vpn_enabled (NOT NULL DEFAULT FALSE) reporte la valeur
 	// explicite au premier Save.
 	WgVpnEnabled *bool `json:"wgVpnEnabled,omitempty"`
+	// N°301 — verrou GROSSISTE du module VPN : posé par l'admin plateforme
+	// depuis la console « VPN & Vente directe » (PUT /api/admin/vpn/
+	// accounts/{id}/module). Retirer le module = WgVpnEnabled=false +
+	// verrou : le gérant ne peut plus le réactiver seul (PUT /api/vpn/
+	// settings refuse avec 403 wg_vpn_locked) — l'octroi devient un geste
+	// de la plateforme, la revente un droit accordé. Pointeur : nil = NON
+	// verrouillé (comportement N°291 inchangé, zéro migration) ; la colonne
+	// settings.wg_vpn_locked (NOT NULL DEFAULT FALSE) reporte la valeur
+	// explicite au premier Save.
+	WgVpnLocked *bool `json:"wgVpnLocked,omitempty"`
 }
 
 // DefaultLogRetentionDays — rétention par défaut du journal utilisateurs
@@ -368,6 +378,14 @@ func (t Tenant) WgVpnModuleEnabled() bool {
 	return t.WgVpnEnabled != nil && *t.WgVpnEnabled
 }
 
+// WgVpnModuleLocked — valeur EFFECTIVE du verrou grossiste (N°301) : nil =
+// NON verrouillé (comportement N°291 préservé pour tous les comptes
+// existants). Vrai = le module est retiré par la plateforme ET le gérant ne
+// peut plus le réactiver seul.
+func (t Tenant) WgVpnModuleLocked() bool {
+	return t.WgVpnLocked != nil && *t.WgVpnLocked
+}
+
 // PlatformConfig — configuration globale de la plateforme MikCloud (vivante
 // sur les settings du compte principal). Gérée depuis la console plateforme
 // (vue Paramètres plateforme), persistée en PostgreSQL — plus besoin de
@@ -386,6 +404,19 @@ type PlatformConfig struct {
 	// RegisterKey : clé d'invitation requise quand RegisterOpen = false
 	// ("" = pas de clé → inscriptions totalement fermées).
 	RegisterKey string `json:"registerKey,omitempty"`
+	// N°301 — vitrine B2C MikCloud VPN (vente directe plateforme, hors
+	// zone des gérants) : canal opt-in OFF par défaut (même doctrine D6
+	// — un flag, pas un nouvel usage ; l'ouverture est un geste de
+	// l'exploitant pour ne pas se mettre en concurrence avec ses
+	// revendeurs sans l'avoir décidé). Colonne settings.public_vpn_shop
+	// (NOT NULL DEFAULT FALSE) sur le compte principal uniquement.
+	PublicVpnShop *bool `json:"publicVpnShop,omitempty"`
+}
+
+// PublicVpnShopEnabled — valeur EFFECTIVE d'ouverture de la vitrine B2C
+// (nil = fermée : opt-in strict).
+func (p PlatformConfig) PublicVpnShopEnabled() bool {
+	return p.PublicVpnShop != nil && *p.PublicVpnShop
 }
 
 // AdminUser — compte d'accès à la console (login), rattaché à un compte SaaS.

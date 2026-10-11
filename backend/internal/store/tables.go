@@ -75,6 +75,8 @@ const (
 	TableCyberPostes = "cyber_postes"
 	// N°291 — peers VPN vendus (produit WireGuard client final, wg0 VM).
 	TableVpnPeers = "vpn_peers"
+	// N°301 — commandes VPN B2C « vente directe plateforme » (vitrine /vpn).
+	TablePublicVpnOrders = "public_vpn_orders"
 	// N°293 — abonnés PPPoE (chantier ⑥, unicité PAR ROUTEUR).
 	TablePppSecrets = "ppp_secrets"
 	TableSettings   = "settings" // hors diff d'empreintes (syncSettings)
@@ -123,6 +125,7 @@ var syncKnownTables = map[string]bool{
 	TableSites:                true,
 	TableCyberPostes:          true,
 	TableVpnPeers:             true,
+	TablePublicVpnOrders:      true,
 	TablePppSecrets:           true,
 	TableSettings:             true,
 }

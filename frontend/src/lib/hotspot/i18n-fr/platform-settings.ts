@@ -12,7 +12,19 @@ export const frPlatformSettings: Record<string, string> = {
   "platformSettings.tabMaintenance": "Maintenance",
   "platformSettings.loadError": "Impossible de charger les paramètres plateforme.",
   "platformSettings.identity": "Identité",
-  "platformSettings.identityDesc": "Nom affiché du SaaS sur l'écran de connexion et le pied de page.",
+  
+// N°301 — vitrine B2C MikCloud VPN (vente directe /vpn).
+"platformSettings.vpnShop": "Vitrine VPN (vente directe)",
+"platformSettings.vpnShopDesc":
+  "Le canal direct : la page publique /vpn vend des accès VPN aux clients hors zone hotspot (paiement en ligne, provisioning automatique). Opt-in strict — fermée par défaut pour ne jamais concurrencer vos revendeurs sans l'avoir décidé.",
+"platformSettings.vpnShopOpen": "Vente directe ouverte",
+"platformSettings.vpnShopOpenHint": "La vitrine /vpn accepte les commandes",
+"platformSettings.vpnShopCloseNote":
+  "La fermeture n'annule AUCUNE commande : les accès en service restent actifs jusqu'à leur terme.",
+"platformSettings.vpnShopOpenToast": "Vitrine VPN ouverte — /vpn vend",
+"platformSettings.vpnShopClosedToast": "Vitrine VPN fermée (les accès en service restent actifs)",
+
+"platformSettings.identityDesc": "Nom affiché du SaaS sur l'écran de connexion et le pied de page.",
   "platformSettings.platformName": "Nom de la plateforme",
   "platformSettings.platformNameHint": "60 caractères maximum — laissé vide, « MikCloud » est utilisé.",
   "platformSettings.identitySaved": "Identité plateforme mise à jour",

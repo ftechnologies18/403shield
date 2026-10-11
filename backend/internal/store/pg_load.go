@@ -45,6 +45,7 @@ func (p *PG) Load() (db *model.DB, found bool, err error) {
 		Sites:             []model.Site{},
 		CyberPostes:       []model.CyberPoste{},
 		VpnPeers:          []model.VpnPeer{},
+		PublicVpnOrders:   []model.PublicVpnOrder{},
 		PppSecrets:        []model.PppSecret{},
 	}
 
@@ -91,6 +92,7 @@ func (p *PG) Load() (db *model.DB, found bool, err error) {
 		{"sites", func() error { return loadInto(p, &db.Sites, siteSpec) }},
 		{"cyber_postes", func() error { return loadInto(p, &db.CyberPostes, cyberPosteSpec) }},
 		{"vpn_peers", func() error { return loadInto(p, &db.VpnPeers, vpnPeerSpec) }},
+		{"public_vpn_orders", func() error { return loadInto(p, &db.PublicVpnOrders, publicVpnOrderSpec) }},
 		{"ppp_secrets", func() error { return loadInto(p, &db.PppSecrets, pppSecretSpec) }},
 		{"settings", func() error { return p.loadSettings(db) }},
 	}
@@ -157,7 +159,7 @@ func (p *PG) loadSettings(db *model.DB) error {
                         sub_router_slots, sub_last_paid_at, last_tick, last_sweep,
                         platform_name, platform_register_open, platform_register_key, auto_import_router_users,
                         join_button, cyber_enabled, portal_style, portal_welcome, portal_promos, portal_socials, portal_slides, portal_services, portal_ticker, portal_whatsapp, portal_key,
-                        log_retention_days, wg_vpn_enabled
+                        log_retention_days, wg_vpn_enabled, wg_vpn_locked, platform_public_vpn_shop
                  FROM settings`)
 	if err != nil {
 		return err
@@ -187,6 +189,10 @@ func (p *PG) loadSettings(db *model.DB) error {
 			cyberEnabled bool
 			// N°291 - module VPN WireGuard vendable (defaut OFF : opt-in).
 			wgVpnEnabled bool
+			// N°301 - verrou grossiste du module VPN (defaut NON verrouille).
+			wgVpnLocked bool
+			// N°301 - ouverture de la vitrine B2C (compte principal, defaut FERMEE).
+			platformPublicVpnShop bool
 			// N°55 - mode hospitalité du portail (style/bienvenue/promos/socials).
 			portalStyle, portalWelcome, portalPromos, portalSocials string
 			// N°136 - slides du carrousel commercial (JSON d'URLs https ≤ 3).
@@ -212,7 +218,7 @@ func (p *PG) loadSettings(db *model.DB) error {
 			&subPlanID, &subStatus, &subPeriodStart, &subPeriodEnd, &subLastAmount,
 			&subRouterSlots, &subLastPaidAt, &lastTick, &lastSweep,
 			&platformName, &platformRegisterOpen, &platformRegisterKey, &autoImport,
-			&joinButton, &cyberEnabled, &portalStyle, &portalWelcome, &portalPromos, &portalSocials, &portalSlides, &portalServices, &portalTicker, &portalWhatsapp, &portalKey, &logRetentionDays, &wgVpnEnabled); err != nil {
+			&joinButton, &cyberEnabled, &portalStyle, &portalWelcome, &portalPromos, &portalSocials, &portalSlides, &portalServices, &portalTicker, &portalWhatsapp, &portalKey, &logRetentionDays, &wgVpnEnabled, &wgVpnLocked, &platformPublicVpnShop); err != nil {
 			return err
 		}
 		if accID == "" {
@@ -246,6 +252,9 @@ func (p *PG) loadSettings(db *model.DB) error {
 				RegisterOpen: platformRegisterOpen,
 				RegisterKey:  platformRegisterKey,
 			}
+			// N°301 - même pattern : valeur lue EXPLICITE (colonne NOT NULL
+			// DEFAULT FALSE sur le compte principal uniquement).
+			settings.Platform.PublicVpnShop = &platformPublicVpnShop
 		}
 		// Audit purge - valeur lue EXPLICITE (colonne NOT NULL) : le
 		// reglage survit aux redemarrages (le pointeur est pose).
@@ -261,6 +270,9 @@ func (p *PG) loadSettings(db *model.DB) error {
 		// N°291 - même pattern : valeur lue EXPLICITE (colonne NOT NULL
 		// DEFAULT FALSE), l'activation du module VPN survit aux redémarrages.
 		settings.Tenant.WgVpnEnabled = &wgVpnEnabled
+		// N°301 - même pattern : valeur lue EXPLICITE (colonne NOT NULL
+		// DEFAULT FALSE), le verrou grossiste survit aux redémarrages.
+		settings.Tenant.WgVpnLocked = &wgVpnLocked
 		// N°65 - même pattern : valeur lue EXPLICITE (colonne NOT NULL
 		// DEFAULT 90), la rétention du journal survit aux redémarrages.
 		settings.Tenant.LogRetentionDays = &logRetentionDays

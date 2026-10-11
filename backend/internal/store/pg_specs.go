@@ -216,6 +216,25 @@ var vpnPeerSpec = entitySpec[model.VpnPeer]{
 	hashOf: hashEntity[model.VpnPeer],
 }
 
+// publicVpnOrderSpec — N°301 : commandes VPN B2C « vente directe plateforme »
+// (vitrine publique /vpn). Même discipline que vpnPeerSpec : l'ordre
+// cols/scan/args reste strictement aligné. Aucun secret ici (la conf vit sur
+// le vpn_peer lié — pas de secretbox, parité billingRequestSpec).
+var publicVpnOrderSpec = entitySpec[model.PublicVpnOrder]{
+	table: "public_vpn_orders",
+	cols:  []string{"id", "ref", "email", "phone", "plan_id", "months", "base_amount_fcfa", "amount_fcfa", "pay_method", "paid_via", "gateway_ref", "status", "peer_id", "peer_name", "expires_at", "error_msg", "resolved_by", "created_at", "updated_at", "paid_at"},
+	idOf:  func(x *model.PublicVpnOrder) string { return x.ID },
+	scan: func(r *sql.Rows) (model.PublicVpnOrder, error) {
+		var x model.PublicVpnOrder
+		err := r.Scan(&x.ID, &x.Ref, &x.Email, &x.Phone, &x.PlanID, &x.Months, &x.BaseAmountFcfa, &x.AmountFcfa, &x.PayMethod, &x.PaidVia, &x.GatewayRef, &x.Status, &x.PeerID, &x.PeerName, &x.ExpiresAt, &x.ErrorMsg, &x.ResolvedBy, &x.CreatedAt, &x.UpdatedAt, &x.PaidAt)
+		return x, err
+	},
+	args: func(x *model.PublicVpnOrder) []any {
+		return []any{x.ID, x.Ref, x.Email, x.Phone, x.PlanID, x.Months, x.BaseAmountFcfa, x.AmountFcfa, x.PayMethod, x.PaidVia, x.GatewayRef, x.Status, x.PeerID, x.PeerName, x.ExpiresAt, x.ErrorMsg, x.ResolvedBy, x.CreatedAt, x.UpdatedAt, x.PaidAt}
+	},
+	hashOf: hashEntity[model.PublicVpnOrder],
+}
+
 // pppSecretSpec — N°293 : abonnés PPPoE (chantier ⑥ Phase A, unicité PAR
 // ROUTEUR — contrairement aux peers VPN dont le nom est global au wg0).
 // Même discipline que vpnPeerSpec : l'ordre cols/scan/args reste

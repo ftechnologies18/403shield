@@ -12,7 +12,19 @@ export const enPlatformSettings: Record<string, string> = {
   "platformSettings.tabMaintenance": "Maintenance",
   "platformSettings.loadError": "Unable to load platform settings.",
   "platformSettings.identity": "Identity",
-  "platformSettings.identityDesc": "SaaS display name on the login screen and footer.",
+  
+// N°301 — public MikCloud VPN shop (direct sales /vpn).
+"platformSettings.vpnShop": "VPN shop (direct sales)",
+"platformSettings.vpnShopDesc":
+  "The direct channel: the public /vpn page sells VPN access to customers outside hotspot areas (online payment, automatic provisioning). Strict opt-in — closed by default so you never compete with your resellers unintentionally.",
+"platformSettings.vpnShopOpen": "Direct sales open",
+"platformSettings.vpnShopOpenHint": "The /vpn shop accepts orders",
+"platformSettings.vpnShopCloseNote":
+  "Closing does NOT cancel any order: in-service access stays active until its term.",
+"platformSettings.vpnShopOpenToast": "VPN shop open — /vpn is selling",
+"platformSettings.vpnShopClosedToast": "VPN shop closed (in-service access stays active)",
+
+"platformSettings.identityDesc": "SaaS display name on the login screen and footer.",
   "platformSettings.platformName": "Platform name",
   "platformSettings.platformNameHint": "60 characters max — empty falls back to “MikCloud”.",
   "platformSettings.identitySaved": "Platform identity updated",

@@ -34,6 +34,13 @@ import type {
   PlatformOverview,
   PlatformSettingsResponse,
   PlatformSettingsUpdatePayload,
+  PlatformVpnOverview,
+  PlatformVpnPeersResponse,
+  PlatformVpnReconcile,
+  PublicVpnOffers,
+  PublicVpnOrder,
+  PublicVpnOrderCreated,
+  PublicVpnOrderStatus,
   PurgeAccountRow,
   PurgeResponse,
   PlatformTeamMember,
@@ -1180,9 +1187,110 @@ export async function fetchVpnReconcile(): Promise<{ reachable: boolean; vmPeerC
 }
 
 /** setVpnEnabled — N°291 : active/désactive le module VPN (la désactivation
- * ne révoque RIEN — les peers actifs restent en service). */
+ * ne révoque RIEN — les peers actifs restent en service). 403 wg_vpn_locked
+ * (N°301) si la plateforme a retiré le module. */
 export async function setVpnEnabled(enabled: boolean): Promise<AppSettings> {
   return api<AppSettings>("/api/vpn/settings", { method: "PUT", body: { enabled } });
+}
+
+/* — N°301 : console plateforme « VPN & Vente directe » (le grossiste) — */
+
+/** fetchPlatformVpnOverview — N°301 : jauge du pool wg0 TOUS comptes confondus
+ * + santé wg-mini + statistiques B2C du canal « vente directe ». */
+export async function fetchPlatformVpnOverview(): Promise<PlatformVpnOverview> {
+  return api<PlatformVpnOverview>("/api/admin/vpn/overview", { timeoutMs: 30_000 });
+}
+
+/** fetchPlatformVpnPeers — N°301 : registre GLOBAL des peers (tous comptes),
+ * enrichi de la télémétrie wg-mini (handshake/transfer). Jamais de conf. */
+export async function fetchPlatformVpnPeers(): Promise<PlatformVpnPeersResponse> {
+  return api<PlatformVpnPeersResponse>("/api/admin/vpn/peers", { timeoutMs: 30_000 });
+}
+
+/** revokePlatformVpnPeer — N°301 : révocation PLATEFORME d'un peer de
+ * N'IMPORTE QUEL compte (le levier ops du grossiste). */
+export async function revokePlatformVpnPeer(id: string): Promise<{ ok: boolean; message: string }> {
+  return api<{ ok: boolean; message: string }>(`/api/admin/vpn/peers/${encodeURIComponent(id)}/revoke`, {
+    method: "POST",
+    timeoutMs: 30_000,
+  });
+}
+
+/** setPlatformVpnModule — N°301 : octroi (active + déverrouille) ou retrait
+ * (désactive + VERROUILLE — le gérant ne peut plus réactiver seul) du module
+ * de revente pour un compte. */
+export async function setPlatformVpnModule(accountId: string, enabled: boolean): Promise<{ ok: boolean; message: string }> {
+  return api<{ ok: boolean; message: string }>(`/api/admin/vpn/accounts/${encodeURIComponent(accountId)}/module`, {
+    method: "PUT",
+    body: { enabled },
+    timeoutMs: 30_000,
+  });
+}
+
+/** fetchPlatformVpnOrders — N°301 : la file des commandes B2C (pending en
+ * tête — le travail du grossiste). */
+export async function fetchPlatformVpnOrders(): Promise<{ orders: PublicVpnOrder[] }> {
+  return api<{ orders: PublicVpnOrder[] }>("/api/admin/vpn/orders", { timeoutMs: 30_000 });
+}
+
+/** resolvePlatformVpnOrder — N°301 : confirmation manuelle (markPaid →
+ * provisioning auto) ou annulation (révoque le peer) d'une commande B2C. */
+export async function resolvePlatformVpnOrder(id: string, action: "markPaid" | "cancel"): Promise<{ ok: boolean; message: string; status?: string }> {
+  return api<{ ok: boolean; message: string; status?: string }>(`/api/admin/vpn/orders/${encodeURIComponent(id)}/resolve`, {
+    method: "POST",
+    body: { action },
+    timeoutMs: 45_000,
+  });
+}
+
+/** fetchPlatformVpnReconcile — N°301 : réconciliation GLOBALE cloud ↔ wg-mini
+ * (manquants + fantômes — le « wg-peer.sh list en SSH » en un bouton). */
+export async function fetchPlatformVpnReconcile(): Promise<PlatformVpnReconcile> {
+  return api<PlatformVpnReconcile>("/api/admin/vpn/reconcile", { timeoutMs: 30_000 });
+}
+
+/* — N°301 : vitrine B2C publique (/api/public/vpn/* — SANS auth, apiAnon) — */
+
+/** fetchPublicVpnOffers — N°301 : catalogue public de la vitrine (formules +
+ * montants par moyen). Respond {"enabled": false} quand le shop est fermé. */
+export async function fetchPublicVpnOffers(): Promise<PublicVpnOffers> {
+  return apiAnon<PublicVpnOffers>("/api/public/vpn/offers");
+}
+
+/** createPublicVpnOrderBody — formulaire d'achat de la vitrine (phone requis
+ * pour Wave ; website = honeypot anti-robots). */
+export interface createPublicVpnOrderBody {
+  email: string;
+  phone?: string;
+  planId: string;
+  payMethod: string;
+  website?: string;
+}
+
+/** createPublicVpnOrder — N°301 : crée la commande pending et (paiement en
+ * ligne configuré) renvoie l'URL de paiement GeniusPay. */
+export async function createPublicVpnOrder(body: createPublicVpnOrderBody): Promise<PublicVpnOrderCreated> {
+  return apiAnon<PublicVpnOrderCreated>("/api/public/vpn/order", {
+    method: "POST",
+    body,
+    timeoutMs: 30_000,
+  });
+}
+
+/** fetchPublicVpnOrderStatus — N°301 : statut public minimal par référence
+ * (le poll de retour de paiement finalise côté serveur si besoin). */
+export async function fetchPublicVpnOrderStatus(ref: string): Promise<PublicVpnOrderStatus> {
+  return apiAnon<PublicVpnOrderStatus>(`/api/public/vpn/order/${encodeURIComponent(ref)}`);
+}
+
+/** recoverPublicVpnConf — N°301 : re-livraison SELF-SERVICE de la conf par
+ * e-mail (appariement strict e-mail + référence). Réponse générique. */
+export async function recoverPublicVpnConf(email: string, ref: string): Promise<{ ok: boolean; message: string }> {
+  return apiAnon<{ ok: boolean; message: string }>("/api/public/vpn/recover", {
+    method: "POST",
+    body: { email, ref },
+    timeoutMs: 30_000,
+  });
 }
 
 /* — N°294 : abonnés PPPoE (console WISP — canal AGENT socle + renfort

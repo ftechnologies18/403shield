@@ -104,7 +104,14 @@ func (a *API) authMiddleware(next http.Handler) http.Handler {
 		// le quota IP a.chat. Le préfixe « /api/chat/ » ne peut pas capter
 		// les routes admin (/api/admin/chat/… ne partage pas ce préfixe).
 		publicChat := strings.HasPrefix(path, "/api/chat/")
-		if path == "/api/auth/login" || path == "/api/auth/register" || path == "/api/reseller/login" || path == "/api/webhooks/wave" || path == "/api/webhooks/geniuspay" || path == "/api/webhooks/telegram" || path == "/api/vitals" || strings.HasPrefix(path, "/api/join/") || publicWifi || publicMedia || publicPromoTrack || publicPasswordReset || publicChat || !strings.HasPrefix(path, "/api/") {
+		// N°301 — vitrine B2C MikCloud VPN : 4 routes publiques (GET
+		// catalogue, POST commande, GET statut par ref, POST récupération
+		// self-service). L'appariement e-mail+référence et les quotas IP
+		// dédiés (a.vpnOrder / a.vpnStatus / a.vpnRecover) bornent l'abus ;
+		// le préfixe ne capte RIEN de console (/api/admin/vpn/* et
+		// /api/vpn/* ne partagent pas ce préfixe).
+		publicVpnShop := strings.HasPrefix(path, "/api/public/vpn/")
+		if path == "/api/auth/login" || path == "/api/auth/register" || path == "/api/reseller/login" || path == "/api/webhooks/wave" || path == "/api/webhooks/geniuspay" || path == "/api/webhooks/telegram" || path == "/api/vitals" || strings.HasPrefix(path, "/api/join/") || publicWifi || publicMedia || publicPromoTrack || publicPasswordReset || publicChat || publicVpnShop || !strings.HasPrefix(path, "/api/") {
 			next.ServeHTTP(w, r)
 			return
 		}

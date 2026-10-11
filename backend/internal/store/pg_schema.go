@@ -768,6 +768,43 @@ func (p *PG) ensureSchema() error {
                 )`,
 		`CREATE UNIQUE INDEX IF NOT EXISTS idx_vpn_peers_name   ON vpn_peers (name)`,
 		`CREATE INDEX IF NOT EXISTS idx_vpn_peers_account ON vpn_peers (account_id)`,
+		// N°301 — COMMANDES VPN B2C « vente directe plateforme » (vitrine
+		// publique /vpn, cf. model/publicvpnorder.go) : facturation + cycle
+		// de vie B2C. Aucun secret ici (la conf vit sur le vpn_peer lié,
+		// colonne conf chiffrée — D5-a inchangée) ; le ref MCV- est la clé
+		// publique d'appariement (webhook GeniusPay, récupération
+		// self-service e-mail + ref).
+		`CREATE TABLE IF NOT EXISTS public_vpn_orders (
+                        id               TEXT PRIMARY KEY,
+                        ref              TEXT NOT NULL,
+                        email            TEXT NOT NULL,
+                        phone            TEXT NOT NULL DEFAULT '',
+                        plan_id          TEXT NOT NULL,
+                        months           INTEGER NOT NULL DEFAULT 1,
+                        base_amount_fcfa INTEGER NOT NULL DEFAULT 0,
+                        amount_fcfa      INTEGER NOT NULL DEFAULT 0,
+                        pay_method       TEXT NOT NULL DEFAULT '',
+                        paid_via         TEXT NOT NULL DEFAULT '',
+                        gateway_ref      TEXT NOT NULL DEFAULT '',
+                        status           TEXT NOT NULL DEFAULT 'pending',
+                        peer_id          TEXT NOT NULL DEFAULT '',
+                        peer_name        TEXT NOT NULL DEFAULT '',
+                        expires_at       TEXT NOT NULL DEFAULT '',
+                        error_msg        TEXT NOT NULL DEFAULT '',
+                        resolved_by      TEXT NOT NULL DEFAULT '',
+                        created_at       TEXT NOT NULL,
+                        updated_at       TEXT NOT NULL,
+                        paid_at          TEXT NOT NULL DEFAULT ''
+                )`,
+		`CREATE UNIQUE INDEX IF NOT EXISTS idx_public_vpn_orders_ref   ON public_vpn_orders (ref)`,
+		`CREATE INDEX IF NOT EXISTS idx_public_vpn_orders_status ON public_vpn_orders (status)`,
+		`CREATE INDEX IF NOT EXISTS idx_public_vpn_orders_email  ON public_vpn_orders (email)`,
+		// N°301 — verrou grossiste du module VPN par compte (défaut NON
+		// verrouillé : comportement N°291 préservé, zéro migration).
+		`ALTER TABLE settings ADD COLUMN IF NOT EXISTS wg_vpn_locked BOOLEAN NOT NULL DEFAULT FALSE`,
+		// N°301 — ouverture de la vitrine B2C (compte principal uniquement,
+		// défaut fermé : opt-in strict — l'exploitant décide du canal direct).
+		`ALTER TABLE settings ADD COLUMN IF NOT EXISTS public_vpn_shop BOOLEAN NOT NULL DEFAULT FALSE`,
 		// N°293 — ABONNÉS PPPoE (chantier ⑥ Phase A — cf. model/pppsecret.go)
 		// : registre cloud des secrets d'un pppoe-server EXISTANT (D2), le
 		// transport est agent ppp_* (D1 — zéro cred, zéro port). Unicité PAR

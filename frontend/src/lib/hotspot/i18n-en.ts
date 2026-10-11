@@ -38,6 +38,7 @@ import { enPlatformLogs } from "./i18n-en/platform-logs";
 import { enPlatformChat } from "./i18n-en/platform-chat";
 import { enPlatformSettings } from "./i18n-en/platform-settings";
 import { enPlatformTeam } from "./i18n-en/platform-team";
+import { enPlatformVpn } from "./i18n-en/platform-vpn";
 import { enPortal } from "./i18n-en/portal";
 import { enPrint } from "./i18n-en/print";
 import { enProfile } from "./i18n-en/profile";
@@ -92,6 +93,7 @@ export const enDict: Record<string, string> = {
   ...enPlatformChat,
   ...enPlatformSettings,
   ...enPlatformTeam,
+  ...enPlatformVpn,
   ...enPortal,
   ...enPrint,
   ...enProfile,

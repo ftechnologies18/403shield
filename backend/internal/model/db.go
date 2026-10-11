@@ -82,6 +82,11 @@ type DB struct {
 	// comptes hotspot ayant activé le module (settings.Tenant.WgVpnEnabled)
 	// — cf. vpnpeer.go.
 	VpnPeers []VpnPeer `json:"vpnPeers"`
+	// N°301 — commandes VPN B2C « vente directe plateforme » (vitrine
+	// publique /vpn, cf. publicvpnorder.go) : le peer lié vit dans VpnPeers
+	// au nom du compte principal (AccountID = AccountMainID), cette table ne
+	// porte que la facturation et le cycle de vie B2C.
+	PublicVpnOrders []PublicVpnOrder `json:"publicVpnOrders"`
 	// N°293 — abonnés PPPoE (chantier ⑥, Phase A : gestion d'un
 	// pppoe-server EXISTANT via commandes agent ppp_* — D1/D2 de N°289).
 	// Segment ISP transverse (hotspot/homenet) : aucun garde d'usage.
@@ -366,6 +371,7 @@ func (db *DB) CloneDeep() *DB {
 	clone.Devices = append([]Device(nil), db.Devices...)
 	clone.CyberPostes = append([]CyberPoste(nil), db.CyberPostes...)
 	clone.VpnPeers = append([]VpnPeer(nil), db.VpnPeers...)
+	clone.PublicVpnOrders = append([]PublicVpnOrder(nil), db.PublicVpnOrders...)
 	clone.PppSecrets = append([]PppSecret(nil), db.PppSecrets...)
 	clone.PasswordResets = append([]PasswordReset(nil), db.PasswordResets...)
 	clone.ChatConversations = append([]ChatConversation(nil), db.ChatConversations...)

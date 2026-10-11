@@ -26,6 +26,7 @@ import {
   ChevronDown,
   Database,
   Eraser,
+  Globe,
   Loader2,
   Radio,
   RotateCw,
@@ -309,6 +310,10 @@ export default function PlatformSettingsView() {
           <div className="grid gap-4 lg:grid-cols-2">
             <IdentityCard data={data} onDone={invalidate} />
             <RegisterCard data={data} onDone={invalidate} />
+            {/* N°301 — vitrine B2C MikCloud VPN (vente directe /vpn) : le canal
+                est opt-in strict — l'exploitant décide de ne pas concurrencer
+                ses revendeurs sans l'avoir choisi. */}
+            <PublicVpnShopCard data={data} onDone={invalidate} />
           </div>
         </TabsContent>
 
@@ -481,6 +486,59 @@ function RegisterCard({ data, onDone }: { data: PlatformSettingsResponse; onDone
       </CardContent>
       <CardFooter className="px-4 sm:px-6">
         <Button size="sm" onClick={() => mutation.mutate()} disabled={envLocked || !dirty || mutation.isPending}>
+          {mutation.isPending ? t("common.saving") : t("common.save")}
+        </Button>
+      </CardFooter>
+    </Card>
+  );
+}
+
+/* ─── N°301 — Vitrine B2C MikCloud VPN (vente directe /vpn) ─── */
+function PublicVpnShopCard({ data, onDone }: { data: PlatformSettingsResponse; onDone: () => void }) {
+  const { t } = useI18n();
+  const [open, setOpen] = useState(data.platform.publicVpnShopEnabled === true);
+
+  const mutation = useMutation({
+    mutationFn: () => updatePlatformSettings({ publicVpnShop: open }),
+    onSuccess: () => {
+      toast.success(open ? t("platformSettings.vpnShopOpenToast") : t("platformSettings.vpnShopClosedToast"));
+      onDone();
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+
+  const dirty = open !== (data.platform.publicVpnShopEnabled === true);
+
+  return (
+    <Card className="gap-4 py-4 sm:py-6">
+      <CardHeader className="px-4 sm:px-6">
+        <CardTitle className="flex items-center gap-2 text-base">
+          <span className="flex size-8 items-center justify-center rounded-lg bg-primary/15 text-primary">
+            <Globe className="size-4" />
+          </span>
+          {t("platformSettings.vpnShop")}
+        </CardTitle>
+        <CardDescription>{t("platformSettings.vpnShopDesc")}</CardDescription>
+      </CardHeader>
+      <CardContent className="grid gap-4 px-4 sm:px-6">
+        <div className="flex items-center justify-between rounded-lg border p-3">
+          <div className="min-w-0 pr-3">
+            <p className="text-sm font-medium">{t("platformSettings.vpnShopOpen")}</p>
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              {t("platformSettings.vpnShopOpenHint")}
+            </p>
+          </div>
+          <Switch
+            checked={open}
+            onCheckedChange={setOpen}
+            disabled={mutation.isPending}
+            aria-label={t("platformSettings.vpnShopOpen")}
+          />
+        </div>
+        <p className="text-xs text-muted-foreground">{t("platformSettings.vpnShopCloseNote")}</p>
+      </CardContent>
+      <CardFooter className="px-4 sm:px-6">
+        <Button size="sm" onClick={() => mutation.mutate()} disabled={!dirty || mutation.isPending}>
           {mutation.isPending ? t("common.saving") : t("common.save")}
         </Button>
       </CardFooter>
