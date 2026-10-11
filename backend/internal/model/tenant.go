@@ -408,8 +408,10 @@ type PlatformConfig struct {
 	// zone des gérants) : canal opt-in OFF par défaut (même doctrine D6
 	// — un flag, pas un nouvel usage ; l'ouverture est un geste de
 	// l'exploitant pour ne pas se mettre en concurrence avec ses
-	// revendeurs sans l'avoir décidé). Colonne settings.public_vpn_shop
-	// (NOT NULL DEFAULT FALSE) sur le compte principal uniquement.
+	// revendeurs sans l'avoir décidé). Colonne
+	// settings.platform_public_vpn_shop (NOT NULL DEFAULT FALSE, nom
+	// aligné sur la famille platform_* — N°302) sur le compte principal
+	// uniquement.
 	PublicVpnShop *bool `json:"publicVpnShop,omitempty"`
 }
 

@@ -99,6 +99,143 @@ func TestSyncSettingsSQLConsistency(t *testing.T) {
 	}
 }
 
+// TestSettingsColonnesPariteSchemaLoadSync — N°302 : garde-fou de parité des
+// colonnes settings entre les TROIS endroits qui les décrivent.
+//
+// Contexte (incident du 11/10 10:32, signalé par le bandeau « Mode dégradé —
+// persistance suspendue ») : N°301 avait ajouté la colonne de la vitrine B2C
+// avec DEUX noms — « public_vpn_shop » dans la migration de pg_schema.go et
+// l'UPSERT de pg_sync.go, « platform_public_vpn_shop » dans le SELECT de
+// loadSettings (pg_load.go). Au boot : l'ALTER crée public_vpn_shop, le
+// SELECT échoue en 42703 sur platform_public_vpn_shop, le store classe
+// l'erreur « PG injoignable » → mode dégradé mémoire seule, boucle de
+// récupération condamnée à échouer. Ce test croise les trois listes (schéma
+// garanti par la migration, colonnes lues, colonnes écrites) pour que la
+// moindre divergence de nom soit refusée par la CI AVANT tout déploiement.
+func TestSettingsColonnesPariteSchemaLoadSync(t *testing.T) {
+	// ── Colonnes LUES : le SELECT de loadSettings (ancre : l'unique
+	// occurrence de platform_public_vpn_shop dans pg_load.go, remontée au
+	// SELECT le plus proche puis avancée jusqu'au FROM settings).
+	loadSrc, err := readSourceFile("pg_load.go")
+	if err != nil {
+		t.Fatalf("lecture pg_load.go impossible : %v", err)
+	}
+	k := strings.Index(loadSrc, "platform_public_vpn_shop")
+	if k < 0 {
+		t.Fatal("ancre platform_public_vpn_shop introuvable dans pg_load.go — le SELECT settings a-t-il été réécrit ?")
+	}
+	selStart := strings.LastIndex(loadSrc[:k], "SELECT ")
+	if selStart < 0 {
+		t.Fatal("SELECT du bloc settings introuvable dans pg_load.go")
+	}
+	fromIdx := strings.Index(loadSrc[selStart:], "FROM settings")
+	if fromIdx < 0 {
+		t.Fatal("FROM settings introuvable dans pg_load.go")
+	}
+	loadCols := splitSQLCols(loadSrc[selStart+len("SELECT ") : selStart+fromIdx])
+
+	// ── Colonnes ÉCRITES : la liste entre INSERT INTO settings ( et VALUES
+	// (même extraction que TestSyncSettingsSQLConsistency).
+	syncSrc, err := readSourceFile("pg_sync.go")
+	if err != nil {
+		t.Fatalf("lecture pg_sync.go impossible : %v", err)
+	}
+	i := strings.Index(syncSrc, "INSERT INTO settings")
+	if i < 0 {
+		t.Fatal("bloc INSERT INTO settings introuvable dans pg_sync.go")
+	}
+	open := strings.Index(syncSrc[i:], "(")
+	valIdx := strings.Index(syncSrc[i:], "VALUES")
+	if open < 0 || valIdx < 0 {
+		t.Fatal("liste de colonnes de l'INSERT settings introuvable")
+	}
+	syncCols := splitSQLCols(syncSrc[i+open+1 : i+valIdx])
+
+	// ── Colonnes GARANTIES : CREATE TABLE settings + tous les ALTER ADD
+	// COLUMN (la migration idempotente du boot).
+	schemaSrc, err := readSourceFile("pg_schema.go")
+	if err != nil {
+		t.Fatalf("lecture pg_schema.go impossible : %v", err)
+	}
+	schemaCols := map[string]bool{}
+	j := strings.Index(schemaSrc, "CREATE TABLE IF NOT EXISTS settings (")
+	if j < 0 {
+		t.Fatal("CREATE TABLE settings introuvable dans pg_schema.go")
+	}
+	end := strings.Index(schemaSrc[j:], "\n                )`")
+	if end < 0 {
+		// Retombade : fermeture générique du littéral.
+		end = strings.Index(schemaSrc[j:], ")`")
+	}
+	for _, line := range strings.Split(schemaSrc[j:j+end], "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" || strings.HasPrefix(line, "--") || strings.HasPrefix(line, "CREATE") || strings.HasPrefix(line, ")") {
+			continue
+		}
+		name := strings.Fields(line)[0]
+		schemaCols[name] = true
+	}
+	addRe := regexp.MustCompile(`ALTER TABLE\s+settings\s+ADD COLUMN IF NOT EXISTS\s+(\w+)`)
+	for _, m := range addRe.FindAllStringSubmatch(schemaSrc, -1) {
+		schemaCols[m[1]] = true
+	}
+	if len(schemaCols) < 10 {
+		t.Fatalf("parseur schéma cassé : seulement %d colonnes settings trouvées", len(schemaCols))
+	}
+
+	// ── Invariant 1 : lecture et écriture décrivent les MÊMES colonnes
+	// (l'UPSERT porte « id » en plus, clé du conflit partagée avec $1).
+	syncSet := map[string]bool{}
+	for _, c := range syncCols {
+		syncSet[c] = true
+	}
+	loadSet := map[string]bool{}
+	for _, c := range loadCols {
+		loadSet[c] = true
+	}
+	delete(syncSet, "id")
+	if len(syncSet) != len(loadSet) {
+		t.Fatalf("RÉGRESSION : %d colonnes lues contre %d écrites — lecture et écriture divergent (cf. incident N°302 : public_vpn_shop vs platform_public_vpn_shop)", len(loadSet), len(syncSet))
+	}
+	for c := range loadSet {
+		if !syncSet[c] {
+			t.Fatalf("RÉGRESSION : colonne %q lue par loadSettings mais absente de l'UPSERT syncSettings — la valeur ne serait jamais persistée", c)
+		}
+	}
+
+	// ── Invariant 2 : TOUTE colonne lue/écrite est garantie par la
+	// migration (CREATE + ALTER ADD) — sinon 42703 au boot.
+	for c := range loadSet {
+		if !schemaCols[c] {
+			t.Fatalf("RÉGRESSION : colonne %q lue par loadSettings mais CRÉÉE PAR AUCUNE migration de pg_schema.go — le boot tombera en 42703 puis en mode dégradé (incident N°302)", c)
+		}
+	}
+	for c := range syncSet {
+		if !schemaCols[c] {
+			t.Fatalf("RÉGRESSION : colonne %q écrite par syncSettings mais CRÉÉE PAR AUCUNE migration de pg_schema.go — chaque flush échouera en rollback (incident N°55)", c)
+		}
+	}
+}
+
+// splitSQLCols — découpe une liste de colonnes SQL (séparées par des
+// virgules, éventuellement multi-lignes avec commentaires « -- ») en noms
+// nus ; les parenthèses d'ouverture/fermeture de la liste sont ignorées.
+func splitSQLCols(s string) []string {
+	cols := []string{}
+	for _, line := range strings.Split(s, "\n") {
+		if c := strings.Index(line, "--"); c >= 0 {
+			line = line[:c]
+		}
+		for _, part := range strings.Split(line, ",") {
+			part = strings.Trim(strings.TrimSpace(part), "() \t")
+			if part != "" {
+				cols = append(cols, part)
+			}
+		}
+	}
+	return cols
+}
+
 // readSourceFile — lit un fichier du package (les tests tournent avec le
 // répertoire du package comme working directory).
 func readSourceFile(name string) (string, error) {

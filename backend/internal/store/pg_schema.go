@@ -804,7 +804,17 @@ func (p *PG) ensureSchema() error {
 		`ALTER TABLE settings ADD COLUMN IF NOT EXISTS wg_vpn_locked BOOLEAN NOT NULL DEFAULT FALSE`,
 		// N°301 — ouverture de la vitrine B2C (compte principal uniquement,
 		// défaut fermé : opt-in strict — l'exploitant décide du canal direct).
-		`ALTER TABLE settings ADD COLUMN IF NOT EXISTS public_vpn_shop BOOLEAN NOT NULL DEFAULT FALSE`,
+		// N°302 — nom aligné sur la famille platform_* (platform_name,
+		// platform_register_open…) ET sur le SELECT de loadSettings : le
+		// déploiement N°301 avait posé « public_vpn_shop » ici et dans
+		// l'UPSERT de syncSettings alors que la lecture attendait
+		// « platform_public_vpn_shop » → 42703 au boot, classé « PG
+		// injoignable » → mode dégradé mémoire seule (incident du
+		// 11/10 10:32). La colonne éphémère née du mauvais nom (créée
+		// par CE migration, valeurs toutes FALSE par défaut, jamais
+		// écrite — la synchro n'a jamais tourné) est nettoyée ici.
+		`ALTER TABLE settings ADD COLUMN IF NOT EXISTS platform_public_vpn_shop BOOLEAN NOT NULL DEFAULT FALSE`,
+		`ALTER TABLE settings DROP COLUMN IF EXISTS public_vpn_shop`,
 		// N°293 — ABONNÉS PPPoE (chantier ⑥ Phase A — cf. model/pppsecret.go)
 		// : registre cloud des secrets d'un pppoe-server EXISTANT (D2), le
 		// transport est agent ppp_* (D1 — zéro cred, zéro port). Unicité PAR

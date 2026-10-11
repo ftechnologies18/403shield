@@ -317,6 +317,22 @@ func mergeRecovered(dst, src *model.DB) int {
 	n += mergeSlice(&dst.ChatConversations, src.ChatConversations, chatConversationSpec.idOf)
 	n += mergeSlice(&dst.ChatMessages, src.ChatMessages, chatMessageSpec.idOf)
 	n += mergeSlice(&dst.Announcements, src.Announcements, announcementSpec.idOf)
+	// N°302 — parité fusion enfin complète : ces cinq collections étaient
+	// chargées au boot (pg_load) et synchronisées (empreintes posées par
+	// rebuildHashes) mais ABSENTES de la fusion — après une fenêtre
+	// dégradée, la récupération les laissait VIDES en mémoire alors que
+	// leurs empreintes existaient : le premier flush du syncreur les
+	// tenait pour « disparues » et SUPPRIMAIT leurs lignes de la base
+	// (scénario exact de l'incident du 11/10 : guérir le schéma à chaud
+	// aurait effacé sites, postes cyber, peers VPN, commandes B2C et
+	// secrets PPP de production — c'est pourquoi le correctif a été
+	// livré par redéploiement, jamais par ALTER manuel). La règle du
+	// commentaire ci-dessus s'applique désormais à la lettre.
+	n += mergeSlice(&dst.Sites, src.Sites, siteSpec.idOf)
+	n += mergeSlice(&dst.CyberPostes, src.CyberPostes, cyberPosteSpec.idOf)
+	n += mergeSlice(&dst.VpnPeers, src.VpnPeers, vpnPeerSpec.idOf)
+	n += mergeSlice(&dst.PublicVpnOrders, src.PublicVpnOrders, publicVpnOrderSpec.idOf)
+	n += mergeSlice(&dst.PppSecrets, src.PppSecrets, pppSecretSpec.idOf)
 
 	// Cartes par compte : complétées, jamais écrasées (la mémoire — réglages
 	// modifiés pendant la fenêtre — garde la main).
