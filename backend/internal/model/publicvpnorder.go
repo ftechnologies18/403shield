@@ -17,13 +17,14 @@
 //     repos (D5-a inchangée), révocation wg-peer.sh remove à chaud.
 //
 // Cycle de vie (machine à états linéaire, jamais de retour arrière) :
-//   pending   — commande créée (vitrine), paiement non confirmé ;
-//   paid      — paiement confirmé (webhook GeniusPay signé, poll de retour,
-//               ou confirmation manuelle de la plateforme) ;
-//   provisioned — peer posé sur wg0 + conf livrée par e-mail + ExpiresAt posé ;
-//   cancelled — paiement échoué / annulation admin / commande stale (>48 h) ;
-//   expired   — terme atteint : le balayage horaire révoque le peer (le
-//               client n'a plus d'accès, la ligne d'historique reste).
+//
+//	pending   — commande créée (vitrine), paiement non confirmé ;
+//	paid      — paiement confirmé (webhook GeniusPay signé, poll de retour,
+//	            ou confirmation manuelle de la plateforme) ;
+//	provisioned — peer posé sur wg0 + conf livrée par e-mail + ExpiresAt posé ;
+//	cancelled — paiement échoué / annulation admin / commande stale (>48 h) ;
+//	expired   — terme atteint : le balayage horaire révoque le peer (le
+//	            client n'a plus d'accès, la ligne d'historique reste).
 //
 // La conf ELLE-MÊME ne vit jamais ici : elle reste sur le VpnPeer lié
 // (PeerID) — coffre unique, discipline D5-a (json:"-" + secretbox côté

@@ -3,15 +3,15 @@
 package store
 
 import (
-        "context"
-        "database/sql"
-        "encoding/json"
-        "fmt"
-        "hash/fnv"
-        "mikcloud/hotspot-api/internal/model"
-        "strconv"
-        "strings"
-        "time"
+	"context"
+	"database/sql"
+	"encoding/json"
+	"fmt"
+	"hash/fnv"
+	"mikcloud/hotspot-api/internal/model"
+	"strconv"
+	"strings"
+	"time"
 )
 
 // maxRowsPerStatement — bornes d'insertion multi-lignes (limite PostgreSQL : 65535 paramètres).
@@ -56,7 +56,7 @@ const syncTimeout = 20 * time.Second
 // les chemins de lecture pollés appellent SyncTables (diff ciblé sur les
 // seules tables marquées sales par le moteur, cf. tables.go).
 func (p *PG) Sync(db *model.DB) (err error) {
-        return p.syncPlan(db, nil)
+	return p.syncPlan(db, nil)
 }
 
 // SyncTables — N°133 — variante CIBLÉE de Sync : seules les tables listées
@@ -70,10 +70,10 @@ func (p *PG) Sync(db *model.DB) (err error) {
 // Une liste vide déclenche le diff complet (défaut sûr : l'appelant qui
 // n'aurait rien su marquer retombe sur le comportement de Sync).
 func (p *PG) SyncTables(db *model.DB, tables map[string]bool) (err error) {
-        if len(tables) == 0 {
-                return p.syncPlan(db, nil)
-        }
-        return p.syncPlan(db, tables)
+	if len(tables) == 0 {
+		return p.syncPlan(db, nil)
+	}
+	return p.syncPlan(db, tables)
 }
 
 // syncStep — UNE table de la synchro différentielle, encapsulée dans une
@@ -90,187 +90,187 @@ func (p *PG) SyncTables(db *model.DB, tables map[string]bool) (err error) {
 // forçait le diff complet au retry : boucle sans issue. Le hachage vit
 // désormais HORS fenêtre (phase 1) — syncTimeout ne borne plus que le SQL.
 type syncStep struct {
-        name string
-        diff func(hashes, pending map[string]map[string]uint64) tableApplier
+	name string
+	diff func(hashes, pending map[string]map[string]uint64) tableApplier
 }
 
 // tableApplier — la partie SQL du plan d'une table, produite par la phase de
 // diff et exécutée dans la fenêtre bornée de la transaction (phase 2).
 type tableApplier interface {
-        apply(ctx context.Context, tx *sql.Tx, delta *syncDelta) error
+	apply(ctx context.Context, tx *sql.Tx, delta *syncDelta) error
 }
 
 // tablePlan — plan concret d'UNE table : lignes à upserter, ids disparus.
 type tablePlan[T any] struct {
-        spec    entitySpec[T]
-        changed []T
-        removed []string
+	spec    entitySpec[T]
+	changed []T
+	removed []string
 }
 
 // apply — upserts multi-lignes puis suppressions, dans la transaction.
 func (pl tablePlan[T]) apply(ctx context.Context, tx *sql.Tx, delta *syncDelta) error {
-        if len(pl.changed) > 0 {
-                if err := upsertRows(ctx, tx, pl.spec, pl.changed); err != nil {
-                        return err
-                }
-                delta.changed += len(pl.changed) // N°71 — volumétrie (comptée si écrite)
-        }
-        if len(pl.removed) > 0 {
-                if err := deleteRows(ctx, tx, pl.spec.table, pl.spec.cols[0], pl.removed); err != nil {
-                        return err
-                }
-                delta.removed += len(pl.removed) // N°71 — volumétrie (comptée si écrite)
-        }
-        return nil
+	if len(pl.changed) > 0 {
+		if err := upsertRows(ctx, tx, pl.spec, pl.changed); err != nil {
+			return err
+		}
+		delta.changed += len(pl.changed) // N°71 — volumétrie (comptée si écrite)
+	}
+	if len(pl.removed) > 0 {
+		if err := deleteRows(ctx, tx, pl.spec.table, pl.spec.cols[0], pl.removed); err != nil {
+			return err
+		}
+		delta.removed += len(pl.removed) // N°71 — volumétrie (comptée si écrite)
+	}
+	return nil
 }
 
 // syncSteps — plan COMPLET de la synchro différentielle (ordre stable,
 // identique à l'ancien Sync monolithique). Les tables non marquées par un
 // SyncTables sont simplement sautées : leurs empreintes sont reportées.
 func syncSteps(db *model.DB) []syncStep {
-        return []syncStep{
-                {accountSpec.table, func(hashes, pending map[string]map[string]uint64) tableApplier {
-                        return diffTable(hashes, pending, accountSpec, db.Accounts)
-                }},
-                {adminSpec.table, func(hashes, pending map[string]map[string]uint64) tableApplier {
-                        return diffTable(hashes, pending, adminSpec, db.Users)
-                }},
-                {routerSpec.table, func(hashes, pending map[string]map[string]uint64) tableApplier {
-                        return diffTable(hashes, pending, routerSpec, db.Routers)
-                }},
-                {profileSpec.table, func(hashes, pending map[string]map[string]uint64) tableApplier {
-                        return diffTable(hashes, pending, profileSpec, db.Profiles)
-                }},
-                {hotspotUserSpec.table, func(hashes, pending map[string]map[string]uint64) tableApplier {
-                        return diffTable(hashes, pending, hotspotUserSpec, db.HotspotUsers)
-                }},
-                {batchSpec.table, func(hashes, pending map[string]map[string]uint64) tableApplier {
-                        return diffTable(hashes, pending, batchSpec, db.Batches)
-                }},
-                {resellerSpec.table, func(hashes, pending map[string]map[string]uint64) tableApplier {
-                        return diffTable(hashes, pending, resellerSpec, db.Resellers)
-                }},
-                {sellSessionSpec.table, func(hashes, pending map[string]map[string]uint64) tableApplier {
-                        return diffTable(hashes, pending, sellSessionSpec, db.SellSessions)
-                }},
-                {passwordResetSpec.table, func(hashes, pending map[string]map[string]uint64) tableApplier {
-                        return diffTable(hashes, pending, passwordResetSpec, db.PasswordResets)
-                }},
-                {chatConversationSpec.table, func(hashes, pending map[string]map[string]uint64) tableApplier {
-                        return diffTable(hashes, pending, chatConversationSpec, db.ChatConversations)
-                }},
-                {chatMessageSpec.table, func(hashes, pending map[string]map[string]uint64) tableApplier {
-                        return diffTable(hashes, pending, chatMessageSpec, db.ChatMessages)
-                }},
-                // N°152 — annonces de la plateforme (collection globale).
-                {announcementSpec.table, func(hashes, pending map[string]map[string]uint64) tableApplier {
-                        return diffTable(hashes, pending, announcementSpec, db.Announcements)
-                }},
-                // N°182 — sites physiques (regroupement de routeurs + surcharge portail).
-                {siteSpec.table, func(hashes, pending map[string]map[string]uint64) tableApplier {
-                        return diffTable(hashes, pending, siteSpec, db.Sites)
-                }},
-                // N°290 — postes du module Cybercafé (registre + pause + code-temps).
-                {cyberPosteSpec.table, func(hashes, pending map[string]map[string]uint64) tableApplier {
-                        return diffTable(hashes, pending, cyberPosteSpec, db.CyberPostes)
-                }},
-                // N°291 — peers VPN vendus (produit WireGuard client final, wg0 VM).
-                {vpnPeerSpec.table, func(hashes, pending map[string]map[string]uint64) tableApplier {
-                        return diffTable(hashes, pending, vpnPeerSpec, db.VpnPeers)
-                }},
-                // N°301 — commandes VPN B2C « vente directe plateforme ».
-                {publicVpnOrderSpec.table, func(hashes, pending map[string]map[string]uint64) tableApplier {
-                        return diffTable(hashes, pending, publicVpnOrderSpec, db.PublicVpnOrders)
-                }},
-                // N°293 — abonnés PPPoE (chantier ⑥ Phase A, unicité PAR ROUTEUR).
-                {pppSecretSpec.table, func(hashes, pending map[string]map[string]uint64) tableApplier {
-                        return diffTable(hashes, pending, pppSecretSpec, db.PppSecrets)
-                }},
-                {transactionSpec.table, func(hashes, pending map[string]map[string]uint64) tableApplier {
-                        return diffTable(hashes, pending, transactionSpec, db.Transactions)
-                }},
-                {sessionSpec.table, func(hashes, pending map[string]map[string]uint64) tableApplier {
-                        return diffTable(hashes, pending, sessionSpec, db.Sessions)
-                }},
-                {deviceSpec.table, func(hashes, pending map[string]map[string]uint64) tableApplier {
-                        return diffTable(hashes, pending, deviceSpec, db.Devices)
-                }},
-                {activitySpec.table, func(hashes, pending map[string]map[string]uint64) tableApplier {
-                        return diffTable(hashes, pending, activitySpec, db.Activity)
-                }},
-                {saleSpec.table, func(hashes, pending map[string]map[string]uint64) tableApplier {
-                        return diffTable(hashes, pending, saleSpec, db.Sales)
-                }},
-                {commandSpec.table, func(hashes, pending map[string]map[string]uint64) tableApplier {
-                        return diffTable(hashes, pending, commandSpec, db.Commands)
-                }},
-                {templateSpec.table, func(hashes, pending map[string]map[string]uint64) tableApplier {
-                        return diffTable(hashes, pending, templateSpec, db.Templates)
-                }},
-                {userLogSpec.table, func(hashes, pending map[string]map[string]uint64) tableApplier {
-                        return diffTable(hashes, pending, userLogSpec, db.UserLogs)
-                }},
-                {ipBindingSpec.table, func(hashes, pending map[string]map[string]uint64) tableApplier {
-                        return diffTable(hashes, pending, ipBindingSpec, db.IPBindings)
-                }},
-                {schedulerTaskSpec.table, func(hashes, pending map[string]map[string]uint64) tableApplier {
-                        return diffTable(hashes, pending, schedulerTaskSpec, db.SchedulerTasks)
-                }},
-                {trafficSpec.table, func(hashes, pending map[string]map[string]uint64) tableApplier {
-                        return diffTable(hashes, pending, trafficSpec, db.Traffic)
-                }},
-                // N°103 — agrégats quotidiens de qualité de ligne (mesure FAI).
-                {lineQualitySpec.table, func(hashes, pending map[string]map[string]uint64) tableApplier {
-                        return diffTable(hashes, pending, lineQualitySpec, db.LineQuality)
-                }},
-                // N°199 — agrégats quotidiens du volume de données servi.
-                {volumeDaySpec.table, func(hashes, pending map[string]map[string]uint64) tableApplier {
-                        return diffTable(hashes, pending, volumeDaySpec, db.VolumeDays)
-                }},
-                // N°200 — journaux mensuels gelés (archives comptables).
-                {monthlyJournalSpec.table, func(hashes, pending map[string]map[string]uint64) tableApplier {
-                        return diffTable(hashes, pending, monthlyJournalSpec, db.MonthlyJournals)
-                }},
-                {notifSettingsSpec.table, func(hashes, pending map[string]map[string]uint64) tableApplier {
-                        notifRows := make([]model.NotificationSettings, 0, len(db.NotifSettings))
-                        for _, v := range db.NotifSettings {
-                                notifRows = append(notifRows, v)
-                        }
-                        return diffTable(hashes, pending, notifSettingsSpec, notifRows)
-                }},
-                {notifLogSpec.table, func(hashes, pending map[string]map[string]uint64) tableApplier {
-                        return diffTable(hashes, pending, notifLogSpec, db.NotifLog)
-                }},
-                {billingRequestSpec.table, func(hashes, pending map[string]map[string]uint64) tableApplier {
-                        return diffTable(hashes, pending, billingRequestSpec, db.BillingRequests)
-                }},
-                {purgeTombstoneSpec.table, func(hashes, pending map[string]map[string]uint64) tableApplier {
-                        return diffTable(hashes, pending, purgeTombstoneSpec, db.PurgeTombstones)
-                }},
-                {joinLinkSpec.table, func(hashes, pending map[string]map[string]uint64) tableApplier {
-                        return diffTable(hashes, pending, joinLinkSpec, db.JoinLinks)
-                }},
-                {registrationRequestSpec.table, func(hashes, pending map[string]map[string]uint64) tableApplier {
-                        return diffTable(hashes, pending, registrationRequestSpec, db.RegistrationRequests)
-                }},
-                {wifiSiteSpec.table, func(hashes, pending map[string]map[string]uint64) tableApplier {
-                        return diffTable(hashes, pending, wifiSiteSpec, db.WifiSites)
-                }},
-                {wifiGuestSpec.table, func(hashes, pending map[string]map[string]uint64) tableApplier {
-                        return diffTable(hashes, pending, wifiGuestSpec, db.WifiGuests)
-                }},
-                {promoEventSpec.table, func(hashes, pending map[string]map[string]uint64) tableApplier {
-                        return diffTable(hashes, pending, promoEventSpec, db.PromoEvents)
-                }},
-                // N°71 — geniuspay_subs intègre la synchro différentielle : la spec
-                // existait (table chargée au boot) mais échappait à Sync — les abonnements
-                // carte créés en mémoire (avec a.store.Save() !) disparaissaient donc au
-                // redémarrage. La clé primaire « uuid » (≠ « id ») est désormais portée
-                // par la machinerie générique (cols[0] = cible ON CONFLICT, cf. upsertRows).
-                {geniusPaySubSpec.table, func(hashes, pending map[string]map[string]uint64) tableApplier {
-                        return diffTable(hashes, pending, geniusPaySubSpec, db.GeniusPaySubs)
-                }},
-        }
+	return []syncStep{
+		{accountSpec.table, func(hashes, pending map[string]map[string]uint64) tableApplier {
+			return diffTable(hashes, pending, accountSpec, db.Accounts)
+		}},
+		{adminSpec.table, func(hashes, pending map[string]map[string]uint64) tableApplier {
+			return diffTable(hashes, pending, adminSpec, db.Users)
+		}},
+		{routerSpec.table, func(hashes, pending map[string]map[string]uint64) tableApplier {
+			return diffTable(hashes, pending, routerSpec, db.Routers)
+		}},
+		{profileSpec.table, func(hashes, pending map[string]map[string]uint64) tableApplier {
+			return diffTable(hashes, pending, profileSpec, db.Profiles)
+		}},
+		{hotspotUserSpec.table, func(hashes, pending map[string]map[string]uint64) tableApplier {
+			return diffTable(hashes, pending, hotspotUserSpec, db.HotspotUsers)
+		}},
+		{batchSpec.table, func(hashes, pending map[string]map[string]uint64) tableApplier {
+			return diffTable(hashes, pending, batchSpec, db.Batches)
+		}},
+		{resellerSpec.table, func(hashes, pending map[string]map[string]uint64) tableApplier {
+			return diffTable(hashes, pending, resellerSpec, db.Resellers)
+		}},
+		{sellSessionSpec.table, func(hashes, pending map[string]map[string]uint64) tableApplier {
+			return diffTable(hashes, pending, sellSessionSpec, db.SellSessions)
+		}},
+		{passwordResetSpec.table, func(hashes, pending map[string]map[string]uint64) tableApplier {
+			return diffTable(hashes, pending, passwordResetSpec, db.PasswordResets)
+		}},
+		{chatConversationSpec.table, func(hashes, pending map[string]map[string]uint64) tableApplier {
+			return diffTable(hashes, pending, chatConversationSpec, db.ChatConversations)
+		}},
+		{chatMessageSpec.table, func(hashes, pending map[string]map[string]uint64) tableApplier {
+			return diffTable(hashes, pending, chatMessageSpec, db.ChatMessages)
+		}},
+		// N°152 — annonces de la plateforme (collection globale).
+		{announcementSpec.table, func(hashes, pending map[string]map[string]uint64) tableApplier {
+			return diffTable(hashes, pending, announcementSpec, db.Announcements)
+		}},
+		// N°182 — sites physiques (regroupement de routeurs + surcharge portail).
+		{siteSpec.table, func(hashes, pending map[string]map[string]uint64) tableApplier {
+			return diffTable(hashes, pending, siteSpec, db.Sites)
+		}},
+		// N°290 — postes du module Cybercafé (registre + pause + code-temps).
+		{cyberPosteSpec.table, func(hashes, pending map[string]map[string]uint64) tableApplier {
+			return diffTable(hashes, pending, cyberPosteSpec, db.CyberPostes)
+		}},
+		// N°291 — peers VPN vendus (produit WireGuard client final, wg0 VM).
+		{vpnPeerSpec.table, func(hashes, pending map[string]map[string]uint64) tableApplier {
+			return diffTable(hashes, pending, vpnPeerSpec, db.VpnPeers)
+		}},
+		// N°301 — commandes VPN B2C « vente directe plateforme ».
+		{publicVpnOrderSpec.table, func(hashes, pending map[string]map[string]uint64) tableApplier {
+			return diffTable(hashes, pending, publicVpnOrderSpec, db.PublicVpnOrders)
+		}},
+		// N°293 — abonnés PPPoE (chantier ⑥ Phase A, unicité PAR ROUTEUR).
+		{pppSecretSpec.table, func(hashes, pending map[string]map[string]uint64) tableApplier {
+			return diffTable(hashes, pending, pppSecretSpec, db.PppSecrets)
+		}},
+		{transactionSpec.table, func(hashes, pending map[string]map[string]uint64) tableApplier {
+			return diffTable(hashes, pending, transactionSpec, db.Transactions)
+		}},
+		{sessionSpec.table, func(hashes, pending map[string]map[string]uint64) tableApplier {
+			return diffTable(hashes, pending, sessionSpec, db.Sessions)
+		}},
+		{deviceSpec.table, func(hashes, pending map[string]map[string]uint64) tableApplier {
+			return diffTable(hashes, pending, deviceSpec, db.Devices)
+		}},
+		{activitySpec.table, func(hashes, pending map[string]map[string]uint64) tableApplier {
+			return diffTable(hashes, pending, activitySpec, db.Activity)
+		}},
+		{saleSpec.table, func(hashes, pending map[string]map[string]uint64) tableApplier {
+			return diffTable(hashes, pending, saleSpec, db.Sales)
+		}},
+		{commandSpec.table, func(hashes, pending map[string]map[string]uint64) tableApplier {
+			return diffTable(hashes, pending, commandSpec, db.Commands)
+		}},
+		{templateSpec.table, func(hashes, pending map[string]map[string]uint64) tableApplier {
+			return diffTable(hashes, pending, templateSpec, db.Templates)
+		}},
+		{userLogSpec.table, func(hashes, pending map[string]map[string]uint64) tableApplier {
+			return diffTable(hashes, pending, userLogSpec, db.UserLogs)
+		}},
+		{ipBindingSpec.table, func(hashes, pending map[string]map[string]uint64) tableApplier {
+			return diffTable(hashes, pending, ipBindingSpec, db.IPBindings)
+		}},
+		{schedulerTaskSpec.table, func(hashes, pending map[string]map[string]uint64) tableApplier {
+			return diffTable(hashes, pending, schedulerTaskSpec, db.SchedulerTasks)
+		}},
+		{trafficSpec.table, func(hashes, pending map[string]map[string]uint64) tableApplier {
+			return diffTable(hashes, pending, trafficSpec, db.Traffic)
+		}},
+		// N°103 — agrégats quotidiens de qualité de ligne (mesure FAI).
+		{lineQualitySpec.table, func(hashes, pending map[string]map[string]uint64) tableApplier {
+			return diffTable(hashes, pending, lineQualitySpec, db.LineQuality)
+		}},
+		// N°199 — agrégats quotidiens du volume de données servi.
+		{volumeDaySpec.table, func(hashes, pending map[string]map[string]uint64) tableApplier {
+			return diffTable(hashes, pending, volumeDaySpec, db.VolumeDays)
+		}},
+		// N°200 — journaux mensuels gelés (archives comptables).
+		{monthlyJournalSpec.table, func(hashes, pending map[string]map[string]uint64) tableApplier {
+			return diffTable(hashes, pending, monthlyJournalSpec, db.MonthlyJournals)
+		}},
+		{notifSettingsSpec.table, func(hashes, pending map[string]map[string]uint64) tableApplier {
+			notifRows := make([]model.NotificationSettings, 0, len(db.NotifSettings))
+			for _, v := range db.NotifSettings {
+				notifRows = append(notifRows, v)
+			}
+			return diffTable(hashes, pending, notifSettingsSpec, notifRows)
+		}},
+		{notifLogSpec.table, func(hashes, pending map[string]map[string]uint64) tableApplier {
+			return diffTable(hashes, pending, notifLogSpec, db.NotifLog)
+		}},
+		{billingRequestSpec.table, func(hashes, pending map[string]map[string]uint64) tableApplier {
+			return diffTable(hashes, pending, billingRequestSpec, db.BillingRequests)
+		}},
+		{purgeTombstoneSpec.table, func(hashes, pending map[string]map[string]uint64) tableApplier {
+			return diffTable(hashes, pending, purgeTombstoneSpec, db.PurgeTombstones)
+		}},
+		{joinLinkSpec.table, func(hashes, pending map[string]map[string]uint64) tableApplier {
+			return diffTable(hashes, pending, joinLinkSpec, db.JoinLinks)
+		}},
+		{registrationRequestSpec.table, func(hashes, pending map[string]map[string]uint64) tableApplier {
+			return diffTable(hashes, pending, registrationRequestSpec, db.RegistrationRequests)
+		}},
+		{wifiSiteSpec.table, func(hashes, pending map[string]map[string]uint64) tableApplier {
+			return diffTable(hashes, pending, wifiSiteSpec, db.WifiSites)
+		}},
+		{wifiGuestSpec.table, func(hashes, pending map[string]map[string]uint64) tableApplier {
+			return diffTable(hashes, pending, wifiGuestSpec, db.WifiGuests)
+		}},
+		{promoEventSpec.table, func(hashes, pending map[string]map[string]uint64) tableApplier {
+			return diffTable(hashes, pending, promoEventSpec, db.PromoEvents)
+		}},
+		// N°71 — geniuspay_subs intègre la synchro différentielle : la spec
+		// existait (table chargée au boot) mais échappait à Sync — les abonnements
+		// carte créés en mémoire (avec a.store.Save() !) disparaissaient donc au
+		// redémarrage. La clé primaire « uuid » (≠ « id ») est désormais portée
+		// par la machinerie générique (cols[0] = cible ON CONFLICT, cf. upsertRows).
+		{geniusPaySubSpec.table, func(hashes, pending map[string]map[string]uint64) tableApplier {
+			return diffTable(hashes, pending, geniusPaySubSpec, db.GeniusPaySubs)
+		}},
+	}
 }
 
 // syncPlan — moteur commun de Sync (diff complet) et SyncTables (diff ciblé) :
@@ -282,100 +282,100 @@ func syncSteps(db *model.DB) []syncStep {
 // ne peut donc pas perdre de cache) ; la volumétrie santé (syncDelta) ne
 // compte que les tables réellement re-hashées.
 func (p *PG) syncPlan(db *model.DB, only map[string]bool) (err error) {
-        // N°71 — instrumentation santé : le defer alimente les compteurs exposés
-        // par GET /api/admin/sync-status (tentatives/succès/échecs, durée,
-        // volumétrie du delta). Aucun verrou supplémentaire sur le chemin
-        // critique : les compteurs ont leur micro-verrou (syncstats.go) et le
-        // syncreur de fond appelle Sync hors du verrou global du store.
-        start := time.Now()
-        delta := syncDelta{}
-        defer func() {
-                if err != nil {
-                        p.stats.recordFailure(err, time.Since(start))
-                } else {
-                        p.stats.recordSuccess(delta, time.Since(start))
-                }
-                // N°181 — carte Santé persistante : point de contrôle best-effort
-                // après CHAQUE résultat (upsert SÉPARÉ, hors transaction
-                // différentielle — la synchro ne peut pas échouer à cause de la
-                // carte qui l'observe).
-                p.writeHealthCheckpoint()
-        }()
-        // N°130 — exclusion avec rebuildHashes (boot/Reload) qui réécrit le
-        // cache d'empreintes : un seul Sync à la fois (le syncreur de fond est
-        // la seule source d'appel en production).
-        p.syncMu.Lock()
-        defer p.syncMu.Unlock()
+	// N°71 — instrumentation santé : le defer alimente les compteurs exposés
+	// par GET /api/admin/sync-status (tentatives/succès/échecs, durée,
+	// volumétrie du delta). Aucun verrou supplémentaire sur le chemin
+	// critique : les compteurs ont leur micro-verrou (syncstats.go) et le
+	// syncreur de fond appelle Sync hors du verrou global du store.
+	start := time.Now()
+	delta := syncDelta{}
+	defer func() {
+		if err != nil {
+			p.stats.recordFailure(err, time.Since(start))
+		} else {
+			p.stats.recordSuccess(delta, time.Since(start))
+		}
+		// N°181 — carte Santé persistante : point de contrôle best-effort
+		// après CHAQUE résultat (upsert SÉPARÉ, hors transaction
+		// différentielle — la synchro ne peut pas échouer à cause de la
+		// carte qui l'observe).
+		p.writeHealthCheckpoint()
+	}()
+	// N°130 — exclusion avec rebuildHashes (boot/Reload) qui réécrit le
+	// cache d'empreintes : un seul Sync à la fois (le syncreur de fond est
+	// la seule source d'appel en production).
+	p.syncMu.Lock()
+	defer p.syncMu.Unlock()
 
-        // N°157 — PHASE 1, diff : empreintes et détection des changements, en
-        // CPU PUR et HORS fenêtre SQL (cf. syncStep). L'incident du 19/09 voyait
-        // le re-hash des ~70 000 commandes agent consommer tout le budget
-        // syncTimeout AVANT le premier upsert ; les plans d'application
-        // collectés ici sont exécutés en phase 2, dans la transaction bornée.
-        //
-        // N°130 — ATOMICITÉ du cache d'empreintes : les empreintes fraîches
-        // sont calculées dans « pending » et ne REMPLACENT p.hashes qu'APRÈS
-        // le Commit. L'ancien code rafraîchissait les empreintes table par
-        // table AVANT le commit : un échec à mi-parcours (rollback) laissait
-        // le cache croire synchronisées des lignes jamais écrites — le diff
-        // suivant ne les revoyait plus (perte silencieuse). Avec la sauvegarde
-        // asynchrone (retry automatique), ce cas serait devenu un bug actif :
-        // le retry repartait d'un cache pollué. Pending→commit→swap garantit
-        // qu'un échec retente les VRAIES différences.
-        pending := make(map[string]map[string]uint64, len(p.hashes)+4)
-        if only != nil {
-                // N°133 — ciblé : les tables non marquées conservent leurs
-                // empreintes (aucun re-hash, aucune écriture pour elles).
-                for t, h := range p.hashes {
-                        pending[t] = h
-                }
-        }
-        appliers := make([]tableApplier, 0, 36)
-        for _, st := range syncSteps(db) {
-                if only != nil && !only[st.name] {
-                        continue
-                }
-                appliers = append(appliers, st.diff(p.hashes, pending))
-        }
+	// N°157 — PHASE 1, diff : empreintes et détection des changements, en
+	// CPU PUR et HORS fenêtre SQL (cf. syncStep). L'incident du 19/09 voyait
+	// le re-hash des ~70 000 commandes agent consommer tout le budget
+	// syncTimeout AVANT le premier upsert ; les plans d'application
+	// collectés ici sont exécutés en phase 2, dans la transaction bornée.
+	//
+	// N°130 — ATOMICITÉ du cache d'empreintes : les empreintes fraîches
+	// sont calculées dans « pending » et ne REMPLACENT p.hashes qu'APRÈS
+	// le Commit. L'ancien code rafraîchissait les empreintes table par
+	// table AVANT le commit : un échec à mi-parcours (rollback) laissait
+	// le cache croire synchronisées des lignes jamais écrites — le diff
+	// suivant ne les revoyait plus (perte silencieuse). Avec la sauvegarde
+	// asynchrone (retry automatique), ce cas serait devenu un bug actif :
+	// le retry repartait d'un cache pollué. Pending→commit→swap garantit
+	// qu'un échec retente les VRAIES différences.
+	pending := make(map[string]map[string]uint64, len(p.hashes)+4)
+	if only != nil {
+		// N°133 — ciblé : les tables non marquées conservent leurs
+		// empreintes (aucun re-hash, aucune écriture pour elles).
+		for t, h := range p.hashes {
+			pending[t] = h
+		}
+	}
+	appliers := make([]tableApplier, 0, 36)
+	for _, st := range syncSteps(db) {
+		if only != nil && !only[st.name] {
+			continue
+		}
+		appliers = append(appliers, st.diff(p.hashes, pending))
+	}
 
-        // N°74 — contexte borné : un Neon gelé ne peut plus tenir la
-        // synchronisation indéfiniment (cf. syncTimeout) — l'incident se
-        // résout en une erreur retournée, retentée par le syncreur.
-        // N°157 — PHASE 2 : la fenêtre syncTimeout ne borne désormais QUE le
-        // SQL (BEGIN + upserts + suppressions + COMMIT), jamais le hachage.
-        ctx, cancel := context.WithTimeout(context.Background(), syncTimeout)
-        defer cancel()
-        tx, err := p.db.BeginTx(ctx, nil)
-        if err != nil {
-                return fmt.Errorf("pg sync (begin) : %w", err)
-        }
-        defer tx.Rollback() // no-op si Commit réussit
+	// N°74 — contexte borné : un Neon gelé ne peut plus tenir la
+	// synchronisation indéfiniment (cf. syncTimeout) — l'incident se
+	// résout en une erreur retournée, retentée par le syncreur.
+	// N°157 — PHASE 2 : la fenêtre syncTimeout ne borne désormais QUE le
+	// SQL (BEGIN + upserts + suppressions + COMMIT), jamais le hachage.
+	ctx, cancel := context.WithTimeout(context.Background(), syncTimeout)
+	defer cancel()
+	tx, err := p.db.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("pg sync (begin) : %w", err)
+	}
+	defer tx.Rollback() // no-op si Commit réussit
 
-        for _, ap := range appliers {
-                if err := ap.apply(ctx, tx, &delta); err != nil {
-                        return err
-                }
-        }
-        // N°210 — settings différentiel : mêmes garanties d'atomicité que les
-        // tables du plan (pending → commit → swap) ; « volatile » dit si le
-        // rafraîchissement borné des colonnes last_tick/last_sweep a voyagé.
-        pendingSettings := map[string]uint64{}
-        volatile, err := p.syncSettings(ctx, tx, db, pendingSettings, &delta)
-        if err != nil {
-                return err
-        }
-        if err := tx.Commit(); err != nil {
-                return fmt.Errorf("pg sync (commit) : %w", err)
-        }
-        // Écriture confirmée : le cache d'empreintes bascule ATOMIQUEMENT sur
-        // les empreintes de CETTE synchronisation (cf. pending ci-dessus).
-        p.hashes = pending
-        p.settingsHashes = pendingSettings
-        if volatile {
-                p.settingsVolatileAt = time.Now().UTC()
-        }
-        p.touchDB() // écriture confirmée — le keep-alive saute ses pings inutiles
-        return nil
+	for _, ap := range appliers {
+		if err := ap.apply(ctx, tx, &delta); err != nil {
+			return err
+		}
+	}
+	// N°210 — settings différentiel : mêmes garanties d'atomicité que les
+	// tables du plan (pending → commit → swap) ; « volatile » dit si le
+	// rafraîchissement borné des colonnes last_tick/last_sweep a voyagé.
+	pendingSettings := map[string]uint64{}
+	volatile, err := p.syncSettings(ctx, tx, db, pendingSettings, &delta)
+	if err != nil {
+		return err
+	}
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("pg sync (commit) : %w", err)
+	}
+	// Écriture confirmée : le cache d'empreintes bascule ATOMIQUEMENT sur
+	// les empreintes de CETTE synchronisation (cf. pending ci-dessus).
+	p.hashes = pending
+	p.settingsHashes = pendingSettings
+	if volatile {
+		p.settingsVolatileAt = time.Now().UTC()
+	}
+	p.touchDB() // écriture confirmée — le keep-alive saute ses pings inutiles
+	return nil
 }
 
 // syncSettings — N°210 — DIFFÉRENTIEL : une ligne settings ne voyage vers
@@ -403,75 +403,75 @@ func (p *PG) syncPlan(db *model.DB, only map[string]bool) (err error) {
 // par compte disparu, re-purgés au prochain boot via loadSettings) tandis
 // que PostgreSQL reste correctement nettoyé.
 func (p *PG) syncSettings(ctx context.Context, tx *sql.Tx, db *model.DB, pending map[string]uint64, delta *syncDelta) (volatile bool, err error) {
-        accExists := map[string]bool{}
-        for i := range db.Accounts {
-                accExists[db.Accounts[i].ID] = true
-        }
-        // Le compte principal est TOUJOURS préservé : il porte la config
-        // plateforme (Settings.Platform — nom du SaaS, inscriptions) même s'il
-        // n'a pas de ligne dans la table accounts (base de mise en service vide).
-        accExists[model.AccountMainID] = true
-        // Élagage mémoire : les réglages d'un compte disparu (rechargés au boot
-        // par loadSettings depuis des lignes orphelines) sont retirés de l'état —
-        // l'upsert ci-dessous ne doit PAS les réécrire.
-        for accID := range db.SettingsByAccount {
-                if !accExists[accID] {
-                        delete(db.SettingsByAccount, accID)
-                }
-        }
-        // Orphelins : toute ligne dont le compte n'existe PLUS dans l'état
-        // mémoire (table accounts) est supprimée — une ligne settings suit le
-        // cycle de vie de son compte (suppression de compte client, retrait du
-        // compte principal…).
-        rows, err := tx.QueryContext(ctx, `SELECT DISTINCT account_id FROM settings WHERE account_id <> ''`)
-        if err != nil {
-                return false, fmt.Errorf("pg sync settings (lecture orphelins) : %w", err)
-        }
-        present := []string{}
-        for rows.Next() {
-                var acc string
-                if err := rows.Scan(&acc); err != nil {
-                        rows.Close()
-                        return false, fmt.Errorf("pg sync settings (scan orphelins) : %w", err)
-                }
-                present = append(present, acc)
-        }
-        rows.Close()
-        if err := rows.Err(); err != nil {
-                return false, fmt.Errorf("pg sync settings (orphelins) : %w", err)
-        }
-        for _, acc := range present {
-                if !accExists[acc] {
-                        if _, err := tx.ExecContext(ctx, `DELETE FROM settings WHERE account_id = $1`, acc); err != nil {
-                                return false, fmt.Errorf("pg sync settings (suppression orphelin %s) : %w", acc, err)
-                        }
-                }
-        }
+	accExists := map[string]bool{}
+	for i := range db.Accounts {
+		accExists[db.Accounts[i].ID] = true
+	}
+	// Le compte principal est TOUJOURS préservé : il porte la config
+	// plateforme (Settings.Platform — nom du SaaS, inscriptions) même s'il
+	// n'a pas de ligne dans la table accounts (base de mise en service vide).
+	accExists[model.AccountMainID] = true
+	// Élagage mémoire : les réglages d'un compte disparu (rechargés au boot
+	// par loadSettings depuis des lignes orphelines) sont retirés de l'état —
+	// l'upsert ci-dessous ne doit PAS les réécrire.
+	for accID := range db.SettingsByAccount {
+		if !accExists[accID] {
+			delete(db.SettingsByAccount, accID)
+		}
+	}
+	// Orphelins : toute ligne dont le compte n'existe PLUS dans l'état
+	// mémoire (table accounts) est supprimée — une ligne settings suit le
+	// cycle de vie de son compte (suppression de compte client, retrait du
+	// compte principal…).
+	rows, err := tx.QueryContext(ctx, `SELECT DISTINCT account_id FROM settings WHERE account_id <> ''`)
+	if err != nil {
+		return false, fmt.Errorf("pg sync settings (lecture orphelins) : %w", err)
+	}
+	present := []string{}
+	for rows.Next() {
+		var acc string
+		if err := rows.Scan(&acc); err != nil {
+			rows.Close()
+			return false, fmt.Errorf("pg sync settings (scan orphelins) : %w", err)
+		}
+		present = append(present, acc)
+	}
+	rows.Close()
+	if err := rows.Err(); err != nil {
+		return false, fmt.Errorf("pg sync settings (orphelins) : %w", err)
+	}
+	for _, acc := range present {
+		if !accExists[acc] {
+			if _, err := tx.ExecContext(ctx, `DELETE FROM settings WHERE account_id = $1`, acc); err != nil {
+				return false, fmt.Errorf("pg sync settings (suppression orphelin %s) : %w", acc, err)
+			}
+		}
+	}
 
-        lastTick := sql.NullTime{Time: db.LastTick, Valid: !db.LastTick.IsZero()}
-        // N°64 — date du balayage périodique, même logique de persistance.
-        lastSweep := sql.NullTime{Time: db.LastSweep, Valid: !db.LastSweep.IsZero()}
-        // N°210 — cadence du rafraîchissement borné des colonnes volatiles : la
-        // fraîcheur boot reste garantie à 5 min près pour quelques centaines
-        // d'octets ; les blobs, eux, ne voyagent QUE si la ligne a changé.
-        volatileDue := time.Now().UTC().Sub(p.settingsVolatileAt) >= settingsVolatileEvery
-        for accID, s := range db.SettingsByAccount {
-                h := settingsRowHash(accID, s)
-                pending[accID] = h
-                if h == p.settingsHashes[accID] {
-                        continue // N°210 — ligne inchangée : plus un octet ne voyage
-                }
-                // I (paramètres plateforme) — la config globale ne vit que sur le
-                // compte principal ; les autres lignes écrivent les valeurs neutres.
-                var platName string
-                var platOpen bool
-                var platKey string
-                var platShop bool
-                if s.Platform != nil {
-                        platName, platOpen, platKey, platShop = s.Platform.Name, s.Platform.RegisterOpen, s.Platform.RegisterKey, s.Platform.PublicVpnShopEnabled()
-                }
-                _, err := tx.ExecContext(ctx,
-                        `INSERT INTO settings (id, account_id, tenant_name, tenant_currency, tenant_timezone, plan_name, plan_max_routers, plan_max_users, wave_link,
+	lastTick := sql.NullTime{Time: db.LastTick, Valid: !db.LastTick.IsZero()}
+	// N°64 — date du balayage périodique, même logique de persistance.
+	lastSweep := sql.NullTime{Time: db.LastSweep, Valid: !db.LastSweep.IsZero()}
+	// N°210 — cadence du rafraîchissement borné des colonnes volatiles : la
+	// fraîcheur boot reste garantie à 5 min près pour quelques centaines
+	// d'octets ; les blobs, eux, ne voyagent QUE si la ligne a changé.
+	volatileDue := time.Now().UTC().Sub(p.settingsVolatileAt) >= settingsVolatileEvery
+	for accID, s := range db.SettingsByAccount {
+		h := settingsRowHash(accID, s)
+		pending[accID] = h
+		if h == p.settingsHashes[accID] {
+			continue // N°210 — ligne inchangée : plus un octet ne voyage
+		}
+		// I (paramètres plateforme) — la config globale ne vit que sur le
+		// compte principal ; les autres lignes écrivent les valeurs neutres.
+		var platName string
+		var platOpen bool
+		var platKey string
+		var platShop bool
+		if s.Platform != nil {
+			platName, platOpen, platKey, platShop = s.Platform.Name, s.Platform.RegisterOpen, s.Platform.RegisterKey, s.Platform.PublicVpnShopEnabled()
+		}
+		_, err := tx.ExecContext(ctx,
+			`INSERT INTO settings (id, account_id, tenant_name, tenant_currency, tenant_timezone, plan_name, plan_max_routers, plan_max_users, wave_link,
                                dns_name, logo_url, banner_url, expiry_policy_mode, expiry_policy_after_days,
                                sub_plan_id, sub_status, sub_period_start, sub_period_end, sub_last_amount,
                                sub_router_slots, sub_last_paid_at, last_tick, last_sweep,
@@ -521,38 +521,38 @@ func (p *PG) syncSettings(ctx context.Context, tx *sql.Tx, db *model.DB, pending
                            wg_vpn_enabled           = EXCLUDED.wg_vpn_enabled,
                            wg_vpn_locked            = EXCLUDED.wg_vpn_locked,
                            public_vpn_shop          = EXCLUDED.public_vpn_shop`,
-                        accID, s.Tenant.Name, s.Tenant.Currency, s.Tenant.Timezone,
-                        s.Plan.Name, s.Plan.MaxRouters, s.Plan.MaxUsers,
-                        s.Tenant.WaveLink, s.Tenant.DNSName, s.Tenant.LogoURL, s.Tenant.BannerURL,
-                        s.Tenant.ExpiryPolicyMode, s.Tenant.ExpiryPolicyAfterDays,
-                        s.Subscription.PlanID, s.Subscription.Status, s.Subscription.PeriodStart,
-                        s.Subscription.PeriodEnd, s.Subscription.LastAmountFcfa,
-                        s.Subscription.RouterSlots, s.Subscription.LastPaidAt, lastTick, lastSweep,
-                        platName, platOpen, platKey, s.ImportAutoEnabled(), s.Tenant.JoinButtonEnabled(), s.Tenant.CyberModuleEnabled(),
-                        s.Tenant.PortalStyle, s.Tenant.PortalWelcome, s.Tenant.PortalPromos, s.Tenant.PortalSocials,
-                        s.Tenant.PortalSlides,
-                        s.Tenant.PortalServices,
-                        s.Tenant.PortalTicker,
-                        s.Tenant.PortalWhatsapp,
-                        s.Tenant.PortalKey, s.Tenant.LogRetentionDaysEffective(), s.Tenant.WgVpnModuleEnabled(), s.Tenant.WgVpnModuleLocked(), platShop)
-                if err != nil {
-                        return false, fmt.Errorf("pg sync settings (%s) : %w", accID, err)
-                }
-                delta.changed++                           // N°71 — volumétrie (comptée si écrite)
-                delta.changedBytes += settingsRowBytes(s) // N°210 — garde-fou egress
-        }
-        if volatileDue {
-                // N°210 — fraîcheur seule : un UPDATE minuscule (aucun blob)
-                // porte last_tick/last_sweep sur toutes les lignes — le contrat
-                // SyncTables (« la fraîcheur du moteur ne dépend pas du ciblage »)
-                // tient, à settingsVolatileEvery près.
-                if _, err := tx.ExecContext(ctx, `UPDATE settings SET last_tick = $1, last_sweep = $2`, lastTick, lastSweep); err != nil {
-                        return false, fmt.Errorf("pg sync settings (tick) : %w", err)
-                }
-                delta.changedBytes += int64(len(pending)) * 64 // garde-fou volumétrie (approx.)
-                volatile = true
-        }
-        return volatile, nil
+			accID, s.Tenant.Name, s.Tenant.Currency, s.Tenant.Timezone,
+			s.Plan.Name, s.Plan.MaxRouters, s.Plan.MaxUsers,
+			s.Tenant.WaveLink, s.Tenant.DNSName, s.Tenant.LogoURL, s.Tenant.BannerURL,
+			s.Tenant.ExpiryPolicyMode, s.Tenant.ExpiryPolicyAfterDays,
+			s.Subscription.PlanID, s.Subscription.Status, s.Subscription.PeriodStart,
+			s.Subscription.PeriodEnd, s.Subscription.LastAmountFcfa,
+			s.Subscription.RouterSlots, s.Subscription.LastPaidAt, lastTick, lastSweep,
+			platName, platOpen, platKey, s.ImportAutoEnabled(), s.Tenant.JoinButtonEnabled(), s.Tenant.CyberModuleEnabled(),
+			s.Tenant.PortalStyle, s.Tenant.PortalWelcome, s.Tenant.PortalPromos, s.Tenant.PortalSocials,
+			s.Tenant.PortalSlides,
+			s.Tenant.PortalServices,
+			s.Tenant.PortalTicker,
+			s.Tenant.PortalWhatsapp,
+			s.Tenant.PortalKey, s.Tenant.LogRetentionDaysEffective(), s.Tenant.WgVpnModuleEnabled(), s.Tenant.WgVpnModuleLocked(), platShop)
+		if err != nil {
+			return false, fmt.Errorf("pg sync settings (%s) : %w", accID, err)
+		}
+		delta.changed++                           // N°71 — volumétrie (comptée si écrite)
+		delta.changedBytes += settingsRowBytes(s) // N°210 — garde-fou egress
+	}
+	if volatileDue {
+		// N°210 — fraîcheur seule : un UPDATE minuscule (aucun blob)
+		// porte last_tick/last_sweep sur toutes les lignes — le contrat
+		// SyncTables (« la fraîcheur du moteur ne dépend pas du ciblage »)
+		// tient, à settingsVolatileEvery près.
+		if _, err := tx.ExecContext(ctx, `UPDATE settings SET last_tick = $1, last_sweep = $2`, lastTick, lastSweep); err != nil {
+			return false, fmt.Errorf("pg sync settings (tick) : %w", err)
+		}
+		delta.changedBytes += int64(len(pending)) * 64 // garde-fou volumétrie (approx.)
+		volatile = true
+	}
+	return volatile, nil
 }
 
 // ---------------------------------------------------------------------------
@@ -584,76 +584,76 @@ const settingsVolatileEvery = 5 * time.Minute
 // branding (logo data: 216 Ko mesuré en production, bannière jusqu'à
 // 500 Ko, slides, promos…) à CHAQUE flush.
 func settingsRowHash(accID string, s model.Settings) uint64 {
-        var platName string
-        var platOpen bool
-        var platKey string
-        var platShop bool
-        if s.Platform != nil {
-                platName, platOpen, platKey, platShop = s.Platform.Name, s.Platform.RegisterOpen, s.Platform.RegisterKey, s.Platform.PublicVpnShopEnabled()
-        }
-        return hashEntity(&[]any{
-                accID,
-                s.Tenant.Name, s.Tenant.Currency, s.Tenant.Timezone,
-                s.Plan.Name, s.Plan.MaxRouters, s.Plan.MaxUsers,
-                s.Tenant.WaveLink, s.Tenant.DNSName, s.Tenant.LogoURL, s.Tenant.BannerURL,
-                s.Tenant.ExpiryPolicyMode, s.Tenant.ExpiryPolicyAfterDays,
-                s.Subscription.PlanID, s.Subscription.Status, s.Subscription.PeriodStart,
-                s.Subscription.PeriodEnd, s.Subscription.LastAmountFcfa,
-                s.Subscription.RouterSlots, s.Subscription.LastPaidAt,
-                platName, platOpen, platKey, s.ImportAutoEnabled(), s.Tenant.JoinButtonEnabled(),
-                // N°291 — correctif : CyberModuleEnabled ENTRE dans l'empreinte
-                // (son absence depuis N°290 faisait que l'activation du module
-                // Cybercafé seule ne répliquait jamais cyber_enabled tant qu'un
-                // autre champ settings ne changeait pas) + WgVpnModuleEnabled
-                // (même discipline dès la naissance).
-                s.Tenant.CyberModuleEnabled(), s.Tenant.WgVpnModuleEnabled(),
-                // N°301 — verrou grossiste + ouverture vitrine B2C : même
-                // discipline dès la naissance (sinon le retrait/ouverture seul
-                // ne répliquerait jamais la colonne).
-                s.Tenant.WgVpnModuleLocked(), platShop,
-                s.Tenant.PortalStyle, s.Tenant.PortalWelcome, s.Tenant.PortalPromos, s.Tenant.PortalSocials,
-                s.Tenant.PortalSlides, s.Tenant.PortalServices, s.Tenant.PortalTicker,
-                s.Tenant.PortalWhatsapp, s.Tenant.PortalKey, s.Tenant.LogRetentionDaysEffective(),
-        })
+	var platName string
+	var platOpen bool
+	var platKey string
+	var platShop bool
+	if s.Platform != nil {
+		platName, platOpen, platKey, platShop = s.Platform.Name, s.Platform.RegisterOpen, s.Platform.RegisterKey, s.Platform.PublicVpnShopEnabled()
+	}
+	return hashEntity(&[]any{
+		accID,
+		s.Tenant.Name, s.Tenant.Currency, s.Tenant.Timezone,
+		s.Plan.Name, s.Plan.MaxRouters, s.Plan.MaxUsers,
+		s.Tenant.WaveLink, s.Tenant.DNSName, s.Tenant.LogoURL, s.Tenant.BannerURL,
+		s.Tenant.ExpiryPolicyMode, s.Tenant.ExpiryPolicyAfterDays,
+		s.Subscription.PlanID, s.Subscription.Status, s.Subscription.PeriodStart,
+		s.Subscription.PeriodEnd, s.Subscription.LastAmountFcfa,
+		s.Subscription.RouterSlots, s.Subscription.LastPaidAt,
+		platName, platOpen, platKey, s.ImportAutoEnabled(), s.Tenant.JoinButtonEnabled(),
+		// N°291 — correctif : CyberModuleEnabled ENTRE dans l'empreinte
+		// (son absence depuis N°290 faisait que l'activation du module
+		// Cybercafé seule ne répliquait jamais cyber_enabled tant qu'un
+		// autre champ settings ne changeait pas) + WgVpnModuleEnabled
+		// (même discipline dès la naissance).
+		s.Tenant.CyberModuleEnabled(), s.Tenant.WgVpnModuleEnabled(),
+		// N°301 — verrou grossiste + ouverture vitrine B2C : même
+		// discipline dès la naissance (sinon le retrait/ouverture seul
+		// ne répliquerait jamais la colonne).
+		s.Tenant.WgVpnModuleLocked(), platShop,
+		s.Tenant.PortalStyle, s.Tenant.PortalWelcome, s.Tenant.PortalPromos, s.Tenant.PortalSocials,
+		s.Tenant.PortalSlides, s.Tenant.PortalServices, s.Tenant.PortalTicker,
+		s.Tenant.PortalWhatsapp, s.Tenant.PortalKey, s.Tenant.LogRetentionDaysEffective(),
+	})
 }
 
 // settingsRowBytes — N°210 — taille approximative du payload SQL de la
 // ligne (les blobs dominent) : garde-fou volumétrie exposé par sync-status.
 func settingsRowBytes(s model.Settings) int64 {
-        return int64(len(s.Tenant.LogoURL)+len(s.Tenant.BannerURL)+len(s.Tenant.PortalPromos)+
-                len(s.Tenant.PortalSocials)+len(s.Tenant.PortalSlides)+len(s.Tenant.PortalServices)+
-                len(s.Tenant.PortalTicker)+len(s.Tenant.PortalWelcome)+len(s.Tenant.PortalWhatsapp)) + 256
+	return int64(len(s.Tenant.LogoURL)+len(s.Tenant.BannerURL)+len(s.Tenant.PortalPromos)+
+		len(s.Tenant.PortalSocials)+len(s.Tenant.PortalSlides)+len(s.Tenant.PortalServices)+
+		len(s.Tenant.PortalTicker)+len(s.Tenant.PortalWelcome)+len(s.Tenant.PortalWhatsapp)) + 256
 }
 
 // entitySpec — description d'une table : colonnes (cols[0] est TOUJOURS la
 // clé primaire — « id » partout, « uuid » pour geniuspay_subs), extraction
 // d'id, lecture et écriture d'une ligne.
 type entitySpec[T any] struct {
-        table  string
-        cols   []string
-        idOf   func(*T) string
-        scan   func(*sql.Rows) (T, error)
-        args   func(*T) []any
-        hashOf func(*T) uint64
+	table  string
+	cols   []string
+	idOf   func(*T) string
+	scan   func(*sql.Rows) (T, error)
+	args   func(*T) []any
+	hashOf func(*T) uint64
 }
 
 // loadInto — SELECT des colonnes explicites → tranche typée.
 
 // loadInto — SELECT des colonnes explicites → tranche typée.
 func loadInto[T any](p *PG, out *[]T, spec entitySpec[T]) error {
-        rows, err := p.db.Query(`SELECT ` + strings.Join(spec.cols, ", ") + ` FROM ` + spec.table)
-        if err != nil {
-                return err
-        }
-        defer rows.Close()
-        for rows.Next() {
-                v, err := spec.scan(rows)
-                if err != nil {
-                        return err
-                }
-                *out = append(*out, v)
-        }
-        return rows.Err()
+	rows, err := p.db.Query(`SELECT ` + strings.Join(spec.cols, ", ") + ` FROM ` + spec.table)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		v, err := spec.scan(rows)
+		if err != nil {
+			return err
+		}
+		*out = append(*out, v)
+	}
+	return rows.Err()
 }
 
 // diffTable — phase CPU du différentiel : détecte ajouts/modifications
@@ -669,34 +669,34 @@ func loadInto[T any](p *PG, out *[]T, spec entitySpec[T]) error {
 // écritures — sur le 0,1 vCPU Render, chaque synchro payait deux fois le
 // prix d'un parc de 3 500+ utilisateurs hotspot (~2,8 s → ~1,4 s).
 func diffTable[T any](hashes, pending map[string]map[string]uint64, spec entitySpec[T], rows []T) tableApplier {
-        cached := hashes[spec.table]
-        if cached == nil {
-                cached = map[string]uint64{}
-        }
+	cached := hashes[spec.table]
+	if cached == nil {
+		cached = map[string]uint64{}
+	}
 
-        seen := make(map[string]struct{}, len(rows))
-        fresh := make(map[string]uint64, len(rows))
-        var changed []T
-        for i := range rows {
-                id := spec.idOf(&rows[i])
-                seen[id] = struct{}{}
-                h := spec.hashOf(&rows[i])
-                fresh[id] = h
-                if old, ok := cached[id]; !ok || old != h {
-                        changed = append(changed, rows[i])
-                }
-        }
-        var removed []string
-        for id := range cached {
-                if _, ok := seen[id]; !ok {
-                        removed = append(removed, id)
-                }
-        }
+	seen := make(map[string]struct{}, len(rows))
+	fresh := make(map[string]uint64, len(rows))
+	var changed []T
+	for i := range rows {
+		id := spec.idOf(&rows[i])
+		seen[id] = struct{}{}
+		h := spec.hashOf(&rows[i])
+		fresh[id] = h
+		if old, ok := cached[id]; !ok || old != h {
+			changed = append(changed, rows[i])
+		}
+	}
+	var removed []string
+	for id := range cached {
+		if _, ok := seen[id]; !ok {
+			removed = append(removed, id)
+		}
+	}
 
-        // Empreintes de CETTE table prêtes pour le commit — Sync les basculera
-        // dans p.hashes uniquement si la transaction entière passe.
-        pending[spec.table] = fresh
-        return tablePlan[T]{spec: spec, changed: changed, removed: removed}
+	// Empreintes de CETTE table prêtes pour le commit — Sync les basculera
+	// dans p.hashes uniquement si la transaction entière passe.
+	pending[spec.table] = fresh
+	return tablePlan[T]{spec: spec, changed: changed, removed: removed}
 }
 
 // hashEntity — empreinte FNV-1a de la sérialisation JSON (l'ordre des champs
@@ -705,13 +705,13 @@ func diffTable[T any](hashes, pending map[string]map[string]uint64, spec entityS
 // hashEntity — empreinte FNV-1a de la sérialisation JSON (l'ordre des champs
 // d'une struct est stable en Go → déterministe).
 func hashEntity[T any](v *T) uint64 {
-        b, err := json.Marshal(v)
-        if err != nil {
-                return 0
-        }
-        h := fnv.New64a()
-        h.Write(b)
-        return h.Sum64()
+	b, err := json.Marshal(v)
+	if err != nil {
+		return 0
+	}
+	h := fnv.New64a()
+	h.Write(b)
+	return h.Sum64()
 }
 
 // deleteRows — DELETE ... WHERE <clé> IN (…) par blocs de 500. La clé est
@@ -720,21 +720,21 @@ func hashEntity[T any](v *T) uint64 {
 // deleteRows — DELETE ... WHERE <clé> IN (…) par blocs de 500. La clé est
 // cols[0] de la spec (« id » partout, « uuid » pour geniuspay_subs — N°71).
 func deleteRows(ctx context.Context, tx *sql.Tx, table, key string, ids []string) error {
-        for start := 0; start < len(ids); start += 500 {
-                end := min(start+500, len(ids))
-                chunk := ids[start:end]
-                ph := make([]string, len(chunk))
-                args := make([]any, len(chunk))
-                for i, id := range chunk {
-                        ph[i] = "$" + strconv.Itoa(i+1)
-                        args[i] = id
-                }
-                q := `DELETE FROM ` + table + ` WHERE ` + key + ` IN (` + strings.Join(ph, ",") + `)`
-                if _, err := tx.ExecContext(ctx, q, args...); err != nil {
-                        return fmt.Errorf("suppression %s : %w", table, err)
-                }
-        }
-        return nil
+	for start := 0; start < len(ids); start += 500 {
+		end := min(start+500, len(ids))
+		chunk := ids[start:end]
+		ph := make([]string, len(chunk))
+		args := make([]any, len(chunk))
+		for i, id := range chunk {
+			ph[i] = "$" + strconv.Itoa(i+1)
+			args[i] = id
+		}
+		q := `DELETE FROM ` + table + ` WHERE ` + key + ` IN (` + strings.Join(ph, ",") + `)`
+		if _, err := tx.ExecContext(ctx, q, args...); err != nil {
+			return fmt.Errorf("suppression %s : %w", table, err)
+		}
+	}
+	return nil
 }
 
 // upsertRows — INSERT ... ON CONFLICT (id) DO UPDATE par blocs multi-lignes
@@ -743,46 +743,46 @@ func deleteRows(ctx context.Context, tx *sql.Tx, table, key string, ids []string
 // upsertRows — INSERT ... ON CONFLICT (id) DO UPDATE par blocs multi-lignes
 // (une seule requête pour jusqu'à 200 lignes → un seul aller-retour réseau).
 func upsertRows[T any](ctx context.Context, tx *sql.Tx, spec entitySpec[T], rows []T) error {
-        n := len(spec.cols)
-        // Clause SET de l'upsert (toutes les colonnes sauf la clé).
-        sets := make([]string, 0, n-1)
-        for _, c := range spec.cols[1:] {
-                sets = append(sets, c+` = EXCLUDED.`+c)
-        }
-        setClause := strings.Join(sets, ", ")
+	n := len(spec.cols)
+	// Clause SET de l'upsert (toutes les colonnes sauf la clé).
+	sets := make([]string, 0, n-1)
+	for _, c := range spec.cols[1:] {
+		sets = append(sets, c+` = EXCLUDED.`+c)
+	}
+	setClause := strings.Join(sets, ", ")
 
-        for start := 0; start < len(rows); start += maxRowsPerStatement {
-                end := min(start+maxRowsPerStatement, len(rows))
-                chunk := rows[start:end]
+	for start := 0; start < len(rows); start += maxRowsPerStatement {
+		end := min(start+maxRowsPerStatement, len(rows))
+		chunk := rows[start:end]
 
-                var sb strings.Builder
-                args := make([]any, 0, len(chunk)*n)
-                k := 0
-                sb.WriteString(`INSERT INTO ` + spec.table + ` (` + strings.Join(spec.cols, ", ") + `) VALUES `)
-                for i := range chunk {
-                        if i > 0 {
-                                sb.WriteByte(',')
-                        }
-                        sb.WriteByte('(')
-                        for j := 0; j < n; j++ {
-                                if j > 0 {
-                                        sb.WriteByte(',')
-                                }
-                                k++
-                                sb.WriteString("$" + strconv.Itoa(k))
-                        }
-                        sb.WriteByte(')')
-                        args = append(args, spec.args(&chunk[i])...)
-                }
-                // N°71 — cible de conflit = cols[0] (clé primaire : « id » pour 28
-                // tables, « uuid » pour geniuspay_subs) au lieu du « id » en dur.
-                sb.WriteString(` ON CONFLICT (` + spec.cols[0] + `) DO UPDATE SET ` + setClause)
+		var sb strings.Builder
+		args := make([]any, 0, len(chunk)*n)
+		k := 0
+		sb.WriteString(`INSERT INTO ` + spec.table + ` (` + strings.Join(spec.cols, ", ") + `) VALUES `)
+		for i := range chunk {
+			if i > 0 {
+				sb.WriteByte(',')
+			}
+			sb.WriteByte('(')
+			for j := 0; j < n; j++ {
+				if j > 0 {
+					sb.WriteByte(',')
+				}
+				k++
+				sb.WriteString("$" + strconv.Itoa(k))
+			}
+			sb.WriteByte(')')
+			args = append(args, spec.args(&chunk[i])...)
+		}
+		// N°71 — cible de conflit = cols[0] (clé primaire : « id » pour 28
+		// tables, « uuid » pour geniuspay_subs) au lieu du « id » en dur.
+		sb.WriteString(` ON CONFLICT (` + spec.cols[0] + `) DO UPDATE SET ` + setClause)
 
-                if _, err := tx.ExecContext(ctx, sb.String(), args...); err != nil {
-                        return fmt.Errorf("upsert %s : %w", spec.table, err)
-                }
-        }
-        return nil
+		if _, err := tx.ExecContext(ctx, sb.String(), args...); err != nil {
+			return fmt.Errorf("upsert %s : %w", spec.table, err)
+		}
+	}
+	return nil
 }
 
 // ---------------------------------------------------------------------------
@@ -798,76 +798,76 @@ func upsertRows[T any](ctx context.Context, tx *sql.Tx, spec entitySpec[T], rows
 // peut recalibrer le cache pendant que le syncreur de fond synchronise l'état
 // précédent ; l'exclusion évite la course sur p.hashes.
 func (p *PG) rebuildHashes(db *model.DB) {
-        p.syncMu.Lock()
-        defer p.syncMu.Unlock()
-        p.hashes = map[string]map[string]uint64{
-                accountSpec.table:             hashRows(db.Accounts, accountSpec),
-                adminSpec.table:               hashRows(db.Users, adminSpec),
-                routerSpec.table:              hashRows(db.Routers, routerSpec),
-                profileSpec.table:             hashRows(db.Profiles, profileSpec),
-                hotspotUserSpec.table:         hashRows(db.HotspotUsers, hotspotUserSpec),
-                batchSpec.table:               hashRows(db.Batches, batchSpec),
-                resellerSpec.table:            hashRows(db.Resellers, resellerSpec),
-                sellSessionSpec.table:         hashRows(db.SellSessions, sellSessionSpec),
-                passwordResetSpec.table:       hashRows(db.PasswordResets, passwordResetSpec),
-                transactionSpec.table:         hashRows(db.Transactions, transactionSpec),
-                sessionSpec.table:             hashRows(db.Sessions, sessionSpec),
-                activitySpec.table:            hashRows(db.Activity, activitySpec),
-                saleSpec.table:                hashRows(db.Sales, saleSpec),
-                commandSpec.table:             hashRows(db.Commands, commandSpec),
-                templateSpec.table:            hashRows(db.Templates, templateSpec),
-                userLogSpec.table:             hashRows(db.UserLogs, userLogSpec),
-                ipBindingSpec.table:           hashRows(db.IPBindings, ipBindingSpec),
-                schedulerTaskSpec.table:       hashRows(db.SchedulerTasks, schedulerTaskSpec),
-                trafficSpec.table:             hashRows(db.Traffic, trafficSpec),
-                lineQualitySpec.table:         hashRows(db.LineQuality, lineQualitySpec),
-                volumeDaySpec.table:           hashRows(db.VolumeDays, volumeDaySpec),
-                monthlyJournalSpec.table:      hashRows(db.MonthlyJournals, monthlyJournalSpec),
-                notifLogSpec.table:            hashRows(db.NotifLog, notifLogSpec),
-                billingRequestSpec.table:      hashRows(db.BillingRequests, billingRequestSpec),
-                purgeTombstoneSpec.table:      hashRows(db.PurgeTombstones, purgeTombstoneSpec),
-                joinLinkSpec.table:            hashRows(db.JoinLinks, joinLinkSpec),
-                registrationRequestSpec.table: hashRows(db.RegistrationRequests, registrationRequestSpec),
-                wifiSiteSpec.table:            hashRows(db.WifiSites, wifiSiteSpec),
-                wifiGuestSpec.table:           hashRows(db.WifiGuests, wifiGuestSpec),
-                promoEventSpec.table:          hashRows(db.PromoEvents, promoEventSpec),
-                geniusPaySubSpec.table:        hashRows(db.GeniusPaySubs, geniusPaySubSpec),
-                // N°133 — parité avec Sync : les tables chat et devices manquaient au
-                // cache reconstruit au boot — le premier flush les considérait
-                // intégralement « changées » (empreintes absentes) et re-upsertait
-                // toutes leurs lignes pour rien. Elles sont chargées au boot comme
-                // les autres : leurs empreintes sont posées comme les autres.
-                chatConversationSpec.table: hashRows(db.ChatConversations, chatConversationSpec),
-                chatMessageSpec.table:      hashRows(db.ChatMessages, chatMessageSpec),
-                announcementSpec.table:     hashRows(db.Announcements, announcementSpec),
-                siteSpec.table:             hashRows(db.Sites, siteSpec),
-                deviceSpec.table:           hashRows(db.Devices, deviceSpec),
-                cyberPosteSpec.table:       hashRows(db.CyberPostes, cyberPosteSpec),
-                vpnPeerSpec.table:          hashRows(db.VpnPeers, vpnPeerSpec),
-                publicVpnOrderSpec.table:   hashRows(db.PublicVpnOrders, publicVpnOrderSpec),
-                pppSecretSpec.table:        hashRows(db.PppSecrets, pppSecretSpec),
-        }
-        notifRows := make([]model.NotificationSettings, 0, len(db.NotifSettings))
-        for _, v := range db.NotifSettings {
-                notifRows = append(notifRows, v)
-        }
-        p.hashes[notifSettingsSpec.table] = hashRows(notifRows, notifSettingsSpec)
-        // N°210 — parité settings : sans empreintes au boot, le premier flush
-        // réécrirait toutes les lignes pour rien (même logique que la parité
-        // chat/devices du N°133).
-        p.settingsHashes = make(map[string]uint64, len(db.SettingsByAccount))
-        for accID, s := range db.SettingsByAccount {
-                p.settingsHashes[accID] = settingsRowHash(accID, s)
-        }
+	p.syncMu.Lock()
+	defer p.syncMu.Unlock()
+	p.hashes = map[string]map[string]uint64{
+		accountSpec.table:             hashRows(db.Accounts, accountSpec),
+		adminSpec.table:               hashRows(db.Users, adminSpec),
+		routerSpec.table:              hashRows(db.Routers, routerSpec),
+		profileSpec.table:             hashRows(db.Profiles, profileSpec),
+		hotspotUserSpec.table:         hashRows(db.HotspotUsers, hotspotUserSpec),
+		batchSpec.table:               hashRows(db.Batches, batchSpec),
+		resellerSpec.table:            hashRows(db.Resellers, resellerSpec),
+		sellSessionSpec.table:         hashRows(db.SellSessions, sellSessionSpec),
+		passwordResetSpec.table:       hashRows(db.PasswordResets, passwordResetSpec),
+		transactionSpec.table:         hashRows(db.Transactions, transactionSpec),
+		sessionSpec.table:             hashRows(db.Sessions, sessionSpec),
+		activitySpec.table:            hashRows(db.Activity, activitySpec),
+		saleSpec.table:                hashRows(db.Sales, saleSpec),
+		commandSpec.table:             hashRows(db.Commands, commandSpec),
+		templateSpec.table:            hashRows(db.Templates, templateSpec),
+		userLogSpec.table:             hashRows(db.UserLogs, userLogSpec),
+		ipBindingSpec.table:           hashRows(db.IPBindings, ipBindingSpec),
+		schedulerTaskSpec.table:       hashRows(db.SchedulerTasks, schedulerTaskSpec),
+		trafficSpec.table:             hashRows(db.Traffic, trafficSpec),
+		lineQualitySpec.table:         hashRows(db.LineQuality, lineQualitySpec),
+		volumeDaySpec.table:           hashRows(db.VolumeDays, volumeDaySpec),
+		monthlyJournalSpec.table:      hashRows(db.MonthlyJournals, monthlyJournalSpec),
+		notifLogSpec.table:            hashRows(db.NotifLog, notifLogSpec),
+		billingRequestSpec.table:      hashRows(db.BillingRequests, billingRequestSpec),
+		purgeTombstoneSpec.table:      hashRows(db.PurgeTombstones, purgeTombstoneSpec),
+		joinLinkSpec.table:            hashRows(db.JoinLinks, joinLinkSpec),
+		registrationRequestSpec.table: hashRows(db.RegistrationRequests, registrationRequestSpec),
+		wifiSiteSpec.table:            hashRows(db.WifiSites, wifiSiteSpec),
+		wifiGuestSpec.table:           hashRows(db.WifiGuests, wifiGuestSpec),
+		promoEventSpec.table:          hashRows(db.PromoEvents, promoEventSpec),
+		geniusPaySubSpec.table:        hashRows(db.GeniusPaySubs, geniusPaySubSpec),
+		// N°133 — parité avec Sync : les tables chat et devices manquaient au
+		// cache reconstruit au boot — le premier flush les considérait
+		// intégralement « changées » (empreintes absentes) et re-upsertait
+		// toutes leurs lignes pour rien. Elles sont chargées au boot comme
+		// les autres : leurs empreintes sont posées comme les autres.
+		chatConversationSpec.table: hashRows(db.ChatConversations, chatConversationSpec),
+		chatMessageSpec.table:      hashRows(db.ChatMessages, chatMessageSpec),
+		announcementSpec.table:     hashRows(db.Announcements, announcementSpec),
+		siteSpec.table:             hashRows(db.Sites, siteSpec),
+		deviceSpec.table:           hashRows(db.Devices, deviceSpec),
+		cyberPosteSpec.table:       hashRows(db.CyberPostes, cyberPosteSpec),
+		vpnPeerSpec.table:          hashRows(db.VpnPeers, vpnPeerSpec),
+		publicVpnOrderSpec.table:   hashRows(db.PublicVpnOrders, publicVpnOrderSpec),
+		pppSecretSpec.table:        hashRows(db.PppSecrets, pppSecretSpec),
+	}
+	notifRows := make([]model.NotificationSettings, 0, len(db.NotifSettings))
+	for _, v := range db.NotifSettings {
+		notifRows = append(notifRows, v)
+	}
+	p.hashes[notifSettingsSpec.table] = hashRows(notifRows, notifSettingsSpec)
+	// N°210 — parité settings : sans empreintes au boot, le premier flush
+	// réécrirait toutes les lignes pour rien (même logique que la parité
+	// chat/devices du N°133).
+	p.settingsHashes = make(map[string]uint64, len(db.SettingsByAccount))
+	for accID, s := range db.SettingsByAccount {
+		p.settingsHashes[accID] = settingsRowHash(accID, s)
+	}
 }
 
 // hashRows — empreintes indexées par id.
 
 // hashRows — empreintes indexées par id.
 func hashRows[T any](rows []T, spec entitySpec[T]) map[string]uint64 {
-        m := make(map[string]uint64, len(rows))
-        for i := range rows {
-                m[spec.idOf(&rows[i])] = spec.hashOf(&rows[i])
-        }
-        return m
+	m := make(map[string]uint64, len(rows))
+	for i := range rows {
+		m[spec.idOf(&rows[i])] = spec.hashOf(&rows[i])
+	}
+	return m
 }

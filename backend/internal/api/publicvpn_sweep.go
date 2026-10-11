@@ -2,14 +2,14 @@
 // directe » : le seul filet qui garantit les promesses de la vitrine SANS
 // personne devant une console.
 //
-//   1. TERMES : chaque commande « provisioned » dont ExpiresAt est franchi
-//      perd son peer (wg-peer.sh remove à chaud — le client n'a plus
-//      d'accès, la ligne passe « expired », l'historique reste).
-//   2. STALE : une commande « pending » non réglée depuis 48 h est annulée
-//      (les liens de paiement GeniusPay expirent de toute façon sous 24 h).
-//   3. RETRY : chaque commande « paid » non provisionnée (échec transitoire
-//      wg-mini, pool épuisé au moment du paiement…) est REJOUÉE — la
-//      promesse « provisioning auto » ne se perd jamais.
+//  1. TERMES : chaque commande « provisioned » dont ExpiresAt est franchi
+//     perd son peer (wg-peer.sh remove à chaud — le client n'a plus
+//     d'accès, la ligne passe « expired », l'historique reste).
+//  2. STALE : une commande « pending » non réglée depuis 48 h est annulée
+//     (les liens de paiement GeniusPay expirent de toute façon sous 24 h).
+//  3. RETRY : chaque commande « paid » non provisionnée (échec transitoire
+//     wg-mini, pool épuisé au moment du paiement…) est REJOUÉE — la
+//     promesse « provisioning auto » ne se perd jamais.
 //
 // Patron des balayages existants (retention.go N°64, chat_sweep.go N°129,
 // announcement_sweep.go N°165) : goroutine lancée par main.go, rattrapage
