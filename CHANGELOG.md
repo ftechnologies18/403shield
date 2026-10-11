@@ -6,6 +6,82 @@ aux dates de livraison — le déploiement est continu : chaque push `main` pass
 la CI puis se déploie automatiquement (frontend Vercel, backend Oracle E5
 depuis le T2 N°266 — Render suspendu N°303).
 
+## 2026-10-12 — N°306 — **DOCS /GUIDES/GUIDES : captures des 6 guides plateforme (17 écrans console super-admin) + correction d'exactitude « page de maintenance »**
+
+### Périmètre livré (suite directe de N°304 — la lacune identifiée « captures à venir » ; renuméroté N°305 → N°306 : collision de registre avec la livraison « correction du contact propriétaire », arrivée sur main pendant la session de captures)
+- **Session de captures production 2026-10-12** sur le compte super-admin
+  dédié transmis par l'exploitant (username `admin`, rôle platform_admin —
+  celui du 04/10, marqué « Vous » dans la vue Équipe) : 17 PNG desktop
+  1440×900 dans `frontend/public/docs/plateforme/` — cockpit (KPIs,
+  abonnements, croissance), comptes SaaS (table + actions),
+  impersonation (bannière « Console de APAH SERVICE — SESSION SUPPORT » +
+  lien de retour), flotte (5 routeurs Agent, RouterOS 7.24.5, aucun delta
+  de MAJ), VPN ×3 onglets (Aperçu & comptes / Peers / Commandes B2C — pool
+  wg0 0/253, vitrine fermée), conversations (filtres + rétention),
+  annonces (liste + dialogue de rédaction), demandes de renouvellement,
+  journal global, équipe, paramètres ×3 onglets (Général / Sécurité /
+  Maintenance), menu profil avec l'entrée « Guides plateforme ».
+- **Intégration dans les 6 guides** : emplacements « capture à venir »
+  remplacés, étapes enrichies au passage — cockpit +2 étapes (vue Comptes
+  SaaS ; « Gardez les guides sous la main » = menu profil/point d'entrée
+  N°304), VPN +1 étape (onglet Peers), support +1 étape (formulaire de
+  diffusion, bouton inactif sans titre), réglages +2 étapes (Sécurité :
+  mot de passe admin + 2FA ; Maintenance : rechargement base + santé de
+  la persistance + purge). 17 attachements `cap()` au total.
+- **Correction d'exactitude (N°304 approximatif)** : le guide « Journal,
+  équipe & paramètres plateforme » décrivait une « page de maintenance »
+  activable — CETTE FONCTIONNALITÉ N'EXISTE PAS dans le code (seul le
+  niveau d'annonce « Maintenance » existe, i18n ann.level.maintenance).
+  Textes corrigés (quoi/reçoit/étapes/piège) : l'onglet Maintenance des
+  paramètres = base de données (rechargement), santé de la persistance
+  (synchro, deltas, agents, R2) et purge des données ; la vraie procédure
+  de maintenance passe par une annonce de niveau Maintenance. Piège
+  reformulé en conséquence.
+
+### Sécurité de la session (lecture seule stricte)
+- Navigation de vues uniquement ; impersonation du compte APAH SERVICE
+  OUVERTE puis quittée immédiatement (geste support prévu par l'app,
+  tracé au journal, aucun effet de bord) ; dialogue « Diffuser une
+  annonce » ouvert puis fermé sans saisir (bouton de diffusion inactif
+  sans titre — impossible de publier par accident) ; aucun geste
+  destructeur (pas de suspension, pas d'octroi, pas de purge, pas de
+  modification de paramètres).
+- Vérification VLM anti-secret sur les 17 captures (3 lots) : aucune IP
+  publique, aucun mot de passe, token ou clé API, aucun e-mail personnel
+  visible — données affichées = métier B2B (noms de comptes, usage,
+  revenus), cohérentes avec les 52 captures publiques N°304.
+- Prod vérifiée avant/après : backend `ok:true` (sweep 22:35:16Z
+  inchangé par la session), 0 erreur console navigateur.
+- Incident de connexion documenté : premier mot de passe transmis refusé
+  (« Identifiants invalides ») — cause identifiée par lecture SEULE de la
+  réplique Supabase : 3 lignes `username='admin'` coexistent dans
+  admin_users (29/08 role admin, 04/10 platform_admin, 11/10 admin) alors
+  que handleLogin résout le PREMIER match du heap ; le second mot de passe
+  transmis a fonctionné (compte du 04/10). Hygiène recommandée à
+  l'exploitant : purger les doublons `admin` historiques depuis la vue
+  Équipe plateforme (bouton Supprimer) — un username devrait rester
+  unique.
+
+### Vérifications
+- Lint ✓, typecheck (tsgo) ✓ ; dev local 3100 : routes 200 (hub public,
+  /docs/guides/plateforme, capture statique). Gate anonyme « Connexion
+  requise » intacte ; session admin simulée (store zustand) → hub privé
+  avec bandeau « Section plateforme (privée) » + 6 guides ; guide cockpit
+  4 captures chargées et légendées (VLM), guide réglages 5 figures ; hub
+  public SANS aucune mention du volet (anti-régression N°304) ; mobile
+  390 : capture pleine largeur sans débordement (VLM) ; 0 erreur console.
+- Aucun schéma DB → rien à synchroniser. Frontend only : Vercel déploie
+  au push (CI verte requise).
+
+### Suites exploitant
+- Doublons `admin` (29/08 + fantôme 11/10 dans la réplique) : purge
+  recommandée via la vue Équipe plateforme — geste exploitant.
+- Captures terrain restantes de N°304 : page /wifi/<slug> réelle + écran
+  portail client final (à planifier en session terrain).
+- La confidentialité du volet reste au niveau navigation/réseau (N°304) :
+  si une confidentialité cryptographique des captures est exigée un
+  jour, évolution via API authentifiée.
+
 ## 2026-10-12 — N°304 — **DOCS /GUIDES/GUIDES : 36 guides d'exploitation illustrés (30 publics + 6 plateforme PRIVÉS, entrée unique menu profil) — captures production lerobuste/ProMax WIFI**
 
 ### Périmètre livré (plan Tâche 4 validé par l'exploitant, avec sa modification)
