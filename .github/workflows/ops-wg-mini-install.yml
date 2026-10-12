@@ -2,11 +2,17 @@ name: ops-wg-mini-install
 
 # N°291 — Installation one-shot du mini-service wg-mini sur la VM Oracle
 # (décision D3-a de N°289, recette deploy/oracle/wg-mini/README.md §8).
+# N°308 — le workflow devient AUSSI la voie canonique de MISE À JOUR (hot
+# upgrade v2, ~1 s) : le binaire est reconstruit depuis main, le service est
+# RESTARTÉ (un `enable --now` seul ne redémarre PAS un service déjà actif —
+# sans restart, le run serait vert pendant que le processus v1 continue de
+# répondre depuis son inode orphelin) et la version est PROUVÉE par un ping
+# SIGNÉ qui doit répondre {"version":"v2"} — sinon le run est ROUGE.
 #
-# Déclenchement : workflow_dispatch UNIQUEMENT (installation volontaire).
-# Idempotent : rejouable sans danger (le secret existant est CONSERVÉ,
-# le binaire et l'unité sont réinstallés, l'env backend n'est touché que
-# si WG_MINI_* y manque — pas de redémarrage backend inutile).
+# Déclenchement : workflow_dispatch UNIQUEMENT (installation/upgrade
+# volontaires). Idempotent : rejouable sans danger (le secret existant est
+# CONSERVÉ, le binaire et l'unité sont réinstallés, l'env backend n'est
+# touchée que si WG_MINI_* y manque — pas de redémarrage backend inutile).
 #
 # Ce que fait ce workflow :
 #   1. build statique wg-mini (GOARCH = variable repo ORACLE_GOARCH —
@@ -16,15 +22,20 @@ name: ops-wg-mini-install
 #   3. scp binaire + unité systemd → installation (755 / 644) ;
 #   4. /etc/mikcloud/wg-mini.env : CRÉÉ avec WG_MINI_SECRET aléatoire
 #      (openssl rand -hex 32) UNIQUEMENT s'il n'existe pas — 600 root ;
-#   5. systemd enable --now + vérifications de santé (port 127.0.0.1:4020,
+#   5. systemd enable --now + RESTART effectif (hot upgrade ~1 s, peers wg0
+#      intacts — wg-mini n'est qu'un socket de contrôle) ;
+#   6. PREUVE DE VERSION (N°308) : ping SIGNÉ HMAC → la réponse doit porter
+#      "version":"v2" — c'est LE juge de paix (le ping SANS signature ne
+#      donne que 401, il ne prouve rien sur la version) ;
+#   7. vérifications de santé réseau (port 127.0.0.1:4020 UNIQUEMENT,
 #      /v1/ping sans signature = 401 attendu) ;
-#   6. WG_MINI_URL + WG_MINI_SECRET ajoutés à /etc/mikcloud/mikcloud.env
+#   8. WG_MINI_URL + WG_MINI_SECRET ajoutés à /etc/mikcloud/mikcloud.env
 #      s'ils y manquent (secret PARTAGÉ avec le mini) → redémarrage du
 #      backend CONSCIENT DU TRANSPORT (docker --network host ou systemd,
 #      miroir deploy-oracle.yml) + healthcheck patient (Load ~1 min) ;
-#   7. smoke test HMAC bout en bout (add vpn-smoketest → vérification →
+#   9. smoke test HMAC bout en bout (add vpn-smoketest → vérification →
 #      remove) — la conf générée n'est JAMAIS affichée ;
-#   8. preuve que le PROCESS backend porte WG_MINI_SECRET (/proc environ,
+#  10. preuve que le PROCESS backend porte WG_MINI_SECRET (/proc environ,
 #      vérification booléenne — aucune valeur échoée).
 #
 # Secrets requis (déjà posés — cf. deploy-oracle.yml) : ORACLE_HOST,
@@ -125,11 +136,35 @@ jobs:
           fi
           sudo chmod 600 /etc/mikcloud/wg-mini.env
 
-          echo "═══ 4. systemd enable --now ═══"
+          echo "═══ 4. systemd enable --now + RESTART (hot upgrade) ═══"
           sudo systemctl daemon-reload
           sudo systemctl enable --now wg-mini
+          # N°308 — enable --now ne REDÉMARRE PAS un service déjà actif :
+          # sans restart, le binaire v2 resterait posé sur disque pendant que
+          # le processus v1 (inode orphelin) continuerait de répondre — run
+          # vert trompeur. restart ≈ 1 s, les peers du wg0 continuent de
+          # router (aucun état destructif : wg-mini n'est qu'un socket local).
+          sudo systemctl restart wg-mini
           sleep 1
           systemctl is-active wg-mini
+
+          echo "═══ 4bis. PREUVE DE VERSION (N°308) — ping SIGNÉ doit répondre v2 ═══"
+          S=$(sudo grep -oP '(?<=^WG_MINI_SECRET=).*' /etc/mikcloud/wg-mini.env)
+          TS=$(date +%s)
+          # signature sur "<ts>.<corps>" — corps VIDE pour un GET (même
+          # schéma que le smoke test §9 et que wg-mini.go authorized()).
+          SIG=$(printf '%s.%s' "$TS" '' | openssl dgst -sha256 -hmac "$S" -hex | sed 's/^.* //')
+          if ! PING=$(curl -s -m 10 http://127.0.0.1:4020/v1/ping \
+               -H "X-WGMini-Timestamp: $TS" -H "X-WGMini-Signature: $SIG"); then
+            echo "ERREUR: ping signé injoignable (wg-mini down après restart ?)" >&2
+            sudo journalctl -u wg-mini -n 15 --no-pager >&2
+            exit 1
+          fi
+          echo "ping signé → $PING"
+          printf '%s' "$PING" | grep -q '"version":"v2"' \
+            || { echo "ERREUR: v2 NON PROUVÉ (réponse ci-dessus) — l'upgrade n'est PAS terminé, le run est ROUGE" >&2; exit 1; }
+          echo "wg-mini v2 EN SERVICE ✓"
+          unset S
 
           echo "═══ 5. santé réseau (127.0.0.1:4020 UNIQUEMENT) ═══"
           if sudo ss -ltnp | grep -q ':4020 '; then sudo ss -ltnp | grep ':4020 ' | sed 's/users:.*//'; else echo "ERREUR: rien n'écoute sur 4020" >&2; sudo journalctl -u wg-mini -n 20 --no-pager >&2; exit 1; fi

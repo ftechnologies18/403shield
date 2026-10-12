@@ -84,8 +84,30 @@ curl -s -X POST http://127.0.0.1:4020/v1/add -H "Content-Type: application/json"
 
 ## Mise à jour (hot upgrade)
 
-`wg-mini` n'engendre AUCUNE re-dépense : recompiler → `sudo install -m 755
-wg-mini /usr/local/bin/wg-mini && sudo systemctl restart wg-mini` (~1 s).
+`wg-mini` n'engendre AUCUNE re-dépense. **Voie recommandée (N°308)** : le
+workflow `ops-wg-mini-install` du dépôt (GitHub → Actions → Run workflow,
+branche main, ~2 min de run) — il reconstruit depuis main, pose le binaire,
+**RESTART le service** et **PROUVE la version** par un ping signé
+(`{"version":"v2"}` attendu — run ROUGE sinon).
+
+⚠️ Piège documenté (N°308) : un simple `systemctl enable --now` ne
+redémarre PAS un service déjà actif — poser le binaire v2 sans restart
+laisse le processus v1 répondre depuis son inode orphelin (tout semble
+vert, la voie royale reste éteinte). La preuve de version signée est LE
+juge de paix : le ping SANS signature (401) ne dit rien de la version.
+
+Voie manuelle (SSH, équivalente) : recompiler → `sudo install -m 755
+wg-mini /usr/local/bin/wg-mini && sudo systemctl restart wg-mini` (~1 s),
+puis vérifier le ping signé :
+
+```bash
+S=$(sudo grep -oP '(?<=WG_MINI_SECRET=).*' /etc/mikcloud/wg-mini.env)
+TS=$(date +%s)
+SIG=$(printf '%s.%s' "$TS" '' | openssl dgst -sha256 -hmac "$S" -hex | sed 's/^.* //')
+curl -s -H "X-WGMini-Timestamp: $TS" -H "X-WGMini-Signature: $SIG" \
+     http://127.0.0.1:4020/v1/ping   # → {"ok":true,"service":"wg-mini","version":"v2"}
+```
+
 `wg-peer.sh` reste re-posé à chaque dispatch ops (discipline §9 inchangée) :
 wg-mini appelle TOUJOURS le script disque, jamais une copie figée.
 

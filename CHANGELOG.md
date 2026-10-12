@@ -6,6 +6,57 @@ aux dates de livraison — le déploiement est continu : chaque push `main` pass
 la CI puis se déploie automatiquement (frontend Vercel, backend Oracle E5
 depuis le T2 N°266 — Render suspendu N°303).
 
+## 2026-10-12 — N°308 — **KIT OPS-WG-MINI-INSTALL : hot upgrade v2 rendu VRAIMENT effectif (restart + preuve de version signée — correction du faux vert)**
+
+### Problème découvert en pré-vol du geste exploitant
+Le kit `ops-wg-mini-install` (N°291, exécuté avec succès le 10/10 run #4
+pour l'installation v1) faisait `systemctl enable --now` **sans restart** :
+or `enable --now` ne redémarre PAS un service déjà actif. Déclenché tel
+quel sur main (qui porte wg-mini v2 depuis N°307), le run serait **vert
+trompeur** : binaire v2 posé sur disque, mais le processus v1 (démarré le
+10/10, inode orphelin) continuerait de répondre sur 127.0.0.1:4020 —
+health checks verts (401 sans signature = v1 répond très bien), smoke test
+B2C vert (v1 gère /v1/add), **alors que la voie royale resterait éteinte**
+(404 sur /v1/add-router côté backend). Le ping SANS signature ne prouve
+RIEN sur la version — aucun check de version n'existait dans le kit.
+
+### Livré (2 fichiers, 0 code backend/frontend)
+- **`.github/workflows/ops-wg-mini-install.yml`** : §4 `enable --now` +
+  **`systemctl restart wg-mini`** effectif (≈ 1 s, peers du wg0 intacts —
+  wg-mini n'est qu'un socket de contrôle, aucun état destructif) ; §4bis
+  **PREUVE DE VERSION** : ping SIGNÉ HMAC (même schéma que le smoke test —
+  corps vide pour un GET, `"<ts>."`) → la réponse doit porter
+  `"version":"v2"`, **sinon run ROUGE** avec journal wg-mini en diagnostic ;
+  en-tête du workflow actualisé (le kit devient AUSSI la voie canonique de
+  mise à jour, idempotence et secret conservé inchangés).
+- **`deploy/oracle/wg-mini/README.md` § Mise à jour** : voie recommandée =
+  le kit (Actions → Run workflow) avec preuve v2 intégrée ; recette SSH
+  manuelle conservée + commande de vérification du ping signé ; le piège
+  « enable --now ≠ restart » documenté noir sur blanc.
+
+### Vérifications (harnais local jetable /tmp/wg308 — rien commité)
+- YAML du workflow : parse OK (6 steps) ; `bash -n` du bloc REMOTE
+  modifié : OK.
+- **Round-trip HMAC réel du §4bis** contre un serveur mock reproduisant
+  `authorized()` de wg-mini.go (fenêtre ±120 s, `<ts>.<body>`, hex
+  insensible à la casse, comparaison temps constant) : snippet bash EXACT
+  du workflow → v2 répond → **gate PASS** ; mock répondant v1 → **gate
+  ÉCHEC (exit 1, run ROUGE — l'anti-faux-vert fonctionne)** ; signature
+  invalide → 401 corps vide → **gate ÉCHEC**.
+- Aucun secret dans les logs (le ping signé ne révèle que
+  `{"ok":true,"service":"wg-mini","version":"v2"}` — rien de sensible).
+
+### Suites pour l'exploitant (geste unique)
+Le hot upgrade v2 de production devient **un seul geste, prouvé** :
+GitHub → Actions → `ops-wg-mini-install` → Run workflow (branche main,
+~2 min) → run vert avec « wg-mini v2 EN SERVICE ✓ ». La voie manuelle
+SSH du README reste équivalente. Note d'environnement : le poste de
+pilotage agent a encore été réinitialisé (3e fois — `/home/z/.oci` et
+coffre git vides, cf. `recover-pont-access.yml`) : le déclenchement
+direct par l'agent nécessite un jeton GitHub (actions:write) ;
+le clic exploitant ne nécessite rien. Aucun schéma DB → rien à
+synchroniser.
+
 ## 2026-10-12 — N°307 — **RENFORT WIREGUARD : provisionnement 100 % automatique (wg-mini v2) — zéro valeur technique à saisir**
 
 ### Problème de l'exploitant (demande de la session)
