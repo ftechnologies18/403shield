@@ -285,6 +285,186 @@ func (b Builder) buildPppReadActive(cmd model.Command) string {
 }
 
 // ---------------------------------------------------------------------------
+// N°310 — Provisionnement AUTOMATIQUE du serveur PPPoE (voie agent, zéro saisie)
+// ---------------------------------------------------------------------------
+
+// pppSafeIface — re-sanitisation du nom d'interface (le handler a déjà
+// validé la même regex) : alphabet RouterOS sûr SANS guillemet/backslash/$/
+// espace (le script est interpolé — défense aux DEUX bords).
+func pppSafeIface(s string) string {
+	var sb strings.Builder
+	for _, c := range strings.TrimSpace(s) {
+		switch {
+		case c >= 'a' && c <= 'z', c >= 'A' && c <= 'Z', c >= '0' && c <= '9',
+			c == '.', c == '_', c == '@', c == ':', c == '-':
+			sb.WriteRune(c)
+		}
+	}
+	out := sb.String()
+	if len(out) > 32 {
+		out = out[:32]
+	}
+	return out
+}
+
+// pppSafePoolBase — base de /24 (« 10.10.0 ») : re-validée par la forme IPv4
+// canonique de base+".1" (model.ValidPppStaticIP — même défense que le
+// handler) ; tout le reste disparaît (auto-détection côté routeur).
+func pppSafePoolBase(s string) string {
+	s = strings.TrimSpace(s)
+	if !model.ValidPppStaticIP(s + ".1") {
+		return ""
+	}
+	return s
+}
+
+// PppProvisionCandidates — /24 de base testés DANS LE SCRIPT côté routeur
+// (premier LIBRE retenu : aucun chevauchement avec /ip address ni /ip pool).
+// 10.10.x (six sous-réseaux), 172.22-24.0 et 192.168.120 : espaces privés
+// rarement utilisés par un LAN existant ni par le tunnel mikcloud-wg (10.8.0.0/24).
+var pppProvisionCandidates = []string{
+	"10.10.0", "10.10.1", "10.10.2", "10.10.3", "10.10.4", "10.10.5",
+	"172.22.0", "172.23.0", "172.24.0", "192.168.120",
+}
+
+// buildPppProvision — ppp_provision (N°310) : provisionnement AUTOMATIQUE du
+// serveur PPPoE sur le routeur — le gérant ne saisit AUCUNE valeur technique.
+//
+// Le script (exécuté côté routeur par l'agent, canal TLS strict D1) :
+//  1. détecte l'interface LAN : bridge ACTIVE portant une adresse (réseau
+//     classique d'un WISP), sinon ether active avec adresse — la valeur
+//     choisie est RAPPORTÉE (transparence, le mode expert reste pour les
+//     topologies exotiques) ;
+//  2. retient le premier /24 LIBRE des candidats (préfixe absent de TOUTE
+//     adresse /ip address et de TOUT range /ip pool — chevauchement simple
+//     par préfixe, la parc antérieure ne peut pas être réutilisée par
+//     accident) ;
+//  3. pose les trois objets de façon IDEMPOTENTE (garde find par nom,
+//     exactement comme le script .rsc assisté N°294 — relancer ne duplique
+//     rien, re-provisionner un objet existant est ok sans retouche) :
+//     /ip pool « mikcloud-ppp-pool » (.10-.254), /ppp profile
+//     « mikcloud-ppp » (local .1, remote pool, only-one), /interface
+//     pppoe-server server « mikcloud » (interface détectée, profil par
+//     défaut, one-session-per-host) ;
+//  4. rapporte les valeurs CHOISIES (iface|pool|profile|service) — elles
+//     vivent dans Command.Result, le poll console les affiche.
+//
+// Payload TOUT optionnel (voie royale = corps vide) : iface/poolBase/service/
+// profile vident = auto-détection ; les overrides expert passent par les
+// mêmes clés. Toute valeur est re-sanitisée ici (défense aux deux bords).
+func (b Builder) buildPppProvision(cmd model.Command) string {
+	p := "q" + idSafe(cmd.ID) // préfixe des variables locales (unicité inter-commandes)
+	okVar := "ok" + idSafe(cmd.ID)
+	iface := pppSafeIface(plStr(cmd.Payload, "iface"))
+	poolBase := pppSafePoolBase(plStr(cmd.Payload, "poolBase"))
+	service := pppSafeIface(plStr(cmd.Payload, "service"))
+	profile := pppSafeProfile(plStr(cmd.Payload, "profile"))
+	if service == "" {
+		service = "mikcloud"
+	}
+	if profile == "" {
+		profile = "mikcloud-ppp"
+	}
+
+	var cands strings.Builder
+	for i, c := range pppProvisionCandidates {
+		if i > 0 {
+			cands.WriteString(";")
+		}
+		cands.WriteString(`"` + c + `"`)
+	}
+
+	var sb strings.Builder
+	sb.WriteString(header(cmd))
+	sb.WriteString(":local " + okVar + " true\n")
+	sb.WriteString(":local " + p + `iface "` + rosEscape(iface) + `"` + "\n")
+	sb.WriteString(":local " + p + `pool "` + rosEscape(poolBase) + `"` + "\n")
+	sb.WriteString(":local " + p + `srv "` + rosEscape(service) + `"` + "\n")
+	sb.WriteString(":local " + p + `prof "` + rosEscape(profile) + `"` + "\n")
+	sb.WriteString(":local " + p + `why ""` + "\n")
+
+	// 1. Interface LAN — détection côté routeur (vérité locale).
+	sb.WriteString(`:if ($` + p + `iface = "") do={
+  :foreach i in=[/interface find where running and type=bridge] do={
+    :local qn [:tostr [/interface get $i name]]
+    :if ($` + p + `iface = "" and [:len [/ip address find where interface=$qn]] > 0) do={ :set ` + p + `iface $qn }
+  }
+  :if ($` + p + `iface = "") do={
+    :foreach i in=[/interface find where running and type=ether] do={
+      :local qn [:tostr [/interface get $i name]]
+      :if ($` + p + `iface = "" and [:len [/ip address find where interface=$qn]] > 0) do={ :set ` + p + `iface $qn }
+    }
+  }
+  :if ($` + p + `iface = "") do={ :set ` + okVar + ` false; :set ` + p + `why "aucune interface LAN candidate (bridge/ether active portant une adresse)" }
+}
+`)
+
+	// 2. /24 libre — candidats testés contre /ip address ET /ip pool (préfixe).
+	sb.WriteString(`:if ($` + p + `pool = "") do={
+  :foreach qcb in={` + cands.String() + `} do={
+    :if ($` + p + `pool = "") do={
+      :local qbusy false
+      :local qpref ($qcb . ".")
+      :foreach qa in=[/ip address find] do={
+        :local qaddr [:tostr [/ip address get $qa address]]
+        :if ([:pick $qaddr 0 [:len $qpref]] = $qpref) do={ :set qbusy true }
+      }
+      :foreach qp in=[/ip pool find] do={
+        :local qrng [:tostr [/ip pool get $qp ranges]]
+        :if ([:pick $qrng 0 [:len $qpref]] = $qpref) do={ :set qbusy true }
+      }
+      :if (!$qbusy) do={ :set ` + p + `pool $qcb }
+    }
+  }
+  :if ($` + p + `pool = "") do={ :set ` + okVar + ` false; :set ` + p + `why "aucun /24 libre (candidats occupes par vos reseaux)" }
+}
+`)
+
+	// 3. Pose idempotente — exactement le .rsc assisté N°294 (garde find).
+	sb.WriteString(`:if ($` + okVar + `) do={
+  :if ([:len [/ip pool find name="mikcloud-ppp-pool"]] = 0) do={
+    :do { /ip pool add name="mikcloud-ppp-pool ranges=($` + p + `pool . ".10-" . $` + p + `pool . ".254") } on-error={ :set ` + okVar + ` false; :set ` + p + `why "ip pool add echoue"; :log warning "mikcloud: ppp provision pool echoue" }
+  }
+  :if ([:len [/ppp profile find name=$` + p + `prof]] = 0) do={
+    :do { /ppp profile add name=$` + p + `prof local-address=($` + p + `pool . ".1") remote-address="mikcloud-ppp-pool" only-one=yes } on-error={ :set ` + okVar + ` false; :set ` + p + `why "ppp profile add echoue"; :log warning "mikcloud: ppp provision profil echoue" }
+  }
+  :if ([:len [/interface pppoe-server server find service-name=$` + p + `srv]] = 0) do={
+    :do { /interface pppoe-server server add service-name=$` + p + `srv interface=$` + p + `iface default-profile=$` + p + `prof disabled=no one-session-per-host=yes } on-error={ :set ` + okVar + ` false; :set ` + p + `why "pppoe-server add echoue"; :log warning "mikcloud: ppp provision serveur echoue" }
+  }
+}
+`)
+
+	// 4. Rapport dynamique (pattern buildWgSetup — les valeurs sont lues côté
+	// routeur, le fetch les porte) : ok porte le PLAN, ko porte la cause.
+	fetchOK := `/tool fetch url="` + strings.TrimRight(b.BaseURL, "/") + `/agent/result?token=` + urlEscape(b.Token) +
+		`" http-method=post http-data=("cmd=` + cmd.ID +
+		`&status=ok&iface=". $` + p + `iface ."&pool=". $` + p + `pool ."&profile=". $` + p + `prof ."&service=". $` + p + `srv) output=none`
+	fetchKO := b.reportLine(cmd.ID, false, nil)
+	sb.WriteString(":if ($" + okVar + ") do={\n  " + fetchOK + "\n} else={\n  " + fetchKO + "\n}\n")
+	return sb.String()
+}
+
+// PppProvisionPayloadFrom — payload canonique de ppp_provision (voie royale :
+// TOUTES les valeurs vides = auto-détection côté routeur ; l'expert peut
+// pointer iface/poolBase/service/profile).
+func PppProvisionPayloadFrom(iface, poolBase, service, profile string) map[string]any {
+	payload := map[string]any{}
+	if iface != "" {
+		payload["iface"] = iface
+	}
+	if poolBase != "" {
+		payload["poolBase"] = poolBase
+	}
+	if service != "" {
+		payload["service"] = service
+	}
+	if profile != "" {
+		payload["profile"] = profile
+	}
+	return payload
+}
+
+// ---------------------------------------------------------------------------
 // Payloads canoniques (pattern WgSetupPayloadFrom N°285)
 // ---------------------------------------------------------------------------
 

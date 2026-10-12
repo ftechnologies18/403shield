@@ -199,9 +199,29 @@ export const enPpp: Record<string, string> = {
   "ppp.renfort.note":
     "Prerequisites: RouterOS API enabled on the router (/ip service enable api) and the router tunneled (WireGuard reinforcement) — the backend dials 10.8.0.N:8728 through wg0.",
 
-  // — Assisted provisioning (phase B) —
+  // — Provisioning (N°310: automatic by default, .rsc expert collapsed) —
   "ppp.provision": "Provision the PPPoE server",
-  "ppp.provisionTitle": "Assisted provisioning of the PPPoE server",
+  "ppp.provisionDoneShort": "PPPoE server ready",
+  "ppp.provisionTitle": "Provision the PPPoE server",
+  "ppp.provisionAuto.dialogDesc":
+    "Install the PPPoE server on this router in one click — the MikCloud agent detects the network interface and picks a free subnet; you have nothing to type.",
+  "ppp.provisionAuto.title": "Automatic configuration (recommended)",
+  "ppp.provisionAuto.desc":
+    "The agent installed on the router detects the LAN interface, picks a free subnet (no conflict with your existing networks) and installs pool + profile + PPPoE server — automatically and without duplicates (re-running duplicates nothing).",
+  "ppp.provisionAuto.cta": "Provision automatically",
+  "ppp.provisionAuto.redo": "Run configuration again",
+  "ppp.provisionAuto.retry": "Retry",
+  "ppp.provisionAuto.pending": "In progress — the agent is applying the configuration (≤ 45 s)…",
+  "ppp.provisionAuto.queuedToast": "Provisioning requested — the agent takes care of it (≤ 45 s)",
+  "ppp.provisionAuto.done": "PPPoE server installed",
+  "ppp.provisionAuto.doneNote":
+    "Your PPPoE subscribers can now be created in the Subscribers tab — the profile above is assigned to them by default.",
+  "ppp.provisionAuto.plan.iface": "LAN interface",
+  "ppp.provisionAuto.plan.pool": "Address range",
+  "ppp.provisionAuto.plan.profile": "Profile",
+  "ppp.provisionAuto.plan.service": "Service",
+  "ppp.provisionAuto.errorUnknown": "Provisioning failed (unknown cause) — retry or use expert mode.",
+  "ppp.provisionExpertToggle": "Expert mode — generate a .rsc script to paste yourself",
   "ppp.provisionDesc":
     "Generates an IDEMPOTENT .rsc script (each block only creates its object if absent): pool, profile and PPPoE server. No secret, no queued command — you paste the script yourself.",
   "ppp.provisionInterface": "LAN interface to bridge",

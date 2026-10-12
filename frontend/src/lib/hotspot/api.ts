@@ -1499,3 +1499,43 @@ export async function getPppProvisioningScript(
     },
   });
 }
+
+/** PppProvisionPlan — N°310 : valeurs CHOISIES par le routeur lui-même lors
+ * du provisionnement automatique (détection LAN + /24 libre côté routeur). */
+export interface PppProvisionPlan {
+  iface: string;
+  pool: string;
+  profile: string;
+  service: string;
+}
+
+/** PppProvisionStatus — N°310 : état du provisionnement automatique du serveur
+ * PPPoE (poll 8 s). state : none (jamais) | queued/sent (≤ 45 s) | done (plan
+ * appliqué) | error (cause). */
+export interface PppProvisionStatus {
+  state: "none" | "queued" | "sent" | "done" | "error";
+  agentOnline: boolean;
+  agentOnly: boolean;
+  commandId?: string;
+  createdAt?: string;
+  doneAt?: string;
+  plan?: PppProvisionPlan;
+  message?: string;
+}
+
+/** pppProvisionAuto — N°310 : provisionnement AUTOMATIQUE du serveur PPPoE
+ * (voie agent, ZÉRO saisie) — commande en file, l'agent détecte l'interface
+ * LAN et un sous-réseau libre, pose pool + profil + serveur PPPoE de façon
+ * idempotente et rapporte le plan. 202 = en attente du check-in (≤ 45 s). */
+export async function pppProvisionAuto(routerId: string): Promise<{ queued: boolean; commandId: string; already?: boolean; router: string; message: string }> {
+  return api(`/api/routers/${encodeURIComponent(routerId)}/ppp/provision-auto`, {
+    method: "POST",
+    body: {},
+    timeoutMs: 30_000,
+  });
+}
+
+/** pppProvisionStatus — N°310 : état du provisionnement automatique (poll). */
+export async function pppProvisionStatus(routerId: string): Promise<PppProvisionStatus> {
+  return api<PppProvisionStatus>(`/api/routers/${encodeURIComponent(routerId)}/ppp/provision`);
+}

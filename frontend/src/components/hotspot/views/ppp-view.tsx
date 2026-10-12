@@ -28,6 +28,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   CalendarPlus,
   Cable,
+  ChevronDown,
   Copy,
   Download,
   KeyRound,
@@ -43,6 +44,7 @@ import {
   Radio,
   RotateCw,
   Search,
+  Sparkles,
   Terminal,
   Trash2,
   TriangleAlert,
@@ -88,6 +90,7 @@ import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
   api,
   createPppSecret,
@@ -101,11 +104,14 @@ import {
   listPppSecrets,
   pppDiscover,
   pppLiveActive,
+  pppProvisionAuto,
+  pppProvisionStatus,
   putPppApiCreds,
   renewPppSecret,
   updatePppSecret,
   type PppLiveActiveResponse,
   type PppProvisioningResponse,
+  type PppProvisionStatus,
   type PppSecretUpdateBody,
 } from "@/lib/hotspot/api";
 import { STALE_TIME } from "@/lib/hotspot/query";
@@ -117,6 +123,7 @@ import { LoadingRows } from "@/components/hotspot/loading";
 import { PageHeader } from "@/components/hotspot/page-header";
 import { StatCard } from "@/components/hotspot/stat-card";
 import { useHotspotStore } from "@/lib/hotspot/store";
+import { roleRank } from "@/lib/hotspot/roles";
 import type { PppActiveRow, PppSecret, RouterDevice } from "@/lib/hotspot/types";
 import { cn } from "@/lib/utils";
 
@@ -498,8 +505,36 @@ export default function PppView() {
     onError: (err) => setLiveError(err instanceof Error ? err.message : t("ppp.errorToast")),
   });
 
-  // — Provisionnement assisté (script .rsc idempotent) —
+  // — Provisionnement AUTOMATIQUE (N°310 — voie royale, zéro saisie) —
+  const role = useHotspotStore((s) => s.user?.role);
+  const canManage = roleRank(role ?? "") >= 2;
   const [provOpen, setProvOpen] = useState(false);
+  const provisionQuery = useQuery({
+    queryKey: ["/api/routers", routerId, "ppp/provision"],
+    queryFn: () => pppProvisionStatus(routerId),
+    // Poll accéléré UNIQUEMENT pendant la convergence agent (≤ 45 s) ;
+    // état stable (none/done/error) → plus de re-poll, la valeur sert d'affichage
+    // (badge du bouton + panneau du dialog).
+    refetchInterval: (q) => {
+      const st = q.state.data?.state;
+      return st === "queued" || st === "sent" ? 8_000 : false;
+    },
+    enabled: routerId !== "",
+    staleTime: 30_000,
+  });
+  const provision = provisionQuery.data;
+  const provisionBusy = provision?.state === "queued" || provision?.state === "sent";
+  const provAutoMutation = useMutation({
+    mutationFn: () => pppProvisionAuto(routerId),
+    onSuccess: (res) => {
+      toast.success(res.message || t("ppp.provisionAuto.queuedToast"));
+      void queryClient.invalidateQueries({ queryKey: ["/api/routers", routerId, "ppp/provision"] });
+    },
+    onError: toastError,
+  });
+
+  // — Provisionnement assisté (mode expert — script .rsc idempotent) —
+  const [provExpertOpen, setProvExpertOpen] = useState(false);
   const [provResult, setProvResult] = useState<PppProvisioningResponse | null>(null);
   const [provIface, setProvIface] = useState("");
   const [provService, setProvService] = useState("mikcloud");
@@ -525,6 +560,7 @@ export default function PppView() {
   });
   const openProv = () => {
     setProvResult(null);
+    setProvExpertOpen(false);
     setProvOpen(true);
   };
   const downloadScript = () => {
@@ -892,8 +928,16 @@ export default function PppView() {
               {t("ppp.add")}
             </Button>
             <Button size="sm" variant="outline" className="h-10 gap-1.5" onClick={openProv}>
-              <Terminal className="size-4" aria-hidden />
-              <span className="hidden sm:inline">{t("ppp.provision")}</span>
+              {provisionBusy ? (
+                <Loader2 className="size-4 animate-spin" aria-hidden />
+              ) : provision?.state === "done" ? (
+                <Zap className="size-4 text-emerald-600 dark:text-emerald-400" aria-hidden />
+              ) : (
+                <Terminal className="size-4" aria-hidden />
+              )}
+              <span className="hidden sm:inline">
+                {provision?.state === "done" ? t("ppp.provisionDoneShort") : t("ppp.provision")}
+              </span>
             </Button>
             <div className="relative">
               <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
@@ -1835,13 +1879,84 @@ export default function PppView() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* — Dialog provisionnement assisté (script .rsc) — */}
+      {/* — Dialog provisionnement du serveur PPPoE (N°310 : automatique en
+          panneau principal, .rsc expert replié) — */}
       <Dialog open={provOpen} onOpenChange={setProvOpen}>
         <DialogContent className="max-h-[85dvh] overflow-y-auto sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>{t("ppp.provisionTitle")}</DialogTitle>
-            <DialogDescription>{t("ppp.provisionDesc")}</DialogDescription>
+            <DialogDescription>{t("ppp.provisionAuto.dialogDesc")}</DialogDescription>
           </DialogHeader>
+
+          {/* — Panneau « Configuration automatique (recommandé) » : le
+              routeur détecte tout seul l'interface LAN et un sous-réseau
+              libre, pose les objets de façon idempotente et rapporte son
+              plan — le gérant n'a AUCUNE valeur technique à saisir. — */}
+          <div className="flex flex-col gap-2 rounded-md border border-emerald-500/30 bg-emerald-500/5 p-3">
+            <div className="flex items-center gap-1.5">
+              <Sparkles className="size-3.5 shrink-0 text-emerald-600 dark:text-emerald-400" aria-hidden />
+              <p className="text-xs font-medium text-foreground">{t("ppp.provisionAuto.title")}</p>
+            </div>
+            <p className="text-xs text-muted-foreground">{t("ppp.provisionAuto.desc")}</p>
+
+            {provisionBusy ? (
+              <p className="flex items-center gap-1.5 rounded-md border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1.5 text-xs text-emerald-700 dark:text-emerald-300">
+                <Loader2 className="size-3.5 animate-spin" aria-hidden />
+                {t("ppp.provisionAuto.pending")}
+              </p>
+            ) : null}
+
+            {provision?.state === "done" && provision.plan ? (
+              <div className="space-y-1.5 rounded-md border border-emerald-500/40 bg-emerald-500/10 px-2.5 py-2 text-xs">
+                <p className="flex items-center gap-1.5 font-medium text-emerald-700 dark:text-emerald-300">
+                  <Zap className="size-3.5 shrink-0" aria-hidden />
+                  {t("ppp.provisionAuto.done")}
+                </p>
+                <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-muted-foreground">
+                  <dt className="font-medium text-foreground">{t("ppp.provisionAuto.plan.iface")}</dt>
+                  <dd className="font-mono">{provision.plan.iface || "—"}</dd>
+                  <dt className="font-medium text-foreground">{t("ppp.provisionAuto.plan.pool")}</dt>
+                  <dd className="font-mono">
+                    {provision.plan.pool ? `${provision.plan.pool}.10 – ${provision.plan.pool}.254` : "—"}
+                  </dd>
+                  <dt className="font-medium text-foreground">{t("ppp.provisionAuto.plan.profile")}</dt>
+                  <dd className="font-mono">{provision.plan.profile || "—"}</dd>
+                  <dt className="font-medium text-foreground">{t("ppp.provisionAuto.plan.service")}</dt>
+                  <dd className="font-mono">{provision.plan.service || "—"}</dd>
+                </dl>
+                <p className="text-muted-foreground">{t("ppp.provisionAuto.doneNote")}</p>
+              </div>
+            ) : null}
+
+            {provision?.state === "error" ? (
+              <p className="rounded-md border border-amber-500/30 bg-amber-500/10 px-2.5 py-1.5 text-xs text-amber-700 dark:text-amber-300">
+                {provision.message || t("ppp.provisionAuto.errorUnknown")}
+              </p>
+            ) : null}
+
+            {canManage ? (
+              <Button
+                type="button"
+                size="sm"
+                className="h-9 w-fit gap-1.5"
+                disabled={provAutoMutation.isPending || provisionBusy}
+                onClick={() => provAutoMutation.mutate()}
+              >
+                {provAutoMutation.isPending ? (
+                  <Loader2 className="size-4 animate-spin" aria-hidden />
+                ) : (
+                  <Sparkles className="size-4" aria-hidden />
+                )}
+                {provision?.state === "done"
+                  ? t("ppp.provisionAuto.redo")
+                  : provision?.state === "error"
+                    ? t("ppp.provisionAuto.retry")
+                    : t("ppp.provisionAuto.cta")}
+              </Button>
+            ) : null}
+          </div>
+
+          {/* — Voie experte N°294 : le .rsc assisté, REPLIÉ (visible au clic) — */}
           <form
             className="space-y-3 py-1"
             onSubmit={(event) => {
@@ -1850,7 +1965,17 @@ export default function PppView() {
               provMutation.mutate();
             }}
           >
-            <div className="grid gap-3 sm:grid-cols-2">
+            <Collapsible open={provExpertOpen} onOpenChange={setProvExpertOpen}>
+              <CollapsibleTrigger className="flex w-fit items-center gap-1 text-xs text-muted-foreground underline-offset-2 hover:text-foreground hover:underline">
+                <ChevronDown
+                  className={`size-3.5 transition-transform ${provExpertOpen ? "" : "-rotate-90"}`}
+                  aria-hidden
+                />
+                {t("ppp.provisionExpertToggle")}
+              </CollapsibleTrigger>
+              <CollapsibleContent className="mt-3 flex flex-col gap-3">
+                <p className="text-xs text-muted-foreground">{t("ppp.provisionDesc")}</p>
+                <div className="grid gap-3 sm:grid-cols-2">
               <div className="space-y-1.5">
                 <Label htmlFor="ppp-prov-iface">{t("ppp.provisionInterface")}</Label>
                 <Input
@@ -1859,7 +1984,6 @@ export default function PppView() {
                   onChange={(event) => setProvIface(event.target.value)}
                   placeholder={t("ppp.provisionInterfacePlaceholder")}
                   maxLength={32}
-                  autoFocus
                 />
               </div>
               <div className="space-y-1.5">
@@ -1980,6 +2104,8 @@ export default function PppView() {
                 </Button>
               </DialogFooter>
             )}
+              </CollapsibleContent>
+            </Collapsible>
           </form>
         </DialogContent>
       </Dialog>

@@ -533,6 +533,10 @@ func (b Builder) ScriptFor(cmd model.Command) (string, error) {
 		return b.buildPppSecretRemove(cmd), nil
 	case model.CmdPppKick:
 		return b.buildPppKick(cmd), nil
+	// N°310 — provisionnement AUTOMATIQUE du serveur PPPoE (voie agent,
+	// zéro saisie — auto-détection LAN + /24 libre côté routeur).
+	case model.CmdPppProvision:
+		return b.buildPppProvision(cmd), nil
 	default:
 		return "", fmt.Errorf("kind de commande inconnu : %s", cmd.Kind)
 	}

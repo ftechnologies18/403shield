@@ -71,6 +71,7 @@ const (
 	CmdPppSecretSet        = "ppp_secret_set"       // N°293 : /ppp/secret/set [find name=…] avec SEULEMENT les propriétés présentes dans le payload (password/profile/disabled/comment — ligne construite dynamiquement)
 	CmdPppSecretRemove     = "ppp_secret_remove"    // N°293 : /ppp/secret/remove [find name=…] — ok même si absent (convergé) ; le retrait du REGISTRE cloud n'a lieu qu'à la confirmation (discipline N°291)
 	CmdPppKick             = "ppp_kick"             // N°293 : /ppp/active/remove [find name=…] — déconnexion de la session PPPoE d'un abonné, ok même si absent
+	CmdPppProvision        = "ppp_provision"        // N°310 : provisionnement AUTOMATIQUE du serveur PPPoE (voie agent, zéro saisie) — le script détecte l'interface LAN (bridge/ether avec adresse) et un /24 LIBRE (aucun chevauchement /ip address ni /ip pool) CÔTÉ ROUTEUR, puis pose pool + profil + pppoe-server de façon idempotente (garde find par nom) et rapporte les valeurs choisies (iface|pool|profile|service) — pattern wg-auto N°307
 )
 
 // N°80 — niveaux SafeWiFi (filtrage DNS du WiFi public par redirection).

@@ -518,6 +518,12 @@ export const HOTSPOT_GUIDES: Guide[] = [
         ),
       },
       {
+        title: "Provisionnez le serveur PPPoE — automatique",
+        body:
+          "Bouton « Provisionner le serveur PPPoE » → « Provisionner automatiquement » : l'agent présent sur le routeur détecte l'interface LAN, retient un sous-réseau libre (aucun conflit avec vos réseaux existants) et installe pool + profil + serveur — un clic, ZÉRO valeur technique à saisir (≤ 45 s). Le plan appliqué s'affiche (interface, plage, profil) et le bouton passe à « Serveur PPPoE prêt ».",
+        tip: "Le mode expert (script .rsc à coller dans le terminal) reste replié pour les topologies exotiques. La configuration automatique est idempotente : relancer ne duplique rien.",
+      },
+      {
         title: "Créez un abonné",
         body:
           "Nom d'utilisateur, mot de passe, profil de débit, échéance. Le secret part vers le routeur cible au check-in ; le client configure la connexion PPPoE chez lui (ou sur son routeur CPE fourni).",

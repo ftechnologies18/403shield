@@ -335,3 +335,99 @@ func TestBuildPppStaticAddress(t *testing.T) {
 		t.Errorf("buildPppSecretSet : IP invalide doit devenir chaîne vide, script %q", s4)
 	}
 }
+
+// TestBuildPppProvisionShape — N°310 : la forme du script de provisionnement
+// automatique est CONTRACTUELLE (le routeur exécute ce qui est généré) :
+// détection bridge-puis-ether, candidats /24 testés contre /ip address ET
+// /ip pool, gardes find idempotentes (pool + profil + serveur), rapport
+// dynamique des valeurs choisies. La voie royale = payload VIDE.
+func TestBuildPppProvisionShape(t *testing.T) {
+	b := Builder{BaseURL: "https://cloud.test", Token: "tok-ppp-prov"}
+	cmd := model.Command{ID: "c-prov1", Kind: model.CmdPppProvision,
+		Payload: PppProvisionPayloadFrom("", "", "", "")}
+	s := b.buildPppProvision(cmd)
+
+	for _, frag := range []string{
+		"# mikcloud cmd c-prov1 ppp_provision",
+		":local okcprov1 true",
+		// 1. Détection interface : bridge prioritaire puis ether, running +
+		//    adresse posée, garde d'échec explicite.
+		"[/interface find where running and type=bridge]",
+		"[/interface find where running and type=ether]",
+		`[:len [/ip address find where interface=$qn]] > 0`,
+		`aucune interface LAN candidate`,
+		// 2. Candidats /24 libres — testés contre /ip address ET /ip pool.
+		`"10.10.0";"10.10.1";"10.10.2";"10.10.3";"10.10.4";"10.10.5";"172.22.0";"172.23.0";"172.24.0";"192.168.120"`,
+		`[:pick $qaddr 0 [:len $qpref]] = $qpref`,
+		`[:pick $qrng 0 [:len $qpref]] = $qpref`,
+		// 3. Gardes idempotentes (exactement le .rsc assisté N°294).
+		`[:len [/ip pool find name="mikcloud-ppp-pool"]] = 0`,
+		`[:len [/ppp profile find name=$qcprov1prof]] = 0`,
+		`[:len [/interface pppoe-server server find service-name=$qcprov1srv]] = 0`,
+		`ranges=($qcprov1pool . ".10-" . $qcprov1pool . ".254")`,
+		`local-address=($qcprov1pool . ".1")`,
+		`remote-address="mikcloud-ppp-pool"`,
+		`only-one=yes`,
+		`interface=$qcprov1iface default-profile=$qcprov1prof disabled=no one-session-per-host=yes`,
+		// 4. Rapport dynamique : le plan appliqué remonte au cloud.
+		`&status=ok&iface=". $qcprov1iface ."&pool=". $qcprov1pool ."&profile=". $qcprov1prof ."&service=". $qcprov1srv`,
+		`/agent/result?token=tok-ppp-prov`,
+		// Défauts de la voie royale.
+		`"mikcloud"`,     // service-name
+		`"mikcloud-ppp"`, // profil
+	} {
+		if !strings.Contains(s, frag) {
+			t.Errorf("buildPppProvision : fragment attendu manquant %q\nscript:\n%s", frag, s)
+		}
+	}
+	// La voie royale ne pré-choisit RIEN (auto-détection totale) : les
+	// variables partent vides.
+	if !strings.Contains(s, `:local qcprov1iface ""`) || !strings.Contains(s, `:local qcprov1pool ""`) {
+		t.Errorf("buildPppProvision : voie royale — iface/pool doivent partir vides\nscript:\n%s", s)
+	}
+	// Branche d'échec : fetch statique reportLine (status=error).
+	if !strings.Contains(s, "status=error") {
+		t.Errorf("buildPppProvision : branche d'échec (rapport error) attendue\nscript:\n%s", s)
+	}
+}
+
+// TestBuildPppProvisionOverrides — valeurs expert embarquées (iface/pool/
+// service/profil) ; valeurs HOSTILES neutralisées (défense au bord builder —
+// une valeur corrompue retombe sur l'auto-détection, jamais d'injection).
+func TestBuildPppProvisionOverrides(t *testing.T) {
+	b := Builder{BaseURL: "https://cloud.test", Token: "t"}
+	cmd := model.Command{ID: "c-prov2", Kind: model.CmdPppProvision,
+		Payload: PppProvisionPayloadFrom("ether2", "172.16.5", "acme-ppp", "ABONNE-10M")}
+	s := b.buildPppProvision(cmd)
+	for _, frag := range []string{
+		`:local qcprov2iface "ether2"`,
+		`:local qcprov2pool "172.16.5"`,
+		`:local qcprov2srv "acme-ppp"`,
+		`:local qcprov2prof "ABONNE-10M"`,
+	} {
+		if !strings.Contains(s, frag) {
+			t.Errorf("buildPppProvision overrides : fragment attendu manquant %q\nscript:\n%s", frag, s)
+		}
+	}
+	// Hostile : guillemet/backslash/$/espace et pool non quadruplet → tout
+	// neutralisé (iface vide = auto, pool vide = auto).
+	bad := model.Command{ID: "c-prov3", Kind: model.CmdPppProvision,
+		Payload: map[string]any{
+			"iface":    `eth"er$2`,
+			"poolBase": "10.10.0.254",
+			"service":  "svc;rm",
+			"profile":  `pr"ofil`,
+		}}
+	s3 := b.buildPppProvision(bad)
+	for _, evil := range []string{`eth"er`, "svc;rm", `pr"ofil`, "10.10.0.254"} {
+		if strings.Contains(s3, evil) {
+			t.Errorf("buildPppProvision : valeur hostile %q non neutralisée\nscript:\n%s", evil, s3)
+		}
+	}
+	// La sanitisation suit pppSafeName : les caractères hostiles sont RETIRÉS,
+	// le reste sûr demeure (« eth"er$2 » → « ether2 », valeur déterministe et
+	// sûre — jamais d'injection possible, l'auto-détection couvre le reste).
+	if !strings.Contains(s3, `:local qcprov3iface "ether2"`) {
+		t.Errorf("buildPppProvision : iface hostile doit être sanitisée en ether2\nscript:\n%s", s3)
+	}
+}

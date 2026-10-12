@@ -955,6 +955,17 @@ func (a *API) handleAgentResult(w http.ResponseWriter, r *http.Request) {
 		// GET /api/routers/{id}/ppp/discover et /ppp/active le resservent
 		// tant que la commande est done depuis < 120 s. Rien d'autre à
 		// appliquer (ni journal, ni registre — lecture pure).
+	case cmd.Kind == model.CmdPppProvision && ok:
+		// N°310 — provisionnement automatique CONFIRMÉ par le routeur :
+		// le plan appliqué (interface, pool, profil, service) vit déjà
+		// dans Command.Result (boucle générale — le poll GET /ppp/provision
+		// le ressert) ; le journal porte la trace lisible du geste.
+		a.logActivity(db, router.AccountID, "router", "Serveur PPPoE provisionné AUTOMATIQUEMENT sur «"+router.Name+"» (interface "+vals.Get("iface")+", pool "+vals.Get("pool")+".10-"+vals.Get("pool")+".254, profil "+vals.Get("profile")+") — idempotent, relancer ne duplique rien")
+	case !ok && cmd.Kind == model.CmdPppProvision:
+		// N°310 — échec rapporté : cause bornée dans Result (le poll la
+		// montre), journal honnête. AUCUNE boucle de re-file (pattern wg
+		// N°285 — c'est le gérant qui relance).
+		a.logActivity(db, router.AccountID, "router", "Provisionnement du serveur PPPoE ÉCHOUÉ sur «"+router.Name+"» : "+boundedString(vals.Get("message"), 200))
 	case !ok && (cmd.Kind == model.CmdPppSecretAdd || cmd.Kind == model.CmdPppSecretSet || cmd.Kind == model.CmdPppSecretRemove):
 		// Échec rapporté : State=error + message (résumé — le builder
 		// n'envoie JAMAIS le secret ni le mot de passe dans ses messages).

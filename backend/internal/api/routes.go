@@ -356,6 +356,11 @@ func (a *API) Handler() http.Handler {
 	mux.HandleFunc("POST /api/routers/{routerID}/ppp/live/active", a.requireRole(1, a.handlePppLiveActive))
 	mux.HandleFunc("POST /api/ppp/secrets/{secretID}/kick-live", a.requireRole(2, a.handlePppSecretKickLive))
 	mux.HandleFunc("GET /api/routers/{routerID}/ppp/provisioning-script", a.requireRole(2, a.handlePppProvisioningScript))
+	// N°310 — provisionnement AUTOMATIQUE du serveur PPPoE (voie agent,
+	// zéro saisie — auto-détection LAN + /24 libre côté routeur, plan
+	// rapporté, idempotent). Écriture rang 2, lecture du poll rang 1.
+	mux.HandleFunc("POST /api/routers/{routerID}/ppp/provision-auto", a.requireRole(2, a.handlePppProvisionAuto))
+	mux.HandleFunc("GET /api/routers/{routerID}/ppp/provision", a.requireRole(1, a.handlePppProvisionStatus))
 	mux.HandleFunc("DELETE /api/sessions/{id}", a.handleSessionKick)
 
 	// Revendeurs

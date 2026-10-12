@@ -6,6 +6,55 @@ aux dates de livraison — le déploiement est continu : chaque push `main` pass
 la CI puis se déploie automatiquement (frontend Vercel, backend Oracle E5
 depuis le T2 N°266 — Render suspendu N°303).
 
+## 2026-10-12 — N°310 — **PROVISIONNEMENT DU SERVEUR PPPoE 100 % AUTOMATIQUE (voie agent, zéro saisie — miroir wg-auto N°307)**
+
+### Problème
+Le « provisioning assisté » N°294 (D2 phase B) livrait un script `.rsc` que le
+WISP devait **coller lui-même** dans le terminal Winbox/SSH — après avoir
+saisi 7 valeurs techniques (interface à bridge, plage du pool d'adresses,
+adresse locale, DNS…) : hors de portée d'un gérant sans notion réseau.
+
+### Livré — la voie royale (une commande agent, le routeur décide tout)
+- **Nouvelle commande `ppp_provision`** (agent, D1 : zéro cred API, zéro port
+  public, CGNAT-proof, ≤ 45 s — AUCUNE dépendance au tunnel ni au renfort) :
+  le script exécuté SUR LE ROUTEUR (1) **détecte l'interface LAN** (bridge
+  active portant une adresse, sinon ether — vérité locale, la topologie est
+  lue là où elle vit), (2) **retient le premier /24 LIBRE** parmi 10 candidats
+  (10.10.0-5, 172.22-24.0, 192.168.120 — testés par préfixe contre TOUTES les
+  adresses `/ip address` et TOUTES les plages `/ip pool` : aucune collision
+  possible avec les réseaux existants ni le tunnel mikcloud-wg 10.8.0.0/24),
+  (3) **pose les trois objets de façon idempotente** (garde `find` par nom —
+  exactement le `.rsc` assisté : pool `mikcloud-ppp-pool` .10-.254, profil
+  `mikcloud-ppp` local .1 + remote pool + only-one, serveur PPPoE
+  `mikcloud` sur l'interface détectée, one-session-per-host), (4) **rapporte
+  le plan appliqué** (iface|pool|profile|service) via le fetch dynamique —
+  toutes les valeurs re-sanitisées au bord builder (défense aux deux bords).
+- **Backend** : `POST /api/routers/{id}/ppp/provision-auto` (rang 2, anti
+  double-file, re-livraison self-healing après done) ;
+  `GET /api/routers/{id}/ppp/provision` (rang 1, poll 8 s pendant la
+  convergence) ; rapports agent → journal d'activité (« provisionné
+  AUTOMATIQUEMENT » + plan, ou cause en échec). **État SANS colonne** : la
+  vérité vit dans le registre des commandes (dernière `ppp_provision` :
+  queued/done/error + Result) — aucun champ Router, aucun schéma DB, rien à
+  synchroniser.
+- **Frontend** : dialog de provisionnement refondu — panneau « Configuration
+  automatique (recommandé) » (bouton unique « Provisionner
+  automatiquement », progression ≤ 45 s, plan appliqué affiché en vert,
+  note d'échec ambre + reprise) ; le formulaire 7 valeurs N°294 replié en
+  **« Mode expert »** (Collapsible, .rsc à coller soi-même — 0 régression) ;
+  bouton d'entrée passe à « Serveur PPPoE prêt » (éclair émeraude) une fois
+  configuré ; i18n FR/EN 23 clés.
+- **Guide /docs/guides (pppoe)** : étape « Provisionnez le serveur PPPoE —
+  automatique » (un clic, zéro saisie, plan affiché, expert replié).
+
+### Vérifié
+gofmt 0 diff, go vet OK, go test 11/11 packages (56 s — nouveaux tests
+TestBuildPppProvisionShape/Overrides : forme contractuelle du script,
+neutralisation des valeurs hostiles ; TestPppProvisionAutoCycle : cycle
+complet POST → file → rapport ok → done+plan → échec → error+cause →
+re-livraison → isolation multi-compte → non-agent refusé) ; eslint 0,
+tsgo 0, next build OK.
+
 ## 2026-10-12 — N°308 — **KIT OPS-WG-MINI-INSTALL : hot upgrade v2 rendu VRAIMENT effectif (restart + preuve de version signée — correction du faux vert)**
 
 ### Problème découvert en pré-vol du geste exploitant
