@@ -568,7 +568,8 @@ export interface RouterTestResult {
 
 /** N°285 — état du renfort WireGuard d'un routeur agent (GET /api/routers/{id}/wg).
  * Les secrets (PSK, clé publique serveur) ne sortent JAMAIS — seulement leur
- * présence (hasParams). */
+ * présence (hasParams). N°307 : `auto` indique que le provisionnement
+ * automatique (wg-mini) est actif sur l'installation (sinon voie experte). */
 export interface RouterWgStatus {
   state: string; // "" | pending_keygen | ready | pending_setup | active | error
   wgPub?: string;
@@ -583,6 +584,7 @@ export interface RouterWgStatus {
   hasParams: boolean;
   hasKeygen: boolean;
   serverTunnel: string;
+  auto?: boolean; // N°307 — automatisation wg-mini disponible côté serveur
   note: string;
 }
 

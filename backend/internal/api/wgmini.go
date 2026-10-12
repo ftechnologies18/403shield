@@ -182,15 +182,66 @@ func wgMiniPing() error {
 	return err
 }
 
+// wgMiniRouterLivret — N°307 — les 4 valeurs du livret .router.txt retournées
+// par /v1/add-router (address, server_pub, psk, endpoint). La PSK et la clé
+// publique serveur transittent UNIQUEMENT sur la boucle locale signée HMAC —
+// même frontière de confiance que le cat SSH du livret par l'exploitant en
+// N°285, sans l'exploitant.
+type wgMiniRouterLivret struct {
+	Address   string
+	ServerPub string
+	PSK       string
+	Endpoint  string
+}
+
+// wgMiniAddRouter — N°307 — wg-peer.sh add-router <name> <pub> : embarque le
+// peer ROUTEUR côté VM (la clé publique vient du routeur — générée sur
+// l'appareil par wg_keygen, la clé privée ne quitte jamais le routeur),
+// alloue l'adresse 10.8.0.N et génère la PSK, puis retourne le livret.
+// wg-mini v2 requis (v1 → 404 : message de mise à jour explicite).
+func wgMiniAddRouter(name, routerPub string) (wgMiniRouterLivret, error) {
+	raw, err := wgMiniCallFn(http.MethodPost, "/v1/add-router", map[string]string{"name": name, "pub": routerPub})
+	if err != nil {
+		// v1 répond 404 sur la route inconnue : traduire en consigne exploitant.
+		if strings.Contains(err.Error(), "404") {
+			return wgMiniRouterLivret{}, errors.New("wg-mini v1 détecté sur la VM — mettez à jour wg-mini en v2 pour l'automatisation du renfort (cf. deploy/oracle/wg-mini/README.md, hot upgrade ~1 s)")
+		}
+		return wgMiniRouterLivret{}, err
+	}
+	var env struct {
+		Address   string `json:"address"`
+		ServerPub string `json:"serverPub"`
+		PSK       string `json:"psk"`
+		Endpoint  string `json:"endpoint"`
+	}
+	if err := json.Unmarshal(raw, &env); err != nil {
+		return wgMiniRouterLivret{}, fmt.Errorf("wg-mini : réponse add-router illisible : %w", err)
+	}
+	if env.Address == "" || env.ServerPub == "" || env.PSK == "" || env.Endpoint == "" {
+		return wgMiniRouterLivret{}, errors.New("wg-mini : livret routeur incomplet — vérifiez wg-peer.sh sur la VM")
+	}
+	return wgMiniRouterLivret{Address: env.Address, ServerPub: env.ServerPub, PSK: env.PSK, Endpoint: env.Endpoint}, nil
+}
+
+// wgMiniConfigured — l'automatisation N°307 du renfort (add-router +
+// révocation automatique) n'est active que si le mini-service est configuré
+// (WG_MINI_SECRET présent dans l'env du backend). Absent → la voie experte
+// N°285 (livret wg-peer.sh collé à la main) reste LA voie, inchangée.
+func wgMiniConfigured() bool {
+	return strings.TrimSpace(os.Getenv("WG_MINI_SECRET")) != ""
+}
+
 // wgMiniPingFn — indirection pour les tests (même discipline).
 var wgMiniPingFn = wgMiniPing
 
 // wgMiniListFn — indirection pour les tests.
 var wgMiniListFn = wgMiniList
 
-// wgMiniAddFn / wgMiniRemoveFn / wgMiniConfFn — indirections pour les tests.
+// wgMiniAddFn / wgMiniRemoveFn / wgMiniConfFn / wgMiniAddRouterFn —
+// indirections pour les tests.
 var (
-	wgMiniAddFn    = wgMiniAdd
-	wgMiniRemoveFn = wgMiniRemove
-	wgMiniConfFn   = wgMiniConf
+	wgMiniAddFn       = wgMiniAdd
+	wgMiniRemoveFn    = wgMiniRemove
+	wgMiniConfFn      = wgMiniConf
+	wgMiniAddRouterFn = wgMiniAddRouter
 )

@@ -6,6 +6,98 @@ aux dates de livraison — le déploiement est continu : chaque push `main` pass
 la CI puis se déploie automatiquement (frontend Vercel, backend Oracle E5
 depuis le T2 N°266 — Render suspendu N°303).
 
+## 2026-10-12 — N°307 — **RENFORT WIREGUARD : provisionnement 100 % automatique (wg-mini v2) — zéro valeur technique à saisir**
+
+### Problème de l'exploitant (demande de la session)
+Le cycle N°285 exigeait du gérant qu'il **colle 4 valeurs techniques** (adresse
+tunnel, clé publique serveur, PSK, endpoint) lues par l'exploitant dans un
+livret SSH (`wg-peer.sh add-router` → `sudo cat /opt/wireguard/peers/<nom>.router.txt`)
+— rédhibitoire pour un usager sans aucune notion réseau : la demande est
+l'**automatisation complète des paramétrages**.
+
+### Voie royale N°307 (cycle un-clic)
+1. « Activer le tunnel » → `wg_keygen` au check-in (≤ 45 s, clé privée
+   toujours sur le routeur — inchangé) ;
+2. **le rapport de clé déclenche TOUT SEUL la suite** : `wg-mini add-router`
+   embarque le peer sur le wg0 de la VM (adresse + PSK allouées là où est la
+   vérité : `wg0.conf`), le livret est consommé par le backend (boucle locale
+   signée HMAC — même frontière de confiance que le cat SSH N°285, sans
+   l'exploitant), `wg_setup` est filé aussitôt (≤ 45 s, canal agent TLS) ;
+3. « Tester le tunnel » → preuve de joignabilité. **Aucun champ à remplir.**
+4. « Désactiver » → démontage routeur + **révocation automatique du peer
+   serveur** (wg-mini remove) — plus de rappel ops-wg quand l'automatisation
+   est active.
+
+### Voie experte N°285 — conservée intégralement (repli)
+`PUT /api/routers/{id}/wg-params` et le formulaire 4 valeurs restent la voie
+quand wg-mini est absent/v1 (installations sans mini-service) : la carte les
+replie dans un « **Mode expert** » (Collapsible, fermé par défaut) et affiche
+la note de cause quand l'automatisation échoue + un bouton de reprise
+« Terminer la configuration » (retry après incident wg-mini). Doctrine
+inchangée : le mode agent reste le SOCLE, le tunnel n'est jamais sur le
+chemin critique du check-in, PSK/clé serveur jamais exposées côté console.
+
+### Livré
+- **wg-mini v2** (`deploy/oracle/wg-mini/wg-mini.go`) : `POST /v1/add-router
+  {"name","pub"}` → `wg-peer.sh add-router` + relecture du livret
+  `.router.txt` → réponse {address, serverPub, psk, endpoint} ; `/v1/remove`
+  accepte désormais les DEUX espaces de noms (B2C `vpn-*` + routeurs de
+  gestion — révocation automatique) ; regex dédiée (pas de préfixe `vpn-`
+  côté routeurs, clé publique re-validée 44 base64 « = ») ; version v2 au
+  ping ; README (table des endpoints, § v2, ordre de mise à jour).
+- **Backend** : `POST /api/routers/{id}/wg-auto` (rang 2) — provisionnement
+  neuf via wg-mini OU re-livraison des paramètres stockés (réparation d'un
+  état error, self-healing) ; chaînage automatique dans le rapport
+  `wg_keygen` (goroutine : appel réseau wg-mini HORS verrou global,
+  discipline handlers_vpn) ; révocation auto au disable (goroutine) ;
+  `GET …/wg` expose `auto` (wg-mini configuré) ; messages enable/status/
+  disable adaptés ; validations strictes identiques des deux côtés de la
+  frontière VM→cloud (ValidWgIPv4/ValidWgKey/endpoint) + anti-collision
+  d'adresse + retraits best-effort des peers provisoires (jamais de fantôme
+  sur wg0 en cas de concurrence manuelle/automatique).
+- **Frontend** : carte Tunnel WireGuard refondue — panneau vert
+  « Configuration automatique (recommandé) » avec bouton unique + note
+  d'échec ambre ; formulaire 4 valeurs en Collapsible « Mode expert »
+  (affiché replié si auto, direct sinon) ; badge « Clé prête —
+  configuration automatique » ; poll 8 s étendu à l'état `ready` en attente
+  du chaînage backend ; i18n FR/EN 9 clés neuves + desc. de confirmation
+  de démontage actualisée ; `types.ts RouterWgStatus.auto`.
+- **Guide /docs/guides** (Parc routeurs & fiche routeur) : étape neuve
+  « Activez le tunnel (renfort) — automatique » + astuce mise à jour (mode
+  expert = repli sans wg-mini).
+
+### Vérifications (harnais local jetable /tmp — rien commité)
+- Backend : `gofmt` 0 diff, `go vet` OK, `go build` OK, `go test ./...`
+  11/11 paquets OK ; E2E API complet sur backend JSON + **vrai binaire
+  wg-mini v2** + script factice : enable → rapport keygen simulé →
+  goroutine auto-provision (état `pending_setup` + params + peer VM posé
+  en 5 ms) → rapport setup simulé → **`active`** ; journal complet
+  (« Clé générée — configuration AUTOMATIQUE en cours », « provisionné
+  AUTOMATIQUEMENT (peer routeur-e2e-307, 10.8.0.7) », « actif ») ;
+  disable → **remove wg0 confirmé (3 ms)**.
+- Frontend : `eslint` 0 erreur, `tsgo` 0 erreur ; E2E navigateur
+  (agent-browser, 1440×900, compte gérant hotspot dédié) : carte Désactivé →
+  « Activer » → badge keygen → (wg-mini coupé) panneau auto + note ambre +
+  bouton reprise + expert replié → (wg-mini relancé) clic « Terminer la
+  configuration » → « Configuration en cours… » → rapport setup →
+  **« Tunnel actif » + coordonnées (10.8.0.7 / 192.0.2.10:51820)** ;
+  expansion du mode expert (5 champs) OK ; 0 erreur console ; mobile 390 px
+  propre ; VLM ×3 écrans (panneau/notes/boutons/coord. confirmés, aucun
+  défaut visuel).
+- Dégradation face à un wg-mini v1 (404 sur /v1/add-router) : message
+  explicite « mettez à jour wg-mini en v2 » côté console — vérifié par
+  construction (traduction du 404 dans wgmini.go).
+
+### Suites pour l'exploitant (GESTE VM requis pour activer la voie royale)
+Le backend et le frontend livrés ici déploient seuls (Oracle + Vercel au
+push) mais **l'automatisation ne s'allume sur la VM de production qu'après
+la mise à jour de wg-mini en v2** (hot upgrade ~1 s, recette § « Mise à
+jour » du README : `GOOS=linux GOARCH=amd64 go build → install -m 755 →
+systemctl restart wg-mini`, vérif `ping` → `version: v2`). D'ici là, la
+console dégrade proprement : carte en mode expert N°285 (formulaire direct,
+messages inchangés), aucune régression. Aucun schéma DB (colonnes Wg*
+existantes réutilisées) → **rien à synchroniser**.
+
 ## 2026-10-12 — N°306 — **DOCS /GUIDES/GUIDES : captures des 6 guides plateforme (17 écrans console super-admin) + correction d'exactitude « page de maintenance »**
 
 ### Périmètre livré (suite directe de N°304 — la lacune identifiée « captures à venir » ; renuméroté N°305 → N°306 : collision de registre avec la livraison « correction du contact propriétaire », arrivée sur main pendant la session de captures)

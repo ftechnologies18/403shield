@@ -1,16 +1,24 @@
-// wg-mini — N°291 — passerelle locale WireGuard pour MikCloud (chantier ⑦,
-// décision D3-a de N°289).
+// wg-mini — N°291 (v2 : N°307) — passerelle locale WireGuard pour MikCloud
+// (chantier ⑦, décision D3-a de N°289).
 //
 // RÔLE : le backend MikCloud tourne dans un conteneur distroless — il ne
 // peut ni sudo ni toucher /etc/wireguard. wg-mini est une unité systemd
 // ROOT (wg-peer.sh exige root) sur la MÊME VM qui expose les gestes de
 // wg-peer.sh au backend, en boucle locale exclusivement :
 //
-//	POST /v1/add    {"name":"vpn-…"}  → wg-peer.sh add    → {"ok":true,"conf":"…","ip":"10.8.0.N"}
-//	POST /v1/remove {"name":"vpn-…"}  → wg-peer.sh remove → {"ok":true}
-//	GET  /v1/conf?name=vpn-…          → lecture conf      → {"ok":true,"conf":"…"}
-//	GET  /v1/list                     → wg-peer.sh list   → {"ok":true,"peers":[…]}
-//	GET  /v1/ping                     → {"ok":true,"service":"wg-mini","version":"v1"}
+//	POST /v1/add         {"name":"vpn-…"}              → wg-peer.sh add         → {"ok":true,"conf":"…","ip":"10.8.0.N"}
+//	POST /v1/add-router  {"name":"r-…","pub":"44car="} → wg-peer.sh add-router  → {"ok":true,"address":"…","serverPub":"…","psk":"…","endpoint":"…"}
+//	POST /v1/remove      {"name":"vpn-…|r-…"}          → wg-peer.sh remove      → {"ok":true}
+//	GET  /v1/conf?name=vpn-…                             → lecture conf           → {"ok":true,"conf":"…"}
+//	GET  /v1/list                                          → wg-peer.sh list        → {"ok":true,"peers":[…]}
+//	GET  /v1/ping                                          → {"ok":true,"service":"wg-mini","version":"v2"}
+//
+// v2 (N°307) : /v1/add-router ouvre le provisionnement AUTOMATIQUE du
+// renfort WireGuard des routeurs (la clé publique vient du routeur — générée
+// sur l'appareil par wg_keygen, la clé privée ne quitte jamais le routeur) ;
+// /v1/remove accepte désormais AUSSI les peers routeurs (révocation
+// automatique au démontage). Le backend dégrade proprement face à un v1
+// (404 → message de mise à jour côté cloud).
 //
 // SÉCURITÉ (conventions §8 de docs/RUNBOOK-HEBERGEMENT.md) :
 //   - bind 127.0.0.1:4020 UNIQUEMENT (port à réserver au registre) — aucune
@@ -19,11 +27,13 @@
 //     MÊME schéma que les webhooks GeniusPay du backend, inversé ;
 //     fenêtre d'horloge ±120 s, comparaison à temps constant ;
 //   - nom de peer validé par regex stricte côté mini ET côté cloud (aucun
-//     caractère d'échappement ne peut atteindre exec — pas de shell) ;
+//     caractère d'échappement ne peut atteindre exec — pas de shell) ; la clé
+//     publique routeur est validée par la même regex que wg-peer.sh ;
 //   - le secret et les confs ne sont JAMAIS logués (clés hors logs) ;
 //   - timeouts partout (script 20 s, client 10 s), corps limité à 8 Ko.
 //
-// INSTALLATION : cf. README.md du répertoire (recette §8 complète).
+// INSTALLATION : cf. README.md du répertoire (recette §8 complète, hot
+// upgrade ~1 s : recompiler → install → systemctl restart).
 package main
 
 import (
@@ -47,7 +57,7 @@ import (
 	"time"
 )
 
-const version = "v1"
+const version = "v2"
 
 var (
 	addr       = envOr("WG_MINI_ADDR", "127.0.0.1:4020")
@@ -56,10 +66,25 @@ var (
 	secret     = strings.TrimSpace(os.Getenv("WG_MINI_SECRET"))
 )
 
-// nameRe — mêmes règles que le cloud (model.vpnpeer.go) : préfixe « vpn- »
-// obligatoire (les peers de GESTION routeurs ne passent PAS par wg-mini),
-// minuscules/chiffres/tirets, aucun métacaractère.
+// nameRe — peers CLIENTS B2C : mêmes règles que le cloud (model.vpnpeer.go) :
+// préfixe « vpn- » obligatoire, minuscules/chiffres/tirets, aucun
+// métacaractère.
 var nameRe = regexp.MustCompile(`^vpn-[a-z0-9][a-z0-9-]{2,26}$`)
+
+// routerNameRe — peers ROUTEURS de gestion (renfort N°285, automatisation
+// N°307) : PAS de préfixe vpn- (réservé B2C — le retrait d'un add-router
+// mal orienté est impossible), même charset que la suggestion cloud
+// (WgPeerNameSuggestion : [a-z0-9][a-z0-9-]{0,31}).
+var routerNameRe = regexp.MustCompile(`^[a-z0-9][a-z0-9-]{0,31}$`)
+
+// pubKeyRe — clé publique WireGuard (44 caractères base64 std, « = » final) :
+// la même validation que wg-peer.sh add-router côté cloud (agent.ValidWgKey).
+var pubKeyRe = regexp.MustCompile(`^[A-Za-z0-9+/]{43}=$`)
+
+// peerAnyRe — /v1/remove accepte les DEUX espaces de noms (B2C vpn-* et
+// routeurs de gestion) : la révocation automatique N°307 en dépend. Un
+// remove sur un nom inexistant échoue proprement côté wg-peer.sh.
+var peerAnyRe = regexp.MustCompile(`^[a-z0-9][a-z0-9-]{0,31}$`)
 
 // scriptTimeout — wg-peer.sh add génère des clés + syncconf : quelques ms
 // sur la VM ; 20 s couvre une VM fatiguée sans laisser pendre une requête.
@@ -222,7 +247,8 @@ func handleRemove(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	name := strings.TrimSpace(req.Name)
-	if !nameRe.MatchString(name) {
+	// N°307 — B2C (vpn-*) ET routeurs de gestion : révocation automatique.
+	if !peerAnyRe.MatchString(name) {
 		fail(w, http.StatusBadRequest, "nom de peer invalide")
 		return
 	}
@@ -234,6 +260,82 @@ func handleRemove(w http.ResponseWriter, r *http.Request) {
 	}
 	log.Printf("[remove] %s ok (%s)", name, time.Since(start).Round(time.Millisecond))
 	writeJSON(w, http.StatusOK, map[string]any{"ok": true})
+}
+
+// handleAddRouter — N°307 — POST /v1/add-router {"name":"r-…","pub":"…="} :
+// wg-peer.sh add-router <name> <pub> embarque le peer ROUTEUR (clé publique
+// fournie par le routeur, PSK + adresse allouées sur la VM) puis le LIVRET
+// .router.txt est relu et ses 4 valeurs retournées au backend (address,
+// server_pub, psk, endpoint) — elles repartent aussitôt vers le routeur via
+// le canal agent TLS strict du cloud. La PSK/clé serveur ne transitent que
+// sur cette boucle locale signée (même frontière de confiance que le cat SSH
+// du livret par l'exploitant en N°285 — sans l'exploitant).
+func handleAddRouter(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Name string `json:"name"`
+		Pub  string `json:"pub"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		fail(w, http.StatusBadRequest, "corps invalide")
+		return
+	}
+	name := strings.TrimSpace(req.Name)
+	pub := strings.TrimSpace(req.Pub)
+	if !routerNameRe.MatchString(name) || strings.HasPrefix(name, "vpn-") {
+		fail(w, http.StatusBadRequest, "nom de peer routeur invalide (minuscules/chiffres/tirets, sans préfixe vpn-)")
+		return
+	}
+	if !pubKeyRe.MatchString(pub) {
+		fail(w, http.StatusBadRequest, "clé publique routeur invalide (44 caractères base64, « = » final)")
+		return
+	}
+	start := time.Now()
+	out, err := runScript(r.Context(), "add-router", name, pub)
+	if err != nil {
+		log.Printf("[add-router] %s échec (%s) : %v", name, time.Since(start).Round(time.Millisecond), err)
+		fail(w, http.StatusBadGateway, err.Error())
+		return
+	}
+	raw, err := os.ReadFile(filepath.Join(peersDir, name+".router.txt"))
+	if err != nil {
+		log.Printf("[add-router] %s posé mais livret illisible : %v", name, err)
+		fail(w, http.StatusInternalServerError, "peer routeur posé sur wg0 mais livret illisible — vérifiez "+peersDir)
+		return
+	}
+	livret := parseLivret(string(raw))
+	if livret["address"] == "" || livret["server_pub"] == "" || livret["psk"] == "" || livret["endpoint"] == "" {
+		log.Printf("[add-router] %s livret incomplet", name)
+		fail(w, http.StatusInternalServerError, "livret routeur incomplet — vérifiez wg-peer.sh sur la VM")
+		return
+	}
+	log.Printf("[add-router] %s ok (%s)", name, time.Since(start).Round(time.Millisecond))
+	// Le livret contient la PSK et la clé serveur : réponse signée HMAC,
+	// boucle locale uniquement — jamais loguée.
+	writeJSON(w, http.StatusOK, map[string]any{
+		"ok":        true,
+		"name":      name,
+		"address":   livret["address"],
+		"serverPub": livret["server_pub"],
+		"psk":       livret["psk"],
+		"endpoint":  livret["endpoint"],
+		"_":         lastLine(string(out)), // trace wg-peer.sh (sans le livret)
+	})
+}
+
+// parseLivret — découpe les lignes « clé=valeur » du .router.txt (fichier
+// local 600 root déjà validé par regex de nom — aucune traversée possible).
+func parseLivret(raw string) map[string]string {
+	out := map[string]string{}
+	for _, line := range strings.Split(raw, "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" {
+			continue
+		}
+		if i := strings.IndexByte(line, '='); i > 0 {
+			out[line[:i]] = strings.TrimSpace(line[i+1:])
+		}
+	}
+	return out
 }
 
 func handleConf(w http.ResponseWriter, r *http.Request) {
@@ -321,6 +423,7 @@ func main() {
 	}
 	mux := http.NewServeMux()
 	mux.HandleFunc("POST /v1/add", signed(handleAdd))
+	mux.HandleFunc("POST /v1/add-router", signed(handleAddRouter))
 	mux.HandleFunc("POST /v1/remove", signed(handleRemove))
 	mux.HandleFunc("GET /v1/conf", signed(handleConf))
 	mux.HandleFunc("GET /v1/list", signed(handleList))

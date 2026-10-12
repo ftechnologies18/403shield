@@ -849,7 +849,18 @@ func (a *API) handleAgentResult(w http.ResponseWriter, r *http.Request) {
 			router.WgPub = wgpub
 			router.WgState = "ready"
 			router.WgError = ""
-			a.logActivity(db, router.AccountID, "router", "Clé WireGuard générée sur «"+router.Name+"» — posez le peer côté serveur (dispatch ops-wg peer-add-router) puis livrez les paramètres dans la console")
+			if wgMiniConfigured() {
+				// N°307 — chaînage AUTOMATIQUE : le peer serveur est
+				// embarqué par wg-mini (add-router) puis wg_setup est filé —
+				// le gérant ne saisit AUCUNE valeur technique. Goroutine :
+				// l'appel réseau wg-mini ne part JAMAIS sous le verrou global
+				// (la goroutine attend la fin du check-in, ~0 impact).
+				bgAcc, bgRouter := router.AccountID, router.ID
+				go a.wgAutoProvisionBg(bgRouter, bgAcc)
+				a.logActivity(db, router.AccountID, "router", "Clé WireGuard générée sur «"+router.Name+"» — configuration AUTOMATIQUE du tunnel en cours (peer serveur embarqué, aucune valeur à saisir)")
+			} else {
+				a.logActivity(db, router.AccountID, "router", "Clé WireGuard générée sur «"+router.Name+"» — posez le peer côté serveur (dispatch ops-wg peer-add-router) puis livrez les paramètres dans la console")
+			}
 		} else {
 			router.WgState = "error"
 			router.WgError = "clé publique rapportée invalide"

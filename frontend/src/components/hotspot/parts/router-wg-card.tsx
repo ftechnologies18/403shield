@@ -4,26 +4,29 @@
 //
 // RENFORT opt-in : un deuxième chemin routeur ↔ VM, chiffré, sans aucun port
 // public — le mode agent reste le SOCLE et le tunnel n'est JAMAIS sur le
-// chemin critique du check-in (zéro orphelin possible). Cycle guidé :
-//   1. « Activer » → le routeur génère sa paire WG (clé privée jamais
-//      transportée) et rapporte sa clé publique ;
-//   2. l'exploitant embarque le peer côté serveur (dispatch ops-wg
-//      peer-add-router) et lit le livret 600 root (.router.txt) ;
-//   3. le gérant colle les 4 valeurs du livret → livraison au routeur au
-//      prochain check-in (≤ 45 s) ;
-//   4. « Tester » → dial direct 10.8.0.N:8728 depuis la VM (preuve de
-//      joignabilité) ;
-//   5. « Désactiver » → démontage routeur + rappel de la révocation serveur.
+// chemin critique du check-in (zéro orphelin possible).
+//
+// N°307 — AUTOMATISATION (voie royale) : quand wg-mini est actif côté
+// serveur (status.auto), le gérant ne saisit AUCUNE valeur technique —
+// « Activer le tunnel » → la clé est générée sur le routeur (≤ 45 s) → le
+// backend embarque le peer serveur et livre wg_setup tout seul (≤ 45 s) →
+// « Tester ». La carte suit la progression et n'expose qu'un bouton de
+// reprise « Terminer la configuration » (retry après un incident wg-mini).
+// Le formulaire 4 valeurs N°285 (livret wg-peer.sh collé à la main) devient
+// le « Mode expert », replié par défaut — il reste LA voie quand wg-mini
+// est absent (dégradation propre, aucun changement de doctrine).
 
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Check,
+  ChevronDown,
   Copy,
   Loader2,
   RefreshCw,
   ShieldCheck,
   ShieldOff,
+  Sparkles,
   TriangleAlert,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -41,6 +44,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { api } from "@/lib/hotspot/api";
@@ -97,17 +101,30 @@ export function RouterWireGuardCard({ router }: { router: RouterDevice }) {
   const [form, setForm] = useState<WgForm>(WG_FORM_EMPTY);
   const [confirmDisable, setConfirmDisable] = useState(false);
   const [copiedPub, setCopiedPub] = useState(false);
+  const [expertOpen, setExpertOpen] = useState(false);
 
   // État du renfort : poll 8 s UNIQUEMENT pendant les phases d'attente
-  // (keygen/setup en vol) — l'état stable ne consomme rien (économie N°75).
+  // (keygen/setup en vol, ou N°307 provisionnement automatique en cours) —
+  // l'état stable ne consomme rien (économie N°75).
   const { data: wg } = useQuery({
     queryKey: ["/api/routers", router.id, "wg"],
     queryFn: () => api<RouterWgStatus>(`/api/routers/${router.id}/wg`),
     refetchInterval: (q) => {
       const st = q.state.data?.state ?? "";
-      return st === "pending_keygen" || st === "pending_setup" ? 8_000 : false;
+      if (st === "pending_keygen" || st === "pending_setup") {
+        return 8_000;
+      }
+      // N°307 — le chaînage automatique (keygen → peer serveur → setup) se
+      // joue côté backend : on surveille la transition « ready » →
+      // « pending_setup » tant que rien n'est livré.
+      if (st === "ready" && q.state.data?.auto && !q.state.data?.hasParams) {
+        return 8_000;
+      }
+      return false;
     },
   });
+
+  const autoAvailable = wg?.auto === true;
 
   // peerNameVal — suggestion affichée en placeholder, utilisée si le champ
   // reste vide (aucun effet de synchronisation : dérivation au rendu,
@@ -126,6 +143,21 @@ export function RouterWireGuardCard({ router }: { router: RouterDevice }) {
       invalidate();
     },
     onError: (err: Error) => toast.error(err.message),
+  });
+
+  // N°307 — provisionnement automatique : wg-mini embarque le peer serveur et
+  // wg_setup part au routeur (zéro saisie). Sert aussi de reprise manuelle si
+  // le chaînage backend a échoué (wg-mini redémarré, incident transitoire).
+  const autoMutation = useMutation({
+    mutationFn: () => api<RouterWgActionResult>(`/api/routers/${router.id}/wg-auto`, { method: "POST" }),
+    onSuccess: (res) => {
+      toast.success(res.message ?? t("routers.wg.autoQueued"));
+      invalidate();
+    },
+    onError: (err: Error) => {
+      toast.error(err.message);
+      invalidate(); // l'état « ready » porte la note de cause (wg.error)
+    },
   });
 
   const paramsMutation = useMutation({
@@ -179,7 +211,11 @@ export function RouterWireGuardCard({ router }: { router: RouterDevice }) {
 
   const state = wg?.state ?? "";
   const busy =
-    enableMutation.isPending || paramsMutation.isPending || testMutation.isPending || disableMutation.isPending;
+    enableMutation.isPending ||
+    autoMutation.isPending ||
+    paramsMutation.isPending ||
+    testMutation.isPending ||
+    disableMutation.isPending;
 
   const stateBadge = () => {
     switch (state) {
@@ -194,7 +230,7 @@ export function RouterWireGuardCard({ router }: { router: RouterDevice }) {
       case "ready":
         return (
           <Badge variant="outline" className="gap-1 border-sky-500/40 bg-sky-500/10 text-sky-700 dark:text-sky-400">
-            {t("routers.wg.stateReady")}
+            {t(autoAvailable ? "routers.wg.stateReadyAuto" : "routers.wg.stateReady")}
           </Badge>
         );
       case "active":
@@ -227,6 +263,116 @@ export function RouterWireGuardCard({ router }: { router: RouterDevice }) {
     /^[A-Za-z0-9+/]{43}=$/.test(form.serverPub.trim()) &&
     /^[A-Za-z0-9+/]{43}=$/.test(form.psk.trim()) &&
     form.endpoint.trim().length > 0;
+
+  // Voie experte N°285 — consignes serveur + formulaire 4 valeurs. Rendu tel
+  // quel quand l'automatisation est indisponible ; replié dans un
+  // « Mode expert » quand elle l'est (le gérant lambda n'a plus à la voir).
+  const expertContent = (
+    <>
+      <div className="rounded-md border bg-muted/40 p-3 text-xs text-muted-foreground">
+        <p className="font-medium text-foreground">{t("routers.wg.stepServerTitle")}</p>
+        <ol className="mt-1 list-decimal space-y-0.5 pl-4">
+          <li>
+            {t("routers.wg.stepDispatch")}
+            {wg?.peerName ? (
+              <code className="ml-1 rounded bg-muted px-1 font-mono">peer_name={wg.peerName}</code>
+            ) : null}
+          </li>
+          <li>{t("routers.wg.stepLivret")}</li>
+          <li>{t("routers.wg.stepPaste")}</li>
+        </ol>
+      </div>
+
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <div className="flex flex-col gap-1">
+          <Label htmlFor={`wg-peer-${router.id}`} className="text-xs">
+            {t("routers.wg.peerLabel")}
+          </Label>
+          <Input
+            id={`wg-peer-${router.id}`}
+            value={form.peerName}
+            onChange={(e) => setForm({ ...form, peerName: e.target.value })}
+            placeholder={wg?.peerName || "routeur-1"}
+            className="h-9 font-mono text-xs"
+            autoComplete="off"
+            spellCheck={false}
+          />
+        </div>
+        <div className="flex flex-col gap-1">
+          <Label htmlFor={`wg-addr-${router.id}`} className="text-xs">
+            {t("routers.wg.addrLabel")}
+          </Label>
+          <Input
+            id={`wg-addr-${router.id}`}
+            value={form.address}
+            onChange={(e) => setForm({ ...form, address: e.target.value })}
+            placeholder="10.8.0.2"
+            className="h-9 font-mono text-xs"
+            autoComplete="off"
+            spellCheck={false}
+          />
+        </div>
+        <div className="flex flex-col gap-1">
+          <Label htmlFor={`wg-spub-${router.id}`} className="text-xs">
+            {t("routers.wg.serverPubLabel")}
+          </Label>
+          <Input
+            id={`wg-spub-${router.id}`}
+            value={form.serverPub}
+            onChange={(e) => setForm({ ...form, serverPub: e.target.value })}
+            placeholder="…="
+            className="h-9 font-mono text-xs"
+            autoComplete="off"
+            spellCheck={false}
+          />
+        </div>
+        <div className="flex flex-col gap-1">
+          <Label htmlFor={`wg-psk-${router.id}`} className="text-xs">
+            {t("routers.wg.pskLabel")}
+          </Label>
+          <Input
+            id={`wg-psk-${router.id}`}
+            type="password"
+            value={form.psk}
+            onChange={(e) => setForm({ ...form, psk: e.target.value })}
+            placeholder="…="
+            className="h-9 font-mono text-xs"
+            autoComplete="off"
+            spellCheck={false}
+          />
+        </div>
+        <div className="flex flex-col gap-1 sm:col-span-2">
+          <Label htmlFor={`wg-ep-${router.id}`} className="text-xs">
+            {t("routers.wg.endpointLabel")}
+          </Label>
+          <Input
+            id={`wg-ep-${router.id}`}
+            value={form.endpoint}
+            onChange={(e) => setForm({ ...form, endpoint: e.target.value })}
+            placeholder="203.0.113.10:51820"
+            className="h-9 font-mono text-xs"
+            autoComplete="off"
+            spellCheck={false}
+          />
+        </div>
+      </div>
+
+      {canManage ? (
+        <div>
+          <Button
+            type="button"
+            size="sm"
+            className="h-9 gap-1.5"
+            disabled={busy || !formValid}
+            onClick={() => paramsMutation.mutate(form)}
+          >
+            {paramsMutation.isPending ? <Loader2 className="size-4 animate-spin" /> : <ShieldCheck className="size-4" />}
+            {t("routers.wg.deliver")}
+          </Button>
+        </div>
+      ) : null}
+    </>
+  );
 
   return (
     <Card className="py-0">
@@ -312,108 +458,57 @@ export function RouterWireGuardCard({ router }: { router: RouterDevice }) {
               </div>
             </div>
 
-            <div className="rounded-md border bg-muted/40 p-3 text-xs text-muted-foreground">
-              <p className="font-medium text-foreground">{t("routers.wg.stepServerTitle")}</p>
-              <ol className="mt-1 list-decimal space-y-0.5 pl-4">
-                <li>
-                  {t("routers.wg.stepDispatch")}
-                  {wg.peerName ? (
-                    <code className="ml-1 rounded bg-muted px-1 font-mono">peer_name={wg.peerName}</code>
+            {autoAvailable ? (
+              <>
+                {/* N°307 — panneau automatique : le serveur fait tout, le
+                    gérant n'a qu'un bouton de reprise. */}
+                <div className="flex flex-col gap-2 rounded-md border border-emerald-500/30 bg-emerald-500/5 p-3">
+                  <div className="flex items-center gap-1.5">
+                    <Sparkles className="size-3.5 shrink-0 text-emerald-600 dark:text-emerald-400" />
+                    <p className="text-xs font-medium text-foreground">{t("routers.wg.autoTitle")}</p>
+                  </div>
+                  <p className="text-xs text-muted-foreground">{t("routers.wg.autoDesc")}</p>
+                  {state === "ready" && wg.error ? (
+                    <p className="rounded-md border border-amber-500/30 bg-amber-500/5 px-2.5 py-1.5 text-xs text-amber-700 dark:text-amber-400">
+                      {wg.error}
+                    </p>
                   ) : null}
-                </li>
-                <li>{t("routers.wg.stepLivret")}</li>
-                <li>{t("routers.wg.stepPaste")}</li>
-              </ol>
-            </div>
+                  {canManage && state === "ready" && !wg?.hasParams ? (
+                    <Button
+                      type="button"
+                      size="sm"
+                      className="h-9 w-fit gap-1.5"
+                      disabled={busy}
+                      onClick={() => autoMutation.mutate()}
+                    >
+                      {autoMutation.isPending ? (
+                        <Loader2 className="size-4 animate-spin" />
+                      ) : (
+                        <Sparkles className="size-4" />
+                      )}
+                      {t("routers.wg.autoDeliver")}
+                    </Button>
+                  ) : null}
+                </div>
 
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <div className="flex flex-col gap-1">
-                <Label htmlFor={`wg-peer-${router.id}`} className="text-xs">
-                  {t("routers.wg.peerLabel")}
-                </Label>
-                <Input
-                  id={`wg-peer-${router.id}`}
-                  value={form.peerName}
-                  onChange={(e) => setForm({ ...form, peerName: e.target.value })}
-                  placeholder={wg.peerName || "routeur-1"}
-                  className="h-9 font-mono text-xs"
-                  autoComplete="off"
-                  spellCheck={false}
-                />
-              </div>
-              <div className="flex flex-col gap-1">
-                <Label htmlFor={`wg-addr-${router.id}`} className="text-xs">
-                  {t("routers.wg.addrLabel")}
-                </Label>
-                <Input
-                  id={`wg-addr-${router.id}`}
-                  value={form.address}
-                  onChange={(e) => setForm({ ...form, address: e.target.value })}
-                  placeholder="10.8.0.2"
-                  className="h-9 font-mono text-xs"
-                  autoComplete="off"
-                  spellCheck={false}
-                />
-              </div>
-              <div className="flex flex-col gap-1">
-                <Label htmlFor={`wg-spub-${router.id}`} className="text-xs">
-                  {t("routers.wg.serverPubLabel")}
-                </Label>
-                <Input
-                  id={`wg-spub-${router.id}`}
-                  value={form.serverPub}
-                  onChange={(e) => setForm({ ...form, serverPub: e.target.value })}
-                  placeholder="…="
-                  className="h-9 font-mono text-xs"
-                  autoComplete="off"
-                  spellCheck={false}
-                />
-              </div>
-              <div className="flex flex-col gap-1">
-                <Label htmlFor={`wg-psk-${router.id}`} className="text-xs">
-                  {t("routers.wg.pskLabel")}
-                </Label>
-                <Input
-                  id={`wg-psk-${router.id}`}
-                  type="password"
-                  value={form.psk}
-                  onChange={(e) => setForm({ ...form, psk: e.target.value })}
-                  placeholder="…="
-                  className="h-9 font-mono text-xs"
-                  autoComplete="off"
-                  spellCheck={false}
-                />
-              </div>
-              <div className="flex flex-col gap-1 sm:col-span-2">
-                <Label htmlFor={`wg-ep-${router.id}`} className="text-xs">
-                  {t("routers.wg.endpointLabel")}
-                </Label>
-                <Input
-                  id={`wg-ep-${router.id}`}
-                  value={form.endpoint}
-                  onChange={(e) => setForm({ ...form, endpoint: e.target.value })}
-                  placeholder="203.0.113.10:51820"
-                  className="h-9 font-mono text-xs"
-                  autoComplete="off"
-                  spellCheck={false}
-                />
-              </div>
-            </div>
-
-            {canManage ? (
-              <div>
-                <Button
-                  type="button"
-                  size="sm"
-                  className="h-9 gap-1.5"
-                  disabled={busy || !formValid}
-                  onClick={() => paramsMutation.mutate(form)}
-                >
-                  {paramsMutation.isPending ? <Loader2 className="size-4 animate-spin" /> : <ShieldCheck className="size-4" />}
-                  {t("routers.wg.deliver")}
-                </Button>
-              </div>
-            ) : null}
+                {/* Voie experte N°285, repliée : visible au clic uniquement. */}
+                <Collapsible open={expertOpen} onOpenChange={setExpertOpen}>
+                  <CollapsibleTrigger className="flex w-fit items-center gap-1 text-xs text-muted-foreground underline-offset-2 hover:text-foreground hover:underline">
+                    <ChevronDown
+                      className={`size-3.5 transition-transform ${expertOpen ? "" : "-rotate-90"}`}
+                      aria-hidden
+                    />
+                    {t("routers.wg.expertToggle")}
+                  </CollapsibleTrigger>
+                  <CollapsibleContent className="mt-3 flex flex-col gap-3">
+                    <p className="text-xs text-muted-foreground">{t("routers.wg.expertHint")}</p>
+                    {expertContent}
+                  </CollapsibleContent>
+                </Collapsible>
+              </>
+            ) : (
+              expertContent
+            )}
           </div>
         ) : null}
 

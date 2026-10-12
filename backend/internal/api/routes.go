@@ -582,10 +582,13 @@ func (a *API) Handler() http.Handler {
 	mux.HandleFunc("POST /api/routers/{id}/routerboard-firmware", a.requireRole(2, a.handleRouterboardFirmware))
 	mux.HandleFunc("POST /api/routers/{id}/migrate-url", a.requireRole(2, a.handleRouterMigrateURL))
 	// N°285 — renfort WireGuard (opt-in, mode agent uniquement) : cycle
-	// keygen → params (livret wg-peer.sh) → setup → test → teardown.
+	// keygen → params (livret wg-peer.sh, voie experte) → setup → test →
+	// teardown. N°307 — wg-auto : provisionnement automatique du peer
+	// serveur (wg-mini add-router) + chaînage keygen → setup sans saisie.
 	mux.HandleFunc("POST /api/routers/{id}/wg-enable", a.requireRole(2, a.handleRouterWgEnable))
 	mux.HandleFunc("GET /api/routers/{id}/wg", a.handleRouterWgStatus)
 	mux.HandleFunc("PUT /api/routers/{id}/wg-params", a.requireRole(2, a.handleRouterWgParams))
+	mux.HandleFunc("POST /api/routers/{id}/wg-auto", a.requireRole(2, a.handleRouterWgAuto))
 	mux.HandleFunc("POST /api/routers/{id}/wg-test", a.requireRole(2, a.handleRouterWgTest))
 	mux.HandleFunc("POST /api/routers/{id}/wg-disable", a.requireRole(2, a.handleRouterWgDisable))
 	// N°97 — docteur pool IP (épuisement heures de pointe)

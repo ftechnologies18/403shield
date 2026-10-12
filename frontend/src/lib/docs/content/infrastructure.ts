@@ -72,7 +72,12 @@ export const INFRASTRUCTURE_GUIDES: Guide[] = [
         title: "Personnalisez le portail (raccourci)",
         body:
           "Le bouton « Personnaliser le portail » de la fiche ouvre directement l'éditeur de marque pour CE routeur (chaîne compte → site → routeur, guide Portail captif & marque).",
-        tip: "Le tunnel WG (renfort) est optionnel : il double le canal agent pour la robustesse (CGNAT capricieux, ligne fragile). Sans tunnel, l'agent suffit.",
+      },
+      {
+        title: "Activez le tunnel (renfort) — automatique",
+        body:
+          "La carte « Tunnel WireGuard » de la fiche ne demande AUCUNE compétence réseau : cliquez « Activer le tunnel » et attendez. Le routeur génère sa clé (≤ 45 s), le serveur embarque le peer et livre les paramètres chiffrés (≤ 45 s) — puis « Tester le tunnel » confirme le chemin direct. Aucune adresse, clé ou endpoint à saisir : l'installation fait tout.",
+        tip: "Le tunnel WG (renfort) est optionnel : il double le canal agent pour la robustesse (CGNAT capricieux, ligne fragile). Sans tunnel, l'agent suffit. Sur les installations sans wg-mini, la carte bascule en mode expert (4 valeurs du livret serveur) — réservé aux initiés.",
       },
       {
         title: "Le menu ⋯ (maintenance)",
