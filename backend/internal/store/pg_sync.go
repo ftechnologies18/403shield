@@ -186,6 +186,10 @@ func syncSteps(db *model.DB) []syncStep {
 		{pppSecretSpec.table, func(hashes, pending map[string]map[string]uint64) tableApplier {
 			return diffTable(hashes, pending, pppSecretSpec, db.PppSecrets)
 		}},
+		// N°313 — clients légers de la console tunnel (Programme Tunnel, D-T2).
+		{tunnelClientSpec.table, func(hashes, pending map[string]map[string]uint64) tableApplier {
+			return diffTable(hashes, pending, tunnelClientSpec, db.TunnelClients)
+		}},
 		{transactionSpec.table, func(hashes, pending map[string]map[string]uint64) tableApplier {
 			return diffTable(hashes, pending, transactionSpec, db.Transactions)
 		}},
@@ -851,6 +855,7 @@ func (p *PG) rebuildHashes(db *model.DB) {
 		cyberPosteSpec.table:       hashRows(db.CyberPostes, cyberPosteSpec),
 		vpnPeerSpec.table:          hashRows(db.VpnPeers, vpnPeerSpec),
 		publicVpnOrderSpec.table:   hashRows(db.PublicVpnOrders, publicVpnOrderSpec),
+		tunnelClientSpec.table:     hashRows(db.TunnelClients, tunnelClientSpec),
 		pppSecretSpec.table:        hashRows(db.PppSecrets, pppSecretSpec),
 	}
 	notifRows := make([]model.NotificationSettings, 0, len(db.NotifSettings))

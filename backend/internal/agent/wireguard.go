@@ -50,6 +50,8 @@ const WgListenPort = 13231
 // MikCloud. N°312 : la liste s'ÉLARGIT par compte avec les IP des peers
 // « remote » du gérant (supervision B2B — cf. WgAllowedSourcesLocked côté
 // api) ; sans peer remote, le comportement N°285 est identique au byte près.
+// N°313 : les peers remote frais vivent sur le SEGMENT 10.8.2.0/24 (pool
+// multi-segments D-T5) — le socle de gestion reste 10.8.0.1, inchangé.
 const WgServerTunnelIP = "10.8.0.1"
 
 // WgDefaultAllowedSources — la valeur de repli (et le socle) de la clé
@@ -69,20 +71,49 @@ var wgKeyRe = regexp.MustCompile(`^[A-Za-z0-9+/]{43}=$`)
 var wgIPv4Re = regexp.MustCompile(`^10\.8\.0\.(\d{1,3})$`)
 var wgPeerNameRe = regexp.MustCompile(`^[a-z0-9][a-z0-9-]{0,31}$`)
 var wgHostRe = regexp.MustCompile(`^[A-Za-z0-9.-]{1,253}$`)
-var wgAllowedItemRe = regexp.MustCompile(`^10\.8\.0\.(\d{1,2}|1\d{2}|2[0-4]\d|25[0-5])/32$`)
+
+// N°313 — items de la liste allowedSources du peer serveur : /32 du segment
+// GESTION (10.8.0.x — socle + peers remote posés avant la v4) OU du segment
+// REMOTE (10.8.2.x — peers remote frais, wg-peer.sh v4). Le segment B2C
+// (10.8.1.x) est REFUSÉ : un peer full-tunnel vendu ne supervise rien, il
+// n'a rien à faire dans l'allowed-address d'un routeur.
+var wgAllowedItemRe = regexp.MustCompile(`^10\.8\.[02]\.(\d{1,2}|1\d{2}|2[0-4]\d|25[0-5])/32$`)
 
 // ValidWgKey — clé publique WireGuard (44 caractères base64 std, terminé « = »).
 // Valide indifféremment une clé publique et une PresharedKey (même format).
 func ValidWgKey(s string) bool { return wgKeyRe.MatchString(s) }
 
-// ValidWgIPv4 — adresse tunnel d'un routeur : 10.8.0.N, N ∈ [2,254]
-// (10.8.0.1 = le serveur, réservé).
+// ValidWgIPv4 — adresse tunnel d'un ROUTEUR : 10.8.0.N, N ∈ [2,254]
+// (10.8.0.1 = le serveur, réservé). Les routeurs de gestion RESTENT sur le
+// segment historique (wg-peer.sh v4 add-router, N°313).
 func ValidWgIPv4(s string) bool {
 	m := wgIPv4Re.FindStringSubmatch(s)
 	if m == nil {
 		return false
 	}
 	n, err := strconv.Atoi(m[1])
+	return err == nil && n >= 2 && n <= 254
+}
+
+// ValidWgSupervisionIP — N°313 — adresse tunnel d'un peer « remote » (le
+// gérant) : segment GESTION (10.8.0.x — peers posés avant la v4) ou segment
+// REMOTE (10.8.2.x — peers frais, wg-peer.sh v4), N ∈ [2,254]. Le segment
+// B2C (10.8.1.x) est REFUSÉ : les peers full-tunnel vendus ne figurent
+// JAMAIS dans l'allowed-address du peer serveur d'un routeur (isolation
+// produit — wgAllowedSourcesLocked filtre déjà par Kind, cette regex est la
+// défense en profondeur du bord builder).
+func ValidWgSupervisionIP(s string) bool {
+	if s == "" {
+		return false
+	}
+	m := strings.Split(s, ".")
+	if len(m) != 4 {
+		return false
+	}
+	if m[0] != "10" || m[1] != "8" || (m[2] != "0" && m[2] != "2") {
+		return false
+	}
+	n, err := strconv.Atoi(m[3])
 	return err == nil && n >= 2 && n <= 254
 }
 
@@ -97,11 +128,14 @@ func ValidWgPort(p int) bool { return p >= 1 && p <= 65535 }
 
 // SanitizeWgAllowedSources — N°312 — valide/assainit la liste d'allowed-address
 // du peer serveur (clé « allowedSources » du payload wg_setup) : items
-// « 10.8.0.N/32 » séparés par des virgules. Toute valeur mal formée, liste
+// « 10.8.0.N/32 » (gestion + remote historiques) ou « 10.8.2.N/32 » (remote
+// frais, N°313) séparés par des virgules. Toute valeur mal formée, liste
 // vide ou trop longue (isolation : au plus 26 entrées — le socle + les
 // MaxVpnPeersPerAccount peers remote, marge comprise) retombe sur le SOCLE
 // seul (10.8.0.1/32) : le repli est TOUJOURS conservateur — jamais une porte
 // plus ouverte que prévu (défense en profondeur, frontière cloud → routeur).
+// Les adresses du segment B2C (10.8.1.x) sont refusées de la même façon :
+// un peer full-tunnel vendu ne supervise rien.
 func SanitizeWgAllowedSources(raw string) string {
 	raw = strings.TrimSpace(raw)
 	if raw == "" {

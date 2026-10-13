@@ -861,6 +861,21 @@ func (p *PG) ensureSchema() error {
 		`CREATE UNIQUE INDEX IF NOT EXISTS idx_ppp_secrets_router_name ON ppp_secrets (router_id, name)`,
 		`CREATE INDEX IF NOT EXISTS idx_ppp_secrets_account ON ppp_secrets (account_id)`,
 		`CREATE INDEX IF NOT EXISTS idx_ppp_secrets_router  ON ppp_secrets (router_id)`,
+		// N°313 — CLIENTS LÉGERS de la console tunnel (Programme
+		// Tunnel, D-T2 : l'espace client B2C de la phase 2 — JAMAIS
+		// dans admin_users). Aucun secret : pas de mot de passe, les
+		// codes de connexion à usage unique vivent en mémoire API
+		// (TTL 10 min) — rien de durable à stocker ici. L'e-mail est
+		// la clé d'appariement aux commandes B2C (public_vpn_orders).
+		`CREATE TABLE IF NOT EXISTS tunnel_clients (
+                        id          TEXT PRIMARY KEY,
+                        email       TEXT NOT NULL,
+                        phone       TEXT NOT NULL DEFAULT '',
+                        status      TEXT NOT NULL DEFAULT 'active',
+                        created_at  TEXT NOT NULL,
+                        updated_at  TEXT NOT NULL
+                )`,
+		`CREATE UNIQUE INDEX IF NOT EXISTS idx_tunnel_clients_email ON tunnel_clients (email)`,
 		// N°294 — cycle de vie complet de l'abonné : suspension auto
 		// (ExpMode→disable, gabarit hotspot F1), réactivation F4,
 		// IP statique (phase B), récurrent + rappels (phase C).

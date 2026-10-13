@@ -92,6 +92,10 @@ type DB struct {
 	// Segment ISP transverse (hotspot/homenet) : aucun garde d'usage.
 	// Cf. pppsecret.go.
 	PppSecrets []PppSecret `json:"pppSecrets"`
+	// N°313 — clients LÉGERS de la console tunnel (Programme Tunnel,
+	// D-T2 : jamais dans admin_users). Aucun secret : les codes à usage
+	// unique vivent en mémoire API. Cf. tunnelclient.go.
+	TunnelClients []TunnelClient `json:"tunnelClients"`
 	// N°68 — demandes de réinitialisation de mot de passe (« Mot de passe
 	// oublié ? ») : token hashé, expiration 60 min, usage unique — voir
 	// PasswordReset. Borné par prunePasswordResetsLocked.
@@ -373,6 +377,7 @@ func (db *DB) CloneDeep() *DB {
 	clone.VpnPeers = append([]VpnPeer(nil), db.VpnPeers...)
 	clone.PublicVpnOrders = append([]PublicVpnOrder(nil), db.PublicVpnOrders...)
 	clone.PppSecrets = append([]PppSecret(nil), db.PppSecrets...)
+	clone.TunnelClients = append([]TunnelClient(nil), db.TunnelClients...)
 	clone.PasswordResets = append([]PasswordReset(nil), db.PasswordResets...)
 	clone.ChatConversations = append([]ChatConversation(nil), db.ChatConversations...)
 	clone.ChatMessages = append([]ChatMessage(nil), db.ChatMessages...)

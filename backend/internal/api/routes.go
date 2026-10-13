@@ -48,7 +48,16 @@ type API struct {
 	vpnOrder   *signupLimiter
 	vpnStatus  *signupLimiter
 	vpnRecover *signupLimiter
-	vitals     *telemetry.Collector // B2 — Core Web Vitals (nil = collecte désactivée)
+	// N°313 — quotas du module tunnel (console séparée, routes publiques) :
+	// la demande de code fait partir un e-mail RÉEL → serrée ; la
+	// vérification est large (un humain qui retape son code reste loin du
+	// seuil). tunnelCodes/tunnelMu : registre VOLATIL des codes à usage
+	// unique (TTL 10 min — jamais en base, cf. handlers_tunnel.go).
+	tunnelCode   *signupLimiter
+	tunnelVerify *signupLimiter
+	tunnelCodes  map[string]*tunnelCodeEntry
+	tunnelMu     sync.Mutex
+	vitals       *telemetry.Collector // B2 — Core Web Vitals (nil = collecte désactivée)
 	// N°72 — bande passante sortante du jour (octets de corps de réponse
 	// par catégorie : agents / portail / medias / console / autre), exposée
 	// dans GET /api/admin/sync-status. Le quota Render (5 Go/mois gratuit)
@@ -154,7 +163,7 @@ func New(s *store.Store, jwtSecret string) *API {
 	// groupe serial rejoue l'inscription déjà passée — cf. signup_abuse.go.
 	// Les autres limiteurs S3 (join, reset) gardent les constantes : aucune
 	// suite E2E ne les traverse.
-	return &API{store: s, secret: jwtSecret, gws: map[string]routeros.Gateway{}, pinLock: newPinLimiter(), signup: signupLimiterFromEnv(os.Getenv), join: newSignupLimiter(), wifiClaim: newSignupLimiterLimits(20, 100), portalTrack: newSignupLimiterLimits(300, 3000), reset: newSignupLimiter(), chat: newSignupLimiterLimits(30, 400), vpnOrder: newSignupLimiterLimits(10, 40), vpnStatus: newSignupLimiterLimits(120, 3000), vpnRecover: newSignupLimiterLimits(5, 20), egress: newEgressStats(), readStateDone: map[string]time.Time{}, readAcc: map[string]*readStateAccum{}, readStateChunks: map[string]int{}, readStateFreshAt: map[string]time.Time{}, readStateFreshPending: map[string]bool{}, devicesDone: map[string]time.Time{}, attn: map[string]time.Time{}, watcherFailN: map[string]int{}, watcherFailAt: map[string]time.Time{}, tgPairings: map[string]telegramPairing{}, tgAccountCode: map[string]string{}}
+	return &API{store: s, secret: jwtSecret, gws: map[string]routeros.Gateway{}, pinLock: newPinLimiter(), signup: signupLimiterFromEnv(os.Getenv), join: newSignupLimiter(), wifiClaim: newSignupLimiterLimits(20, 100), portalTrack: newSignupLimiterLimits(300, 3000), reset: newSignupLimiter(), chat: newSignupLimiterLimits(30, 400), vpnOrder: newSignupLimiterLimits(10, 40), vpnStatus: newSignupLimiterLimits(120, 3000), vpnRecover: newSignupLimiterLimits(5, 20), tunnelCode: newSignupLimiterLimits(6, 30), tunnelVerify: newSignupLimiterLimits(12, 120), tunnelCodes: map[string]*tunnelCodeEntry{}, egress: newEgressStats(), readStateDone: map[string]time.Time{}, readAcc: map[string]*readStateAccum{}, readStateChunks: map[string]int{}, readStateFreshAt: map[string]time.Time{}, readStateFreshPending: map[string]bool{}, devicesDone: map[string]time.Time{}, attn: map[string]time.Time{}, watcherFailN: map[string]int{}, watcherFailAt: map[string]time.Time{}, tgPairings: map[string]telegramPairing{}, tgAccountCode: map[string]string{}}
 }
 
 // Handler — mux complet, protégé par le middleware d'authentification.
@@ -330,6 +339,15 @@ func (a *API) Handler() http.Handler {
 	mux.HandleFunc("POST /api/public/vpn/order", a.handlePublicVpnOrderCreate)
 	mux.HandleFunc("GET /api/public/vpn/order/{ref}", a.handlePublicVpnOrderStatus)
 	mux.HandleFunc("POST /api/public/vpn/recover", a.handlePublicVpnRecover)
+	// N°313 — module TUNNEL (Programme Tunnel, phase 1 : fondations de la
+	// console séparée, D-T2/D-T3) : auth passwordless par code e-mail
+	// (DEUX routes publiques — whitelist middleware.go + quotas IP dédiés
+	// + honeypot, l'e-mail fait office d'identité) + espace client (JWT
+	// rôle « tunnel », whitlisté /api/tunnel/* ONLY par le middleware —
+	// aucun droit console SaaS, miroir du rôle reseller).
+	mux.HandleFunc("POST /api/tunnel/auth/request-code", a.handleTunnelAuthCode)
+	mux.HandleFunc("POST /api/tunnel/auth/verify", a.handleTunnelAuthVerify)
+	mux.HandleFunc("GET /api/tunnel/me", a.handleTunnelMe)
 	// N°293 — PPPoE Phase A (chantier ⑥ de N°289, Option V lot 3) :
 	// abonnés PPPoE d'un pppoe-server EXISTANT (D2) pilotés par l'agent
 	// (D1 — commandes ppp_*, zéro cred, zéro port). Segment ISP TRANSVERSE

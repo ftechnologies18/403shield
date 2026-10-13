@@ -47,6 +47,7 @@ func (p *PG) Load() (db *model.DB, found bool, err error) {
 		VpnPeers:          []model.VpnPeer{},
 		PublicVpnOrders:   []model.PublicVpnOrder{},
 		PppSecrets:        []model.PppSecret{},
+		TunnelClients:     []model.TunnelClient{},
 	}
 
 	steps := []struct {
@@ -94,6 +95,7 @@ func (p *PG) Load() (db *model.DB, found bool, err error) {
 		{"vpn_peers", func() error { return loadInto(p, &db.VpnPeers, vpnPeerSpec) }},
 		{"public_vpn_orders", func() error { return loadInto(p, &db.PublicVpnOrders, publicVpnOrderSpec) }},
 		{"ppp_secrets", func() error { return loadInto(p, &db.PppSecrets, pppSecretSpec) }},
+		{"tunnel_clients", func() error { return loadInto(p, &db.TunnelClients, tunnelClientSpec) }},
 		{"settings", func() error { return p.loadSettings(db) }},
 	}
 	for _, st := range steps {

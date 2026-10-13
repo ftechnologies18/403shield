@@ -1,0 +1,33 @@
+@import "tailwindcss";
+
+/* tunnel-console — N°313 — thème sombre émeraude/ardoise (sous-marque
+   MikTunnel « powered by FTech CI » — aucun bleu/indigo, discipline repo). */
+
+:root {
+  --background: #020617;
+  --foreground: #e2e8f0;
+}
+
+html {
+  color-scheme: dark;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Halo émeraude discret derrière le hero. */
+.hero-glow {
+  background:
+    radial-gradient(600px 300px at 70% -10%, rgba(16, 185, 129, 0.18), transparent 70%),
+    radial-gradient(400px 200px at 10% 110%, rgba(13, 148, 136, 0.12), transparent 70%);
+}
+
+/* Code à 6 chiffres : chiffres équidistants, monospace. */
+.code-input {
+  letter-spacing: 0.6em;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}

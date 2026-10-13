@@ -191,9 +191,16 @@ func VpnPeerNameTaken(db *DB, name string) bool {
 // avec l'éditeur de formules — cf. N°289 §3.3).
 const MaxVpnPeersPerAccount = 25
 
-// VpnWg0PoolSize — capacité du pool wg0 : 10.8.0.2..254 (le .1 est le
-// serveur). Global à la VM, partagé avec les routeurs de gestion.
-const VpnWg0PoolSize = 253
+// VpnWg0PoolSize — capacité GLOBALE du pool tunnel : 3 segments /24 sur wg0
+// (N°313, wg-peer.sh v4) — gestion/B2C/remote — soit 3 × 253 adresses
+// (le .1 de chaque segment est la gateway, réservée). Garde-fou CLOUD grossier
+// et volontairement prudent : la vraie borne par segment vit dans wg-peer.sh
+// (alloc par préfixe, échec propre « pool X.0/24 épuisé ») ; ce compteur
+// global ne sert qu'à couper le runaway avant la VM. Les routeurs n'allouent
+// que le segment gestion, les fulltunnel le segment B2C, les remote le
+// segment remote — le compteur surestime donc la pression d'un segment
+// (jamais l'inverse : échec honnête côté VM si un segment sature).
+const VpnWg0PoolSize = 759
 
 // DefaultWgVpnMonthlyQuotaGB — N°311 — quota mensuel de trafic par peer VPN
 // vendu, en Go (rx+tx confondus), quand la plateforme n'a rien réglé :

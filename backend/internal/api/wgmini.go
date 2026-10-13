@@ -124,10 +124,12 @@ type wgMiniPeer struct {
 // (fulltunnel par défaut | remote : supervision B2B du gérant).
 // PREUVE PAR LA CONF (défense en profondeur — jamais de confiance aveugle à
 // la version de la VM) : la conf renvoyée est VÉRIFIÉE contre la forme
-// demandée (remote → « AllowedIPs = 10.8.0.0/24 », SANS 0.0.0.0/0 ;
-// fulltunnel → « 0.0.0.0/0 »). Un wg-mini/wg-peer.sh ANTÉRIEUR ignore le
-// kind et rend une conf full-tunnel : le refus est EXPLICITE (geste
-// exploitant ops-wg-mini-install) — jamais un produit en trompe-l'œil.
+// demandée. N°313 — remote v4 : « AllowedIPs = 10.8.0.0/24, 10.8.2.0/24 »
+// (routeurs du segment gestion + son propre segment remote), SANS
+// 0.0.0.0/0 ; fulltunnel → « 0.0.0.0/0 ». Un wg-mini/wg-peer.sh ANTÉRIEUR
+// (v3 : remote = « 10.8.0.0/24 » seul ; v2- : full-tunnel systématique)
+// rend une conf non conforme : le refus est EXPLICITE (geste exploitant
+// ops-wg-mini-install) — jamais un produit en trompe-l'œil.
 func wgMiniAdd(name, kind string) (conf, ip string, err error) {
 	if kind == "" {
 		kind = model.VpnKindFullTunnel
@@ -150,8 +152,8 @@ func wgMiniAdd(name, kind string) (conf, ip string, err error) {
 		return "", "", errors.New("wg-mini : conf client vide — vérifiez wg-peer.sh sur la VM")
 	}
 	if kind == model.VpnKindRemote {
-		if !strings.Contains(env.Conf, "AllowedIPs = 10.8.0.0/24") || strings.Contains(env.Conf, "0.0.0.0/0") {
-			return "", "", errors.New("wg-mini/wg-peer.sh antérieur à la forme « remote » (conf full-tunnel renvoyée) — lancez le workflow ops-wg-mini-install (repose wg-peer.sh + wg-mini puis RESTART, ~2 min — cf. deploy/oracle/wg-mini/README.md)")
+		if !strings.Contains(env.Conf, "AllowedIPs = 10.8.0.0/24, 10.8.2.0/24") || strings.Contains(env.Conf, "0.0.0.0/0") {
+			return "", "", errors.New("wg-mini/wg-peer.sh antérieur aux segments du pool (N°313) — lancez le workflow ops-wg-mini-install (repose wg-peer.sh v4 + wg-mini v4 puis RESTART, ~2 min — cf. deploy/oracle/wg-mini/README.md)")
 		}
 	} else if !strings.Contains(env.Conf, "0.0.0.0/0") {
 		return "", "", errors.New("wg-mini : conf full-tunnel inattendue (AllowedIPs sans 0.0.0.0/0) — vérifiez wg-peer.sh sur la VM")

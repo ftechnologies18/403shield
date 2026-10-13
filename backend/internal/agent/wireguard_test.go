@@ -171,7 +171,8 @@ func TestBuildWgSetupShape(t *testing.T) {
 
 // TestBuildWgSetupAllowedSources — N°312 — l'élargissement par compte :
 // socle + IP des peers remote, séparées par virgules, SANS guillemets ni
-// échappement (la validation garantit l'alphabet 10.8.0.N/32).
+// échappement (la validation garantit l'alphabet 10.8.0.N/32 et, depuis
+// N°313, 10.8.2.N/32 — peers remote frais du segment dédié).
 func TestBuildWgSetupAllowedSources(t *testing.T) {
 	b := Builder{BaseURL: "https://api.mikcloud.ftci.fr", Token: "tok"}
 	cmd := model.Command{ID: "c5", Kind: model.CmdWgSetup, Payload: WgSetupPayloadFrom(
@@ -180,6 +181,14 @@ func TestBuildWgSetupAllowedSources(t *testing.T) {
 	s := b.buildWgSetup(cmd)
 	if !strings.Contains(s, "allowed-address=10.8.0.1/32,10.8.0.7/32,10.8.0.12/32") {
 		t.Error("buildWgSetup : allowed-address élargi absent/mal formé")
+	}
+	// N°313 — peers remote frais (segment 10.8.2.0/24) mêlés aux
+	// historiques : la liste traverse telle quelle.
+	mix := model.Command{ID: "c7", Kind: model.CmdWgSetup, Payload: WgSetupPayloadFrom(
+		wgTestKey, wgTestKey, "10.8.0.9/32", "203.0.113.10", 51820,
+		"10.8.0.1/32,10.8.2.7/32")}
+	if got := b.buildWgSetup(mix); !strings.Contains(got, "allowed-address=10.8.0.1/32,10.8.2.7/32") {
+		t.Errorf("buildWgSetup : allowed-address multi-segments absent/mal formé\n%s", got)
 	}
 	// Payload ANTÉRIEUR (aucune clé allowedSources) : socle seul — le
 	// comportement N°285 reste identifiable au byte près.
@@ -201,6 +210,9 @@ func TestSanitizeWgAllowedSources(t *testing.T) {
 		"10.8.0.1/32":                 "10.8.0.1/32",
 		"10.8.0.1/32,10.8.0.7/32":     "10.8.0.1/32,10.8.0.7/32",
 		" 10.8.0.1/32 , 10.8.0.7/32 ": "10.8.0.1/32,10.8.0.7/32", // espaces tolérés
+		// N°313 — segment remote frais : accepté, mêlé aux historiques.
+		"10.8.0.1/32,10.8.2.7/32":             "10.8.0.1/32,10.8.2.7/32",
+		"10.8.0.1/32,10.8.2.7/32,10.8.0.9/32": "10.8.0.1/32,10.8.2.7/32,10.8.0.9/32",
 	}
 	for in, want := range ok {
 		if got := SanitizeWgAllowedSources(in); got != want {
@@ -219,10 +231,32 @@ func TestSanitizeWgAllowedSources(t *testing.T) {
 		"10.8.0.1/32,10.8.0.7/32,10.8.0.7/32",              // doublon
 		"10.8.0.1/32,; drop all",                           // injection
 		"10.8.0.0/24,10.8.0.1/32",                          // jamais de /24 élargi
+		"10.8.0.1/32,10.8.1.7/32",                          // N°313 : segment B2C — REFUSÉ (un peer vendu ne supervise rien)
+		"10.8.0.1/32,10.8.2.999/32",                        // segment remote, N hors bornes
 		strings.Repeat("10.8.0.1/32,", 40) + "10.8.0.1/32", // trop longue
 	} {
 		if got := SanitizeWgAllowedSources(bad); got != "10.8.0.1/32" {
 			t.Errorf("SanitizeWgAllowedSources(%q) = %q, attendu le repli", bad, got)
+		}
+	}
+}
+
+// TestValidWgSupervisionIP — N°313 — IP de peer « remote » : segments gestion
+// (10.8.0.x, historique) et remote (10.8.2.x, frais) admis, N ∈ [2,254] ;
+// segment B2C (10.8.1.x) et tout le reste refusés.
+func TestValidWgSupervisionIP(t *testing.T) {
+	for _, s := range []string{"10.8.0.2", "10.8.0.254", "10.8.2.7", "10.8.2.254"} {
+		if !ValidWgSupervisionIP(s) {
+			t.Errorf("ValidWgSupervisionIP(%q) = faux, attendu vrai", s)
+		}
+	}
+	for _, s := range []string{
+		"", "10.8.0.1", "10.8.0.255", "10.8.2.1", "10.8.2.255", "10.8.2.0",
+		"10.8.1.7", "10.8.1.254", "10.8.3.7", "10.9.0.7", "192.168.1.5",
+		"10.8.0.7/32", "10.8.2.7/32", "10.8.02.7", "10.8.2.999",
+	} {
+		if ValidWgSupervisionIP(s) {
+			t.Errorf("ValidWgSupervisionIP(%q) = vrai, attendu faux", s)
 		}
 	}
 }

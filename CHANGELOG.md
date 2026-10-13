@@ -6,6 +6,145 @@ aux dates de livraison — le déploiement est continu : chaque push `main` pass
 la CI puis se déploie automatiquement (frontend Vercel, backend Oracle E5
 depuis le T2 N°266 — Render suspendu N°303).
 
+## 2026-10-13 — N°313 — **PROGRAMME TUNNEL, PHASE 1 : MULTI-SEGMENTS DU POOL WG0 + MODULE TUNNEL + CONSOLE SÉPARÉE MIKTUNNEL (fondations D-T1…D-T5)**
+
+### Problème
+Le cadrage « Programme Tunnel » du 13/10 (objectif propriétaire : un service
+de tunnels sécurisés type portmap.io **amélioré** — VPN vendu + accès distant
+remote + futur LAN étendu — avec une console **séparée** de la console
+Hotspot) a validé cinq décisions D-T1…D-T5. Deux murs bloquaient tout : le
+pool tunnel wg0 est UN seul /24 (253 adresses partagées routeurs de gestion +
+VPN vendus — plafond physique du business), et l'acheteur B2C vit sans
+identité (e-mail + référence MCV- : il ne peut RIEN gérer, la fidélisation
+n'existe pas). La console Hotspot, elle, n'a pas vocation à devenir un
+magasin grand public.
+
+### Décisions appliquées (D-T1…D-T5 du cadrage)
+- **D-T5 (multi-segments du pool, LE chantier transversal)** : wg0 porte
+  désormais TROIS /24 — 10.8.0.0/24 (routeurs de gestion + peers VPN
+  HISTORIQUES, jamais déplacés), 10.8.1.0/24 (fulltunnel B2C, ULA
+  fd00:8:1::N), 10.8.2.0/24 (remote, ULA fd00:8:2::N). Capacité 253 → 759.
+  Les segments secondaires sont posés par `ensure_boot_segments` (lignes
+  PostUp marquées `# mikcloud-segments` dans [Interface] de wg0.conf —
+  rejouées à CHAQUE wg-quick up, donc au reboot) ET `ensure_runtime_segments`
+  (gestes live idempotents — syncconf ne rejoue pas PostUp). NAT : MASQUERADE
+  v4+v6 pour le segment B2C (full-tunnel, c'est le produit) ; pour le segment
+  remote, FORWARD seul, **AUCUN MASQUERADE — fail-closed** : un peer remote
+  ne peut JAMAIS utiliser la VM comme sortie Internet, même avec une conf
+  trafiquée.
+- **D-T2 (clients légers)** : table dédiée `tunnel_clients` — JAMAIS dans
+  admin_users (dette des doublons consignée). Passwordless : code à 6
+  chiffres par e-mail (TTL 10 min, 5 tentatives, usage unique, cooldown
+  60 s), hashé sha256(secret|email|code) EN MÉMOIRE API uniquement (miroir
+  du « état SANS colonne » ppp_provision N°310) ; le client NAÎT à la
+  première vérification réussie (inscription = connexion).
+- **D-T3 (console séparée)** : nouvelle app Next.js `tunnel-console/` dans
+  le monorepo (sous-marque **MikTunnel** « powered by FTech CI », D-T1) —
+  vitrine + login code + espace client (profil + commandes B2C appariées
+  par e-mail). Le projet Vercel existant (root `frontend/`) est INTACT ;
+  le déploiement Vercel dédié (root `tunnel-console/`) + domaine restent
+  des gestes exploitant (README du dossier — le token Cloudflare est
+  invalide, dette connue).
+- **D-T4 (ordre des chantiers)** : console d'abord — le LAN étendu devient
+  la phase 3 (N°315), livré comme offre « Pro » de CETTE console ; son
+  design D-B1 reste prêt, rien ne se perd.
+- **Isolation des rôles** : JWT rôle « tunnel » (24 h, même HMAC que la
+  console) whitelisté `/api/tunnel/*` ONLY par le middleware (miroir exact
+  du garde reseller §Mode Vente) + exemption du garde epoch S1-A3 (les
+  clients légers ne sont pas des AdminUser) ; les deux routes d'auth sont
+  publiques (honeypot + quotas IP dédiés : demande de code 6/10 min +
+  30/24 h, vérification 12/10 min + 120/24 h).
+
+### Livré
+- **VM** : `deploy/oracle/wg-peer.sh` v4 (segments par forme : fulltunnel →
+  10.8.1.N, remote → 10.8.2.N, add-router → 10.8.0.N inchangé ; conf remote
+  v4 = `AllowedIPs = 10.8.0.0/24, 10.8.2.0/24` (gestion + son segment, PAS
+  de 0.0.0.0/0, pas de DNS) ; PostUp boot + gestes runtime idempotents ;
+  formats list/remove/reip/qr/show-router INTACTS). `deploy/oracle/wg-mini`
+  v4 (bump de version — aucune route ni champ nouveau : la segmentation vit
+  dans wg-peer.sh appelé tel quel ; la preuve d'ops-wg-mini-install lit
+  `const version` de la source, juge de paix N°308).
+- **Backend — preuve par la conf (D-B3 étendu)** : wgMiniAdd exige la conf
+  remote v4 (`10.8.0.0/24, 10.8.2.0/24`) ; une VM v3 (remote =
+  `10.8.0.0/24` seul) ou v2- (full-tunnel) est refusée proprement avec la
+  consigne `ops-wg-mini-install` — dégradation honnête identique au passage
+  v2→v3 de N°312, AUCUN peer existant n'est touché.
+- **Backend — segments côté cloud** : `agent.ValidWgSupervisionIP`
+  (10.8.0.x legacy + 10.8.2.x frais, N ∈ [2,254] — le segment B2C 10.8.1.x
+  est REFUSÉ : un peer vendu ne supervise rien) ; sanitize `wgAllowedItemRe`
+  étendu `[02]` ; `wgAllowedSourcesLocked` filtre par ValidWgSupervisionIP ;
+  `VpnWg0PoolSize` 253 → 759 (garde-fou grossier : la vraie borne par
+  segment vit dans wg-peer.sh, échec propre « pool X.0/24 épuisé »).
+- **Backend — module tunnel** (`handlers_tunnel.go`) : `POST
+  /api/tunnel/auth/request-code` (net/mail, canonisation minuscules,
+  honeypot, cooldown, expéditeur = relais plateforme N°150, envoi asynchrone
+  emailTaskDispatch, trace NotifLog kind `tunnel_code` SANS le code), `POST
+  /api/tunnel/auth/verify` (comparaison à temps constant, usage unique,
+  tentatives bornées, naissance du client, JWT tunnel), `GET /api/tunnel/me`
+  (profil + 10 commandes B2C les plus récentes appariées par e-mail, scope
+  « phase1 » honnête — aucune conf ne sort). Routes + limiters câblés
+  (routes.go), whitelist middleware + exemption epoch (middleware.go).
+- **Backend — pattern 6 points** : `model/tunnelclient.go` + DB/Clone ;
+  pg_specs (tunnelClientSpec), pg_schema (CREATE TABLE IF NOT EXISTS +
+  index e-mail UNIQUE), pg_load, pg_sync (diffTable + hashRows), tables.go
+  (constante + registre), syncstats (volumétrie), recovery (mergeSlice) ;
+  garde-fous de concordance mis à jour (42 différentielles + settings).
+- **Console** : `tunnel-console/` — vitrine honnête (la vente reste la
+  vitrine /vpn de MikCloud, doctrine N°301 inchangée), login/verify code,
+  espace /me (skeletons, états d'erreur, badge de statut par commande,
+  bloc « Mes appareils — bientôt »), footer collant, README ops Vercel.
+- **Tests** : `handlers_tunnel_test.go` (envoi/cooldown/honeypot/503 sans
+  relais, code absent du journal, cycle complet verify : JWT + naissance +
+  usage unique + verrouillage 5 tentatives, /me + appariement + refus rôle
+  console, whitelist middleware bout en bout sur a.Handler()) ;
+  `wireguard_test.go` (ValidWgSupervisionIP, sanitize multi-segments, B2C
+  refusé) ; `handlers_vpn_remote_test.go` étendu (conf v4 + refus v3/v2-,
+  IP 10.8.2.7 de bout en bout, liste par compte multi-segments).
+
+### Vérifié
+gofmt 0 · go vet OK · go test 11/11 packages (api ~56 s) · build backend OK ·
+`bash -n wg-peer.sh` OK · wg-mini v4 compile (10,4 Mo) · tunnel-console :
+ESLint 0, tsc 0, `next build` OK (4 routes statiques) · le frontend/
+existant n'est PAS touché (aucun fichier modifié hors backend/, deploy/ et
+tunnel-console/).
+
+### Verdict schéma DB (doctrine — explicite)
+**NOUVELLE TABLE `tunnel_clients`** (id TEXT PK, email TEXT NOT NULL UNIQUE,
+phone TEXT NOT NULL DEFAULT '', status TEXT NOT NULL DEFAULT 'active',
+created_at TEXT NOT NULL, updated_at TEXT NOT NULL) + index UNIQUE
+`idx_tunnel_clients_email` — DDL idempotent posé au boot par ensureSchema ;
+**aucune colonne ajoutée aux tables existantes** (les codes à usage unique
+vivent en mémoire API, jamais en base) ; volumétrie santé + synchro
+différentielle + recovery étendues (42 tables différentielles + settings —
+sentinelles TestSyncKnownTablesConcordance/TestSyncStatusContract/
+TestLiveTableRowsConcordance mises à jour). Les répliques Supabase/Neon
+suivront à la reverse-sync nocturne 03:00 UTC.
+
+### Suites exploitant
+1. **Déployer le nouveau projet Vercel** `tunnel-console/` (root Directory =
+   tunnel-console/, `NEXT_PUBLIC_API_BASE=https://api.mikcloud.ftci.fr`) —
+   puis domaine dédié (ex. tunnel.ftci.fr) quand le token Cloudflare sera
+   re-validé (dette connue). Recette : `tunnel-console/README.md`.
+2. **Hot upgrade VM** : workflow `ops-wg-mini-install` (repose wg-peer.sh v4
+   + wg-mini v4, restart, preuve de version v4 signée) — AVANT lui, la
+   création remote REFUSE honnêtement (502 + consigne, preuve par la conf)
+   et les fulltunnel B2C continuent sur le segment historique (aucun
+   impact, aucune urgence) ; les segments se posent au premier `add` v4.
+3. Smoke test produit après upgrade : créer un accès distant (le peer doit
+   recevoir une IP 10.8.2.N et une conf AllowedIPs double), joindre
+   10.8.0.M:8291 d'un routeur actif, puis un fulltunnel B2C (IP 10.8.1.N,
+   Internet OK — MASQUERADE v4+v6 posé).
+
+### Non-objectifs
+- Espace client complet (gestion des appareils, re-livraison, renouvellement
+  1-clic, paiement Wave depuis la console) : phase 2 (N°314).
+- Accès distant Pro + LAN étendu exposés dans MikTunnel : phase 3 (N°315) —
+  le design D-B1 (détection LAN pattern ppp_provision + AllowedIPs peer
+  routeur + srcnat marqué) reste prêt et documenté.
+- Pas de vente depuis tunnel-console (la vitrine /vpn reste LE canal B2C) ;
+  pas de B2C remote ; pas de tc/HTB (reporté N°311) ; pas de migration des
+  peers historiques (10.8.0.x = comportement inchangé au byte près).
+
 ## 2026-10-13 — N°312 — **VPN « REMOTE » : L'ACCÈS DISTANT DU GÉRANT (P-A livré — supervision B2B de ses routeurs via le tunnel)**
 
 ### Problème

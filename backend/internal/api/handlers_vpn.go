@@ -554,7 +554,9 @@ func (a *API) handleVpnPeerTelegram(w http.ResponseWriter, r *http.Request) {
 // registre cloud (D4-a). ISOLEMENT multi-tenant : les peers FULLTUNNEL ne
 // figurent JAMAIS dans la liste (le produit « client final » ne supervise
 // rien) et les peers remote d'AUTRES comptes non plus — le routeur de CE
-// compte n'accepte QUE son propre gérant.
+// compte n'accepte QUE son propre gérant. N°313 — les peers remote frais
+// vivent sur le segment 10.8.2.0/24 (ValidWgSupervisionIP accepte les DEUX
+// segments, historique 10.8.0.x et frais 10.8.2.x — jamais le B2C 10.8.1.x).
 func wgAllowedSourcesLocked(db *model.DB, acc string) string {
 	items := []string{agent.WgDefaultAllowedSources}
 	seen := map[string]bool{agent.WgDefaultAllowedSources: true}
@@ -564,7 +566,7 @@ func wgAllowedSourcesLocked(db *model.DB, acc string) string {
 			continue
 		}
 		ip := strings.TrimSpace(p.IPv4)
-		if !agent.ValidWgIPv4(ip) || seen[ip+"/32"] {
+		if !agent.ValidWgSupervisionIP(ip) || seen[ip+"/32"] {
 			continue
 		}
 		seen[ip+"/32"] = true

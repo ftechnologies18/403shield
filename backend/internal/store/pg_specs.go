@@ -272,6 +272,25 @@ var pppSecretSpec = entitySpec[model.PppSecret]{
 	hashOf: hashEntity[model.PppSecret],
 }
 
+// tunnelClientSpec — N°313 : clients LÉGERS de la console tunnel (Programme
+// Tunnel, D-T2). Même discipline que publicVpnOrderSpec : l'ordre
+// cols/scan/args reste strictement aligné ; AUCUN secret (pas de mot de
+// passe — les codes à usage unique vivent en mémoire API, jamais en base).
+var tunnelClientSpec = entitySpec[model.TunnelClient]{
+	table: "tunnel_clients",
+	cols:  []string{"id", "email", "phone", "status", "created_at", "updated_at"},
+	idOf:  func(x *model.TunnelClient) string { return x.ID },
+	scan: func(r *sql.Rows) (model.TunnelClient, error) {
+		var x model.TunnelClient
+		err := r.Scan(&x.ID, &x.Email, &x.Phone, &x.Status, &x.CreatedAt, &x.UpdatedAt)
+		return x, err
+	},
+	args: func(x *model.TunnelClient) []any {
+		return []any{x.ID, x.Email, x.Phone, x.Status, x.CreatedAt, x.UpdatedAt}
+	},
+	hashOf: hashEntity[model.TunnelClient],
+}
+
 var profileSpec = entitySpec[model.Profile]{
 	table: "profiles",
 	cols:  []string{"id", "name", "rate_limit", "session_timeout_min", "shared_users", "validity_days", "price", "data_quota_mb", "created_at", "account_id", "exp_mode", "grace_period_min", "lock_user", "selling_price", "lock_first_device", "address_pool", "parent_queue", "validity_min", "quota_mode", "throttle_rate"},

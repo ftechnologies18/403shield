@@ -79,7 +79,9 @@ const (
 	TablePublicVpnOrders = "public_vpn_orders"
 	// N°293 — abonnés PPPoE (chantier ⑥, unicité PAR ROUTEUR).
 	TablePppSecrets = "ppp_secrets"
-	TableSettings   = "settings" // hors diff d'empreintes (syncSettings)
+	// N°313 — clients légers de la console tunnel (Programme Tunnel, D-T2).
+	TableTunnelClients = "tunnel_clients"
+	TableSettings      = "settings" // hors diff d'empreintes (syncSettings)
 )
 
 // syncKnownTables — registre des noms acceptés par SaveTables/SyncTables :
@@ -127,6 +129,7 @@ var syncKnownTables = map[string]bool{
 	TableVpnPeers:             true,
 	TablePublicVpnOrders:      true,
 	TablePppSecrets:           true,
+	TableTunnelClients:        true,
 	TableSettings:             true,
 }
 

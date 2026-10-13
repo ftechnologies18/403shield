@@ -111,7 +111,15 @@ func (a *API) authMiddleware(next http.Handler) http.Handler {
 		// le préfixe ne capte RIEN de console (/api/admin/vpn/* et
 		// /api/vpn/* ne partagent pas ce préfixe).
 		publicVpnShop := strings.HasPrefix(path, "/api/public/vpn/")
-		if path == "/api/auth/login" || path == "/api/auth/register" || path == "/api/reseller/login" || path == "/api/webhooks/wave" || path == "/api/webhooks/geniuspay" || path == "/api/webhooks/telegram" || path == "/api/vitals" || strings.HasPrefix(path, "/api/join/") || publicWifi || publicMedia || publicPromoTrack || publicPasswordReset || publicChat || publicVpnShop || !strings.HasPrefix(path, "/api/") {
+		// N°313 — module tunnel (console séparée, Programme Tunnel) :
+		// les DEUX routes d'authentification par code e-mail sont
+		// publiques (passwordless — l'e-mail fait l'identité, le code
+		// est le secret ; quotas IP + honeypot côté handlers). Le
+		// préfixe « /api/tunnel/auth/ » ne peut capter NI /api/tunnel/me
+		// (garde rôle « tunnel » ci-dessous) NI quelque route console
+		// que ce soit.
+		publicTunnelAuth := strings.HasPrefix(path, "/api/tunnel/auth/")
+		if path == "/api/auth/login" || path == "/api/auth/register" || path == "/api/reseller/login" || path == "/api/webhooks/wave" || path == "/api/webhooks/geniuspay" || path == "/api/webhooks/telegram" || path == "/api/vitals" || strings.HasPrefix(path, "/api/join/") || publicWifi || publicMedia || publicPromoTrack || publicPasswordReset || publicChat || publicVpnShop || publicTunnelAuth || !strings.HasPrefix(path, "/api/") {
 			next.ServeHTTP(w, r)
 			return
 		}
@@ -135,7 +143,10 @@ func (a *API) authMiddleware(next http.Handler) http.Handler {
 		// tokens antérieurs au correctif se décodent ver=0 et restent
 		// valables tant que SessionEpoch vaut 0. Les revendeurs (Mode
 		// Vente) ne sont pas des AdminUser : hors périmètre de ce garde.
-		if claims.Role != "reseller" {
+		// N°313 — les clients légers tunnel (rôle « tunnel ») non plus :
+		// ils vivent dans tunnel_clients, leur blocage se vérifie dans
+		// handleTunnelMe (lecture à chaque appel d'espace).
+		if claims.Role != "reseller" && claims.Role != "tunnel" {
 			a.store.Lock()
 			found, epoch := false, 0
 			for i := range a.store.Data().Users {
@@ -179,6 +190,13 @@ func (a *API) authMiddleware(next http.Handler) http.Handler {
 		// des codes/mots de passe du compte par les routes sans requireRole.
 		if claims.Role == "reseller" && !strings.HasPrefix(path, "/api/sell/") {
 			writeErr(w, http.StatusForbidden, "Accès réservé au Mode Vente")
+			return
+		}
+		// N°313 — liste blanche du rôle « tunnel » (clients légers de la
+		// console tunnel) : le token n'atteint QUE /api/tunnel/* — AUCUNE
+		// route console SaaS, miroir exact du garde reseller ci-dessus.
+		if claims.Role == "tunnel" && !strings.HasPrefix(path, "/api/tunnel/") {
+			writeErr(w, http.StatusForbidden, "Accès réservé à la console tunnel")
 			return
 		}
 		// Suspension (P5) : au-delà de PeriodEnd + 30 jours de grâce, le compte

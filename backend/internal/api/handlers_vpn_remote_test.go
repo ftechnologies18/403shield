@@ -88,8 +88,15 @@ func remoteTestRouter(id, acc, wgIPv4 string) model.Router {
 	}
 }
 
-// confRemoteFake — conf client « remote » conforme à wg-peer.sh v3.
+// confRemoteFake — conf client « remote » conforme à wg-peer.sh v4
+// (N°313 : segment 10.8.2.0/24, AllowedIPs gestion + remote, ULA de segment).
 func confRemoteFake(ip string) string {
+	return "[Interface]\nPrivateKey = k\nAddress = " + ip + "/32, fd00:8:2::7/128\nMTU = 1420\n\n[Peer]\nPublicKey = k\nPresharedKey = k\nEndpoint = 203.0.113.10:51820\nAllowedIPs = 10.8.0.0/24, 10.8.2.0/24\nPersistentKeepalive = 25\n"
+}
+
+// confRemoteV3Fake — conf remote de la VM v3 (N°312, mono-segment) : la
+// PREUVE PAR LA CONF doit la REFUSER (dégradation honnête → ops-wg-mini-install).
+func confRemoteV3Fake(ip string) string {
 	return "[Interface]\nPrivateKey = k\nAddress = " + ip + "/32, fd00:8::7/128\nMTU = 1420\n\n[Peer]\nPublicKey = k\nPresharedKey = k\nEndpoint = 203.0.113.10:51820\nAllowedIPs = 10.8.0.0/24\nPersistentKeepalive = 25\n"
 }
 
@@ -111,13 +118,18 @@ func TestWgAllowedSourcesLocked(t *testing.T) {
 			{ID: "vp-4", AccountID: "acc-a", Kind: model.VpnKindFullTunnel, IPv4: "10.8.0.11", State: model.VpnStateActive}, // fulltunnel : JAMAIS
 			{ID: "vp-5", AccountID: "acc-b", Kind: model.VpnKindRemote, IPv4: "10.8.0.13", State: model.VpnStateActive},     // compte étranger : JAMAIS
 			{ID: "vp-6", AccountID: "acc-a", Kind: model.VpnKindRemote, IPv4: "10.8.0.7", State: model.VpnStateActive},      // doublon d'IP → une seule fois
+			// N°313 — segments : remote FRAIS (10.8.2.x, inclus) ;
+			// fulltunnel B2C sur le segment 1 (10.8.1.x) : REFUSÉ par
+			// ValidWgSupervisionIP même si Kind était corrompu.
+			{ID: "vp-7", AccountID: "acc-a", Kind: model.VpnKindRemote, IPv4: "10.8.2.7", State: model.VpnStateActive},
+			{ID: "vp-8", AccountID: "acc-a", Kind: model.VpnKindRemote, IPv4: "10.8.1.7", State: model.VpnStateActive},
 		},
 	}
-	if got := wgAllowedSourcesLocked(db, "acc-a"); got != "10.8.0.1/32,10.8.0.7/32,10.8.0.9/32" {
-		t.Errorf("wgAllowedSourcesLocked(acc-a) = %q, attendu le socle + .7 + .9", got)
+	if got := wgAllowedSourcesLocked(db, "acc-a"); got != "10.8.0.1/32,10.8.0.7/32,10.8.0.9/32,10.8.2.7/32" {
+		t.Errorf("wgAllowedSourcesLocked(acc-a) = %q, attendu socle + .7 + .9 (legacy) + 10.8.2.7 (segment remote)", got)
 	}
 	// Compte ÉTRANGER : ses propres peers remote entrent, ceux d'acc-a JAMAIS
-	// (l'IP .13 de acc-b figure ; les .7/.9/.11 d'acc-a non).
+	// (l'IP .13 de acc-b figure ; les .7/.9/.2.7/.1.7 d'acc-a non).
 	if got := wgAllowedSourcesLocked(db, "acc-b"); got != "10.8.0.1/32,10.8.0.13/32" {
 		t.Errorf("wgAllowedSourcesLocked(acc-b) = %q, attendu le socle + son propre .13", got)
 	}
@@ -225,12 +237,16 @@ func TestWgMiniAddKindProof(t *testing.T) {
 		t.Errorf("kind transmis à wg-mini = %q, attendu remote", gotKind)
 	}
 
-	// wg-mini ANTÉRIEUR : conf full-tunnel renvoyée pour un remote → refus
-	// explicite avec la consigne exploitant (jamais de trompe-l'œil).
+	// wg-mini ANTÉRIEUR v3 (mono-segment) : conf remote sans le segment
+	// 10.8.2.0/24 → refus explicite avec la consigne exploitant (jamais de
+	// trompe-l'œil). Un antérieur v2- rend une conf full-tunnel : même refus.
+	wgMiniCallFn = respond(confRemoteV3Fake("10.8.0.7"))
+	if _, _, err := wgMiniAdd("vpn-proof2", model.VpnKindRemote); err == nil || !strings.Contains(err.Error(), "ops-wg-mini-install") {
+		t.Errorf("wgMiniAdd(remote, conf v3 mono-segment) : attendu le refus ops-wg-mini-install, eu %v", err)
+	}
 	wgMiniCallFn = respond(confFulltunnelFake("10.8.0.7"))
-	_, _, err := wgMiniAdd("vpn-proof2", model.VpnKindRemote)
-	if err == nil || !strings.Contains(err.Error(), "ops-wg-mini-install") {
-		t.Errorf("wgMiniAdd(remote, conf full-tunnel) : attendu le refus ops-wg-mini-install, eu %v", err)
+	if _, _, err := wgMiniAdd("vpn-proof2b", model.VpnKindRemote); err == nil || !strings.Contains(err.Error(), "ops-wg-mini-install") {
+		t.Errorf("wgMiniAdd(remote, conf full-tunnel v2) : attendu le refus ops-wg-mini-install, eu %v", err)
 	}
 
 	// fulltunnel conforme : accepté.
@@ -286,7 +302,7 @@ func (rec *wgMiniCallRecorder) call(method, path string, payload any) ([]byte, e
 			rec.removes = append(rec.removes, m["name"])
 		}
 	}
-	return json.Marshal(map[string]any{"ok": true, "conf": rec.conf, "ip": "10.8.0.7", "kind": kind})
+	return json.Marshal(map[string]any{"ok": true, "conf": rec.conf, "ip": "10.8.2.7", "kind": kind})
 }
 
 func (rec *wgMiniCallRecorder) snapshot() (adds, removes []string) {
@@ -339,7 +355,7 @@ func TestVpnPeerCreateRemote(t *testing.T) {
 	if err := json.Unmarshal(rec2.Body.Bytes(), &out); err != nil {
 		t.Fatalf("réponse illisible : %v", err)
 	}
-	if out.Kind != model.VpnKindRemote || out.State != model.VpnStateActive || out.IPv4 != "10.8.0.7" {
+	if out.Kind != model.VpnKindRemote || out.State != model.VpnStateActive || out.IPv4 != "10.8.2.7" {
 		t.Fatalf("peer créé inattendu : %+v", out)
 	}
 
@@ -358,8 +374,8 @@ func TestVpnPeerCreateRemote(t *testing.T) {
 	if fresh == nil || fresh.RouterID != "r-ok" {
 		t.Fatalf("wg_setup non re-filé au routeur actif : %+v", db.Commands)
 	}
-	if got, _ := fresh.Payload["allowedSources"].(string); got != "10.8.0.1/32,10.8.0.7/32" {
-		t.Fatalf("allowedSources = %q, attendu socle + IP nouvelle", got)
+	if got, _ := fresh.Payload["allowedSources"].(string); got != "10.8.0.1/32,10.8.2.7/32" {
+		t.Fatalf("allowedSources = %q, attendu socle + IP nouvelle du segment remote", got)
 	}
 	if db.Routers[0].WgState != "pending_setup" {
 		t.Errorf("routeur cible : état %q, attendu pending_setup", db.Routers[0].WgState)
@@ -456,8 +472,8 @@ func TestVpnPeerRevokeRemoteRelay(t *testing.T) {
 	db.Routers = []model.Router{remoteTestRouter("r-ok", "acc-a", "10.8.0.2")}
 	db.VpnPeers = []model.VpnPeer{{
 		ID: "vp-r1", AccountID: "acc-a", Name: "vpn-remote1111", Label: "Gérant",
-		Kind: model.VpnKindRemote, IPv4: "10.8.0.7", State: model.VpnStateActive,
-		Conf: confRemoteFake("10.8.0.7"), CreatedAt: model.NowISO(), UpdatedAt: model.NowISO(),
+		Kind: model.VpnKindRemote, IPv4: "10.8.2.7", State: model.VpnStateActive,
+		Conf: confRemoteFake("10.8.2.7"), CreatedAt: model.NowISO(), UpdatedAt: model.NowISO(),
 	}}
 	st.Save()
 	st.Unlock()
