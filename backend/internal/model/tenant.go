@@ -413,12 +413,32 @@ type PlatformConfig struct {
 	// aligné sur la famille platform_* — N°302) sur le compte principal
 	// uniquement.
 	PublicVpnShop *bool `json:"publicVpnShop,omitempty"`
+	// WgVpnMonthlyQuotaGB — N°311 — quota mensuel de trafic par peer VPN
+	// vendu, en Go (rx+tx confondus) : le garde-fou egress du tier Always
+	// Free OCI (N°289 §3.1 — ~10 To/mois TOUTE la plateforme). Nil = défaut
+	// DefaultWgVpnMonthlyQuotaGB (50 Go), 0 = illimité. Le balayage
+	// api/vpnquota_sweep.go révoque le peer au dépassement (D-b) et la
+	// console affiche le cumul par peer (D-a). Colonne
+	// settings.platform_wg_vpn_quota_gb (INTEGER NOT NULL DEFAULT 50) sur
+	// le compte principal uniquement — nom aligné sur la famille platform_*.
+	WgVpnMonthlyQuotaGB *int `json:"wgVpnMonthlyQuotaGB,omitempty"`
 }
 
 // PublicVpnShopEnabled — valeur EFFECTIVE d'ouverture de la vitrine B2C
 // (nil = fermée : opt-in strict).
 func (p PlatformConfig) PublicVpnShopEnabled() bool {
 	return p.PublicVpnShop != nil && *p.PublicVpnShop
+}
+
+// WgVpnMonthlyQuotaEffective — N°311 — valeur EFFECTIVE du quota mensuel
+// VPN (Go) : nil = défaut 50 Go (DefaultWgVpnMonthlyQuotaGB), 0 = illimité.
+// Consommée par le balayage vpnquota_sweep.go (borne de révocation) et par
+// les vues console (denominateur de la jauge par peer).
+func (p PlatformConfig) WgVpnMonthlyQuotaEffective() int {
+	if p.WgVpnMonthlyQuotaGB != nil {
+		return *p.WgVpnMonthlyQuotaGB
+	}
+	return DefaultWgVpnMonthlyQuotaGB
 }
 
 // AdminUser — compte d'accès à la console (login), rattaché à un compte SaaS.

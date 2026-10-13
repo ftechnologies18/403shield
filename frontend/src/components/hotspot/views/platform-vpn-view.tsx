@@ -76,7 +76,7 @@ import {
 } from "@/lib/hotspot/api";
 import { ApiError } from "@/lib/hotspot/api";
 import { useI18n } from "@/lib/hotspot/i18n";
-import { formatCurrency, formatDate } from "@/lib/hotspot/format";
+import { formatBytes, formatCurrency, formatDate } from "@/lib/hotspot/format";
 import { useCurrency } from "@/components/hotspot/parts/sd-currency";
 import { EmptyState } from "@/components/hotspot/empty-state";
 import { LoadingRows } from "@/components/hotspot/loading";
@@ -104,6 +104,33 @@ function PeerStateBadge({ state }: { state: string }) {
     return <Badge variant="outline" className="border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400">{t("vpn.state.pending")}</Badge>;
   }
   return <Badge variant="outline" className="border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-400">{t("vpn.state.error")}</Badge>;
+}
+
+/** N°311 — jauge du quota mensuel d'un peer (rx+tx, mois calendaire UTC) :
+ * cumul formaté + limite ; ambre à l'approche (≥ 80 %), rouge au dépassement
+ * (la révocation automatique suit sous 15 min), 0 = illimité (cumul seul). */
+function VpnQuotaCell({ bytes, limitGb, lang }: { bytes: number; limitGb: number; lang: "fr" | "en" }) {
+  const { t } = useI18n();
+  const limitBytes = limitGb * (1 << 30);
+  const unit = lang === "fr" ? "Go" : "GB";
+  const tone =
+    limitGb > 0 && bytes > limitBytes
+      ? "text-sm font-medium text-destructive"
+      : limitGb > 0 && bytes >= limitBytes * 0.8
+        ? "text-sm font-medium text-amber-600 dark:text-amber-400"
+        : "text-sm text-muted-foreground";
+  return (
+    <span className="flex items-baseline gap-1.5" title={t("vpn.quota.title")}>
+      <span className={tone}>{formatBytes(bytes, lang)}</span>
+      {limitGb > 0 ? (
+        <span className="text-xs text-muted-foreground">
+          / {limitGb} {unit}
+        </span>
+      ) : (
+        <span className="text-xs text-muted-foreground">· {t("vpn.quota.unlimited")}</span>
+      )}
+    </span>
+  );
 }
 
 /** Badge d'état d'une commande B2C. */
@@ -270,6 +297,8 @@ export default function PlatformVpnView() {
   const mini = overview?.mini;
   const slotsUsed = pool?.slotsUsed ?? 0;
   const slotsPool = pool?.slotsPool ?? 253;
+  // N°311 — quota mensuel EFFECTIF par peer (Go ; 0 = illimité, défaut 50).
+  const quotaGb = overview?.quotaMonthlyGb ?? 50;
   const resellerAccounts = (pool?.byAccount ?? []).filter((a) => a.accountId !== "acc-main");
   const b2cActive = (b2c?.provisioned ?? 0) + (b2c?.paid ?? 0);
   const pendingTotal = (b2c?.pending ?? 0);
@@ -545,6 +574,7 @@ export default function PlatformVpnView() {
                       <TableHead>{t("platformVpn.peers.state")}</TableHead>
                       <TableHead className="hidden lg:table-cell">{t("platformVpn.peers.handshake")}</TableHead>
                       <TableHead className="hidden lg:table-cell">{t("platformVpn.peers.transfer")}</TableHead>
+                      <TableHead className="hidden xl:table-cell">{t("vpn.quota")}</TableHead>
                       <TableHead className="hidden xl:table-cell">{t("platformVpn.peers.term")}</TableHead>
                       <TableHead className="text-right">{t("vpn.actions")}</TableHead>
                     </TableRow>
@@ -577,6 +607,12 @@ export default function PlatformVpnView() {
                         </TableCell>
                         <TableCell className="hidden text-xs text-muted-foreground lg:table-cell">
                           {peer.transfer || t("platformVpn.peers.noHandshake")}
+                        </TableCell>
+                        {/* N°311 — jauge du quota mensuel (rx+tx, mois calendaire
+                            UTC) : ambre à l'approche, rouge au dépassement (la
+                            révocation automatique suit sous 15 min). */}
+                        <TableCell className="hidden xl:table-cell">
+                          <VpnQuotaCell bytes={peer.quotaBytes} limitGb={quotaGb} lang={lang} />
                         </TableCell>
                         <TableCell className="hidden text-xs text-muted-foreground xl:table-cell">
                           {peer.expiresAt ? formatDate(peer.expiresAt, lang) : "—"}

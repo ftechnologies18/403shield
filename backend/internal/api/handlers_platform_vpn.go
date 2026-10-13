@@ -131,8 +131,13 @@ func (a *API) handlePlatformVpnOverview(w http.ResponseWriter, r *http.Request) 
 		ShopEnabled bool `json:"shopEnabled"`
 	}
 	b2c := b2cStats{}
+	// N°311 — quota mensuel VPN EFFECTIF (setting plateforme, défaut 50 Go,
+	// 0 = illimité) : exposé à la console plateforme (en-tête du registre
+	// global — dénominateur des jauges par peer).
+	quotaGB := model.DefaultWgVpnMonthlyQuotaGB
 	if settings, ok := db.SettingsByAccount[model.AccountMainID]; ok && settings.Platform != nil {
 		b2c.ShopEnabled = settings.Platform.PublicVpnShopEnabled()
+		quotaGB = settings.Platform.WgVpnMonthlyQuotaEffective()
 	}
 	cutoff30d := time.Now().UTC().AddDate(0, 0, -30).Format(time.RFC3339)
 	for i := range db.PublicVpnOrders {
@@ -168,8 +173,9 @@ func (a *API) handlePlatformVpnOverview(w http.ResponseWriter, r *http.Request) 
 			"slotsPool": model.VpnWg0PoolSize,
 			"byAccount": accounts,
 		},
-		"mini": mini,
-		"b2c":  b2c,
+		"mini":           mini,
+		"b2c":            b2c,
+		"quotaMonthlyGb": quotaGB,
 	})
 }
 

@@ -50,6 +50,9 @@ func (a *API) handlePlatformSettingsGet(w http.ResponseWriter, r *http.Request) 
 			"registerKeySet": cfg.RegisterKey != "",
 			// N°301 — état d'ouverture de la vitrine B2C MikCloud VPN.
 			"publicVpnShopEnabled": cfg.PublicVpnShopEnabled(),
+			// N°311 — quota mensuel de trafic par peer VPN vendu (Go,
+			// rx+tx confondus ; 0 = illimité, défaut 50).
+			"wgVpnMonthlyQuotaGb": cfg.WgVpnMonthlyQuotaEffective(),
 		},
 		"registerSource": source,
 	})
@@ -66,10 +69,11 @@ func (a *API) handlePlatformSettingsPut(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	var req struct {
-		Name          string  `json:"name"`
-		RegisterOpen  *bool   `json:"registerOpen"`
-		RegisterKey   *string `json:"registerKey"`
-		PublicVpnShop *bool   `json:"publicVpnShop"`
+		Name              string  `json:"name"`
+		RegisterOpen      *bool   `json:"registerOpen"`
+		RegisterKey       *string `json:"registerKey"`
+		PublicVpnShop     *bool   `json:"publicVpnShop"`
+		WgVpnMonthlyQuota *int    `json:"wgVpnMonthlyQuotaGb"`
 	}
 	if err := decodeBody(r, &req); err != nil {
 		writeErr(w, http.StatusBadRequest, "Corps de requête invalide")
@@ -120,6 +124,20 @@ func (a *API) handlePlatformSettingsPut(w http.ResponseWriter, r *http.Request) 
 	if req.PublicVpnShop != nil {
 		cfg.PublicVpnShop = req.PublicVpnShop
 	}
+	// N°311 — quota mensuel de trafic par peer VPN vendu (Go, rx+tx
+	// confondus) : le garde-fou egress du tier Always Free OCI. Baisse du
+	// quota : les cumuls déjà au-dessus de la NOUVELLE borne seront
+	// révoqués au prochain passage du balayage (15 min) — c'est le geste
+	// d'urgence anti-abus voulu (aucune rétroactivité sur le mois écoulé,
+	// le compteur ne se réinitialise que le mois suivant). 0 = illimité.
+	if req.WgVpnMonthlyQuota != nil {
+		if *req.WgVpnMonthlyQuota < 0 || *req.WgVpnMonthlyQuota > 10000 {
+			a.store.Unlock()
+			writeErr(w, http.StatusBadRequest, "Le quota mensuel VPN doit être entre 0 (illimité) et 10000 Go")
+			return
+		}
+		cfg.WgVpnMonthlyQuotaGB = req.WgVpnMonthlyQuota
+	}
 	settings.Platform = cfg
 	db.SettingsByAccount[model.AccountMainID] = settings
 	a.logActivityBy(r, db, model.AccountMainID, "system", "Paramètres plateforme mis à jour")
@@ -132,6 +150,7 @@ func (a *API) handlePlatformSettingsPut(w http.ResponseWriter, r *http.Request) 
 			"registerOpen":         cfg.RegisterOpen,
 			"registerKeySet":       cfg.RegisterKey != "",
 			"publicVpnShopEnabled": cfg.PublicVpnShopEnabled(),
+			"wgVpnMonthlyQuotaGb":  cfg.WgVpnMonthlyQuotaEffective(),
 		},
 	})
 }

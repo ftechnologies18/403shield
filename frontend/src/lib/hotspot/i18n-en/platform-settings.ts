@@ -24,6 +24,16 @@ export const enPlatformSettings: Record<string, string> = {
 "platformSettings.vpnShopOpenToast": "VPN shop open — /vpn is selling",
 "platformSettings.vpnShopClosedToast": "VPN shop closed (in-service access stays active)",
 
+// N°311 — monthly traffic quota for sold VPN peers (egress guard).
+"platformSettings.vpnQuota": "Monthly VPN quota",
+"platformSettings.vpnQuotaDesc":
+  "The bandwidth guard: every VPN access consumes the platform's Internet egress (rx + tx). Beyond the monthly quota, the access is automatically revoked and the owning account is notified — protecting the OCI Always Free tier.",
+"platformSettings.vpnQuotaLabel": "Quota per access",
+"platformSettings.vpnQuotaHint": "GB per calendar month (0 = unlimited, default 50)",
+"platformSettings.vpnQuotaNote":
+  "Lowering the quota takes effect at the next sweep pass (≤ 15 min): access above the new threshold is revoked — the anti-abuse emergency lever. Each access counter resets at month change.",
+"platformSettings.vpnQuotaSavedToast": "Monthly VPN quota saved: {gb} GB per access",
+
 "platformSettings.identityDesc": "SaaS display name on the login screen and footer.",
   "platformSettings.platformName": "Platform name",
   "platformSettings.platformNameHint": "60 characters max — empty falls back to “MikCloud”.",

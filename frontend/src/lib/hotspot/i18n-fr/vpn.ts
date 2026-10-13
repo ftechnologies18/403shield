@@ -49,6 +49,12 @@ export const frVpn: Record<string, string> = {
   "vpn.more": "Plus d'actions",
   "vpn.noAddress": "—",
 
+  // — Quota mensuel de trafic (N°311 : garde-fou egress, balayage 15 min) —
+  "vpn.quota": "Quota du mois",
+  "vpn.quota.title":
+    "Consommation du mois courant (reçu + envoyé) — le compteur repart à zéro à chaque mois calendaire ; au-delà du quota, l'accès est révoqué automatiquement et le compte est notifié",
+  "vpn.quota.unlimited": "illimité",
+
   // — États vides —
   "vpn.empty.title": "Aucun accès VPN vendu",
   "vpn.empty.desc":

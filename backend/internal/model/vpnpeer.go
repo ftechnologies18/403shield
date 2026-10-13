@@ -37,6 +37,14 @@
 // = wg-peer.sh remove (syncconf à chaud, les autres peers restent intacts).
 // Le plafond PAR FORMULE (plan) arrive avec l'éditeur de formules — v1 pose
 // la borne constante, honnête et suffisante pour un lancement.
+//
+// N°311 — QUOTA MENSUEL DE TRAFIC par peer (le garde-fou egress manquant de
+// N°289 §3.1 : un client full-tunnel qui consomme 24h/24 dépasserait le
+// plafond du tier Always Free OCI (~10 To/mois) SANS jamais commettre un
+// pic de débit détectable). Cumul échantillonné par le balayage
+// api/vpnquota_sweep.go (15 min, deltas anti-reboot), fenêtre = mois
+// calendaire UTC (le cycle de facturation OCI), révocation au dépassement
+// (décisions D-a/D-b : setting plateforme + remove + notification).
 package model
 
 import (
@@ -93,6 +101,23 @@ type VpnPeer struct {
 	// chiffrée au repos (secretbox, D5-a), re-livrable à la demande
 	// (reveal console + Mail/Telegram).
 	Conf string `json:"-"`
+	// QuotaMonth — N°311 — mois calendaire UTC « YYYY-MM » du cumul en cours
+	// (le compteur repart à zéro au changement de mois : la fenêtre d'abus
+	// correspond au cycle de facturation egress OCI). Vide = jamais échantillonné.
+	QuotaMonth string `json:"quotaMonth,omitempty"`
+	// QuotaBytes — N°311 — cumul du mois courant (rx+tx confondus, octets).
+	// Proxy honnête de la contribution au egress facturé : pour un full-tunnel,
+	// wg tx ≈ réponses servies au client (sortie facturée) et wg rx ≈ requêtes
+	// renvoyées vers Internet (sortie facturée aussi après décapsulage).
+	QuotaBytes int64 `json:"quotaBytes"`
+	// QuotaLast — N°311 — dernier échantillon BRUT du compteur cumulé wg (la
+	// base des deltas du balayage). Hors JSON : détail interne sans valeur pour
+	// les clients de l'API — et SÛR pour la synchro car l'invariant du delta
+	// (QuotaLast ne change que si QuotaBytes ou QuotaMonth change aussi) garantit
+	// que l'empreinte FNV de la ligne bouge à CHAQUE mutation persistée ; un
+	// QuotaLast stal en base après un saut de hash manqué ne peut produire qu'un
+	// delta NÉGATIF au sample suivant → rebase (jamais de surcomptage).
+	QuotaLast int64 `json:"-"`
 	// CreatedAt / UpdatedAt — RFC3339 (model.NowISO).
 	CreatedAt string `json:"createdAt"`
 	UpdatedAt string `json:"updatedAt"`
@@ -169,6 +194,22 @@ const MaxVpnPeersPerAccount = 25
 // VpnWg0PoolSize — capacité du pool wg0 : 10.8.0.2..254 (le .1 est le
 // serveur). Global à la VM, partagé avec les routeurs de gestion.
 const VpnWg0PoolSize = 253
+
+// DefaultWgVpnMonthlyQuotaGB — N°311 — quota mensuel de trafic par peer VPN
+// vendu, en Go (rx+tx confondus), quand la plateforme n'a rien réglé :
+// borne constante honnête pour un lancement (50 Go ≈ navigation intensive
+// un mois, loin des habitudes d'un revendeur de tickets journaliers) ; le
+// plafond PAR FORMULE suivra avec l'éditeur de formules — même doctrine que
+// MaxVpnPeersPerAccount. 0 = illimité (pilotable via
+// settings.platform_wg_vpn_quota_gb).
+const DefaultWgVpnMonthlyQuotaGB = 50
+
+// VpnQuotaMonthKey — N°311 — la clé du mois calendaire UTC courant
+// (« 2026-10 ») : la fenêtre de cumul alignée sur le cycle de facturation
+// egress OCI, indépendante du fuseau du gérant (la VM facture en UTC).
+func VpnQuotaMonthKey(t time.Time) string {
+	return t.UTC().Format("2006-01")
+}
 
 // VpnPeerSlotsUsed — adresses tunnel réservées, tous registres confondus :
 // chaque ligne VpnPeer (pending comprise — le nom est réservé) PLUS chaque

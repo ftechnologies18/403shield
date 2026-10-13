@@ -132,6 +132,14 @@ func main() {
 	// wg-mini transitoire) — la promesse « provisioning auto » de la vitrine
 	// ne se perd jamais.
 	go engine.RunPublicVpnSweepForever()
+	// N°311 — balayage 15 min du quota mensuel de trafic des peers VPN vendus
+	// (garde-fou egress du tier Always Free OCI) : échantillonnage des
+	// compteurs wg (wg-mini /v1/list), accumulation par deltas dans le mois
+	// calendaire UTC (rebase au reboot VM), révocation + notification au
+	// dépassement du quota plateforme (settings.platform_wg_vpn_quota_gb,
+	// défaut 50 Go — 0 = illimité). Peers B2C uniquement, les routeurs de
+	// gestion ne sont jamais touchés.
+	go engine.RunVpnQuotaSweepForever()
 	// N°150 — bootstrap Telegram plateforme : getMe (cache du @username
 	// pour le lien magique) + setWebhook (URL publique RENDER_EXTERNAL_URL
 	// ou PUBLIC_BASE_URL + secret d'env). Best-effort : un échec réseau au

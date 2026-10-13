@@ -26,6 +26,7 @@ import {
   ChevronDown,
   Database,
   Eraser,
+  Gauge,
   Globe,
   Loader2,
   Radio,
@@ -314,6 +315,10 @@ export default function PlatformSettingsView() {
                 est opt-in strict — l'exploitant décide de ne pas concurrencer
                 ses revendeurs sans l'avoir choisi. */}
             <PublicVpnShopCard data={data} onDone={invalidate} />
+            {/* N°311 — quota mensuel de trafic par peer VPN vendu (garde-fou
+                egress du tier Always Free OCI) : borne globale pilotable, la
+                baisse agit au passage du balayage suivant (≤ 15 min). */}
+            <WgVpnQuotaCard data={data} onDone={invalidate} />
           </div>
         </TabsContent>
 
@@ -539,6 +544,66 @@ function PublicVpnShopCard({ data, onDone }: { data: PlatformSettingsResponse; o
       </CardContent>
       <CardFooter className="px-4 sm:px-6">
         <Button size="sm" onClick={() => mutation.mutate()} disabled={!dirty || mutation.isPending}>
+          {mutation.isPending ? t("common.saving") : t("common.save")}
+        </Button>
+      </CardFooter>
+    </Card>
+  );
+}
+
+/* ─── N°311 — Quota mensuel de trafic des peers VPN vendus (garde-fou egress) ─── */
+function WgVpnQuotaCard({ data, onDone }: { data: PlatformSettingsResponse; onDone: () => void }) {
+  const { t, tf } = useI18n();
+  const effective = data.platform.wgVpnMonthlyQuotaGb ?? 50;
+  const [value, setValue] = useState(String(effective));
+
+  const mutation = useMutation({
+    mutationFn: () => updatePlatformSettings({ wgVpnMonthlyQuotaGb: Number(value) }),
+    onSuccess: () => {
+      toast.success(tf("platformSettings.vpnQuotaSavedToast", { gb: value }));
+      onDone();
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+
+  const parsed = Number(value);
+  const valid = value.trim() !== "" && Number.isInteger(parsed) && parsed >= 0 && parsed <= 10000;
+  const dirty = valid && parsed !== effective;
+
+  return (
+    <Card className="gap-4 py-4 sm:py-6">
+      <CardHeader className="px-4 sm:px-6">
+        <CardTitle className="flex items-center gap-2 text-base">
+          <span className="flex size-8 items-center justify-center rounded-lg bg-primary/15 text-primary">
+            <Gauge className="size-4" />
+          </span>
+          {t("platformSettings.vpnQuota")}
+        </CardTitle>
+        <CardDescription>{t("platformSettings.vpnQuotaDesc")}</CardDescription>
+      </CardHeader>
+      <CardContent className="grid gap-4 px-4 sm:px-6">
+        <div className="flex items-center gap-3 rounded-lg border p-3">
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-medium">{t("platformSettings.vpnQuotaLabel")}</p>
+            <p className="mt-0.5 text-xs text-muted-foreground">{t("platformSettings.vpnQuotaHint")}</p>
+          </div>
+          <Input
+            type="number"
+            inputMode="numeric"
+            min={0}
+            max={10000}
+            step={1}
+            value={value}
+            onChange={(event) => setValue(event.target.value)}
+            disabled={mutation.isPending}
+            aria-label={t("platformSettings.vpnQuotaLabel")}
+            className="w-28"
+          />
+        </div>
+        <p className="text-xs text-muted-foreground">{t("platformSettings.vpnQuotaNote")}</p>
+      </CardContent>
+      <CardFooter className="px-4 sm:px-6">
+        <Button size="sm" onClick={() => mutation.mutate()} disabled={!dirty || !valid || mutation.isPending}>
           {mutation.isPending ? t("common.saving") : t("common.save")}
         </Button>
       </CardFooter>

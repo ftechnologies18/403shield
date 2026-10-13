@@ -6,6 +6,119 @@ aux dates de livraison — le déploiement est continu : chaque push `main` pass
 la CI puis se déploie automatiquement (frontend Vercel, backend Oracle E5
 depuis le T2 N°266 — Render suspendu N°303).
 
+## 2026-10-13 — N°311 — **QUOTA MENSUEL DE TRAFIC PAR PEER VPN VENDU (garde-fou egress P-B — l'alerte N°289 §3.3 devient un mécanisme)**
+
+### Problème
+L'egress (sortie Internet) des clients full-tunnel traverse la VM — l'alerte
+« abus de bande passante » de N°289 §3.3 était un TEXTE de console, pas un
+mécanisme. Un client qui consomme 24h/24 franchit le plafond du tier Always
+Free OCI (~10 To/mois TOUTE la plateforme) **sans jamais commettre un pic de
+débit détectable** : seule une limite par volume mensuel peut l'arrêter à
+temps. Arbitrage de session (le « Niveau A » du dossier) : D-a quota mensuel
+plateforme (borne constante honnête v1, plafond PAR FORMULE avec l'éditeur de
+formules — même doctrine que MaxVpnPeersPerAccount) ; D-b révocation +
+notification (pattern B2C N°301 : jamais d'état mensonger, échec wg-mini
+retenté) ; D-c bridage kernel tc/HTB (« Niveau B ») REPORTÉ jusqu'à preuve
+de disputes de pipe réelles (il protégerait le débit, pas le volume) ;
+D-d périmètre peers B2C `vpn-*` UNIQUEMENT (les routeurs de gestion WgPeerName
+ne sont pas dans le registre vpn_peers — jamais touchés).
+
+### Livré — le balayage `vpnquota_sweep` (15 min, rattrapage au démarrage)
+- **Échantillonnage** : `wg-mini /v1/list` HORS verrou (appel local ~ms) ;
+  parseur défensif du champ « reçu/envoyé » — octets bruts `rx/tx` (format
+  réel de `wg show transfer` via wg-peer.sh), « — » (jamais de transfert) → 0,
+  formats unités acceptés par robustesse, unité inconnue → 0 (prudence : rien
+  plutôt qu'un compte faux). rx+tx CONFONDUS : pour un full-tunnel les deux
+  directions deviennent du egress facturé (réponses servies au client +
+  requêtes renvoyées vers Internet après décapsulage).
+- **Accumulation par DELTAS sous verrou** (patron publicvpn_sweep N°301 :
+  collecte sous verrou, gestes réseau hors verrou, re-verrou par résultat) :
+  fenêtre = **mois calendaire UTC** (`quota_month`, clé « YYYY-MM » — le cycle
+  de facturation OCI, indépendant du fuseau du gérant) ; un compteur qui
+  RECULE = reboot VM (les compteurs wg repartent de zéro) → **REBASE**
+  (delta = valeur courante : jamais de cumul négatif, jamais de double
+  comptage — même esprit anti-écrasement que recovery.go) ; un peer absent du
+  wg0 (révocation/terme en cours) garde son cumul **gelé**. Un trou
+  d'échantillon (wg-mini injoignable) ne compte JAMAIS de trafic fantôme : les
+  deltas repartent du dernier point sûr.
+- **Révocation au dépassement** (peers `active` uniquement — un peer `error`
+  est déjà visible du gérant, un `pending` n'existe pas côté VM) :
+  `wg-peer.sh remove` HORS verrou (syncconf à chaud, les autres peers restent
+  intacts), puis re-verrou : ligne retirée du registre, **commande B2C liée
+  passée `cancelled`** (ResolvedBy « quota mensuel dépassé (révocation
+  automatique) » — APRÈS confirmation VM, jamais d'état mensonger), journal
+  d'activité du compte (+ entrée plateforme pour une commande B2C), et
+  **notification** Mail + Telegram du compte (relais e-mail plateforme N°150,
+  goroutine + re-verrou pour NotifLog — pattern dispatchPppReminder N°294).
+  Échec wg-mini : le terme est RETENTÉ au passage suivant (l'accès qui dure
+  trop vaut mieux qu'un registre mensonger — même verdict que N°301).
+- **Setting plateforme `wg_vpn_monthly_quota_gb`** (INTEGER NOT NULL DEFAULT
+  50, compte principal uniquement, nom aligné famille `platform_*` — leçon
+  N°302) : GET/PUT `/api/admin/platform/settings` étendus (0 = illimité,
+  bornes 0–10000) ; **la baisse du quota est le geste d'urgence anti-abus**
+  (les cumuls au-dessus de la nouvelle borne sont révoqués au passage ≤ 15 min
+  — aucune rétroactivité sur le mois écoulé).
+- **Exposition console** : `GET /api/vpn/status` (gérant) et
+  `GET /api/admin/vpn/overview` (plateforme) renvoient `quotaMonthlyGb` ;
+  les listes de peers portent `quotaMonth`/`quotaBytes` (l'empreinte du peer
+  fusionne le cumul — VpnPeer sérialisé tel quel). Frontend : colonne
+  « Quota du mois » dans la table gérant (cumul formaté + limite, ambre ≥ 80 %,
+  rouge au dépassement — la révocation suit sous 15 min, illimité → cumul
+  seul) ; colonne équivalente dans le registre global plateforme
+  (`VpnQuotaCell`) ; carte « Quota mensuel VPN » dans Paramètres plateforme
+  (entrée numérique 0–10000, note d'effet ≤ 15 min) ; i18n FR/EN 13 clés.
+
+### Vérifié
+- gofmt 0, go vet OK, go test 11/11 packages. Nouveaux tests
+  (`vpnquota_sweep_test.go`, zéro réseau — indirections wgMiniListFn/
+  wgMiniRemoveFn/deliverNotif/dispatchEmailTask) : parseur (octets bruts,
+  « — », unités, inconnu → 0) ; accumulation + rollover mensuel + rebase
+  reboot + cumul gelé d'un peer absent ; révocation (peer actif retiré APRÈS
+  confirmation wg-mini, commande B2C liée annulée, journal, peer error et
+  sous-limite intacts, échec wg-mini = ligne conservée et retentée) ;
+  illimité (0 : 500 Go consommés, aucun remove) ; notification (canal
+  Telegram configuré, exécuteur déterministe goroutine + WaitGroup, NotifLog
+  consigné) ; wg-mini injoignable (cumul intact). ESLint 0, tsgo 0, next
+  build OK.
+- Garde-fous de parité VALIDÉS par les tests existants : la nouvelle colonne
+  settings `platform_wg_vpn_quota_gb` est couverte par
+  TestSettingsColonnesPariteSchemaLoadSync (migration + SELECT load + UPSERT
+  sync alignés) et TestSyncSettingsSQLConsistency (42 colonnes / $1..$42) ;
+  la spec vpnPeerSpec étendue passe TestSyncKnownTablesConcordance.
+
+### Schéma DB — verdict explicite
+**Changement de schéma : oui.** (1) `vpn_peers` : + `quota_month` TEXT NOT
+NULL DEFAULT '', + `quota_bytes` BIGINT NOT NULL DEFAULT 0, + `quota_last`
+BIGINT NOT NULL DEFAULT 0 (pattern 6 points complet : tables.go registre
+existant, pg_specs.go cols/scan/args alignés, pg_schema.go ALTER idempotents,
+pg_load.go, pg_sync.go, syncstats rows déjà vivantes). (2) `settings` : +
+`platform_wg_vpn_quota_gb` INTEGER NOT NULL DEFAULT 50. DDL idempotent
+exécuté au boot (`ensureSchema`) : le déploiement backend pose les colonnes
+au redémarrage du service — **jamais d'ALTER manuel à chaud** (leçon N°302) ;
+les répliques Supabase/Neon suivent par la reverse-sync nocturne
+(dump/restore 03:00 UTC), rien à faire côté exploitant. `QuotaLast` hors JSON
+(`json:"-"`) : l'invariant du delta garantit que l'empreinte FNV bouge à
+chaque mutation persistée (un quota_last stal ne peut produire qu'un delta
+négatif → rebase, jamais de surcomptage).
+
+### Suites pour l'exploitant
+- Le balayage démarre avec le service (goroutine main.go, rattrapage
+  immédiat) : premiers échantillons posés dès le premier passage — les cumuls
+  partent de zéro (les compteurs wg ne sont pas rétroactifs).
+- « Niveau B » (bridage de débit kernel tc/HTB par IP tunnel via wg-mini v3)
+  : reporté SANS date — à rouvrir si des disputes de pipe réelles émergent
+  (le quota protège le volume OCI, pas le débit partagé).
+
+### Non-objectifs
+- Pas de quota PAR FORMULE (éditeur de formules — chantier séparé).
+- Pas de suspension récupérable avant révocation (B2 : le pattern « expired »
+  de la durée reste la référence).
+- Pas de notification au client FINAL B2C (seul le compte propriétaire /
+  plateforme est notifié — les e-mails transactionnels client restent le
+  canal de livraison N°301).
+- wg-mini/wg-peer.sh INTACTS : aucune modification VM, aucun nouveau port,
+  aucun geste exploitant requis (contrairement à N°307/308).
+
 ## 2026-10-12 — N°310 — **PROVISIONNEMENT DU SERVEUR PPPoE 100 % AUTOMATIQUE (voie agent, zéro saisie — miroir wg-auto N°307)**
 
 ### Problème

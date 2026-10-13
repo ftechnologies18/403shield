@@ -159,7 +159,8 @@ func (p *PG) loadSettings(db *model.DB) error {
                         sub_router_slots, sub_last_paid_at, last_tick, last_sweep,
                         platform_name, platform_register_open, platform_register_key, auto_import_router_users,
                         join_button, cyber_enabled, portal_style, portal_welcome, portal_promos, portal_socials, portal_slides, portal_services, portal_ticker, portal_whatsapp, portal_key,
-                        log_retention_days, wg_vpn_enabled, wg_vpn_locked, platform_public_vpn_shop
+                        log_retention_days, wg_vpn_enabled, wg_vpn_locked, platform_public_vpn_shop,
+                        platform_wg_vpn_quota_gb
                  FROM settings`)
 	if err != nil {
 		return err
@@ -193,6 +194,8 @@ func (p *PG) loadSettings(db *model.DB) error {
 			wgVpnLocked bool
 			// N°301 - ouverture de la vitrine B2C (compte principal, defaut FERMEE).
 			platformPublicVpnShop bool
+			// N°311 - quota mensuel VPN par peer (compte principal, defaut 50 Go).
+			platformWgVpnQuotaGB int
 			// N°55 - mode hospitalité du portail (style/bienvenue/promos/socials).
 			portalStyle, portalWelcome, portalPromos, portalSocials string
 			// N°136 - slides du carrousel commercial (JSON d'URLs https ≤ 3).
@@ -218,7 +221,7 @@ func (p *PG) loadSettings(db *model.DB) error {
 			&subPlanID, &subStatus, &subPeriodStart, &subPeriodEnd, &subLastAmount,
 			&subRouterSlots, &subLastPaidAt, &lastTick, &lastSweep,
 			&platformName, &platformRegisterOpen, &platformRegisterKey, &autoImport,
-			&joinButton, &cyberEnabled, &portalStyle, &portalWelcome, &portalPromos, &portalSocials, &portalSlides, &portalServices, &portalTicker, &portalWhatsapp, &portalKey, &logRetentionDays, &wgVpnEnabled, &wgVpnLocked, &platformPublicVpnShop); err != nil {
+			&joinButton, &cyberEnabled, &portalStyle, &portalWelcome, &portalPromos, &portalSocials, &portalSlides, &portalServices, &portalTicker, &portalWhatsapp, &portalKey, &logRetentionDays, &wgVpnEnabled, &wgVpnLocked, &platformPublicVpnShop, &platformWgVpnQuotaGB); err != nil {
 			return err
 		}
 		if accID == "" {
@@ -255,6 +258,9 @@ func (p *PG) loadSettings(db *model.DB) error {
 			// N°301 - même pattern : valeur lue EXPLICITE (colonne NOT NULL
 			// DEFAULT FALSE sur le compte principal uniquement).
 			settings.Platform.PublicVpnShop = &platformPublicVpnShop
+			// N°311 - même pattern : valeur lue EXPLICITE (colonne NOT NULL
+			// DEFAULT 50) — le quota mensuel VPN survit aux redémarrages.
+			settings.Platform.WgVpnMonthlyQuotaGB = &platformWgVpnQuotaGB
 		}
 		// Audit purge - valeur lue EXPLICITE (colonne NOT NULL) : le
 		// reglage survit aux redemarrages (le pointeur est pose).

@@ -199,19 +199,24 @@ var cyberPosteSpec = entitySpec[model.CyberPoste]{
 // voyage CHIFFRÉE : scan déscelle (secretbox.Decrypt), args scelle
 // (secretbox.Encrypt) — en mémoire la valeur est TOUJOURS claire, pattern
 // WgPSK du routerSpec.
+//
+// N°311 — quota mensuel : quota_month/quota_bytes/quota_last (cf. modèle)
+// suivent le MÊME alignement — le garde-fou TestSyncKnownTablesConcordance
+// couvre la table, la parité colonnes est vérifiée par les tests statiques
+// du package.
 var vpnPeerSpec = entitySpec[model.VpnPeer]{
 	table: "vpn_peers",
-	cols:  []string{"id", "account_id", "name", "label", "kind", "ipv4", "state", "error_msg", "conf", "created_at", "updated_at"},
+	cols:  []string{"id", "account_id", "name", "label", "kind", "ipv4", "state", "error_msg", "conf", "quota_month", "quota_bytes", "quota_last", "created_at", "updated_at"},
 	idOf:  func(x *model.VpnPeer) string { return x.ID },
 	scan: func(r *sql.Rows) (model.VpnPeer, error) {
 		var x model.VpnPeer
 		var confSealed string
-		err := r.Scan(&x.ID, &x.AccountID, &x.Name, &x.Label, &x.Kind, &x.IPv4, &x.State, &x.ErrorMsg, &confSealed, &x.CreatedAt, &x.UpdatedAt)
+		err := r.Scan(&x.ID, &x.AccountID, &x.Name, &x.Label, &x.Kind, &x.IPv4, &x.State, &x.ErrorMsg, &confSealed, &x.QuotaMonth, &x.QuotaBytes, &x.QuotaLast, &x.CreatedAt, &x.UpdatedAt)
 		x.Conf = secretbox.Decrypt(confSealed)
 		return x, err
 	},
 	args: func(x *model.VpnPeer) []any {
-		return []any{x.ID, x.AccountID, x.Name, x.Label, x.Kind, x.IPv4, x.State, x.ErrorMsg, secretbox.Encrypt(x.Conf), x.CreatedAt, x.UpdatedAt}
+		return []any{x.ID, x.AccountID, x.Name, x.Label, x.Kind, x.IPv4, x.State, x.ErrorMsg, secretbox.Encrypt(x.Conf), x.QuotaMonth, x.QuotaBytes, x.QuotaLast, x.CreatedAt, x.UpdatedAt}
 	},
 	hashOf: hashEntity[model.VpnPeer],
 }

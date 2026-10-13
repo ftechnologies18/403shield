@@ -93,7 +93,7 @@ import {
   telegramVpnConf,
 } from "@/lib/hotspot/api";
 import { useI18n } from "@/lib/hotspot/i18n";
-import { formatCurrency } from "@/lib/hotspot/format";
+import { formatBytes, formatCurrency } from "@/lib/hotspot/format";
 import { SETTINGS_QUERY_KEY, useCurrency, useSettings } from "@/components/hotspot/parts/sd-currency";
 import { copyToClipboard } from "@/components/hotspot/parts/uc-clipboard";
 import { EmptyState } from "@/components/hotspot/empty-state";
@@ -343,6 +343,10 @@ export default function VpnView() {
   const miniUp = status?.miniReachable === true;
   const slotsUsed = status?.slotsUsed ?? 0;
   const slotsPool = status?.slotsPool ?? 253;
+  // N°311 — quota mensuel EFFECTIF par peer (Go ; 0 = illimité, défaut 50).
+  const quotaGb = status?.quotaMonthlyGb ?? 50;
+  const quotaLimitBytes = quotaGb * (1 << 30);
+  const quotaUnit = lang === "fr" ? "Go" : "GB";
 
   return (
     <div className="space-y-4 sm:space-y-6">
@@ -449,6 +453,7 @@ export default function VpnView() {
                   <TableHead className="pl-4 text-muted-foreground sm:pl-6">{t("vpn.access")}</TableHead>
                   <TableHead className="text-muted-foreground">{t("vpn.state")}</TableHead>
                   <TableHead className="hidden font-mono text-muted-foreground md:table-cell">{t("vpn.address")}</TableHead>
+                  <TableHead className="hidden text-muted-foreground lg:table-cell">{t("vpn.quota")}</TableHead>
                   <TableHead className="hidden text-muted-foreground lg:table-cell">{t("vpn.created")}</TableHead>
                   <TableHead className="pr-4 text-right text-muted-foreground sm:pr-6">{t("vpn.actions")}</TableHead>
                 </TableRow>
@@ -495,6 +500,32 @@ export default function VpnView() {
                       </TableCell>
                       <TableCell className="hidden font-mono text-muted-foreground md:table-cell">
                         {peer.ipv4 || t("vpn.noAddress")}
+                      </TableCell>
+                      {/* N°311 — jauge du quota mensuel (rx+tx, mois calendaire) :
+                          ambre à l'approche (≥ 80 %), rouge au dépassement (la
+                          révocation automatique suit sous 15 min), illimité →
+                          cumul seul. */}
+                      <TableCell className="hidden lg:table-cell">
+                        <span className="flex items-baseline gap-1.5" title={t("vpn.quota.title")}>
+                          <span
+                            className={
+                              quotaGb > 0 && peer.quotaBytes > quotaLimitBytes
+                                ? "text-sm font-medium text-destructive"
+                                : quotaGb > 0 && peer.quotaBytes >= quotaLimitBytes * 0.8
+                                  ? "text-sm font-medium text-amber-600 dark:text-amber-400"
+                                  : "text-sm text-muted-foreground"
+                            }
+                          >
+                            {formatBytes(peer.quotaBytes, lang)}
+                          </span>
+                          {quotaGb > 0 ? (
+                            <span className="text-xs text-muted-foreground">
+                              / {quotaGb} {quotaUnit}
+                            </span>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">· {t("vpn.quota.unlimited")}</span>
+                          )}
+                        </span>
                       </TableCell>
                       <TableCell className="hidden text-muted-foreground lg:table-cell">
                         {peer.createdAt.slice(0, 10)}

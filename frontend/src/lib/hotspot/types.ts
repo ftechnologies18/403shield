@@ -850,16 +850,22 @@ export interface VpnPeer {
   ipv4: string;
   state: string;
   errorMsg?: string;
+  /** N°311 — mois calendaire UTC du cumul (« 2026-10 ») ; vide = jamais échantillonné. */
+  quotaMonth?: string;
+  /** N°311 — cumul du mois courant en octets (rx+tx) — balayage 15 min. */
+  quotaBytes: number;
   createdAt: string;
   updatedAt: string;
 }
 
 /** N°291 — statut du module VPN (GET /api/vpn/status) : jauge du pool wg0
  * (slots partagés avec les routeurs de gestion, D4-a) + santé du
- * mini-service wg-mini sur la VM (décision D3-a). */
+ * mini-service wg-mini sur la VM (décision D3-a). N°311 — quota mensuel
+ * EFFECTIF par peer (Go, rx+tx ; 0 = illimité, défaut 50). */
 export interface VpnStatus {
   slotsUsed: number;
   slotsPool: number;
+  quotaMonthlyGb: number;
   miniReachable: boolean;
   miniError?: string;
 }
@@ -891,7 +897,8 @@ export interface PlatformVpnB2cStats {
   shopEnabled: boolean;
 }
 
-/** N°301 — GET /api/admin/vpn/overview : jauge pool + santé wg-mini + B2C. */
+/** N°301 — GET /api/admin/vpn/overview : jauge pool + santé wg-mini + B2C.
+ * N°311 — quota mensuel VPN EFFECTIF (Go, 0 = illimité). */
 export interface PlatformVpnOverview {
   pool: {
     slotsUsed: number;
@@ -900,6 +907,7 @@ export interface PlatformVpnOverview {
   };
   mini: { reachable: boolean; error?: string };
   b2c: PlatformVpnB2cStats;
+  quotaMonthlyGb: number;
 }
 
 /** N°301 — peer du registre GLOBAL enrichi télémétrie VM (vue grossiste) :
@@ -2265,6 +2273,8 @@ export interface PlatformSettingsResponse {
     registerKeySet: boolean;
     /** N°301 — la vitrine B2C MikCloud VPN (/vpn) est-elle ouverte ? */
     publicVpnShopEnabled?: boolean;
+    /** N°311 — quota mensuel de trafic par peer VPN vendu (Go, rx+tx ; 0 = illimité, défaut 50). */
+    wgVpnMonthlyQuotaGb?: number;
   };
   /** Source du contrôle des inscriptions : "database" (console) ou "env" (REGISTER_KEY verrouillée). */
   registerSource: "database" | "env";
@@ -2278,6 +2288,8 @@ export interface PlatformSettingsUpdatePayload {
   registerKey?: string;
   /** N°301 — ouverture/fermeture de la vitrine B2C MikCloud VPN (/vpn). */
   publicVpnShop?: boolean;
+  /** N°311 — quota mensuel VPN (Go ; 0 = illimité, 0–10000). */
+  wgVpnMonthlyQuotaGb?: number;
 }
 
 /* ─── Purge des données fusionnée (portée globale ou ciblée par compte) ─── */

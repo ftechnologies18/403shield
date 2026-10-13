@@ -768,6 +768,18 @@ func (p *PG) ensureSchema() error {
                 )`,
 		`CREATE UNIQUE INDEX IF NOT EXISTS idx_vpn_peers_name   ON vpn_peers (name)`,
 		`CREATE INDEX IF NOT EXISTS idx_vpn_peers_account ON vpn_peers (account_id)`,
+		// N°311 — QUOTA MENSUEL DE TRAFIC par peer VPN vendu (garde-fou
+		// egress P-B — N°289 §3.1/§3.3, décisions D-a/D-b) : cumul du mois
+		// calendaire UTC (rx+tx confondus — proxy honnête de la
+		// contribution au egress facturé : wg tx ≈ réponses servies au
+		// client, wg rx ≈ requêtes renvoyées vers Internet) ;
+		// quota_last = dernier échantillon BRUT du compteur wg (base des
+		// deltas du balayage 15 min, rebase au reboot VM). Échantillonné
+		// par api/vpnquota_sweep.go, révocation au dépassement du quota
+		// plateforme (settings.platform_wg_vpn_quota_gb).
+		`ALTER TABLE vpn_peers ADD COLUMN IF NOT EXISTS quota_month TEXT NOT NULL DEFAULT ''`,
+		`ALTER TABLE vpn_peers ADD COLUMN IF NOT EXISTS quota_bytes BIGINT NOT NULL DEFAULT 0`,
+		`ALTER TABLE vpn_peers ADD COLUMN IF NOT EXISTS quota_last BIGINT NOT NULL DEFAULT 0`,
 		// N°301 — COMMANDES VPN B2C « vente directe plateforme » (vitrine
 		// publique /vpn, cf. model/publicvpnorder.go) : facturation + cycle
 		// de vie B2C. Aucun secret ici (la conf vit sur le vpn_peer lié,
@@ -815,6 +827,13 @@ func (p *PG) ensureSchema() error {
 		// écrite — la synchro n'a jamais tourné) est nettoyée ici.
 		`ALTER TABLE settings ADD COLUMN IF NOT EXISTS platform_public_vpn_shop BOOLEAN NOT NULL DEFAULT FALSE`,
 		`ALTER TABLE settings DROP COLUMN IF EXISTS public_vpn_shop`,
+		// N°311 — quota mensuel de trafic par peer VPN vendu (compte
+		// principal uniquement, défaut 50 Go, 0 = illimité — garde-fou
+		// egress du tier Always Free OCI). Nom aligné sur la famille
+		// platform_* (leçon N°302 : les TROIS listes — migration, SELECT
+		// load, UPSERT sync — doivent porter le MÊME nom, test
+		// TestSettingsColonnesPariteSchemaLoadSync en sentinelle).
+		`ALTER TABLE settings ADD COLUMN IF NOT EXISTS platform_wg_vpn_quota_gb INTEGER NOT NULL DEFAULT 50`,
 		// N°293 — ABONNÉS PPPoE (chantier ⑥ Phase A — cf. model/pppsecret.go)
 		// : registre cloud des secrets d'un pppoe-server EXISTANT (D2), le
 		// transport est agent ppp_* (D1 — zéro cred, zéro port). Unicité PAR

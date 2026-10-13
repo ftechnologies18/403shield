@@ -24,6 +24,16 @@ export const frPlatformSettings: Record<string, string> = {
 "platformSettings.vpnShopOpenToast": "Vitrine VPN ouverte — /vpn vend",
 "platformSettings.vpnShopClosedToast": "Vitrine VPN fermée (les accès en service restent actifs)",
 
+// N°311 — quota mensuel de trafic des peers VPN vendus (garde-fou egress).
+"platformSettings.vpnQuota": "Quota mensuel VPN",
+"platformSettings.vpnQuotaDesc":
+  "Le garde-fou bande passante : chaque accès VPN consomme la sortie Internet de la plateforme (rx + tx). Au-delà du quota mensuel, l'accès est révoqué automatiquement et le compte propriétaire est notifié — la protection du tier Always Free OCI.",
+"platformSettings.vpnQuotaLabel": "Quota par accès",
+"platformSettings.vpnQuotaHint": "Go par mois calendaire (0 = illimité, défaut 50)",
+"platformSettings.vpnQuotaNote":
+  "La baisse du quota s'applique au passage du balayage suivant (≤ 15 min) : les accès au-dessus de la nouvelle borne sont révoqués — c'est le geste d'urgence anti-abus. Le compteur de chaque accès repart à zéro au changement de mois.",
+"platformSettings.vpnQuotaSavedToast": "Quota mensuel VPN enregistré : {gb} Go par accès",
+
 "platformSettings.identityDesc": "Nom affiché du SaaS sur l'écran de connexion et le pied de page.",
   "platformSettings.platformName": "Nom de la plateforme",
   "platformSettings.platformNameHint": "60 caractères maximum — laissé vide, « MikCloud » est utilisé.",

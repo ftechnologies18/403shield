@@ -49,6 +49,12 @@ export const enVpn: Record<string, string> = {
   "vpn.more": "More actions",
   "vpn.noAddress": "—",
 
+  // — Monthly traffic quota (N°311: egress guard, 15-min sweep) —
+  "vpn.quota": "Monthly quota",
+  "vpn.quota.title":
+    "Current month consumption (received + sent) — the counter resets every calendar month; beyond the quota, access is automatically revoked and the account is notified",
+  "vpn.quota.unlimited": "unlimited",
+
   // — Empty states —
   "vpn.empty.title": "No VPN access sold yet",
   "vpn.empty.desc":

@@ -525,13 +525,20 @@ func (a *API) handleVpnStatus(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	slots := model.VpnPeerSlotsUsed(db)
+	// N°311 — quota mensuel EFFECTIF (setting plateforme, défaut 50 Go,
+	// 0 = illimité) : le dénominateur des jauges par peer de la console.
+	quotaGB := model.DefaultWgVpnMonthlyQuotaGB
+	if s, ok := db.SettingsByAccount[model.AccountMainID]; ok && s.Platform != nil {
+		quotaGB = s.Platform.WgVpnMonthlyQuotaEffective()
+	}
 	a.store.Unlock()
 	// Health check HORS verrou (appel réseau).
 	miniErr := wgMiniPingFn()
 	resp := map[string]any{
-		"slotsUsed":     slots,
-		"slotsPool":     model.VpnWg0PoolSize,
-		"miniReachable": miniErr == nil,
+		"slotsUsed":      slots,
+		"slotsPool":      model.VpnWg0PoolSize,
+		"quotaMonthlyGb": quotaGB,
+		"miniReachable":  miniErr == nil,
 	}
 	if miniErr != nil {
 		resp["miniError"] = boundedString(miniErr.Error(), 200)

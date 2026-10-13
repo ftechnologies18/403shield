@@ -467,8 +467,12 @@ func (p *PG) syncSettings(ctx context.Context, tx *sql.Tx, db *model.DB, pending
 		var platOpen bool
 		var platKey string
 		var platShop bool
+		// N°311 — quota mensuel VPN : valeur EFFECTIVE (nil = défaut 50 Go) ;
+		// les lignes non-principales écrivent la valeur neutre (défaut).
+		platQuota := model.DefaultWgVpnMonthlyQuotaGB
 		if s.Platform != nil {
 			platName, platOpen, platKey, platShop = s.Platform.Name, s.Platform.RegisterOpen, s.Platform.RegisterKey, s.Platform.PublicVpnShopEnabled()
+			platQuota = s.Platform.WgVpnMonthlyQuotaEffective()
 		}
 		_, err := tx.ExecContext(ctx,
 			`INSERT INTO settings (id, account_id, tenant_name, tenant_currency, tenant_timezone, plan_name, plan_max_routers, plan_max_users, wave_link,
@@ -477,8 +481,9 @@ func (p *PG) syncSettings(ctx context.Context, tx *sql.Tx, db *model.DB, pending
                                sub_router_slots, sub_last_paid_at, last_tick, last_sweep,
                                platform_name, platform_register_open, platform_register_key, auto_import_router_users, join_button, cyber_enabled,
                                portal_style, portal_welcome, portal_promos, portal_socials, portal_slides, portal_services, portal_ticker, portal_whatsapp, portal_key,
-                               log_retention_days, wg_vpn_enabled, wg_vpn_locked, platform_public_vpn_shop)
-                         VALUES ($1, $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33, $34, $35, $36, $37, $38, $39, $40, $41)
+                               log_retention_days, wg_vpn_enabled, wg_vpn_locked, platform_public_vpn_shop,
+                               platform_wg_vpn_quota_gb)
+                         VALUES ($1, $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33, $34, $35, $36, $37, $38, $39, $40, $41, $42)
                          ON CONFLICT (id) DO UPDATE SET
                            account_id                = EXCLUDED.account_id,
                            tenant_name               = EXCLUDED.tenant_name,
@@ -520,7 +525,8 @@ func (p *PG) syncSettings(ctx context.Context, tx *sql.Tx, db *model.DB, pending
                            log_retention_days       = EXCLUDED.log_retention_days,
                            wg_vpn_enabled           = EXCLUDED.wg_vpn_enabled,
                            wg_vpn_locked            = EXCLUDED.wg_vpn_locked,
-                           platform_public_vpn_shop = EXCLUDED.platform_public_vpn_shop`,
+                           platform_public_vpn_shop = EXCLUDED.platform_public_vpn_shop,
+                           platform_wg_vpn_quota_gb = EXCLUDED.platform_wg_vpn_quota_gb`,
 			accID, s.Tenant.Name, s.Tenant.Currency, s.Tenant.Timezone,
 			s.Plan.Name, s.Plan.MaxRouters, s.Plan.MaxUsers,
 			s.Tenant.WaveLink, s.Tenant.DNSName, s.Tenant.LogoURL, s.Tenant.BannerURL,
@@ -534,7 +540,7 @@ func (p *PG) syncSettings(ctx context.Context, tx *sql.Tx, db *model.DB, pending
 			s.Tenant.PortalServices,
 			s.Tenant.PortalTicker,
 			s.Tenant.PortalWhatsapp,
-			s.Tenant.PortalKey, s.Tenant.LogRetentionDaysEffective(), s.Tenant.WgVpnModuleEnabled(), s.Tenant.WgVpnModuleLocked(), platShop)
+			s.Tenant.PortalKey, s.Tenant.LogRetentionDaysEffective(), s.Tenant.WgVpnModuleEnabled(), s.Tenant.WgVpnModuleLocked(), platShop, platQuota)
 		if err != nil {
 			return false, fmt.Errorf("pg sync settings (%s) : %w", accID, err)
 		}
