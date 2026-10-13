@@ -45,10 +45,16 @@ const WgMarker = "mikcloud-wg"
 const WgListenPort = 13231
 
 // WgServerTunnelIP — adresse du serveur dans le tunnel (wg0 10.8.0.1/24,
-// posée par ops-wg N°284). C'est la seule destination dont le peer routeur
-// autorise le trafic (allowed-address=10.8.0.1/32) : le tunnel est un chemin
-// de gestion vers l'hôte MikCloud, pas une porte vers le LAN du routeur.
+// posée par ops-wg N°284). Socle PERMANENT de l'allowed-address du peer
+// serveur : le tunnel reste d'abord un chemin de gestion vers l'hôte
+// MikCloud. N°312 : la liste s'ÉLARGIT par compte avec les IP des peers
+// « remote » du gérant (supervision B2B — cf. WgAllowedSourcesLocked côté
+// api) ; sans peer remote, le comportement N°285 est identique au byte près.
 const WgServerTunnelIP = "10.8.0.1"
+
+// WgDefaultAllowedSources — la valeur de repli (et le socle) de la clé
+// « allowedSources » du payload wg_setup : le chemin de gestion seul.
+const WgDefaultAllowedSources = WgServerTunnelIP + "/32"
 
 // WgKeepaliveSec — PersistentKeepalive du peer routeur : les routeurs clients
 // sont derrière le NAT de l'opérateur (pattern N°284, 25 s recommandé).
@@ -63,6 +69,7 @@ var wgKeyRe = regexp.MustCompile(`^[A-Za-z0-9+/]{43}=$`)
 var wgIPv4Re = regexp.MustCompile(`^10\.8\.0\.(\d{1,3})$`)
 var wgPeerNameRe = regexp.MustCompile(`^[a-z0-9][a-z0-9-]{0,31}$`)
 var wgHostRe = regexp.MustCompile(`^[A-Za-z0-9.-]{1,253}$`)
+var wgAllowedItemRe = regexp.MustCompile(`^10\.8\.0\.(\d{1,2}|1\d{2}|2[0-4]\d|25[0-5])/32$`)
 
 // ValidWgKey — clé publique WireGuard (44 caractères base64 std, terminé « = »).
 // Valide indifféremment une clé publique et une PresharedKey (même format).
@@ -87,6 +94,41 @@ func ValidWgHost(s string) bool { return wgHostRe.MatchString(s) }
 
 // ValidWgPort — port d'endpoint (1-65535).
 func ValidWgPort(p int) bool { return p >= 1 && p <= 65535 }
+
+// SanitizeWgAllowedSources — N°312 — valide/assainit la liste d'allowed-address
+// du peer serveur (clé « allowedSources » du payload wg_setup) : items
+// « 10.8.0.N/32 » séparés par des virgules. Toute valeur mal formée, liste
+// vide ou trop longue (isolation : au plus 26 entrées — le socle + les
+// MaxVpnPeersPerAccount peers remote, marge comprise) retombe sur le SOCLE
+// seul (10.8.0.1/32) : le repli est TOUJOURS conservateur — jamais une porte
+// plus ouverte que prévu (défense en profondeur, frontière cloud → routeur).
+func SanitizeWgAllowedSources(raw string) string {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return WgDefaultAllowedSources
+	}
+	items := strings.Split(raw, ",")
+	if len(items) > 26 {
+		return WgDefaultAllowedSources
+	}
+	seen := map[string]bool{}
+	out := make([]string, 0, len(items))
+	for _, it := range items {
+		it = strings.TrimSpace(it)
+		if !wgAllowedItemRe.MatchString(it) || seen[it] {
+			return WgDefaultAllowedSources
+		}
+		seen[it] = true
+		out = append(out, it)
+	}
+	// Le socle (chemin de gestion) doit TOUJOURS figurer : sans lui le routeur
+	// ne répond plus au ping tunnel ni à wg-test — on ne retire jamais la porte
+	// de gestion en élargissant celle de supervision.
+	if !seen[WgDefaultAllowedSources] {
+		return WgDefaultAllowedSources
+	}
+	return strings.Join(out, ",")
+}
 
 // WgPeerNameSuggestion — nom de peer conseillé pour un routeur : dérivé du
 // nom assaini (SanitizeName) en minuscules, tirets, charset wg-peer.sh ;
@@ -151,7 +193,10 @@ func (b Builder) buildWgKeygen(cmd model.Command) string {
 
 // buildWgSetup — configure le peer serveur + l'adresse tunnel (idempotent,
 // remove-then-add par marqueur). Valeurs reçues : peerPub (clé publique
-// SERVEUR), psk, address (10.8.0.N/32), endpointHost, endpointPort.
+// SERVEUR), psk, address (10.8.0.N/32), endpointHost, endpointPort, et
+// allowedSources (N°312 — liste allowed-address du peer serveur : socle
+// 10.8.0.1/32 + IP des peers « remote » du compte ; absente = socle seul,
+// rétro-compatible avec tout payload antérieur).
 // Le rapport échoe le compte de peers marqués attendu (1) : vérité routeur.
 func (b Builder) buildWgSetup(cmd model.Command) string {
 	peerPub := rosEscape(strings.TrimSpace(plStr(cmd.Payload, "peerPub")))
@@ -159,6 +204,7 @@ func (b Builder) buildWgSetup(cmd model.Command) string {
 	addr := strings.TrimSpace(plStr(cmd.Payload, "address"))
 	epHost := strings.TrimSpace(plStr(cmd.Payload, "endpointHost"))
 	epPort := int(plInt64(cmd.Payload, "endpointPort"))
+	allowed := SanitizeWgAllowedSources(plStr(cmd.Payload, "allowedSources"))
 	if epPort == 0 {
 		epPort = 51820
 	}
@@ -172,9 +218,11 @@ func (b Builder) buildWgSetup(cmd model.Command) string {
 	sb.WriteString("    /interface/wireguard add name=" + WgIfaceName + " listen-port=" + strconv.Itoa(WgListenPort) + " comment=\"" + WgMarker + "\"\n")
 	sb.WriteString("  }\n")
 	// Peer serveur : remove-then-add par marqueur (idempotent — un re-file
-	// zombie N°73 reconverge, jamais de doublon).
+	// zombie N°73 reconverge, jamais de doublon). N°312 — allowed-address
+	// ÉLARGI par compte (société + supervision) : la valeur est déjà
+	// assainie (items 10.8.0.N/32, virgules — aucun métacaractère RouterOS).
 	sb.WriteString("  :do { /interface/wireguard peers remove [find interface=" + WgIfaceName + " comment=\"" + WgMarker + "\"] } on-error={}\n")
-	sb.WriteString("  /interface/wireguard peers add interface=" + WgIfaceName + " name=\"" + WgMarker + "-srv\" public-key=\"" + peerPub + "\" preshared-key=\"" + psk + "\" endpoint-address=\"" + rosEscape(epHost) + "\" endpoint-port=" + strconv.Itoa(epPort) + " allowed-address=" + WgServerTunnelIP + "/32 persistent-keepalive=" + strconv.Itoa(WgKeepaliveSec) + " comment=\"" + WgMarker + "\"\n")
+	sb.WriteString("  /interface/wireguard peers add interface=" + WgIfaceName + " name=\"" + WgMarker + "-srv\" public-key=\"" + peerPub + "\" preshared-key=\"" + psk + "\" endpoint-address=\"" + rosEscape(epHost) + "\" endpoint-port=" + strconv.Itoa(epPort) + " allowed-address=" + allowed + " persistent-keepalive=" + strconv.Itoa(WgKeepaliveSec) + " comment=\"" + WgMarker + "\"\n")
 	// Adresse tunnel : remove-then-add par marqueur.
 	sb.WriteString("  :do { /ip address remove [find interface=" + WgIfaceName + " comment=\"" + WgMarker + "\"] } on-error={}\n")
 	sb.WriteString("  /ip address add interface=" + WgIfaceName + " address=\"" + rosEscape(addr) + "\" comment=\"" + WgMarker + "\"\n")
@@ -206,14 +254,18 @@ func (b Builder) buildWgTeardown(cmd model.Command) string {
 }
 
 // WgSetupPayloadFrom — construit le payload canonique de wg_setup (le handler
-// l'appelle après validation) : le builder ne lit QUE ces clés.
-func WgSetupPayloadFrom(peerPub, psk, address, endpointHost string, endpointPort int) map[string]any {
+// l'appelle après validation) : le builder ne lit QUE ces clés. N°312 —
+// allowedSources : liste allowed-address du peer serveur côté routeur (socié
+// 10.8.0.1/32 + IP des peers « remote » du compte, cf. wgAllowedSourcesLocked
+// côté api) ; vide = socle seul (comportement N°285, rétro-compatible).
+func WgSetupPayloadFrom(peerPub, psk, address, endpointHost string, endpointPort int, allowedSources string) map[string]any {
 	return map[string]any{
-		"peerPub":      peerPub,
-		"psk":          psk,
-		"address":      address,
-		"endpointHost": endpointHost,
-		"endpointPort": endpointPort,
+		"peerPub":        peerPub,
+		"psk":            psk,
+		"address":        address,
+		"endpointHost":   endpointHost,
+		"endpointPort":   endpointPort,
+		"allowedSources": allowedSources,
 	}
 }
 

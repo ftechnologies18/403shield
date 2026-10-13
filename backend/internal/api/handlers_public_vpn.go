@@ -509,7 +509,9 @@ func (a *API) provisionPublicVpnOrder(orderID string) (model.PublicVpnOrder, err
 	a.store.Unlock()
 
 	// Phase 2 : wg-mini HORS verrou (jamais d'appel réseau sous le verrou global).
-	conf, ip, err := wgMiniAddFn(name)
+	// N°312 — le canal B2C reste FULLTUNNEL exclusivement (le « remote » est
+	// la forme supervision du gérant, hors sujet vitrine).
+	conf, ip, err := wgMiniAddFn(name, model.VpnKindFullTunnel)
 	if err != nil {
 		// Nettoyage best-effort + trace : la commande reste « paid » (rejouée
 		// par le balayage horaire) — jamais définitivement perdue.

@@ -6,6 +6,140 @@ aux dates de livraison — le déploiement est continu : chaque push `main` pass
 la CI puis se déploie automatiquement (frontend Vercel, backend Oracle E5
 depuis le T2 N°266 — Render suspendu N°303).
 
+## 2026-10-13 — N°312 — **VPN « REMOTE » : L'ACCÈS DISTANT DU GÉRANT (P-A livré — supervision B2B de ses routeurs via le tunnel)**
+
+### Problème
+La forme « remote » (P-A de N°289 §3.1 : « un peer WireGuard donne au gérant
+l'accès à SON réseau… presque un cadeau de fidélisation ») était le refus
+honnête `vpn_kind_unavailable` de N°291 — JUSTIFIÉ par l'absence de
+plomberie : le peer aurait été joignable mais le routeur invisible (la
+réponse ne pouvait pas rentrer dans le tunnel : allowed-address du peer
+serveur = 10.8.0.1/32 UNIQUEMENT, « pas une porte vers le LAN »). L'usage
+B2B de supervision — administrer SES routeurs MikroTik depuis n'importe où
+(Winbox/API/SSH/web), CGNAT traversé des deux côtés — restait fermé.
+
+### Décisions de conception (D-B1…D-B5)
+- **D-B1 (périmètre honnête)** : « remote » v1 = supervision du ROUTEUR via
+  son IP tunnel 10.8.0.M (Winbox 8291, API RouterOS 8728, SSH 22, web) —
+  l'accès LAN étendu (caméras/NAS derrière le routeur) reste NON livré :
+  il exige la connaissance du sous-réseau LAN (détection agent, pattern
+  ppp_provision N°310), l'élargissement des AllowedIPs du PEER ROUTEUR côté
+  wg0.conf (wg-peer.sh), et un srcnat marqué côté routeur — phase suivante
+  documentée, jamais un produit en trompe-l'œil (l'UI le dit).
+- **D-B2 (isolation multi-tenant — LE point critique)** : l'élargissement
+  allowed-address du peer serveur est PAR COMPTE et PARESSEUX :
+  `10.8.0.1/32` (socle de gestion, PERMANENT) + `10.8.0.X/32` par peer
+  « remote » ACTIF du compte (registre cloud = source de vérité, D4-a).
+  Les peers FULLTUNNEL ne figurent JAMAIS dans la liste d'un routeur (le
+  produit « client final » ne supervise rien), les peers remote d'AUTRES
+  comptes non plus (rejet à la réception, cryptokey routing RouterOS) ;
+  sans peer remote, le script généré est IDENTIQUE au byte près à N°285 —
+  **zéro migration de flotte**, la liste n'existe que recalculée.
+- **D-B3 (preuve par la conf)** : la conf remote est générée CÔTÉ VM
+  (D5-a inchangé — `AllowedIPs = 10.8.0.0/24`, PAS de DNS tunnel,
+  keepalive 25 s) par wg-peer.sh v3 (`add <nom> [fulltunnel|remote]`,
+  3e argument ignoré par un script antérieur) exposé par wg-mini v3
+  (`POST /v1/add {name, kind?}` — absent/vide = fulltunnel,
+  rétro-compatible). Le backend VÉRIFIE la conf renvoyée (remote →
+  « AllowedIPs = 10.8.0.0/24 » ET PAS « 0.0.0.0/0 » ; fulltunnel →
+  « 0.0.0.0/0 ») : une VM antérieure rend une conf full-tunnel → refus
+  explicite + nettoyage + consigne `ops-wg-mini-install` — jamais de
+  confiance aveugle à la version, jamais de trompe-l'œil déployé.
+- **D-B4 (chorégraphie cloud)** : création remote OK → re-livraison
+  AUTOMATIQUE de wg_setup aux routeurs agents ACTIFS du compte (payload
+  `allowedSources` = liste fraîche, ≤ 45 s par routeur au check-in) ;
+  révocation remote → idem avec liste réduite (hygiène — le peer VM déjà
+  retiré rend l'entrée résiduelle inerte : ceinture ET bretelles) ;
+  CONVERGENCE au résultat : la liste appliquée (payload de la commande
+  exécutée) ≠ liste courante → re-file (idempotent, aucune boucle — la
+  liste ne bouge que sur un geste utilisateur, zéro appel réseau sous
+  verrou) ; wg-params/wg-auto calculent la liste du jour au build.
+- **D-B5 (garde-fous inchangés)** : MaxVpnPeersPerAccount (25), jauge du
+  pool, et le quota mensuel N°311 RESTE applicable aux peers remote —
+  sémantique egress préservée : rx du gérant → re-chiffré vers l'endpoint
+  PUBLIQUE du routeur (egress), tx → endpoint du gérant (egress) ; les
+  deux directions quittent la NIC, le comptage rx+tx reste un proxy
+  honnête. Le balayage reste kind-agnostique, assumé. B2C vitrine N°301 :
+  fulltunnel EXCLUSIVEMENT (le remote est la forme gérant, hors sujet).
+
+### Livré
+- **VM** : `wg-peer.sh` v3 (formes fulltunnel|remote — bloc [Peer] wg0
+  IDENTIQUE pour les deux, seule la conf client diffère : 10.8.0.0/24 sans
+  DNS vs 0.0.0.0/0 + DNS ; `list`/`remove`/format wg0.conf INTACTS) ;
+  `wg-mini` v3 (kind sur /v1/add, validé, logué ; version « v3 » au ping
+  signé) ; README v3 (preuve par la conf, ordre de mise à jour).
+- **Agent (builder wg_setup)** : payload étendu `allowedSources`
+  (défaut = socle seul, rétro-compatible avec tout payload antérieur) ;
+  `SanitizeWgAllowedSources` — items 10.8.0.N/32 bornés (octet 0-255),
+  ≤ 26 entrées, doublons refusés, socle EXIGÉ (on ne referme jamais la
+  porte de gestion) ; toute valeur mal formée retombe sur le socle seul —
+  le repli est TOUJOURS conservateur (frontière cloud → routeur).
+- **Backend** : `wgMiniAdd(name, kind)` + preuve ; création accepte
+  fulltunnel|remote (code `vpn_kind_unavailable` réservé aux formes
+  inconnues) ; `wgAllowedSourcesLocked` (liste par compte, isolation
+  D-B2) ; `queueWgSetupRefreshLocked` (re-livraison ciblée : actifs
+  complets, dédup par commande en file/vol, états avariés écartés sans
+  bloquer le geste VPN) ; convergence au résultat (agent_handlers) ;
+  livraisons e-mail/Telegram kind-aware (instructions supervision) ; B2C
+  explicite fulltunnel.
+- **Frontend** : sélecteur de forme ACTIF (hint par forme : egress client
+  vs supervision par IP tunnel), badge « Accès distant » (émeraude) par
+  ligne + registre plateforme, avertissement et conf-dialogue adaptés à la
+  forme, i18n FR/EN 8 clés nouvelles/màj.
+
+### Vérifié
+- gofmt 0, go vet OK, go test 11/11 packages. Nouveaux tests
+  (`handlers_vpn_remote_test.go` — harnais « VM simulée » sur
+  wgMiniCallFn : la VRAIE chaîne wgMiniAdd + preuve tourne) : liste par
+  compte (socle permanent, fulltunnel/comptes étrangers JAMAIS, doublons
+  écartés, compte sans remote = socle seul) ; re-livraison ciblée (actifs
+  complets seulement, pas de doublon en file/vol, payload frais, état
+  pending_setup) ; preuve par la conf (remote conforme accepté, conf
+  full-tunnel d'une VM antérieure → refus ops-wg-mini-install,
+  fulltunnel sans 0.0.0.0/0 refusé, kind inconnu sans appel réseau) ;
+  création remote de bout en bout (200, peer actif, wg_setup re-filé au
+  routeur avec l'IP nouvelle, toast dédié) ; dégradation honnête (502,
+  ligne error, peer VM nettoyé, AUCUN wg_setup) ; kind inconnu (400,
+  aucune ligne) ; révocation remote (remove + liste réduite au socle).
+  `wireguard_test.go` : allowed-address élargi par items, payload
+  antérieur → socle, sanitize (repli conservateur, injection hors tunnel
+  refusée, /24 JAMAIS élargi, liste trop longue). tsgo 0, ESLint 0,
+  next build OK.
+
+### Schéma DB — verdict explicite
+**Changement de schéma : NON.** La forme est une VALEUR (`kind` colonne
+existante de `vpn_peers` depuis N°291), la liste `allowedSources` est
+RECALCULÉE à chaque build de payload (jamais stockée — le registre cloud
+reste la source de vérité, D4-a), les champs Wg* des routeurs existent
+depuis N°285. Aucun ALTER, aucune migration, rien à faire côté répliques.
+
+### Suites pour l'exploitant
+- **wg-mini v3 + wg-peer.sh v3 sur la VM** : UN run du workflow
+  `ops-wg-mini-install` (GitHub → Actions → Run workflow, ~2 min — il
+  repose le binaire ET wg-peer.sh, RESTART le service et PROUVE la
+  version `v3` par ping signé, run ROUGE sinon). Jusque-là, la création
+  d'accès distants refuse HONNÊTEMENT avec la consigne (502
+  `wg_mini_error`) — les peers fulltunnel existants et le tunnel de
+  gestion des routeurs ne sont PAS touchés.
+- Le chemin de données (peer gérant → wg0 VM → peer routeur) s'appuie sur
+  la plomberie existante vérifiée au runbook §10 : `ip_forward=1`,
+  FORWARD in/out wg0 posés par wg-quick, MASQUERADE scopé à l'interface
+  réelle (la source 10.8.0.X est PRÉSERVÉE entre peers wg0 — condition de
+  l'isolation par allowed-address).
+- Smoke test produit après upgrade : créer un accès distant (label
+  « test gérant »), importer la conf dans WireGuard, joindre l'IP tunnel
+  d'un routeur actif (10.8.0.M :8291 Winbox) — puis révoquer le peer de
+  test.
+
+### Non-objectifs
+- Accès LAN étendu (caméras/NAS derrière le routeur) : NON livré —
+  nécessite détection LAN agent + AllowedIPs du peer routeur côté VM +
+  srcnat marqué (design esquissé D-B1, phase suivante).
+- Plafond PAR FORME (remote « cadeau de fidélisation » gratuit vs vendu) :
+  avec l'éditeur de formules (même doctrine que MaxVpnPeersPerAccount).
+- Pas de B2C remote (la vitrine N°301 vend le full-tunnel exclusivement).
+- Pas de bridage tc/HTB (reporté N°311, sans changement).
+
 ## 2026-10-13 — N°311 — **QUOTA MENSUEL DE TRAFIC PAR PEER VPN VENDU (garde-fou egress P-B — l'alerte N°289 §3.3 devient un mécanisme)**
 
 ### Problème

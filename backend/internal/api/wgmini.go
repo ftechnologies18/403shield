@@ -34,6 +34,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"mikcloud/hotspot-api/internal/model"
 )
 
 // wgMiniTimeout — les gestes wg-peer.sh sont locaux (wg syncconf ≈ ms, la
@@ -116,11 +118,24 @@ type wgMiniPeer struct {
 	Transfer  string `json:"transfer"`
 }
 
-// wgMiniAdd — wg-peer.sh add <name> : génère clés + conf client full-tunnel
+// wgMiniAdd — wg-peer.sh add <name> [kind] : génère clés + conf client
 // CÔTÉ VM et renvoie la conf (une seule traversée cloud ; la clé privée
-// n'a jamais existé ailleurs).
-func wgMiniAdd(name string) (conf, ip string, err error) {
-	raw, err := wgMiniCallFn(http.MethodPost, "/v1/add", map[string]string{"name": name})
+// n'a jamais existé ailleurs). N°312 — kind = forme de produit
+// (fulltunnel par défaut | remote : supervision B2B du gérant).
+// PREUVE PAR LA CONF (défense en profondeur — jamais de confiance aveugle à
+// la version de la VM) : la conf renvoyée est VÉRIFIÉE contre la forme
+// demandée (remote → « AllowedIPs = 10.8.0.0/24 », SANS 0.0.0.0/0 ;
+// fulltunnel → « 0.0.0.0/0 »). Un wg-mini/wg-peer.sh ANTÉRIEUR ignore le
+// kind et rend une conf full-tunnel : le refus est EXPLICITE (geste
+// exploitant ops-wg-mini-install) — jamais un produit en trompe-l'œil.
+func wgMiniAdd(name, kind string) (conf, ip string, err error) {
+	if kind == "" {
+		kind = model.VpnKindFullTunnel
+	}
+	if kind != model.VpnKindFullTunnel && kind != model.VpnKindRemote {
+		return "", "", fmt.Errorf("forme de peer inconnue : %q", kind)
+	}
+	raw, err := wgMiniCallFn(http.MethodPost, "/v1/add", map[string]string{"name": name, "kind": kind})
 	if err != nil {
 		return "", "", err
 	}
@@ -133,6 +148,13 @@ func wgMiniAdd(name string) (conf, ip string, err error) {
 	}
 	if strings.TrimSpace(env.Conf) == "" {
 		return "", "", errors.New("wg-mini : conf client vide — vérifiez wg-peer.sh sur la VM")
+	}
+	if kind == model.VpnKindRemote {
+		if !strings.Contains(env.Conf, "AllowedIPs = 10.8.0.0/24") || strings.Contains(env.Conf, "0.0.0.0/0") {
+			return "", "", errors.New("wg-mini/wg-peer.sh antérieur à la forme « remote » (conf full-tunnel renvoyée) — lancez le workflow ops-wg-mini-install (repose wg-peer.sh + wg-mini puis RESTART, ~2 min — cf. deploy/oracle/wg-mini/README.md)")
+		}
+	} else if !strings.Contains(env.Conf, "0.0.0.0/0") {
+		return "", "", errors.New("wg-mini : conf full-tunnel inattendue (AllowedIPs sans 0.0.0.0/0) — vérifiez wg-peer.sh sur la VM")
 	}
 	return env.Conf, env.IP, nil
 }

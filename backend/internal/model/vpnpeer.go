@@ -25,12 +25,11 @@
 // concurrent.
 //
 // Formes de produit (N°289 §3.1) : « fulltunnel » (P-B, sortie Internet par
-// la VM — IP fixe FR) est la SEULE livrée en v1 ; « remote » (P-A, accès
-// distant du gérant) exige l'élargissement allowed-address CÔTÉ ROUTEUR
-// (plomberie agent, phase B) — l'API refuse avec un message clair tant que
-// cette plomberie n'existe pas (verdict honnête plutôt qu'un produit en
-// trompe-l'œil : le peer serait joignable mais le réseau du gérant resterait
-// invisible, la réponse du routeur ne pouvant pas rentrer dans le tunnel).
+// la VM — IP fixe FR) et « remote » (P-A, accès distant du gérant — LIVRÉ
+// N°312 : supervision B2B de SES routeurs via le tunnel ; l'allowed-address
+// du peer serveur est élargi PAR COMPTE avec les IP des peers remote,
+// wgAllowedSourcesLocked — les peers fulltunnel et les comptes étrangers ne
+// figurent JAMAIS dans la liste d'un routeur).
 //
 // Garde-fous P-B (N°289 §3.3) : plafond par compte (MaxVpnPeersPerAccount),
 // jauge du pool global wg0, alerte egress documentée côté console, révocation
@@ -60,9 +59,10 @@ const (
 	// VpnKindFullTunnel — P-B « client final » : tout le trafic sort par la
 	// VM. Livré en v1 (wg-peer.sh add, conf 0.0.0.0/0 + ::/0).
 	VpnKindFullTunnel = "fulltunnel"
-	// VpnKindRemote — P-A « accès distant du gérant » : réservé phase B
-	// (nécessite allowed-address routeur élargi côté agent — cf. N°289
-	// §3.3/D4). Refusé à la création avec le code « vpn_kind_unavailable ».
+	// VpnKindRemote — P-A « accès distant du gérant » — LIVRÉ en N°312 :
+	// supervision B2B de ses routeurs via le tunnel (conf client
+	// 10.8.0.0/24, allowed-address du peer serveur élargi par compte —
+	// cf. wgAllowedSourcesLocked, handlers_vpn.go).
 	VpnKindRemote = "remote"
 )
 

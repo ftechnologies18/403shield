@@ -43,6 +43,8 @@ export const frVpn: Record<string, string> = {
   "vpn.state.error": "Erreur",
   "vpn.kind.fulltunnel": "Client final",
   "vpn.kind.remote": "Accès distant",
+  "vpn.kind.fulltunnel.title": "Client final — tout le trafic de l'appareil sort par la VM (IP fixe)",
+  "vpn.kind.remote.title": "Accès distant du gérant — supervision de vos routeurs via le tunnel chiffré (aucune sortie Internet)",
   "vpn.conf": "Configuration",
   "vpn.deliver": "Livrer",
   "vpn.revoke": "Révoquer",
@@ -71,20 +73,27 @@ export const frVpn: Record<string, string> = {
   "vpn.addLabelPlaceholder": "Téléphone client Ali, PC boutique…",
   "vpn.addKind": "Forme d'accès",
   "vpn.addKind.fulltunnel": "Client final — tout le trafic sort par la VM (IP fixe)",
-  "vpn.addKind.remote": "Accès distant du gérant — phase B (bientôt)",
+  "vpn.addKind.remote": "Accès distant du gérant — supervision de vos routeurs",
+  "vpn.addKind.fulltunnelHint": "La navigation de votre CLIENT transite par votre serveur : tout l'egress compte sur le quota de la plateforme.",
+  "vpn.addKind.remoteHint": "Pour VOUS : Winbox, l'API RouterOS, SSH et l'interface web de chaque routeur restent joignables à leur adresse tunnel 10.8.0.x, où que vous soyez. Le tunnel ne route rien d'autre — requiert au moins un routeur au tunnel actif (l'accès s'élargit automatiquement, ≤ 45 s par routeur).",
   "vpn.addPrice": "Prix de vente enregistré (0 = ne rien encaisser)",
   "vpn.addPricePlaceholder": "Ex. 2000",
   "vpn.addPriceHint": "Saisi > 0 : la vente part à la caisse (canal direct) et dans les rapports.",
   "vpn.addWarning":
     "Le trafic du client sort par VOTRE serveur : gardez un œil sur la consommation (sortie ~10 To/mois sur l'offre Always Free) et révoquez les accès dormants.",
+  "vpn.addWarning.remote":
+    "La supervision n'ouvre AUCUNE porte vers Internet : le tunnel ne route que le réseau MikCloud (10.8.0.0/24). Caméras et NAS du LAN restent hors périmètre — accès complet au LAN : prochaine étape.",
   "vpn.addCta": "Générer et vendre",
   "vpn.addToast": "Accès VPN créé",
+  "vpn.addToast.remote": "Accès distant créé — vos routeurs actifs l'acceptent sous ≤ 45 s",
   "vpn.addPending": "Génération en cours sur la VM…",
 
   // — Conf / livraison (D5-a) —
   "vpn.confTitle": "Configuration VPN",
   "vpn.confDesc":
     "Le client installe l'application WireGuard, puis « + » → importer. Gardez cette configuration secrète : elle donne un accès complet.",
+  "vpn.confDesc.remote":
+    "Importez-la dans WireGuard (menu « + ») : vos routeurs deviennent joignables à leur adresse tunnel 10.8.0.x (Winbox, API, SSH, web).",
   "vpn.confCopy": "Copier la configuration",
   "vpn.confCopied": "Configuration copiée",
   "vpn.confQr": "QR (scan direct)",

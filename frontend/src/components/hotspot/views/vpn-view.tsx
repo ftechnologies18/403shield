@@ -10,7 +10,12 @@
 //   - D4-a : wg0 partitionné par nommage (vpn-* vs routeurs), jauge de
 //     slots GLOBALE (routeurs de gestion inclus) + check de réconciliation ;
 //   - D5-a : conf chiffrée au repos côté cloud, re-livrable à la demande
-//     (reveal + copie + QR + e-mail + Telegram) — l'argument produit.
+//     (reveal + copie + QR + e-mail + Telegram) — l'argument produit ;
+//   - N°312 : DEUX formes de produit — « fulltunnel » (client final, sortie
+//     Internet par la VM) et « remote » (accès distant du GÉRANT :
+//     supervision de ses routeurs via le tunnel, conf 10.8.0.0/24, aucune
+//     sortie Internet — le sélecteur est actif, le badge distingue les
+//     lignes, la livraison adapte ses instructions à la forme).
 //
 // Le module est OPT-IN (settings.tenant.wgVpnEnabled, défaut OFF — même
 // doctrine D6 que le Cybercafé) : la vue propose l'activation en un clic
@@ -211,18 +216,23 @@ export default function VpnView() {
   const [addOpen, setAddOpen] = useState(false);
   const [addLabel, setAddLabel] = useState("");
   const [addPrice, setAddPrice] = useState("");
+  // N°312 — forme d'accès : fulltunnel (client final) | remote (supervision
+  // du gérant — l'allowed-address des routeurs du compte s'élargit
+  // automatiquement à la création, ≤ 45 s par routeur actif).
+  const [addKind, setAddKind] = useState<"fulltunnel" | "remote">("fulltunnel");
   const createMutation = useMutation({
     mutationFn: () =>
       createVpnPeer({
         label: addLabel.trim(),
-        kind: "fulltunnel",
+        kind: addKind,
         salePrice: Math.max(0, Math.round(Number(addPrice) || 0)),
       }),
     onSuccess: (peer) => {
-      toast.success(t("vpn.addToast"));
+      toast.success(peer.kind === "remote" ? t("vpn.addToast.remote") : t("vpn.addToast"));
       setAddOpen(false);
       setAddLabel("");
       setAddPrice("");
+      setAddKind("fulltunnel");
       invalidatePeers();
       // Le geste suivant naturel : la livraison de la conf au client.
       void openConf(peer.id, peer);
@@ -473,6 +483,26 @@ export default function VpnView() {
                             <span className="block truncate font-mono text-xs text-muted-foreground" title={peer.name}>
                               {peer.name}
                             </span>
+                            {/* N°312 — badge de forme : la supervision (remote) se
+                                distingue au premier regard du client final. */}
+                            {peer.kind === "remote" ? (
+                              <Badge
+                                variant="outline"
+                                title={t("vpn.kind.remote.title")}
+                                className="mt-1 h-5 gap-1 border-emerald-600/30 bg-emerald-500/10 px-1.5 text-[11px] font-medium text-emerald-700 dark:text-emerald-300"
+                              >
+                                <ShieldCheck className="size-3" aria-hidden />
+                                {t("vpn.kind.remote")}
+                              </Badge>
+                            ) : (
+                              <Badge
+                                variant="outline"
+                                title={t("vpn.kind.fulltunnel.title")}
+                                className="mt-1 h-5 px-1.5 text-[11px] font-medium text-muted-foreground"
+                              >
+                                {t("vpn.kind.fulltunnel")}
+                              </Badge>
+                            )}
                           </span>
                         </span>
                       </TableCell>
@@ -622,15 +652,23 @@ export default function VpnView() {
             </div>
             <div className="space-y-1.5">
               <Label>{t("vpn.addKind")}</Label>
-              <Select value="fulltunnel" disabled>
+              {/* N°312 — le sélecteur est ACTIF : la forme « remote » (accès
+                  distant du gérant — supervision) est livrée. */}
+              <Select
+                value={addKind}
+                onValueChange={(v) => setAddKind(v === "remote" ? "remote" : "fulltunnel")}
+              >
                 <SelectTrigger className="w-full">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="fulltunnel">{t("vpn.addKind.fulltunnel")}</SelectItem>
-                  <SelectItem value="remote" disabled>{t("vpn.addKind.remote")}</SelectItem>
+                  <SelectItem value="remote">{t("vpn.addKind.remote")}</SelectItem>
                 </SelectContent>
               </Select>
+              <p className="text-xs text-muted-foreground">
+                {addKind === "remote" ? t("vpn.addKind.remoteHint") : t("vpn.addKind.fulltunnelHint")}
+              </p>
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="vpn-add-price">{t("vpn.addPrice")}</Label>
@@ -643,7 +681,9 @@ export default function VpnView() {
               />
               <p className="text-xs text-muted-foreground">{t("vpn.addPriceHint")}</p>
             </div>
-            <p className="rounded-md border bg-muted/40 p-2.5 text-xs text-muted-foreground">{t("vpn.addWarning")}</p>
+            <p className="rounded-md border bg-muted/40 p-2.5 text-xs text-muted-foreground">
+              {addKind === "remote" ? t("vpn.addWarning.remote") : t("vpn.addWarning")}
+            </p>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setAddOpen(false)}>
@@ -672,7 +712,8 @@ export default function VpnView() {
           <DialogHeader>
             <DialogTitle>{t("vpn.confTitle")}</DialogTitle>
             <DialogDescription>
-              {confPeer ? `${peerLabel(confPeer)} · ${confPeer.name}` : ""} — {t("vpn.confDesc")}
+              {confPeer ? `${peerLabel(confPeer)} · ${confPeer.name}` : ""} —{" "}
+              {confPeer?.kind === "remote" ? t("vpn.confDesc.remote") : t("vpn.confDesc")}
             </DialogDescription>
           </DialogHeader>
           {confLoading || confText === null ? (

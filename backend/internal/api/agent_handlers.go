@@ -876,6 +876,20 @@ func (a *API) handleAgentResult(w http.ResponseWriter, r *http.Request) {
 			router.WgAppliedAt = model.NowISO()
 			router.WgError = ""
 			a.logActivity(db, router.AccountID, "router", "Tunnel WireGuard actif sur «"+router.Name+"» ("+router.WgIPv4+" — chemin direct chiffré via wg0, zéro port public)")
+			// N°312 — convergence de l'élargissement remote : la liste
+			// APPLIQUÉE (payload de la commande exécutée, assainie — un
+			// payload antérieur sans clé retombe sur le socle) peut être en
+			// traîne sur la liste COURANTE (peer remote créé/révoqué pendant
+			// que ce wg_setup volait) → re-file avec la liste du jour.
+			// Idempotent : le re-file porte la liste courante, le résultat
+			// suivant compare à nouveau — ça converge dès que les gestes
+			// s'arrêtent (aucune boucle : la liste ne bouge que sur un geste
+			// utilisateur ; wg-mini/réseau ne sont JAMAIS appelés ici).
+			appliedRaw, _ := cmd.Payload["allowedSources"].(string)
+			applied := agent.SanitizeWgAllowedSources(appliedRaw)
+			if current := wgAllowedSourcesLocked(db, router.AccountID); applied != current {
+				a.queueWgSetupRefreshLocked(nil, db, router.AccountID, "convergence de la liste de supervision")
+			}
 		} else {
 			router.WgState = "error"
 			router.WgError = "vérification routeur impossible (compte de peers invalide) — re-livrez les paramètres"

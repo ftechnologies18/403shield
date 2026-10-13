@@ -1,12 +1,18 @@
 #!/usr/bin/env bash
-# wg-peer.sh — cycle de vie des peers WireGuard (N°284, v2 N°285) — ROOT only
+# wg-peer.sh — cycle de vie des peers WireGuard (N°284, v2 N°285, v3 N°312) — ROOT only
 #
 # usage:
-#   wg-peer.sh add <nom>              — peer FULL-TUNNEL (clé générée ici, conf client .conf)
+#   wg-peer.sh add <nom> [forme]     — peer client (clé générée ici, conf client .conf).
+#                                      forme = fulltunnel (défaut : tout le trafic sort par
+#                                      la VM, conf 0.0.0.0/0 + ::/0) | remote (N°312 :
+#                                      accès distant du gérant — SUPERVISION de ses
+#                                      routeurs via le tunnel, conf 10.8.0.0/24, pas de
+#                                      DNS tunnel — l'appel de forme par un wg-peer.sh
+#                                      antérieur est simplement IGNORÉ, dégradation propre)
 #   wg-peer.sh add-router <nom> <pub> — peer ROUTEUR MikroTik (clé publique fournie par le
 #                                       routeur, livret .router.txt pour la console MikCloud)
 #   wg-peer.sh remove <nom>           — révocation (bloc + fichiers livrables supprimés)
-#   wg-peer.sh qr <nom>               — QR de la conf client full-tunnel
+#   wg-peer.sh qr <nom>               — QR de la conf client (les deux formes)
 #   wg-peer.sh show-router <nom>      — ré-affiche le livret d'un routeur
 #   wg-peer.sh reip <ip>              — changement d'endpoint (IP publique)
 #   wg-peer.sh list                   — tableau des peers (handshake, transferts)
@@ -21,7 +27,7 @@ EP_FILE=/opt/wireguard/endpoint
 [ "$(id -u)" = "0" ] || { echo "root requis"; exit 1; }
 [ -f "$WG_CONF" ] || { echo "wg0.conf absent — lancer mode=install d'abord"; exit 1; }
 cmd="${1:-}"; name="${2:-}"
-usage(){ echo "usage: wg-peer.sh add <nom> | add-router <nom> <pubkey> | remove <nom> | qr <nom> | show-router <nom> | reip <ip> | list"; exit 1; }
+usage(){ echo "usage: wg-peer.sh add <nom> [fulltunnel|remote] | add-router <nom> <pubkey> | remove <nom> | qr <nom> | show-router <nom> | reip <ip> | list"; exit 1; }
 name2pub(){ awk -v n="$1" 'BEGIN{RS=""} index($0,"# peer: "n"\n")==1{c=split($0,L,"\n"); for(i=1;i<=c;i++) if(L[i]~/^PublicKey = /){sub("PublicKey = ","",L[i]);print L[i]}}' "$WG_CONF"; }
 apply(){ wg syncconf wg0 <(wg-quick strip wg0); }
 # next_ip — prochaine adresse 10.8.0.N libre (N ≥ 2 : .1 = le serveur).
@@ -39,6 +45,13 @@ server_pub(){ awk '/^PrivateKey/{print $3; exit}' "$WG_CONF" | wg pubkey; }
 case "$cmd" in
   add)
     [ -n "$name" ] || usage
+    # N°312 — forme de produit : fulltunnel (défaut, rétro-compatible) ou
+    # remote (supervision B2B : la conf ne route QUE le sous-réseau tunnel —
+    # le gérant atteint ses routeurs par leur IP 10.8.0.M, jamais Internet
+    # par la VM). Le 3e argument est ignoré par un wg-peer.sh antérieur :
+    # le cloud VÉRIFIE la conf renvoyée (AllowedIPs) avant de l'accepter.
+    KIND="${3:-fulltunnel}"
+    case "$KIND" in fulltunnel|remote) ;; *) echo "❌ forme inconnue : $KIND (fulltunnel|remote)"; exit 1;; esac
     echo "$name" | grep -qE '^[a-z0-9][a-z0-9-]{0,31}$' || { echo "❌ nom invalide"; exit 1; }
     [ -z "$(name2pub "$name")" ] || { echo "❌ peer '$name' existe déjà"; exit 1; }
     N=$(alloc)
@@ -47,10 +60,33 @@ case "$cmd" in
     PRIV=$(umask 077; wg genkey)
     PUB=$(printf '%s' "$PRIV" | wg pubkey)
     PSK=$(umask 077; wg genpsk)
+    # Le bloc [Peer] côté VM est IDENTIQUE pour les deux formes (AllowedIPs
+    # = l'adresse du peer) : seule la CONF CLIENT diffère — c'est elle qui
+    # décide de ce qui entre dans le tunnel côté gérant.
     printf '\n# peer: %s\n[Peer]\nPublicKey = %s\nPresharedKey = %s\nAllowedIPs = 10.8.0.%s/32, fd00:8::%s/128\n' "$name" "$PUB" "$PSK" "$N" "$N" >> "$WG_CONF"
     apply
     mkdir -p "$PEERS_DIR"
-    cat > "$PEERS_DIR/${name}.conf" <<CLIENTCONF
+    if [ "$KIND" = "remote" ]; then
+      # N°312 — remote : supervision du réseau tunnel UNIQUEMENT (10.8.0.0/24
+      # — ses routeurs + la VM), pas de DNS via le tunnel (supervision par IP,
+      # le DNS local du gérant reste actif), pas de v6 pleine (l'ULA fd00:8::
+      # reste un espace full-tunnel). Keepalive 25 s : le gérant est derrière
+      # CGNAT comme les routeurs (maintien de la correspondance NAT).
+      cat > "$PEERS_DIR/${name}.conf" <<CLIENTCONF
+[Interface]
+PrivateKey = ${PRIV}
+Address = 10.8.0.${N}/32, fd00:8::${N}/128
+MTU = 1420
+
+[Peer]
+PublicKey = ${SPUB}
+PresharedKey = ${PSK}
+Endpoint = ${EP}:51820
+AllowedIPs = 10.8.0.0/24
+PersistentKeepalive = 25
+CLIENTCONF
+    else
+      cat > "$PEERS_DIR/${name}.conf" <<CLIENTCONF
 [Interface]
 PrivateKey = ${PRIV}
 Address = 10.8.0.${N}/32, fd00:8::${N}/128
@@ -64,8 +100,13 @@ Endpoint = ${EP}:51820
 AllowedIPs = 0.0.0.0/0, ::/0
 PersistentKeepalive = 25
 CLIENTCONF
+    fi
     chmod 600 "$PEERS_DIR/${name}.conf"
-    echo "✅ peer '$name' ajouté — IP 10.8.0.$N — fingerprint $(printf '%s' "$PUB" | sha256sum | cut -c1-12)…"
+    if [ "$KIND" = "remote" ]; then
+      echo "✅ peer '$name' ajouté (remote — supervision tunnel) — IP 10.8.0.$N — fingerprint $(printf '%s' "$PUB" | sha256sum | cut -c1-12)…"
+    else
+      echo "✅ peer '$name' ajouté (fulltunnel) — IP 10.8.0.$N — fingerprint $(printf '%s' "$PUB" | sha256sum | cut -c1-12)…"
+    fi
     echo "   conf client : $PEERS_DIR/${name}.conf (600 root — SECRET, ne jamais coller dans un log)"
     echo "   QR (SSH interactif) : sudo qrencode -t ansiutf8 < $PEERS_DIR/${name}.conf"
     ;;

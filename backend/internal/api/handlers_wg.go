@@ -245,7 +245,7 @@ func (a *API) handleRouterWgParams(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	payload := agent.WgSetupPayloadFrom(req.ServerPub, req.PSK, agent.WgIPv4WithPrefix(req.Address), host, port)
+	payload := agent.WgSetupPayloadFrom(req.ServerPub, req.PSK, agent.WgIPv4WithPrefix(req.Address), host, port, wgAllowedSourcesLocked(db, cur.AccountID))
 	cmd := queueCommandLocked(db, cur.AccountID, cur.ID, model.CmdWgSetup, payload)
 	cur.WgPeerName = req.PeerName
 	cur.WgIPv4 = req.Address
@@ -348,7 +348,7 @@ func (a *API) wgRedeliverStored(r *http.Request, id, acc, peerName, ipv4, spub, 
 		a.store.Unlock()
 		return nil, http.StatusNotFound, "Routeur agent introuvable"
 	}
-	payload := agent.WgSetupPayloadFrom(spub, psk, agent.WgIPv4WithPrefix(ipv4), host, port)
+	payload := agent.WgSetupPayloadFrom(spub, psk, agent.WgIPv4WithPrefix(ipv4), host, port, wgAllowedSourcesLocked(db, cur.AccountID))
 	cmd := queueCommandLocked(db, cur.AccountID, cur.ID, model.CmdWgSetup, payload)
 	cur.WgPeerName = peerName
 	cur.WgState = "pending_setup"
@@ -436,7 +436,7 @@ func (a *API) wgProvisionAuto(r *http.Request, id, acc string) (map[string]any, 
 			return nil, http.StatusConflict, "Adresse tunnel " + livret.Address + " déjà attribuée à un autre routeur («" + other.Name + "») — réessayez"
 		}
 	}
-	payload := agent.WgSetupPayloadFrom(livret.ServerPub, livret.PSK, agent.WgIPv4WithPrefix(livret.Address), host, port)
+	payload := agent.WgSetupPayloadFrom(livret.ServerPub, livret.PSK, agent.WgIPv4WithPrefix(livret.Address), host, port, wgAllowedSourcesLocked(db, cur.AccountID))
 	cmd := queueCommandLocked(db, cur.AccountID, cur.ID, model.CmdWgSetup, payload)
 	cur.WgPeerName = peerName
 	cur.WgIPv4 = livret.Address

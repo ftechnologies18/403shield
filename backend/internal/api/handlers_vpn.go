@@ -42,6 +42,7 @@ import (
 	"sort"
 	"strings"
 
+	"mikcloud/hotspot-api/internal/agent"
 	"mikcloud/hotspot-api/internal/model"
 	"mikcloud/hotspot-api/internal/notify"
 	"mikcloud/hotspot-api/internal/store"
@@ -142,9 +143,13 @@ func (a *API) handleVpnPeerCreate(w http.ResponseWriter, r *http.Request) {
 	if kind == "" {
 		kind = model.VpnKindFullTunnel
 	}
-	if kind != model.VpnKindFullTunnel {
+	// N°312 — la forme « remote » (P-A, accès distant du gérant) est LIVRÉE :
+	// supervision B2B de ses routeurs via le tunnel (conf 10.8.0.0/24 côté
+	// VM, allowed-address du peer serveur élargi par compte — cf. le bloc
+	// d'élargissement ci-dessous). Toute autre valeur reste refusée net.
+	if kind != model.VpnKindFullTunnel && kind != model.VpnKindRemote {
 		writeErrCode(w, http.StatusBadRequest, "vpn_kind_unavailable",
-			"Seule la forme « fulltunnel » (client final, sortie par la VM) est livrée en v1 — l'accès distant du gérant arrive en phase B (élargissement allowed-address du routeur)", nil)
+			"Forme d'accès inconnue (« "+kind+" ») — formes livrées : fulltunnel (client final), remote (supervision du gérant)", nil)
 		return
 	}
 	if req.SalePrice < 0 || req.SalePrice > 10_000_000 {
@@ -192,7 +197,7 @@ func (a *API) handleVpnPeerCreate(w http.ResponseWriter, r *http.Request) {
 	a.store.Unlock()
 
 	// Appel réseau HORS verrou (jamais d'appel long sous le verrou global).
-	conf, ip, err := wgMiniAddFn(name)
+	conf, ip, err := wgMiniAddFn(name, kind)
 
 	if err != nil {
 		// Nettoyage VM best-effort : un add partiellement réussi ne doit pas
@@ -241,7 +246,18 @@ func (a *API) handleVpnPeerCreate(w http.ResponseWriter, r *http.Request) {
 		}}, db.Transactions...)
 		a.logActivityBy(r, db, acc, "vpn", "Vente VPN enregistrée : "+name+" ("+fmt.Sprintf("%d FCFA", req.SalePrice)+")")
 	}
-	a.logActivityBy(r, db, acc, "vpn", "Peer VPN créé : "+name+" ("+ip+")")
+	kindNote := ""
+	if kind == model.VpnKindRemote {
+		kindNote = " — supervision"
+	}
+	a.logActivityBy(r, db, acc, "vpn", "Peer VPN créé : "+name+" ("+ip+kindNote+")")
+	// N°312 — forme remote : la liste allowedSources des routeurs du compte
+	// s'ÉLARGIT avec la nouvelle IP — re-livraison automatique de wg_setup aux
+	// routeurs agents ACTIFS du compte (application ≤ 45 s par routeur au
+	// check-in ; les non-actifs convergent à leur prochain provisionnement).
+	if kind == model.VpnKindRemote {
+		a.queueWgSetupRefreshLocked(r, db, acc, "supervision élargie : "+ip)
+	}
 	out := *row
 	a.store.Save()
 	a.store.Unlock()
@@ -301,6 +317,13 @@ func (a *API) handleVpnPeerRevoke(w http.ResponseWriter, r *http.Request) {
 	}
 	db.VpnPeers = append(db.VpnPeers[:idx], db.VpnPeers[idx+1:]...)
 	a.logActivityBy(r, db, acc, "vpn", "Peer VPN révoqué : "+peer.Name+" ("+model.VpnPeerLabel(peer)+")")
+	// N°312 — remote : la liste du compte se RÉDUIT — re-livraison d'hygiène
+	// (le peer VM est déjà retiré, une entrée allowed-address résiduelle serait
+	// de toute façon inerte : sans peer côté VM, rien ne peut signer de ces
+	// paquets — ceinture ET bretelles, jamais d'état mensonger).
+	if peer.Kind == model.VpnKindRemote {
+		a.queueWgSetupRefreshLocked(r, db, acc, "supervision révoquée : "+peer.IPv4)
+	}
 	a.store.Save()
 	a.store.Unlock()
 	writeJSON(w, http.StatusOK, map[string]any{
@@ -375,8 +398,10 @@ func (a *API) handleVpnPeerConf(w http.ResponseWriter, r *http.Request) {
 }
 
 // vpnDeliveryBody — le texte livré au client (e-mail/Telegram) : la conf
-// COMPLÈTE (c'est le produit) + les instructions minimales. Les journaux,
-// eux, ne portent que le résumé (vpnDeliveryLogBody).
+// COMPLÈTE (c'est le produit) + les instructions minimales. N°312 — la forme
+// « remote » (supervision B2B) reçoit les instructions adaptées : le tunnel
+// ne route QUE le sous-réseau 10.8.0.0/24 (ses routeurs + la VM). Les
+// journaux, eux, ne portent que le résumé (vpnDeliveryLogBody).
 func vpnDeliveryBody(peer model.VpnPeer, conf string) string {
 	var sb strings.Builder
 	sb.WriteString("MikCloud — Votre accès VPN WireGuard\n")
@@ -388,6 +413,13 @@ func vpnDeliveryBody(peer model.VpnPeer, conf string) string {
 	sb.WriteString("1. Installez l'application WireGuard (App Store / Google Play / wireguard.com/install).\n")
 	sb.WriteString("2. Dans WireGuard : « + » → « Importer depuis un fichier ou un QR code ».\n")
 	sb.WriteString("3. Collez la configuration ci-dessous (ou scannez le QR affiché dans la console MikCloud).\n\n")
+	if peer.Kind == model.VpnKindRemote {
+		sb.WriteString("Cet accès donne la SUPERVISION de vos routeurs MikCloud à travers le tunnel\n")
+		sb.WriteString("chiffré : Winbox, l'API RouterOS, SSH ou l'interface web de chaque routeur\n")
+		sb.WriteString("restent joignables à leur adresse tunnel 10.8.0.x, où que vous soyez\n")
+		sb.WriteString("(CGNAT traversé, keepalive 25 s). Le tunnel ne route RIEN d'autre — ni\n")
+		sb.WriteString("votre navigation Internet, ni votre DNS local.\n\n")
+	}
 	sb.WriteString(conf)
 	return sb.String()
 }
@@ -508,6 +540,77 @@ func (a *API) handleVpnPeerTelegram(w http.ResponseWriter, r *http.Request) {
 	a.store.Save()
 	a.store.Unlock()
 	writeJSON(w, http.StatusOK, map[string]any{"ok": true, "message": "Conf envoyée sur Telegram"})
+}
+
+// ---------------------------------------------------------------------------
+// N°312 — forme « remote » : élargissement allowed-address PAR COMPTE
+// ---------------------------------------------------------------------------
+
+// wgAllowedSourcesLocked — la valeur de la clé « allowedSources » du payload
+// wg_setup pour CE compte : le socle de gestion (10.8.0.1/32, chemin VM ↔
+// routeur — jamais retiré) + l'IP /32 de chaque peer « remote » du compte
+// (tous états tant qu'une IP tunnel est allouée : un peer « error » peut
+// encore émettre tant que son bloc vit sur le wg0). Source de vérité : le
+// registre cloud (D4-a). ISOLEMENT multi-tenant : les peers FULLTUNNEL ne
+// figurent JAMAIS dans la liste (le produit « client final » ne supervise
+// rien) et les peers remote d'AUTRES comptes non plus — le routeur de CE
+// compte n'accepte QUE son propre gérant.
+func wgAllowedSourcesLocked(db *model.DB, acc string) string {
+	items := []string{agent.WgDefaultAllowedSources}
+	seen := map[string]bool{agent.WgDefaultAllowedSources: true}
+	for i := range db.VpnPeers {
+		p := &db.VpnPeers[i]
+		if p.AccountID != acc || p.Kind != model.VpnKindRemote || p.IPv4 == "" {
+			continue
+		}
+		ip := strings.TrimSpace(p.IPv4)
+		if !agent.ValidWgIPv4(ip) || seen[ip+"/32"] {
+			continue
+		}
+		seen[ip+"/32"] = true
+		items = append(items, ip+"/32")
+	}
+	return strings.Join(items, ",")
+}
+
+// queueWgSetupRefreshLocked — N°312 — re-file wg_setup aux routeurs agents
+// ACTIFS du compte avec la liste allowedSources FRAÎCHE (élargie à la création
+// d'un peer remote, réduite à sa révocation). Idempotent par construction
+// (remove-then-add côté routeur) ; les routeurs non actifs convergent à leur
+// prochain provisionnement (wg-auto/wg-params calculent la liste du jour) ;
+// un wg_setup déjà en file/vol n'est PAS doublé (pattern N°115) — la
+// convergence de traîne est garantie par la comparaison au RÉSULTAT
+// (agent_handlers.go : liste appliquée ≠ liste courante → re-file). Retour :
+// le nombre de routeurs reconfigurés (journal par routeur, pas de résumé).
+func (a *API) queueWgSetupRefreshLocked(r *http.Request, db *model.DB, acc, reason string) int {
+	n := 0
+	for i := range db.Routers {
+		rot := &db.Routers[i]
+		if rot.AccountID != acc || rot.Mode != "agent" || rot.WgState != "active" {
+			continue
+		}
+		if rot.WgIPv4 == "" || rot.WgServerPub == "" || rot.WgPSK == "" {
+			continue // paramètres incomplets : aucun re-file possible (reprendre le provisionnement complet)
+		}
+		if pendingCommandOfKind(db, rot.ID, model.CmdWgSetup) != nil {
+			continue // déjà en file/vol : la vérification au résultat reconvergera
+		}
+		host, port, err := parseEndpointWG(rot.WgEndpoint)
+		if err != nil || !agent.ValidWgIPv4(rot.WgIPv4) || !agent.ValidWgKey(rot.WgServerPub) || !agent.ValidWgKey(rot.WgPSK) {
+			continue // valeurs stockées avariées (restore, main d'œuvre) : ne JAMAIS bloquer le geste VPN sur un routeur avarié
+		}
+		payload := agent.WgSetupPayloadFrom(rot.WgServerPub, rot.WgPSK, agent.WgIPv4WithPrefix(rot.WgIPv4), host, port, wgAllowedSourcesLocked(db, acc))
+		queueCommandLocked(db, acc, rot.ID, model.CmdWgSetup, payload)
+		rot.WgState = "pending_setup"
+		rot.WgError = ""
+		if r != nil {
+			a.logActivityBy(r, db, acc, "router", "Tunnel WireGuard re-livré sur «"+rot.Name+"» (« "+reason+" ») — application au prochain check-in (≤ 45 s)")
+		} else {
+			a.logActivity(db, acc, "router", "Tunnel WireGuard re-livré sur «"+rot.Name+"» (« "+reason+" ») — application au prochain check-in (≤ 45 s)")
+		}
+		n++
+	}
+	return n
 }
 
 // ---------------------------------------------------------------------------

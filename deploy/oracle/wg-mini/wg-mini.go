@@ -1,17 +1,17 @@
-// wg-mini — N°291 (v2 : N°307) — passerelle locale WireGuard pour MikCloud
-// (chantier ⑦, décision D3-a de N°289).
+// wg-mini — N°291 (v2 : N°307, v3 : N°312) — passerelle locale WireGuard pour
+// MikCloud (chantier ⑦, décision D3-a de N°289).
 //
 // RÔLE : le backend MikCloud tourne dans un conteneur distroless — il ne
 // peut ni sudo ni toucher /etc/wireguard. wg-mini est une unité systemd
 // ROOT (wg-peer.sh exige root) sur la MÊME VM qui expose les gestes de
 // wg-peer.sh au backend, en boucle locale exclusivement :
 //
-//	POST /v1/add         {"name":"vpn-…"}              → wg-peer.sh add         → {"ok":true,"conf":"…","ip":"10.8.0.N"}
+//	POST /v1/add         {"name":"vpn-…","kind":"fulltunnel|remote"} → wg-peer.sh add <nom> [forme] → {"ok":true,"conf":"…","ip":"10.8.0.N"}
 //	POST /v1/add-router  {"name":"r-…","pub":"44car="} → wg-peer.sh add-router  → {"ok":true,"address":"…","serverPub":"…","psk":"…","endpoint":"…"}
 //	POST /v1/remove      {"name":"vpn-…|r-…"}          → wg-peer.sh remove      → {"ok":true}
 //	GET  /v1/conf?name=vpn-…                             → lecture conf           → {"ok":true,"conf":"…"}
 //	GET  /v1/list                                          → wg-peer.sh list        → {"ok":true,"peers":[…]}
-//	GET  /v1/ping                                          → {"ok":true,"service":"wg-mini","version":"v2"}
+//	GET  /v1/ping                                          → {"ok":true,"service":"wg-mini","version":"v3"}
 //
 // v2 (N°307) : /v1/add-router ouvre le provisionnement AUTOMATIQUE du
 // renfort WireGuard des routeurs (la clé publique vient du routeur — générée
@@ -19,6 +19,14 @@
 // /v1/remove accepte désormais AUSSI les peers routeurs (révocation
 // automatique au démontage). Le backend dégrade proprement face à un v1
 // (404 → message de mise à jour côté cloud).
+//
+// v3 (N°312) : /v1/add porte un champ « kind » OPTIONNEL (absent/vide =
+// fulltunnel, rétro-compatible) transmis comme 3e argument de wg-peer.sh
+// add — la forme « remote » (accès distant du gérant, supervision B2B de ses
+// routeurs via le tunnel). Défense en profondeur : un wg-peer.sh ANTÉRIEUR
+// ignore l'argument et rend une conf full-tunnel — le backend VÉRIFIE la
+// conf renvoyée (AllowedIPs) avant de l'accepter, jamais de confiance
+// aveugle à la version.
 //
 // SÉCURITÉ (conventions §8 de docs/RUNBOOK-HEBERGEMENT.md) :
 //   - bind 127.0.0.1:4020 UNIQUEMENT (port à réserver au registre) — aucune
@@ -57,7 +65,7 @@ import (
 	"time"
 )
 
-const version = "v2"
+const version = "v3"
 
 var (
 	addr       = envOr("WG_MINI_ADDR", "127.0.0.1:4020")
@@ -201,9 +209,14 @@ func parseIPFromConf(conf string) string {
 // Handlers
 // ---------------------------------------------------------------------------
 
+// kindRe — formes de produit VPN (miroir de model.VpnKind* côté cloud) :
+// absent/vide = fulltunnel (rétro-compatible avec tout backend v1/v2).
+var kindRe = regexp.MustCompile(`^(fulltunnel|remote)$`)
+
 func handleAdd(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		Name string `json:"name"`
+		Kind string `json:"kind"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		fail(w, http.StatusBadRequest, "corps invalide")
@@ -214,8 +227,16 @@ func handleAdd(w http.ResponseWriter, r *http.Request) {
 		fail(w, http.StatusBadRequest, "nom de peer invalide (attendu vpn-… minuscules/tirets)")
 		return
 	}
+	kind := strings.TrimSpace(req.Kind)
+	if kind == "" {
+		kind = "fulltunnel"
+	}
+	if !kindRe.MatchString(kind) {
+		fail(w, http.StatusBadRequest, "forme de peer inconnue (fulltunnel|remote)")
+		return
+	}
 	start := time.Now()
-	out, err := runScript(r.Context(), "add", name)
+	out, err := runScript(r.Context(), "add", name, kind)
 	if err != nil {
 		log.Printf("[add] %s échec (%s) : %v", name, time.Since(start).Round(time.Millisecond), err)
 		fail(w, http.StatusBadGateway, err.Error())
@@ -228,10 +249,11 @@ func handleAdd(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	conf := string(raw)
-	log.Printf("[add] %s ok (%s)", name, time.Since(start).Round(time.Millisecond))
+	log.Printf("[add] %s ok (%s, %s)", name, kind, time.Since(start).Round(time.Millisecond))
 	writeJSON(w, http.StatusOK, map[string]any{
 		"ok":   true,
 		"name": name,
+		"kind": kind,
 		"ip":   parseIPFromConf(conf),
 		"conf": conf,
 		"_":    strings.TrimSpace(out), // trace wg-peer.sh (sans la conf)

@@ -836,11 +836,12 @@ export interface CyberDiscoveryRow {
 }
 
 /** N°291 — peer VPN vendu (GET/POST /api/vpn/peers) : une conf WireGuard
- * client final sur le wg0 de la VM (chantier ⑦ de N°289). La conf elle-même
- * ne sort JAMAIS des listes (json:"-" côté Go) — reveal via GET
+ * client sur le wg0 de la VM (chantier ⑦ de N°289). La conf elle-même ne
+ * sort JAMAIS des listes (json:"-" côté Go) — reveal via GET
  * /api/vpn/peers/{id}/conf (re-livraison D5-a : copie, QR, e-mail,
- * Telegram). kind : "fulltunnel" (v1) | "remote" (phase B, refusé côté
- * serveur) ; state : pending → active | error. */
+ * Telegram). kind : "fulltunnel" (client final, sortie Internet par la VM) |
+ * "remote" (N°312 : accès distant du gérant — supervision B2B de ses
+ * routeurs via le tunnel) ; state : pending → active | error. */
 export interface VpnPeer {
   id: string;
   accountId: string;

@@ -43,6 +43,8 @@ export const enVpn: Record<string, string> = {
   "vpn.state.error": "Error",
   "vpn.kind.fulltunnel": "End client",
   "vpn.kind.remote": "Remote access",
+  "vpn.kind.fulltunnel.title": "End client — all device traffic exits through the VM (fixed IP)",
+  "vpn.kind.remote.title": "Owner remote access — supervise your routers through the encrypted tunnel (no Internet exit)",
   "vpn.conf": "Configuration",
   "vpn.deliver": "Deliver",
   "vpn.revoke": "Revoke",
@@ -71,20 +73,27 @@ export const enVpn: Record<string, string> = {
   "vpn.addLabelPlaceholder": "Client Ali's phone, shop PC…",
   "vpn.addKind": "Access shape",
   "vpn.addKind.fulltunnel": "End client — all traffic exits through the VM (fixed IP)",
-  "vpn.addKind.remote": "Owner remote access — phase B (soon)",
+  "vpn.addKind.remote": "Owner remote access — supervise your routers",
+  "vpn.addKind.fulltunnelHint": "Your CLIENT's browsing transits your server: all egress counts against the platform quota.",
+  "vpn.addKind.remoteHint": "For YOU: Winbox, RouterOS API, SSH and the web UI of each router stay reachable at their tunnel address 10.8.0.x, wherever you are. The tunnel routes nothing else — requires at least one router with an active tunnel (access widens automatically, ≤ 45 s per router).",
   "vpn.addPrice": "Recorded sale price (0 = record nothing)",
   "vpn.addPricePlaceholder": "e.g. 2000",
   "vpn.addPriceHint": "Above 0: the sale goes to the cash journal (direct channel) and reports.",
   "vpn.addWarning":
     "The client's traffic exits through YOUR server: keep an eye on usage (egress ~10 TB/month on the Always Free tier) and revoke dormant accesses.",
+  "vpn.addWarning.remote":
+    "Supervision opens NO door to the Internet: the tunnel routes only the MikCloud network (10.8.0.0/24). LAN cameras and NAS stay out of scope — full LAN access is the next step.",
   "vpn.addCta": "Generate & sell",
   "vpn.addToast": "VPN access created",
+  "vpn.addToast.remote": "Remote access created — your active routers accept it within ≤ 45 s",
   "vpn.addPending": "Generating on the VM…",
 
   // — Conf / delivery (D5-a) —
   "vpn.confTitle": "VPN configuration",
   "vpn.confDesc":
     "The client installs the WireGuard app, then « + » → import. Keep this configuration secret: it grants full access.",
+  "vpn.confDesc.remote":
+    "Import it into WireGuard (menu « + »): your routers become reachable at their tunnel address 10.8.0.x (Winbox, API, SSH, web).",
   "vpn.confCopy": "Copy configuration",
   "vpn.confCopied": "Configuration copied",
   "vpn.confQr": "QR (direct scan)",

@@ -585,6 +585,17 @@ export default function PlatformVpnView() {
                         <TableCell>
                           <div className="font-medium">{peer.label || peer.name}</div>
                           <div className="text-xs text-muted-foreground">{peer.name}</div>
+                          {/* N°312 — badge de forme : supervision (remote) vs
+                              client final ; distinct du badge B2C (canal). */}
+                          {peer.kind === "remote" && (
+                            <Badge
+                              variant="outline"
+                              title={t("vpn.kind.remote.title")}
+                              className="mt-1 border-emerald-600/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
+                            >
+                              {t("vpn.kind.remote")}
+                            </Badge>
+                          )}
                           {peer.b2c && (
                             <Badge variant="outline" className="mt-1 border-sky-500/30 bg-sky-500/10 text-sky-700 dark:text-sky-400">
                               {t("platformVpn.peers.b2c")} {peer.orderRef}

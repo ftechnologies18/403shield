@@ -1126,8 +1126,9 @@ export async function fetchVpnPeers(): Promise<VpnPeer[]> {
   return api<VpnPeer[]>("/api/vpn/peers");
 }
 
-/** VpnPeerCreateBody — kind : "fulltunnel" en v1 ("remote" = phase B, refusé
- * côté serveur) ; salePrice > 0 enregistre la vente à la caisse. */
+/** VpnPeerCreateBody — kind : "fulltunnel" (client final, sortie Internet
+ * par la VM) | "remote" (N°312 : supervision du gérant — accès distant à ses
+ * routeurs via le tunnel) ; salePrice > 0 enregistre la vente à la caisse. */
 export interface VpnPeerCreateBody {
   label: string;
   kind: string;
