@@ -53,6 +53,18 @@ const (
 	PublicVpnOrderExpired     = "expired"
 )
 
+// Genres de commande (N°314) : « sale » = achat classique (nouvel appareil
+// provisionné) ; « renewal » = renouvellement d'une commande EXISTANTE —
+// à la confirmation du paiement, la cible (RenewTargetRef) voit son échéance
+// étendue au lieu qu'un nouveau peer soit posé (l'appareil et sa conf sont
+// conservés, c'est l'argument du renouvellement 1-clic). Si la cible est
+// morte au moment du paiement (révoquée par le balayage entre-temps), la
+// renewal DÉGÉNÈRE honnêtement en vente : nouveau peer, conf neuve livrée.
+const (
+	PublicVpnKindSale    = "sale"
+	PublicVpnKindRenewal = "renewal"
+)
+
 // PublicVpnOrder — ligne du registre des commandes B2C (table
 // « public_vpn_orders »). Les montants suivent la discipline FCFA int du
 // repo (handlers_pricing.go) : BaseAmountFcfa = net catalogue,
@@ -79,6 +91,14 @@ type PublicVpnOrder struct {
 	AmountFcfa int `json:"amountFcfa"`
 	// PayMethod — "wave" | "card" | "manual" (hors ligne, confirmation admin).
 	PayMethod string `json:"payMethod"`
+	// Kind — N°314 — "sale" (défaut, rétro-compatible) | "renewal" : une
+	// renewal étend la commande visée par RenewTargetRef à la confirmation
+	// du paiement (aucun nouveau peer — l'appareil existant est conservé).
+	Kind string `json:"kind,omitempty"`
+	// RenewTargetRef — N°314 — référence PUBLIQUE de la commande renouvelée
+	// (l'échéance étendue vit sur la CIBLE, seule vérité : la ligne renewal
+	// reste une transaction de facturation, PeerID volontairement vide).
+	RenewTargetRef string `json:"renewTargetRef,omitempty"`
 	// PaidVia — "geniuspay" | "manual" (traçabilité de l'encaissement).
 	PaidVia string `json:"paidVia,omitempty"`
 	// GatewayRef — référence marchande GeniusPay (appariement webhook,
@@ -259,6 +279,19 @@ func AddMonthsISO(startISO string, months int) string {
 		t = time.Now().UTC()
 	}
 	return t.AddDate(0, months, 0).UTC().Format(time.RFC3339)
+}
+
+// ExtendPublicVpnExpiry — N°314 — nouvelle échéance d'un renouvellement :
+// mois calendaires AJOUTÉS au plus lointain de (échéance courante, maintenant)
+// — un client qui renouvelle AVANT le terme ne perd jamais les jours restants
+// ; un client en retard repart de maintenant. Comparaison ISO lexicographique
+// sûre (RFC3339 UTC partout dans le registre).
+func ExtendPublicVpnExpiry(currentExpiry, nowISO string, months int) string {
+	base := nowISO
+	if currentExpiry != "" && currentExpiry > nowISO {
+		base = currentExpiry
+	}
+	return AddMonthsISO(base, months)
 }
 
 // PublicVpnOrderLabel — libellé d'affichage console : formule + e-mail.

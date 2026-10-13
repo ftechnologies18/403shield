@@ -11,9 +11,11 @@
 //     JWT rôle « tunnel » (24 h, même HMAC que la console SaaS — rôle SANS
 //     aucun droit console : le middleware whiteliste /api/tunnel/* ONLY,
 //     miroir du rôle reseller §Mode Vente) ;
-//   - GET  /api/tunnel/me                 (JWT tunnel) : profil + rappel des
-//     commandes B2C (appariement par e-mail — la phase 2 branchera la
-//     gestion des appareils et le renouvellement).
+//   - GET  /api/tunnel/me                 (JWT tunnel) : profil + PORTFOLIO des
+//     commandes B2C (appariement par e-mail, migration douce des MCV-
+//     historiques) — ventes ET renouvellements, drapeaux renewable/revealable ;
+//   - POST /api/tunnel/orders/{ref}/reveal et /renew (N°314) : cf.
+//     handlers_tunnel_orders.go (la gestion des commandes vit là).
 //
 // Disciplines :
 //   - codes à usage unique EN MÉMOIRE API (TTL 10 min, 5 tentatives, usage
@@ -28,8 +30,9 @@
 //     (le journal n'est pas un coffre, conventions §8) ;
 //   - l'adresse e-mail est validée par net/mail.ParseAddress (parité
 //     handlers_public_vpn.go) et canonisée en minuscules ;
-//   - AUCUNE dépendance au tunnel WireGuard ici : la phase 1 pose
-//     l'identité, la phase 2 (N°314) branchera les commandes/peers.
+//   - AUCUNE dépendance au tunnel WireGuard ici : l'identité vit dans ce
+//     fichier, la gestion des commandes (reveal/renew) dans
+//     handlers_tunnel_orders.go (N°314).
 package api
 
 import (
@@ -296,11 +299,13 @@ func (a *API) handleTunnelAuthVerify(w http.ResponseWriter, r *http.Request) {
 // GET /api/tunnel/me — profil + commandes B2C (JWT tunnel)
 // ---------------------------------------------------------------------------
 
-// handleTunnelMe — lecture pure : profil du client + RAPPEL des commandes
-// B2C (appariement par e-mail, 10 plus récentes — la phase 2 y branchera la
-// gestion des appareils et le renouvellement). Aucun secret ne sort : la
-// conf d'un peer vit sur le VpnPeer lié et se livre par les voies N°301
-// (reveal console / e-mail), jamais ici.
+// handleTunnelMe — lecture pure : profil du client + PORTFOLIO des commandes
+// B2C (appariement par e-mail, 15 plus récentes — ventes ET renouvellements,
+// migration douce des MCV- historiques sans déplacement de données). Chaque
+// ligne porte ses drapeaux d'action (renewable / revealable) ; le compte
+// d'appareils vivants est renvoyé à part. Aucun secret ne sort : la conf
+// d'un peer vit sur le VpnPeer lié et ne se livre QUE par le reveal (N°314),
+// jamais dans cette liste.
 func (a *API) handleTunnelMe(w http.ResponseWriter, r *http.Request) {
 	c := claimsFrom(r)
 	if c == nil || c.Role != "tunnel" {
@@ -315,8 +320,16 @@ func (a *API) handleTunnelMe(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusUnauthorized, "Session invalide — reconnectez-vous")
 		return
 	}
+	// N°314 — portefeuille complet : les 15 commandes les plus récentes de cet
+	// e-mail (ventes ET renouvellements, migration douce des MCV- historiques :
+	// l'appariement par e-mail suffit — aucune donnée à déplacer). Chaque ligne
+	// porte ses drapeaux d'action : « renewable » (appareil vivant → bouton
+	// renouveler) et « revealable » (conf récupérable dans l'espace). AUCUN
+	// secret ne sort ici (la conf se livre par POST /orders/{ref}/reveal).
+	now := model.NowISO()
 	orders := []map[string]any{}
-	for i := len(db.PublicVpnOrders) - 1; i >= 0 && len(orders) < 10; i-- {
+	devices := 0
+	for i := len(db.PublicVpnOrders) - 1; i >= 0 && len(orders) < 15; i-- {
 		o := db.PublicVpnOrders[i]
 		if !strings.EqualFold(o.Email, client.Email) {
 			continue
@@ -325,18 +338,30 @@ func (a *API) handleTunnelMe(w http.ResponseWriter, r *http.Request) {
 		if plan := model.ResolvePublicVpnPlan(o.PlanID); plan != nil {
 			planLabel = plan.Label
 		}
-		orders = append(orders, map[string]any{
+		isDevice := o.Status == model.PublicVpnOrderProvisioned && o.PeerID != ""
+		if isDevice {
+			devices++
+		}
+		row := map[string]any{
 			"ref": o.Ref, "plan": planLabel, "status": o.Status,
 			"createdAt": o.CreatedAt, "expiresAt": o.ExpiresAt,
-		})
+			"months": o.Months, "amountFcfa": o.AmountFcfa, "payMethod": o.PayMethod,
+			"kind": o.Kind, "renewTargetRef": o.RenewTargetRef,
+			"renewable": isDevice,
+			"revealable": o.Status == model.PublicVpnOrderProvisioned &&
+				(o.ExpiresAt == "" || o.ExpiresAt >= now) &&
+				(o.PeerID != "" || (o.Kind == model.PublicVpnKindRenewal && o.RenewTargetRef != "")),
+		}
+		orders = append(orders, row)
 	}
 	out := map[string]any{
 		"client": map[string]any{
 			"id": client.ID, "email": client.Email,
 			"createdAt": client.CreatedAt, "updatedAt": client.UpdatedAt,
 		},
-		"orders": orders,
-		"scope":  "phase1", // contrat honnête : espace fondation — appareils/renouvellement en phase 2 (N°314)
+		"orders":  orders,
+		"devices": devices,
+		"scope":   "phase2", // espace client complet : appareils + reveal + renouvellement (N°314)
 	}
 	a.store.Unlock()
 	writeJSON(w, http.StatusOK, out)

@@ -6,6 +6,108 @@ aux dates de livraison — le déploiement est continu : chaque push `main` pass
 la CI puis se déploie automatiquement (frontend Vercel, backend Oracle E5
 depuis le T2 N°266 — Render suspendu N°303).
 
+## 2026-10-13 — N°314 — **PROGRAMME TUNNEL, PHASE 2 : ESPACE CLIENT B2C COMPLET (portefeuille d'appareils + re-livraison dans l'espace + renouvellement 1-clic + migration douce des commandes MCV-)**
+
+### Problème
+La phase 1 (N°313) a posé l'identité (console MikTunnel, login par code) mais
+l'espace `/me` restait un RAPPEL en lecture seule : l'acheteur B2C voyait ses
+commandes sans rien pouvoir en faire — la conf se récupérait uniquement sur la
+vitrine (e-mail + ref), le renouvellement n'existait pas (un client qui laissait
+son terme passer perdait son appareil et repartait d'un achat complet), et la
+fidélisation promise par le cadrage restait une ligne d'intention.
+
+### Livré
+- **Portefeuille d'appareils** (`GET /api/tunnel/me` enrichi, contrat
+  `scope: phase2`) : les 15 commandes les plus récentes de l'e-mail — ventes ET
+  renouvellements — avec statut, formule, montant, échéance, genre et DEUX
+  drapeaux d'action (`renewable` / `revealable`) ; compteur d'appareils vivants
+  (commandes provisionnées portant un peer). **Migration douce des commandes
+  MCV- historiques : l'appariement par e-mail suffit** — tout achat passé sur
+  la vitrine apparaît dans l'espace au premier login, zéro donnée déplacée,
+  zéro script de migration.
+- **Re-livraison dans l'espace** (`POST /api/tunnel/orders/{ref}/reveal`) :
+  la conf WireGuard complète du peer lié, self-healing wg-mini si la copie
+  cloud est vide (pattern D5-a de la vue VPN gérant et de la vitrine).
+  Appariement STRICT par le JWT tunnel (né d'un code reçu à CETTE adresse —
+  preuve de possession plus forte que le duo e-mail + ref de la vitrine) ;
+  anti-énumération (e-mail divergent ≡ référence inconnue → même 404) ;
+  commande expirée → 410 honnête avec le terme ; **une RENEWAL suit sa cible**
+  (renouveler ne change pas la conf — la transaction révèle la conf de
+  l'appareil renouvelé). Trace d'activité SANS la conf (le journal n'est pas
+  un coffre). Quota IP dédié `tunnelAction` (8/min · 40/h).
+- **Renouvellement 1-clic** (`POST /api/tunnel/orders/{ref}/renew`) : crée une
+  commande `kind: renewal` ciblant la commande active — MÊMES formules, MÊMES
+  montants, MÊME machine à états et MÊME webhook GeniusPay MCV- que la vitrine
+  (1500 FCFA/1 mois · 15000 FCFA/12 mois ; Wave exige le numéro, carte sinon ;
+  sans clés GeniusPay : bascule honnête sur le canal manual). Garde-fous
+  réutilisés tels quels : boutique ouverte, une seule pending par e-mail (409),
+  plafond d'ordres actifs, honeypot. Retour de paiement vers la console
+  d'origine (en-tête Origin https) avec repli vitrine `/vpn`.
+- **Application du renouvellement** (provisionPublicVpnOrder — LE point de
+  convergence : webhook GeniusPay, poll de retour, confirmation admin et
+  balayage horaire y passent tous) : cible vivante → **échéance étendue au
+  max(now, terme courant) + mois** (renouveler AVANT le terme ne perd jamais
+  les jours restants), la ligne renewal passe `provisioned` **SANS peer propre
+  (PeerID volontairement vide — jamais de double révocation au balayage)**,
+  e-mail de confirmation asynchrone (kind `vpn_renew`, SANS conf — elle ne
+  change pas, c'est l'argument produit) ; cible morte (révoquée par le balayage
+  entre la commande et le paiement) → **dégénérescence honnête en vente** :
+  nouveau peer, conf neuve livrée, trace admin explicite.
+- **Console MikTunnel phase 2** (`tunnel-console/src/app/me/page.tsx` + `lib/api.ts`) :
+  portefeuille complet avec badges statut, genre « Renouvellement », jours
+  restants (alerte visuelle ≤ 7 jours), boutons d'action ; **modal de
+  re-livraison** (conf complète, copie en un clic, ipv4 tunnel, consigne
+  d'import WireGuard) ; **formulaire de renouvellement** (formule, Wave avec
+  numéro / carte → redirection GeniusPay, retour `?order=REF` avec bandeau de
+  convergence et rafraîchissement, canal manuel → notice traçable). ESLint 0 ·
+  tsc 0 · next build OK (5 routes statiques).
+- **Geste exploitant exécuté pendant la session** : projet Vercel `miktunnel`
+  créé (root `tunnel-console/`, lié au dépôt GitHub — déploiements automatiques
+  à chaque push main), `NEXT_PUBLIC_API_BASE` posé, déploiement initial READY
+  (**miktunnel.vercel.app** en ligne), domaine `tunnel.ftci.fr` ajouté au
+  projet (vérification DNS en attente — CNAME vers `cname.vercel-dns.com`,
+  geste Cloudflare du propriétaire, token invalide).
+
+### Vérifié
+gofmt 0 · go vet OK · go build OK · go test 11/11 packages (api : +8 tests
+N°314 — reveal succès/self-healing/renewal-suit-cible/anti-énumération/410/
+401/403, renew succès/kind+cible/montants/garde-fou pending 409/bascule
+manual/validations/honeypot/boutique fermée, provisioning renewal
+extension+idempotence+zéro nouveau peer+e-mail sans conf, dégénérescence en
+vente, routes orders authentifiées bout en bout) · sentinelle TestTunnelMe
+mise à jour vers le contrat `phase2` (évolution voulue, documentée ici) ·
+console : ESLint 0 · tsc 0 · next build OK.
+
+### Verdict DB (obligatoire)
+**2 COLONNES AJOUTÉES à la table EXISTANTE `public_vpn_orders`** :
+`kind TEXT NOT NULL DEFAULT 'sale'` et `renew_target_ref TEXT NOT NULL DEFAULT ''`
+— posées par DDL idempotent au boot (CREATE pour bases neuves + `ALTER TABLE
+… ADD COLUMN IF NOT EXISTS` pour bases existantes, précédent settings
+N°301/311), **les TROIS listes concordent** (DDL pg_schema.go · SELECT/scan ·
+UPSERT args de pg_specs.go — leçon N°302). Valeurs par défaut
+rétro-compatibles : les commandes existantes se lisent comme des ventes
+(`sale`), aucun backfill nécessaire. AUCUNE autre table touchée ; la conf
+chiffrée reste sur `vpn_peers` (D5-a inchangée) ; les codes de connexion
+restent en mémoire API (jamais en base, N°313 inchangée).
+
+### Suites exploitant
+- **Domaine tunnel.ftci.fr** : CNAME `tunnel` → `cname.vercel-dns.com` dans
+  Cloudflare (puis vérification automatique côté Vercel) — token Cloudflare à
+  re-valider, dette connue.
+- **Smoke test terrain recommandé** : login code sur miktunnel.vercel.app →
+  `/me` → « Voir la configuration » (conf affichée) → « Renouveler » (formule
+  mensuelle, canal manuel ou Wave) → confirmation en console plateforme →
+  échéance étendue dans `/me`.
+
+### Non-objectifs (cadrage inchangé)
+- Aucune vente NEUVE depuis la console (la vitrine `/vpn` reste LE canal B2C —
+  doctrine N°301 : jamais en concurrence avec ses revendeurs) ; la console ne
+  vend que le RENOUVELLEMENT de ce que l'e-mail possède déjà.
+- L'accès distant Pro (remote N°312) et le LAN étendu (caméras/NAS) restent
+  les phases suivantes (N°315 — design D-B1 prêt).
+- Pas de QR code en console (la conf texte + copie suffit v1 ; le QR viendra
+  avec le design produit de la phase 3 si le terrain le demande).
+
 ## 2026-10-13 — N°313 — **PROGRAMME TUNNEL, PHASE 1 : MULTI-SEGMENTS DU POOL WG0 + MODULE TUNNEL + CONSOLE SÉPARÉE MIKTUNNEL (fondations D-T1…D-T5)**
 
 ### Problème

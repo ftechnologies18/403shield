@@ -324,18 +324,32 @@ func TestTunnelMe(t *testing.T) {
 		t.Fatalf("me : HTTP %d — %s", rec.Code, rec.Body.String())
 	}
 	var out struct {
-		Client map[string]any   `json:"client"`
-		Orders []map[string]any `json:"orders"`
-		Scope  string           `json:"scope"`
+		Client  map[string]any   `json:"client"`
+		Orders  []map[string]any `json:"orders"`
+		Devices int              `json:"devices"`
+		Scope   string           `json:"scope"`
 	}
 	if err := json.Unmarshal(rec.Body.Bytes(), &out); err != nil {
 		t.Fatalf("réponse illisible : %v", err)
 	}
-	if out.Client["email"] != "ali@example.com" || out.Scope != "phase1" {
+	// N°314 — contrat phase2 : portfolio enrichi (kind, drapeaux d'action,
+	// compte d'appareils). La commande de test n'a PAS de PeerID → appareil
+	// incomplet : renewable faux, revealable faux, devices 0 — le drapeau
+	// reste honnête tant que le peer n'existe pas.
+	if out.Client["email"] != "ali@example.com" || out.Scope != "phase2" {
 		t.Fatalf("client/scope inattendus : %+v", out)
 	}
 	if len(out.Orders) != 1 || out.Orders[0]["ref"] != "MCV-AAAA1111" {
 		t.Fatalf("commandes appariées inattendues : %+v", out.Orders)
+	}
+	if out.Orders[0]["kind"] != "" || out.Orders[0]["renewTargetRef"] != "" {
+		t.Fatalf("genre de commande inattendu (sale implicite) : %+v", out.Orders[0])
+	}
+	if out.Orders[0]["renewable"] != false || out.Orders[0]["revealable"] != false {
+		t.Fatalf("drapeaux d'action inattendus sans peer lié : %+v", out.Orders[0])
+	}
+	if out.Devices != 0 {
+		t.Fatalf("appareils vivants attendus : 0 (aucun PeerID), eu %d", out.Devices)
 	}
 
 	// Rôle console (admin) : refusé — l'espace tunnel n'est PAS la console.

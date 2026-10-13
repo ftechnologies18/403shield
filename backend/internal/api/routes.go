@@ -55,6 +55,7 @@ type API struct {
 	// unique (TTL 10 min — jamais en base, cf. handlers_tunnel.go).
 	tunnelCode   *signupLimiter
 	tunnelVerify *signupLimiter
+	tunnelAction *signupLimiter // N°314 — reveal conf + renouvellement (routes authentifiées console)
 	tunnelCodes  map[string]*tunnelCodeEntry
 	tunnelMu     sync.Mutex
 	vitals       *telemetry.Collector // B2 — Core Web Vitals (nil = collecte désactivée)
@@ -163,7 +164,7 @@ func New(s *store.Store, jwtSecret string) *API {
 	// groupe serial rejoue l'inscription déjà passée — cf. signup_abuse.go.
 	// Les autres limiteurs S3 (join, reset) gardent les constantes : aucune
 	// suite E2E ne les traverse.
-	return &API{store: s, secret: jwtSecret, gws: map[string]routeros.Gateway{}, pinLock: newPinLimiter(), signup: signupLimiterFromEnv(os.Getenv), join: newSignupLimiter(), wifiClaim: newSignupLimiterLimits(20, 100), portalTrack: newSignupLimiterLimits(300, 3000), reset: newSignupLimiter(), chat: newSignupLimiterLimits(30, 400), vpnOrder: newSignupLimiterLimits(10, 40), vpnStatus: newSignupLimiterLimits(120, 3000), vpnRecover: newSignupLimiterLimits(5, 20), tunnelCode: newSignupLimiterLimits(6, 30), tunnelVerify: newSignupLimiterLimits(12, 120), tunnelCodes: map[string]*tunnelCodeEntry{}, egress: newEgressStats(), readStateDone: map[string]time.Time{}, readAcc: map[string]*readStateAccum{}, readStateChunks: map[string]int{}, readStateFreshAt: map[string]time.Time{}, readStateFreshPending: map[string]bool{}, devicesDone: map[string]time.Time{}, attn: map[string]time.Time{}, watcherFailN: map[string]int{}, watcherFailAt: map[string]time.Time{}, tgPairings: map[string]telegramPairing{}, tgAccountCode: map[string]string{}}
+	return &API{store: s, secret: jwtSecret, gws: map[string]routeros.Gateway{}, pinLock: newPinLimiter(), signup: signupLimiterFromEnv(os.Getenv), join: newSignupLimiter(), wifiClaim: newSignupLimiterLimits(20, 100), portalTrack: newSignupLimiterLimits(300, 3000), reset: newSignupLimiter(), chat: newSignupLimiterLimits(30, 400), vpnOrder: newSignupLimiterLimits(10, 40), vpnStatus: newSignupLimiterLimits(120, 3000), vpnRecover: newSignupLimiterLimits(5, 20), tunnelCode: newSignupLimiterLimits(6, 30), tunnelVerify: newSignupLimiterLimits(12, 120), tunnelAction: newSignupLimiterLimits(8, 40), tunnelCodes: map[string]*tunnelCodeEntry{}, egress: newEgressStats(), readStateDone: map[string]time.Time{}, readAcc: map[string]*readStateAccum{}, readStateChunks: map[string]int{}, readStateFreshAt: map[string]time.Time{}, readStateFreshPending: map[string]bool{}, devicesDone: map[string]time.Time{}, attn: map[string]time.Time{}, watcherFailN: map[string]int{}, watcherFailAt: map[string]time.Time{}, tgPairings: map[string]telegramPairing{}, tgAccountCode: map[string]string{}}
 }
 
 // Handler — mux complet, protégé par le middleware d'authentification.
@@ -348,6 +349,11 @@ func (a *API) Handler() http.Handler {
 	mux.HandleFunc("POST /api/tunnel/auth/request-code", a.handleTunnelAuthCode)
 	mux.HandleFunc("POST /api/tunnel/auth/verify", a.handleTunnelAuthVerify)
 	mux.HandleFunc("GET /api/tunnel/me", a.handleTunnelMe)
+	// N°314 — gestion des commandes B2C depuis l'espace client : re-livraison
+	// de la conf (reveal) et renouvellement 1-clic (JWT rôle tunnel, whitelist
+	// /api/tunnel/* ONLY — jamais publiques, jamais rang console SaaS).
+	mux.HandleFunc("POST /api/tunnel/orders/{ref}/reveal", a.handleTunnelReveal)
+	mux.HandleFunc("POST /api/tunnel/orders/{ref}/renew", a.handleTunnelRenew)
 	// N°293 — PPPoE Phase A (chantier ⑥ de N°289, Option V lot 3) :
 	// abonnés PPPoE d'un pppoe-server EXISTANT (D2) pilotés par l'agent
 	// (D1 — commandes ppp_*, zéro cred, zéro port). Segment ISP TRANSVERSE

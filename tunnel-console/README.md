@@ -10,7 +10,7 @@
 ## Ce que c'est
 
 La sous-marque **MikTunnel** (powered by FTech CI) : vitrine + espace client
-du service de tunnels WireGuard. Phase 1 livrée :
+du service de tunnels WireGuard. Phase 2 livrée (N°314) :
 
 - **Vitrine** (`/`) — promesses honnêtes, lien vers la vente MikCloud VPN
   déjà ouverte (`mikcloud.ftci.fr/vpn`) ;
@@ -18,9 +18,11 @@ du service de tunnels WireGuard. Phase 1 livrée :
   par e-mail (10 min, un seul usage) contre le module backend
   `POST /api/tunnel/auth/request-code` + `POST /api/tunnel/auth/verify`
   (N°313, `backend/internal/api/handlers_tunnel.go`) ;
-- **Espace client** (`/me`) — profil + rappel des commandes B2C appariées
-  par e-mail (`GET /api/tunnel/me`, JWT rôle « tunnel » 24 h). La gestion
-  des appareils et le renouvellement 1-clic sont la phase 2 (N°314).
+- **Espace client complet** (`/me`, N°314) — portefeuille de commandes et
+  d'appareils (migration douce : tout achat vitrine avec cet e-mail apparaît
+  ici), re-livraison de la configuration dans l'espace (reveal + copie),
+  renouvellement 1-clic (Wave/carte GeniusPay, canal manuel en repli —
+  `POST /api/tunnel/orders/{ref}/reveal` et `/renew`, JWT rôle tunnel).
 
 ## Développement
 
@@ -37,25 +39,27 @@ Variables d'environnement :
 | `NEXT_PUBLIC_API_BASE` | `https://api.mikcloud.ftci.fr` | Base de l'API (CORS ouverte côté backend — `corsMiddleware`, `routes.go`) |
 | `TUNNEL_DEV_API_PROXY` | — | `=1` en dev local : proxy `/api/*` → `http://localhost:4000` (backend local) |
 
-## Déploiement (Vercel) — geste exploitant
+## Déploiement (Vercel) — FAIT le 13/10/2026 (N°314, session de pilotage)
 
-1. **Nouveau projet Vercel** : Import Git Repository → `ftechnologies18/mikcloud`
-   → **Root Directory : `tunnel-console/`** (Framework Next.js, aucun build
-   override). Le projet existant « mikcloud » (root `frontend/`) n'est pas
-   touché.
-2. **Variable de production** : `NEXT_PUBLIC_API_BASE=https://api.mikcloud.ftci.fr`.
-3. **Domaine dédié** (ex. `tunnel.ftci.fr`) : à brancher dans Vercel puis au
-   DNS Cloudflare — **nécessite le token Cloudflare re-validé** (dette connue :
-   le token actuel est invalide). Jusque-là, l'URL `*.vercel.app` du projet
-   fonctionne (CORS ouverte).
-4. Les déploiements suivent les pushes `main` (webhook Vercel), même discipline
-   que le projet mikcloud.
+1. **Projet Vercel `miktunnel`** CRÉÉ : Import Git Repository →
+   `ftechnologies18/mikcloud` → **Root Directory : `tunnel-console/`**
+   (Framework Next.js, aucun build override). Le projet existant « mikcloud »
+   (root `frontend/`) n'est pas touché. Les déploiements suivent les pushes
+   `main` automatiquement (webhook Vercel).
+2. **Variable de production** POSÉE : `NEXT_PUBLIC_API_BASE=https://api.mikcloud.ftci.fr`.
+3. **URL live** : **https://miktunnel.vercel.app** (alias git :
+   `miktunnel-ftech-ci.vercel.app`).
+4. **Domaine dédié `tunnel.ftci.fr`** : AJOUTÉ au projet Vercel (état
+   « pending domain verification ») — reste le geste DNS Cloudflare du
+   propriétaire : CNAME `tunnel` → `cname.vercel-dns.com` (ou A 76.76.21.21
+   à l'apex). Token Cloudflare invalide = dette connue.
 
-## Périmètre et limites (phase 1)
+## Périmètre et limites (phase 2)
 
-- Aucune vente depuis cette console (la vitrine `/vpn` de MikCloud reste LE
-  canal B2C — doctrine N°301 « jamais en concurrence avec ses revendeurs »
-  inchangée) ;
+- Aucune vente NEUVE depuis cette console (la vitrine `/vpn` de MikCloud
+  reste LE canal B2C — doctrine N°301 « jamais en concurrence avec ses
+  revendeurs » inchangée) ; la console ne vend que le RENOUVELLEMENT de ce
+  que l'e-mail possède déjà ;
 - L'accès distant Pro (remote, N°312) et le LAN étendu (caméras/NAS, phase 3
   N°315) ne sont pas encore exposés ici — la vitrine le dit honnêtement ;
 - Les tokens « tunnel » vivent 24 h et ne sortent JAMAIS de `/api/tunnel/*`

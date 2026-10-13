@@ -471,6 +471,57 @@ func (a *API) provisionPublicVpnOrder(orderID string) (model.PublicVpnOrder, err
 		a.store.Unlock()
 		return snapshot, nil // no-op : déjà provisionée/annulée
 	}
+	// N°314 — RENOUVELLEMENT : la commande étend une commande EXISTANTE au
+	// lieu de poser un nouveau peer (le point de convergence est ICI :
+	// webhook GeniusPay, poll de retour, confirmation admin et balayage
+	// horaire y passent tous). Cible vivante → extension immédiate (l'échéance
+	// étendue vit sur la CIBLE, seule vérité — la ligne renewal reste une
+	// transaction de facturation, PeerID volontairement vide) + e-mail de
+	// confirmation ; cible morte (révoquée par le balayage entre la commande
+	// et le paiement) → dégénérescence HONNÊTE en vente : nouveau peer, conf
+	// neuve livrée.
+	if order.Kind == model.PublicVpnKindRenewal {
+		if target := model.FindPublicVpnOrderByRef(db, order.RenewTargetRef); target != nil &&
+			target.Status == model.PublicVpnOrderProvisioned &&
+			strings.EqualFold(target.Email, order.Email) {
+			now := model.NowISO()
+			newExpiry := model.ExtendPublicVpnExpiry(target.ExpiresAt, now, order.Months)
+			target.ExpiresAt = newExpiry
+			target.UpdatedAt = now
+			order.Status = model.PublicVpnOrderProvisioned
+			order.ExpiresAt = newExpiry // échéance miroir (traçabilité facturation)
+			order.ErrorMsg = ""
+			order.UpdatedAt = now
+			order.PeerID = "" // une renewal ne porte JAMAIS de peer propre
+			order.PeerName = ""
+			a.logActivity(db, model.AccountMainID, "vpn",
+				"Renouvellement VPN B2C appliqué : "+order.Ref+" — commande "+target.Ref+" étendue au "+newExpiry)
+			// Expéditeur (relais plateforme N°150) résolu SOUS verrou, copie VALEUR.
+			var senderCfg model.NotificationSettings
+			senderOK := false
+			if cfg, ok := db.NotifSettings[model.AccountMainID]; ok && notify.EmailCredentialsOK(&cfg) {
+				senderCfg, senderOK = cfg, true
+			}
+			finalOrder := *order
+			finalTarget := *target
+			a.store.Save()
+			a.store.Unlock()
+			// Confirmation asynchrone (preuve du renouvellement, sans secret).
+			if senderOK {
+				a.dispatchPublicVpnRenewEmail(senderCfg, finalOrder, finalTarget)
+			} else {
+				a.logActivityBestEffort(order.Ref, "E-MAIL INDISPONIBLE : confirmation de renouvellement non envoyée (relais plateforme absent)")
+			}
+			return finalOrder, nil
+		}
+		// Cible morte/invalide : dégénérescence en VENTE (trace visible admin).
+		deadTarget := order.RenewTargetRef
+		order.Kind = model.PublicVpnKindSale
+		order.RenewTargetRef = ""
+		order.UpdatedAt = model.NowISO()
+		a.logActivity(db, model.AccountMainID, "vpn",
+			"Renouvellement "+order.Ref+" replié en vente neuve : cible "+deadTarget+" indisponible")
+	}
 	if model.VpnPeerSlotsUsed(db) >= model.VpnWg0PoolSize {
 		order.ErrorMsg = "pool wg0 épuisé — provisioning différé"
 		order.UpdatedAt = model.NowISO()
@@ -739,6 +790,63 @@ func (a *API) sendPublicVpnConfEmailWith(senderCfg model.NotificationSettings, o
 		db.NotifLog = append(db.NotifLog, model.NotificationLog{
 			ID: model.NewID("n-"), Status: status, Error: errText,
 			Channel: "email", Kind: "vpn_order",
+			Title: title, Body: logBody, At: model.NowISO(),
+		})
+		a.store.Save()
+		a.store.Unlock()
+	})
+}
+
+// ---------------------------------------------------------------------------
+// N°314 — e-mail de confirmation de renouvellement (extension d'échéance)
+// ---------------------------------------------------------------------------
+
+// publicVpnRenewEmailBodies — confirmation du renouvellement : la preuve que
+// le client attend (jusqu'à quand il est couvert). AUCUNE conf ici (elle ne
+// change pas — l'appareil et sa configuration sont conservés, c'est
+// l'argument du renouvellement) ; le journal ne porte que le résumé.
+func publicVpnRenewEmailBodies(renewal, target model.PublicVpnOrder) (title, textBody, htmlBody string) {
+	plan := model.ResolvePublicVpnPlan(renewal.PlanID)
+	planLabel := renewal.PlanID
+	if plan != nil {
+		planLabel = plan.Label
+	}
+	until := renewal.ExpiresAt
+	title = "Votre abonnement MikCloud VPN est renouvelé"
+	textBody = "Bonjour,\n\n" +
+		"Votre renouvellement (" + planLabel + ") est confirmé — référence " + renewal.Ref + ".\n" +
+		"Votre accès " + target.Ref + " est désormais couvert jusqu'au " + until + ".\n\n" +
+		"Votre configuration WireGuard ne change pas : elle reste celle livrée à votre adresse,\n" +
+		"et reste récupérable dans votre espace MikTunnel à tout moment.\n\n" +
+		"— MikCloud VPN (powered by FTech CI)"
+	htmlBody = "<div style=\"font-family:system-ui,Segoe UI,Arial,sans-serif;max-width:480px;margin:0 auto;padding:24px\">" +
+		"<h2 style=\"color:#0f766e;margin:0 0 16px\">Renouvellement confirmé</h2>" +
+		"<p style=\"color:#334155;font-size:15px\">Votre renouvellement (" + planLabel + ") est confirmé — référence <code>" + renewal.Ref + "</code>.</p>" +
+		"<p style=\"color:#0f172a;font-size:15px\">Votre accès <code>" + target.Ref + "</code> est couvert jusqu'au <strong>" + until + "</strong>.</p>" +
+		"<p style=\"color:#64748b;font-size:13px\">Votre configuration WireGuard ne change pas ; elle reste récupérable dans votre espace MikTunnel.</p>" +
+		"<p style=\"color:#94a3b8;font-size:12px\">— MikCloud VPN (powered by FTech CI)</p></div>"
+	return title, textBody, htmlBody
+}
+
+// dispatchPublicVpnRenewEmail — envoi asynchrone + trace NotifLog kind
+// « vpn_renew » SANS la conf (pattern dispatchPublicVpnConfEmail : jamais
+// d'envoi réseau sous le verrou, un échec d'e-mail n'abat rien).
+func (a *API) dispatchPublicVpnRenewEmail(senderCfg model.NotificationSettings, renewal, target model.PublicVpnOrder) {
+	title, textBody, htmlBody := publicVpnRenewEmailBodies(renewal, target)
+	cfgCopy := senderCfg
+	to := renewal.Email
+	logBody := "Confirmation de renouvellement VPN B2C " + renewal.Ref + " (cible " + target.Ref + ") envoyée à " + to
+	emailTaskDispatch()(func() {
+		sendErr := accountEmailSender()(&cfgCopy, to, title, textBody, htmlBody)
+		status, errText := "sent", ""
+		if sendErr != nil {
+			status, errText = "error", sendErr.Error()
+		}
+		a.store.Lock()
+		db := a.store.Data()
+		db.NotifLog = append(db.NotifLog, model.NotificationLog{
+			ID: model.NewID("n-"), Status: status, Error: errText,
+			Channel: "email", Kind: "vpn_renew",
 			Title: title, Body: logBody, At: model.NowISO(),
 		})
 		a.store.Save()

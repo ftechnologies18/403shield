@@ -77,10 +77,62 @@ export interface TunnelOrder {
   status: string;
   createdAt: string;
   expiresAt: string;
+  /** N°314 — portfolio complet */
+  months?: number;
+  amountFcfa?: number;
+  payMethod?: string;
+  kind?: string;
+  renewTargetRef?: string;
+  renewable?: boolean;
+  revealable?: boolean;
 }
 
 export interface MeResponse {
   client: { id: string; email: string; createdAt: string; updatedAt: string };
   orders: TunnelOrder[];
+  devices?: number;
   scope: string;
+}
+
+export interface RevealResponse {
+  ref: string;
+  conf: string;
+  ipv4?: string;
+  plan?: string;
+  months?: number;
+  expiresAt?: string;
+}
+
+export interface RenewResponse {
+  ref: string;
+  targetRef: string;
+  status: string;
+  amountFcfa: number;
+  payMethod: string;
+  paymentUrl: string;
+  online: boolean;
+}
+
+/** N°314 — re-livraison de la conf dans l'espace (POST authentifié). */
+export async function tunnelReveal(
+  ref: string,
+  token: string,
+): Promise<RevealResponse> {
+  return apiFetch<RevealResponse>(`/api/tunnel/orders/${encodeURIComponent(ref)}/reveal`, {
+    method: "POST",
+    token,
+  });
+}
+
+/** N°314 — renouvellement 1-clic (POST authentifié). */
+export async function tunnelRenew(
+  ref: string,
+  token: string,
+  body: { planId: string; payMethod: string; phone?: string },
+): Promise<RenewResponse> {
+  return apiFetch<RenewResponse>(`/api/tunnel/orders/${encodeURIComponent(ref)}/renew`, {
+    method: "POST",
+    token,
+    body,
+  });
 }

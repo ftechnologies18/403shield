@@ -786,6 +786,11 @@ func (p *PG) ensureSchema() error {
 		// colonne conf chiffrée — D5-a inchangée) ; le ref MCV- est la clé
 		// publique d'appariement (webhook GeniusPay, récupération
 		// self-service e-mail + ref).
+		// N°314 — kind/renew_target_ref : renouvellement d'une commande
+		// EXISTANTE (console tunnel, extension d'échéance sans nouveau
+		// peer). Nouvelles tables : colonnes dans le CREATE (bases neuves)
+		// + ALTER idempotent dessous (bases existantes — précédent
+		// settings N°301/311, leçon N°302 : DDL/SELECT/UPSERT concordent).
 		`CREATE TABLE IF NOT EXISTS public_vpn_orders (
                         id               TEXT PRIMARY KEY,
                         ref              TEXT NOT NULL,
@@ -796,6 +801,8 @@ func (p *PG) ensureSchema() error {
                         base_amount_fcfa INTEGER NOT NULL DEFAULT 0,
                         amount_fcfa      INTEGER NOT NULL DEFAULT 0,
                         pay_method       TEXT NOT NULL DEFAULT '',
+                        kind             TEXT NOT NULL DEFAULT 'sale',
+                        renew_target_ref TEXT NOT NULL DEFAULT '',
                         paid_via         TEXT NOT NULL DEFAULT '',
                         gateway_ref      TEXT NOT NULL DEFAULT '',
                         status           TEXT NOT NULL DEFAULT 'pending',
@@ -808,6 +815,8 @@ func (p *PG) ensureSchema() error {
                         updated_at       TEXT NOT NULL,
                         paid_at          TEXT NOT NULL DEFAULT ''
                 )`,
+		`ALTER TABLE public_vpn_orders ADD COLUMN IF NOT EXISTS kind             TEXT NOT NULL DEFAULT 'sale'`,
+		`ALTER TABLE public_vpn_orders ADD COLUMN IF NOT EXISTS renew_target_ref TEXT NOT NULL DEFAULT ''`,
 		`CREATE UNIQUE INDEX IF NOT EXISTS idx_public_vpn_orders_ref   ON public_vpn_orders (ref)`,
 		`CREATE INDEX IF NOT EXISTS idx_public_vpn_orders_status ON public_vpn_orders (status)`,
 		`CREATE INDEX IF NOT EXISTS idx_public_vpn_orders_email  ON public_vpn_orders (email)`,
