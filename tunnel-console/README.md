@@ -50,7 +50,7 @@ Variables d'environnement :
 
 | Variable | Défaut | Rôle |
 |---|---|---|
-| `NEXT_PUBLIC_API_BASE` | `https://api.mikcloud.ftci.fr` | Base de l'API (CORS ouverte côté backend — `corsMiddleware`, `routes.go`) |
+| `NEXT_PUBLIC_API_BASE` | `https://api.mikcloud.ftci.fr` | Base de l'API — CORS WHITELIST côté backend (`corsMiddleware`, `main.go` — fail-closed P1 #16) : `https://tunnel.ftci.fr` et `https://miktunnel.vercel.app` figurent dans `ALLOWED_ORIGIN` de la VM (geste `ops-cors-whitelist.yml`, N°316 — non-régression `mikcloud.ftci.fr` prouvée par le workflow) |
 | `TUNNEL_DEV_API_PROXY` | — | `=1` en dev local : proxy `/api/*` → `http://localhost:4000` (backend local) |
 
 Côté BACKEND (N°316) : `TUNNEL_PUBLIC_URL` (défaut `https://tunnel.ftci.fr`)
