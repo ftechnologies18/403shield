@@ -1,0 +1,152 @@
+name: ops-cors-whitelist
+
+# N°316 — Ajout des origines de la sous-marque MikTunnel à la whitelist CORS
+# du backend (/etc/mikcloud/mikcloud.env → ALLOWED_ORIGIN, VM source de
+# vérité post-T2 — gel N°244 : aucun redéploiement ne réécrira l'env).
+#
+# CONTEXTE : corsMiddleware (main.go, sécurité P1 #16) est FAIL-CLOSED en
+# production — sans l'origine dans ALLOWED_ORIGIN, AUCUN en-tête
+# Access-Control-Allow-Origin n'est émis et le navigateur bloque la lecture
+# (« Failed to fetch »). La whitelist ne contenait QUE mikcloud.ftci.fr :
+# la console MikTunnel (N°313-315) et la boutique /shop (N°316) n'ont donc
+# JAMAIS pu appeler l'API cross-origin depuis tunnel.ftci.fr — révélé par
+# la vérification navigateur de N°316 (le README tunnel-console parlait de
+# « CORS ouverte » à tort : le commentaire routes.go:674 décrit le MIDDLEWARE
+# wifi public, pas l'API générale).
+#
+# Ce que fait ce workflow (workflow_dispatch UNIQUEMENT, idempotent) :
+#   1. lit la ligne ALLOWED_ORIGIN actuelle (URLs PUBLIQUES, écho sans
+#      risque — jamais de DSN ni de clé dans les logs) ;
+#   2. ajoute https://tunnel.ftci.fr et https://miktunnel.vercel.app si
+#      absents (backup horodaté de l'env AVANT modification) ;
+#   3. RESTART backend conscient du transport (docker : rm+run de l'image
+#      current pour relire --env-file ; systemd : restart — miroir
+#      deploy-oracle.yml, binaire INTACT) + healthcheck patient (Load ~1 min) ;
+#   4. PREUVE CORS (le juge de paix — run ROUGE sinon) : depuis le runner,
+#      GET /api/public/vpn/offers avec Origin: tunnel.ftci.fr puis
+#      miktunnel.vercel.app DOIT répondre l'en-tête access-control-allow-origin
+#      correspondant ; non-régression : mikcloud.ftci.fr doit rester émis.
+#
+# Secrets requis (déjà posés — cf. deploy-oracle.yml) : ORACLE_HOST,
+# ORACLE_USER, ORACLE_SSH_KEY.
+
+on:
+  workflow_dispatch: {}
+
+concurrency:
+  group: ops-cors-whitelist
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  whitelist:
+    runs-on: ubuntu-latest
+    env:
+      ORACLE_HOST: ${{ secrets.ORACLE_HOST }}
+    steps:
+      - name: Notice — VM Oracle pas encore raccordée
+        if: env.ORACLE_HOST == ''
+        run: |
+          echo "::notice::VM Oracle non raccordée (secret ORACLE_HOST absent) — geste ignoré."
+
+      - name: Ajout des origines MikTunnel + restart backend + preuve différée
+        if: env.ORACLE_HOST != ''
+        env:
+          DEPLOY_USER: ${{ secrets.ORACLE_USER }}
+          SSH_KEY: ${{ secrets.ORACLE_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -m 600 /dev/null /tmp/oracle_key
+          printf '%s\n' "$SSH_KEY" > /tmp/oracle_key
+          SSH_OPTS="-i /tmp/oracle_key -o StrictHostKeyChecking=accept-new -o ConnectTimeout=20"
+          ssh $SSH_OPTS "$DEPLOY_USER@$ORACLE_HOST" bash -s <<'REMOTE'
+          set -euo pipefail
+          ENV_FILE=/etc/mikcloud/mikcloud.env
+          echo "── whitelist CORS actuelle ──"
+          CURRENT=$(sudo grep -E '^ALLOWED_ORIGIN=' "$ENV_FILE" || true)
+          echo "${CURRENT:-ALLOWED_ORIGIN= (absente — CORS fail-closed, cf. P1 #16)}"
+          # Backup horodaté AVANT tout geste (rollback = copie inverse).
+          STAMP=$(date -u +%Y%m%dT%H%M%SZ)
+          sudo cp -p "$ENV_FILE" "/etc/mikcloud/mikcloud.env.bak-cors-$STAMP"
+          echo "backup: mikcloud.env.bak-cors-$STAMP"
+          # Ajout idempotent des deux origines de la sous-marque.
+          NEED_WRITE=0
+          NEW_VAL=$(printf '%s' "${CURRENT#ALLOWED_ORIGIN=}")
+          for ORIGIN in https://tunnel.ftci.fr https://miktunnel.vercel.app; do
+            case ",$NEW_VAL," in
+              *",$ORIGIN,"*|"$ORIGIN,"*|*",$ORIGIN"|"$ORIGIN") echo "déjà présent: $ORIGIN";;
+              *) NEW_VAL="${NEW_VAL:+$NEW_VAL,}$ORIGIN"; NEED_WRITE=1; echo "à ajouter: $ORIGIN";;
+            esac
+          done
+          if [ "$NEED_WRITE" = "1" ]; then
+            sudo sed -i "/^ALLOWED_ORIGIN=/d" "$ENV_FILE"
+            printf 'ALLOWED_ORIGIN=%s\n' "$NEW_VAL" | sudo tee -a "$ENV_FILE" > /dev/null
+            echo "nouvelle whitelist: $NEW_VAL"
+          else
+            echo "aucune modification requise (déjà conforme)"
+          fi
+          # ── Restart conscient du transport (miroir deploy-oracle.yml) ──
+          CARRIER="systemd"
+          if command -v docker >/dev/null 2>&1 && docker ps --format '{{.Names}}' 2>/dev/null | grep -qx 'mikcloud-server'; then
+            CARRIER="docker"
+          fi
+          echo "transport actif: $CARRIER"
+          HEALTH() {
+            i=0
+            until curl -fsS -o /dev/null http://127.0.0.1:4000/; do
+              i=$((i+1))
+              if [ "$i" -ge 60 ]; then echo "BACKEND KO après 10 min" >&2; return 1; fi
+              sleep 10
+            done
+            echo "BACKEND OK (healthcheck au bout de $((i*10)) s)"
+          }
+          if [ "$CARRIER" = "docker" ]; then
+            # Le conteneur doit être RECRÉÉ pour relire --env-file (image intacte).
+            sudo docker rm -f mikcloud-server >/dev/null 2>&1 || true
+            sudo docker run -d --name mikcloud-server \
+              --network host \
+              --env-file /etc/mikcloud/mikcloud.env \
+              --restart unless-stopped \
+              --memory 4g --cpus 3 \
+              mikcloud-server:current
+          else
+            sudo systemctl restart mikcloud
+          fi
+          if ! HEALTH; then
+            echo "═══ échec post-restart — ROLLBACK env (binaire intact) ═══" >&2
+            sudo cp -p "/etc/mikcloud/mikcloud.env.bak-cors-$STAMP" "$ENV_FILE"
+            if [ "$CARRIER" = "docker" ]; then
+              sudo docker rm -f mikcloud-server >/dev/null 2>&1 || true
+              sudo docker run -d --name mikcloud-server \
+                --network host \
+                --env-file /etc/mikcloud/mikcloud.env \
+                --restart unless-stopped \
+                --memory 4g --cpus 3 \
+                mikcloud-server:current
+            else
+              sudo systemctl restart mikcloud
+            fi
+            HEALTH || { echo "ROLLBACK LUI-MÊME EN ÉCHEC — intervention requise" >&2; exit 1; }
+            echo "env restauré depuis le backup — backend revenu sur l'ancienne whitelist" >&2
+            exit 1
+          fi
+          REMOTE
+
+      - name: Preuve CORS (le juge de paix — run ROUGE sinon)
+        if: env.ORACLE_HOST != ''
+        run: |
+          set -euo pipefail
+          # Laisse le Load initial des tables finir si le healthcheck est passé juste après.
+          sleep 5
+          for ORIGIN in https://tunnel.ftci.fr https://miktunnel.vercel.app https://mikcloud.ftci.fr; do
+            echo "── Origin: $ORIGIN ──"
+            HEADER=$(curl -s -D - -o /dev/null --retry 5 --retry-delay 5 \
+              -H "Origin: $ORIGIN" https://api.mikcloud.ftci.fr/api/public/vpn/offers \
+              | tr -d '\r' | grep -i '^access-control-allow-origin:' || true)
+            echo "${HEADER:-<AUCUN en-tête CORS>}"
+            test "$HEADER" = "access-control-allow-origin: $ORIGIN" \
+              || { echo "ÉCHEC : $ORIGIN non autorisé par la whitelist"; exit 1; }
+          done
+          echo "PREUVE CORS OK — tunnel.ftci.fr, miktunnel.vercel.app et mikcloud.ftci.fr (non-régression) émettent l'en-tête."
