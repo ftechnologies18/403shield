@@ -231,6 +231,59 @@ Portes : lint 0 · tsc 0 · parité FR/EN 411=411 chemins (442 − 31 retirés)
 (sélecteur 2 segments cliqué des deux côtés, cartes foyer FR+EN, mobile
 390 px sans débordement, 0 erreur console, chaîne GeniusPay 308→200).
 
+## 6-quinquies. N°323 — fin de la cacophonie des landing pages (commits 1ced53a + fed0d32)
+
+Quatrième grief de fragmentation, le plus architectural : « La console et
+sa boutique se présentent comme des landing pages distinctes — cacophonie
+inexplicable. Normalement le clic doit rediriger vers /login. Je souhaite
+une analyse d'expert digne de Cloudflare et OVH. » Diagnostic : TROIS
+landing pages racontaient le même produit (vitrine légitime N°321-322 +
+racine console doublon N°313/317 + /shop doublon N°316) — la topologie
+403Shield (site / console / api) était déjà cloudflarienne, la SÉPARATION
+DES RÔLES ne l'était pas. Livré (2 commits, 18 fichiers, +1 572/−1 492,
+vérifié au navigateur en production) :
+
+- **Console = PURE application** (pattern dash.cloudflare.com / manager
+  OVH) : la racine `/` est SUPPRIMÉE comme landing → 308 permanent vers
+  `/login` (« Vos tunnels, simplement » disparaît) ; `/login` renvoie le
+  visiteur porteur d'un token vers `/me` (le clic « Console » atterrit
+  dans l'espace du client connecté — un rebond sans boucle si le token a
+  expiré, /me purge sur 401).
+- **Boutique RETOURNE au site marketing** (modèle OVH « commander sur
+  www, gérer dans le manager ») : `/shop` → 308 permanent vers
+  `403shield.ftci.fr/checkout` avec `?order=` préservée (retours
+  GeniusPay en vol et e-mails historiques atterrissent sur la caisse,
+  référence intacte — doctrine N°301 : UN canal B2C, déménagé
+  mikcloud.ftci.fr/vpn → console N°316 → site N°323, jamais dédoublé) ;
+  composants `tunnel-console/src/components/shop/` supprimés.
+- **NOUVELLE caisse `/checkout` sur le site** : parcours N°316 porté
+  tel quel (catalogue live, dialog Wave/carte + honeypot, suivi ?order=
+  poll 5 s, récupération self-service, FAQ) dans le gabarit clay de la
+  vitrine + shadcn ; SEO hérité de l'ancienne /shop (robots index,follow
+  — le 308 transfère l'équité) ; entonnoir direct `?plan=vpn-b2c-month|`
+  `year` (les cartes tarifs du site mènent à la caisse OUVERTE, formule
+  présélectionnée — un seul clic du marketing au paiement).
+- **Vitrine** : cartes tarifs tunnels + CTA /vpn + /tunnels (8, FR+EN) +
+  footer → liens internes `/checkout` ; vercel.json GeniusPay
+  `/vpn?order=` → `/checkout` (interne) ; liens « Console »/« Mon
+  espace » → racine console (qui 308 vers /login).
+- **Phase 2 documentée** (décision propriétaire, chemin de paiement) :
+  backend success_url toujours `{TUNNEL_PUBLIC_URL}/shop?order=` — tout
+  fonctionne via le 308 (un rebond) ; la canonicalisation complète
+  (SuccessURL + e-mails → /checkout direct) se stage après validation.
+
+Preuves au navigateur (production, 18/10/2026) : console.403shield.ftci.fr
+→ atterrit sur /login (« Connexion sans mot de passe ») ·
+console/shop?order=MCV-SMOKE323 → atterrit sur
+403shield.ftci.fr/checkout?order=… avec le panneau de suivi · carte tarifs
+« Buy on the shop » (lien interne) → /checkout?plan=vpn-b2c-month avec
+caisse OUVERTE · catalogue live (1 500/1 675/1 725 · 15 000/15 600/
+16 075 FCFA, Fetch offers 200 + preflight 204, access-control-allow-origin
+403shield.ftci.fr) · tunnel.ftci.fr → 301 → console → 308 → /login ·
+mobile 390 sans débordement · FR/EN · 0 erreur console partout.
+Portes : lint 0 · tsc 0 (les DEUX apps) · parité FR/EN 410+87 chemins +
+26 assertions métier (script /home/z/scratch323/parity323.ts).
+
 ## 7. Actifs de marque
 
 `docs/brand/` : `403shield-clay.png` (1024², bouclier clay menthe + étoile dorée
