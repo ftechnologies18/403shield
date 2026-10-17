@@ -324,7 +324,9 @@ export default function MePage() {
                     <p className="text-sm text-slate-400">
                       Aucune commande pour cet e-mail. Les achats faits sur la{" "}
                       <a
-                        href="/shop"
+                        href="https://403shield.ftci.fr/checkout"
+                        target="_blank"
+                        rel="noopener noreferrer"
                         className="font-medium text-emerald-400 hover:text-emerald-300"
                       >
                         boutique 403Shield
@@ -441,7 +443,9 @@ export default function MePage() {
                             <p className="mt-2 text-xs text-slate-500">
                               L&apos;appareil a été révoqué au terme. Pour repartir,{" "}
                               <a
-                                href="/shop"
+                                href="https://403shield.ftci.fr/checkout"
+                                target="_blank"
+                                rel="noopener noreferrer"
                                 className="font-medium text-emerald-400 hover:text-emerald-300"
                               >
                                 souscrivez un nouvel accès

@@ -1,27 +1,15 @@
-// shop/page.tsx — N°316 — route PUBLIQUE de la vitrine d'achat (le canal B2C
-// a déménagé de mikcloud.ftci.fr/vpn — 301 permanent posé côté Vercel du
-// frontend — vers CE foyer : achat, gestion, renouvellement et Accès Pro
-// vivent sous une seule marque). N°317 — rebrand « 403Shield » : la boutique
-// s'appelle « 403Shield VPN » et vit dans la console 403Shield (tunnel.ftci.fr).
-// Composant serveur minimal (SEO : title + description + indexation
-// OUVERTE — la vitrine DOIT être référencée) qui passe la référence de
-// commande éventuelle (?order=MCV-…, préservée par le 301) au composant
-// client. Next 16 : searchParams est une Promise.
-import type { Metadata } from "next";
-import ShopPage from "@/components/shop/shop-page";
-
-export const metadata: Metadata = {
-  title: "Acheter un VPN WireGuard — 403Shield VPN (IP fixe France, activation en 30 s)",
-  description:
-    "Tunnel WireGuard chiffré vers Marseille : IP française fixe, Wi-Fi public blindé, configuration livrée par e-mail, paiement Wave ou carte. Sans compte, activation en 30 secondes — la console 403Shield, powered by FTech CI.",
-  openGraph: {
-    title: "403Shield VPN — WireGuard, IP fixe France",
-    description:
-      "Tunnel WireGuard chiffré vers Marseille : IP française fixe, Wi-Fi public blindé, configuration livrée par e-mail.",
-    type: "website",
-  },
-  robots: { index: true, follow: true },
-};
+// shop/page.tsx — N°323 — la boutique RETOURNE au site marketing : /shop
+// redirige (308 permanent, query ?order= préservée) vers la caisse du site
+// 403shield.ftci.fr/checkout. Historique du canal B2C (doctrine N°301 :
+// UN seul canal, il déménage sans se dédoubler) : mikcloud.ftci.fr/vpn
+// (N°301) → ICI (N°316) → 403shield.ftci.fr/checkout (N°323, modèle OVH :
+// on commande sur www, on gère dans le manager). Le composant d'achat vit
+// désormais dans frontend/src/components/checkout/ (porté de
+// tunnel-console/src/components/shop/, supprimé).
+// Les retours GeniusPay en vol (success_url {TUNNEL_PUBLIC_URL}/shop?order=)
+// et les liens/e-mails historiques atterrissent ici → 308 → la caisse, avec
+// la référence de commande intacte (le suivi y reprend).
+import { permanentRedirect } from "next/navigation";
 
 export default async function ShopRoute({
   searchParams,
@@ -30,6 +18,8 @@ export default async function ShopRoute({
 }) {
   const params = await searchParams;
   const raw = params.order;
-  const ref = Array.isArray(raw) ? (raw[0] ?? "") : (raw ?? "");
-  return <ShopPage initialOrderRef={ref.trim()} />;
+  const ref = (Array.isArray(raw) ? raw[0] : raw ?? "").trim();
+  permanentRedirect(
+    `https://403shield.ftci.fr/checkout${ref ? `?order=${encodeURIComponent(ref)}` : ""}`
+  );
 }

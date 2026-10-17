@@ -26,13 +26,23 @@ la cascade ftci.fr → mikcloud.ftci.fr → tunnel.ftci.fr fut racontée par le
 DNS), rebrandée « 403Shield Console » en N°317. Phase 3 livrée (N°315),
 rebrand + boutique (N°316), rebrand 403Shield (N°317) :
 
-- **Vitrine** (`/`) — promesses honnêtes, barre écosystème (FTech CI ·
-  403Shield — site · ici), CTA vers la boutique `/shop` ;
-- **Boutique d'achat B2C** (`/shop`, N°316 — « 403Shield VPN » depuis N°317) —
-  le canal de vente directe DEMÉNAGÉ de `mikcloud.ftci.fr/vpn` (301 permanent
-  posé côté Vercel du frontend) : catalogue, achat Wave/carte, suivi
-  `?order=MCV-…`, récupération self-service. Doctrine N°301 préservée : UN
-  seul canal B2C — il a déménagé, il ne s'est pas dédoublé ;
+- **Racine = application pure** (`/`, N°323) — 308 permanent vers `/login`
+  (pattern dash.cloudflare.com / manager OVH) : la console ne porte PLUS de
+  vitrine marketing — le site 403shield.ftci.fr (refondé N°321-322) est
+  l'unique landing. Un visiteur déjà connecté (token en localStorage) est
+  renvoyé de `/login` vers `/me` — le clic « Console » atterrit dans
+  l'espace ;
+- **Boutique d'achat B2C** (`/shop`, N°316 — « 403Shield VPN » depuis N°317,
+  **308 permanent vers `403shield.ftci.fr/checkout` depuis N°323**) — le
+  canal de vente directe a RETOURNÉ au site marketing (modèle OVH :
+  commander sur www, gérer dans le manager) : catalogue, achat Wave/carte,
+  suivi `?order=MCV-…` et récupération self-service vivent dans
+  `frontend/src/components/checkout/` (porté de `src/components/shop/`,
+  supprimé). La redirection préserve `?order=` : les retours GeniusPay en
+  vol (success_url `{TUNNEL_PUBLIC_URL}/shop?order=`) et les liens/e-mails
+  historiques atterrissent sur la caisse du site. Doctrine N°301
+  préservée : UN seul canal B2C — il a déménagé (mikcloud.ftci.fr/vpn
+  N°301 → ici N°316 → site N°323), il ne s'est pas dédoublé ;
 - **Connexion sans mot de passe** (`/login` → `/verify`) — code à 6 chiffres
   par e-mail (10 min, un seul usage) contre le module backend
   `POST /api/tunnel/auth/request-code` + `POST /api/tunnel/auth/verify`

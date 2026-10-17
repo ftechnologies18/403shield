@@ -416,7 +416,12 @@ export default function ProPage() {
                   </p>
                   <p className="mt-2 text-amber-200/60">
                     Vous cherchez un VPN pour votre téléphone ?{" "}
-                    <a href="/shop" className="underline underline-offset-2">
+                    <a
+                      href="https://403shield.ftci.fr/checkout"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="underline underline-offset-2"
+                    >
                       La boutique 403Shield
                     </a>{" "}
                     est faite pour ça.
@@ -660,7 +665,12 @@ export default function ProPage() {
         <div className="mx-auto flex max-w-4xl flex-col items-start justify-between gap-2 px-4 py-6 text-xs text-slate-500 sm:flex-row sm:items-center sm:px-6">
           <p>403Shield Console · powered by FTech CI · Accès Pro : tunnels WireGuard hébergés à Marseille</p>
           <div className="flex gap-4">
-            <a href="/shop" className="hover:text-slate-300">
+            <a
+              href="https://403shield.ftci.fr/checkout"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-slate-300"
+            >
               Boutique VPN
             </a>
             <a

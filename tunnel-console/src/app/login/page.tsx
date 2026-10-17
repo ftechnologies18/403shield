@@ -4,12 +4,17 @@
 // POST /api/tunnel/auth/request-code {email, website (honeypot)} → le code
 // part par e-mail (TTL 10 min) → redirection vers /verify?email=…
 // N°317 — rebrand « 403Shield Console » (ex MikTunnel N°313-316).
+// N°323 — pattern dash.cloudflare.com : la racine de la console redirige
+// ici ; un visiteur DÉJÀ connecté (token en localStorage) est renvoyé
+// vers /me — le clic « Console » atterrit dans l'espace, pas sur le
+// formulaire. Token expiré ? /me le purge (clearToken sur 401) et
+// ramène ici : un rebond, jamais de boucle.
 
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { MailCheck, Send } from "lucide-react";
-import { apiFetch } from "@/lib/api";
+import { apiFetch, getToken } from "@/lib/api";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -17,6 +22,11 @@ export default function LoginPage() {
   const [website, setWebsite] = useState(""); // honeypot — invisible, rempli = robot
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+
+  /* N°323 — déjà connecté ? Direction l'espace (voir en-tête). */
+  useEffect(() => {
+    if (getToken()) router.replace("/me");
+  }, [router]);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
