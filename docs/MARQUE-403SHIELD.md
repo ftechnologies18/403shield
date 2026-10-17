@@ -168,6 +168,32 @@ dispatchés avec preuves. Gestes posés :
 retour boutique → conf livrée → tunnel → espace client → renouvellement —
 **SEUL geste restant** au propriétaire.
 
+## 6-ter. N°321 — la vitrine marketing rattrape l'unification (commit a8a68eb)
+
+Le propriétaire relève que la vitrine « semble figée sur les services
+hotspot d'avant » et que « VPN WireGuard et tunnel apparaissent comme des
+services différents alors qu'ils sont liés ». Corrigé à la racine
+(5 fichiers, +568/−118, vérifié au navigateur en production) :
+
+- **Tunnels WireGuard = 4e pilier** de la vitrine : 4e carte super-pouvoir
+  (« Une suite, quatre piliers », grille 2×2), section `#tunnels` dédiée
+  (rail + mobile, icône Waypoints), 4e stat (« 2 usages du tunnel — VPN &
+  Accès Pro »), hero/marquee/CTA final réécrits FR+EN.
+- **« Un tunnel, deux usages »** partout : le nav porte UNE entrée
+  « Tunnels WireGuard » (hub `/tunnels`, active aussi sur `/vpn`) ; `/vpn`
+  re-badge « Tunnels WireGuard · VPN » avec la note « Un seul tunnel, deux
+  usages » ; `/tunnels` devient le hub famille (hero « Un seul tunnel.
+  Deux usages. », carte pivot « VPN personnel — le même tunnel »).
+- **Segment tarifs « Tunnels »** (3e du sélecteur) aux prix catalogue
+  RÉELS du backend (`publicvpnorder.go`) : VPN Mensuel 1 500 / VPN Annuel
+  15 000 (badge « 2 mois offerts ») / Accès Pro 3 500 · 35 000 FCFA —
+  CTA liens externes boutique/console (pas la modale SaaS).
+- **URLs canoniques** : les liens vitrine visent `console.403shield.ftci.fr`
+  direct (tunnel.ftci.fr → 301 depuis N°320) ; la redirection GeniusPay
+  `vercel.json` `/vpn?order=` → boutique canonique (un saut de moins).
+
+Portes : lint 0 · tsc 0 · parité FR/EN 442=442 chemins + 15 assertions.
+
 ## 7. Actifs de marque
 
 `docs/brand/` : `403shield-clay.png` (1024², bouclier clay menthe + étoile dorée
