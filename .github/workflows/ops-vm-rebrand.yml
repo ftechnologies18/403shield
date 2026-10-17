@@ -1,0 +1,202 @@
+name: ops-vm-rebrand
+
+# ═══ N°319 — GESTES VM DU RENOMMAGE (Caddy + outillage), PILOTÉS PAR SSH ═══
+#
+# Deux gestes indépendants, chacun idempotent, chacun avec backup horodaté
+# et preuve — sur la VM Oracle (secrets ORACLE_HOST/USER/SSH_KEY du coffre) :
+#
+#   geste caddy_alias (confirm=EXECUTER) :
+#     Ajoute un NOM D'USAGE à la place de l'API dans le bloc site du
+#     /etc/caddy/Caddyfile : « api.mikcloud.ftci.fr, api.403shield.ftci.fr { ».
+#     Caddy tente ALORS l'émission ACME pour le nouveau nom — elle échoue
+#     tant que le DNS n'existe pas (bruit borné dans le journal, backoff
+#     exponentiel) et RÉUSSIT SEULE dès que l'exploitant pose l'enregistrement
+#     A (cf. recette affichée) : le certificat et le HTTPS deviennent vivants
+#     sans aucun nouveau geste VM. C'est la moitié automatisable du
+#     « api.mikcloud.ftci.fr : geste VM + env » de docs/MARQUE-403SHIELD.md §6
+#     (l'env NEXT_PUBLIC_API_BASE basculera seulement APRÈS le DNS — jamais
+#     avant, sinon la console perd son API).
+#
+#   geste hunt_repo_url (confirm=EXECUTER) :
+#     Rebase l'URL du dépôt dans /usr/local/bin/mikcloud-hunt-dispatch.sh
+#     (ftechnologies18/mikcloud → ftechnologies18/403shield) après le
+#     renommage GitHub : l'API GitHub répond 301 aux anciens chemins et le
+#     script (curl sans -L) ne suit PAS les redirections.
+#
+# Sécurité : gestes mutatifs derrière confirm=EXECUTER ; backup AVANT chaque
+# modification (rollback = copie inverse) ; les jetons éventuellement présents
+# dans le script de chasse sont MASQUÉS à l'affichage ; workflow_dispatch
+# UNIQUEMENT, permissions vides.
+
+on:
+  workflow_dispatch:
+    inputs:
+      gesture:
+        description: "Geste : diag (lecture seule) | caddy_alias | hunt_repo_url"
+        type: choice
+        default: "diag"
+        options:
+          - diag
+          - caddy_alias
+          - hunt_repo_url
+      alias:
+        description: "Nom d'usage à armer sur le bloc Caddy (geste caddy_alias)"
+        required: false
+        default: "api.403shield.ftci.fr"
+      repo_url:
+        description: "Chemin dépôt GitHub cible (geste hunt_repo_url)"
+        required: false
+        default: "ftechnologies18/403shield"
+      confirm:
+        description: "Taper EXECUTER pour autoriser les gestes mutatifs"
+        type: string
+        default: ""
+
+permissions: {}
+
+concurrency:
+  group: ops-vm-rebrand
+  cancel-in-progress: false
+
+jobs:
+  gesture:
+    name: "VM — ${{ inputs.gesture }}"
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      ORACLE_HOST: ${{ secrets.ORACLE_HOST }}
+    steps:
+      - name: Garde — confirmation pour les gestes mutatifs
+        run: |
+          set -euo pipefail
+          case '${{ inputs.gesture }}' in
+            caddy_alias|hunt_repo_url)
+              if [ '${{ inputs.confirm }}' != 'EXECUTER' ]; then
+                echo "✗ geste mutatif : relancer avec confirm=EXECUTER (mesure anti-clic accidentel)"
+                exit 1
+              fi ;;
+          esac
+          echo "garde OK : ${{ inputs.gesture }}"
+
+      - name: Notice — VM Oracle pas encore raccordée
+        if: env.ORACLE_HOST == ''
+        run: echo "::notice::VM Oracle non raccordée (secret ORACLE_HOST absent) — geste ignoré."
+
+      - name: Diagnostic AVANT (lecture seule — Caddyfile, services, script de chasse)
+        if: env.ORACLE_HOST != ''
+        env:
+          DEPLOY_USER: ${{ secrets.ORACLE_USER }}
+          SSH_KEY: ${{ secrets.ORACLE_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -m 600 /dev/null /tmp/oracle_key
+          printf '%s\n' "$SSH_KEY" > /tmp/oracle_key
+          SSH_OPTS="-i /tmp/oracle_key -o StrictHostKeyChecking=accept-new -o ConnectTimeout=20"
+          ssh $SSH_OPTS "$DEPLOY_USER@$ORACLE_HOST" bash -s <<'REMOTE'
+          set -euo pipefail
+          echo "── caddy : $(systemctl is-active caddy) ; $(caddy version 2>/dev/null || echo 'version n/a')"
+          echo "── /etc/caddy/Caddyfile (le bloc site — preuve de la config) :"
+          sudo cat /etc/caddy/Caddyfile | grep -vE '^[[:space:]]*(#|$)' | head -20
+          echo
+          echo "── services :"
+          for s in mikcloud caddy wg-quick@wg0 wg-mini; do printf '%-14s %s\n' "$s" "$(systemctl is-active $s 2>/dev/null || true)"; done
+          echo
+          echo "── script de chasse (/usr/local/bin/mikcloud-hunt-dispatch.sh) :"
+          if sudo test -f /usr/local/bin/mikcloud-hunt-dispatch.sh; then
+            sudo grep -nE 'github\.com/ftechnologies18|repos/' /usr/local/bin/mikcloud-hunt-dispatch.sh \
+              | sed -E 's/(ghp_|gho_|ghs_|github_pat_)[A-Za-z0-9_]+/\1***MASQUÉ***/g' || echo "  (aucune URL de dépôt)"
+          else
+            echo "  (absent — geste hunt_repo_url sans objet)"
+          fi
+          REMOTE
+
+      - name: "Geste caddy_alias — armer le nom d'usage API + reload + preuves"
+        if: env.ORACLE_HOST != '' && inputs.gesture == 'caddy_alias'
+        env:
+          DEPLOY_USER: ${{ secrets.ORACLE_USER }}
+          SSH_KEY: ${{ secrets.ORACLE_SSH_KEY }}
+          ALIAS: ${{ inputs.alias }}
+        run: |
+          set -euo pipefail
+          install -m 600 /dev/null /tmp/oracle_key
+          printf '%s\n' "$SSH_KEY" > /tmp/oracle_key
+          SSH_OPTS="-i /tmp/oracle_key -o StrictHostKeyChecking=accept-new -o ConnectTimeout=20"
+          ssh $SSH_OPTS "$DEPLOY_USER@$ORACLE_HOST" "ALIAS='$ALIAS' bash -s" <<'REMOTE'
+          set -euo pipefail
+          case "$ALIAS" in
+            *..*|.*|*[!a-z0-9.-]*|'') echo "✗ alias invalide : «$ALIAS»"; exit 1;;
+          esac
+          echo "── état AVANT :"
+          sudo grep -n '^[a-z0-9.-]*[[:space:]]*{' /etc/caddy/Caddyfile || true
+          if sudo grep -qE "^[a-z0-9.-]+,[[:space:]]*$ALIAS[[:space:]]*{|^[[:space:]]*[a-z0-9.-]+,[[:space:]]*$ALIAS" /etc/caddy/Caddyfile; then
+            echo "✓ $ALIAS DÉJÀ armé sur le bloc site — rien à faire"
+          else
+            STAMP=$(date -u +%Y%m%dT%H%M%SZ)
+            sudo cp -p /etc/caddy/Caddyfile "/etc/caddy/Caddyfile.bak-n319-$STAMP"
+            echo "backup : /etc/caddy/Caddyfile.bak-n319-$STAMP"
+            sudo sed -i "s/^api\.mikcloud\.ftci\.fr[[:space:]]*{/api.mikcloud.ftci.fr, $ALIAS {/" /etc/caddy/Caddyfile
+            echo "── état APRÈS :"
+            sudo grep -n '^[a-z0-9.-]*[[:space:]]*{' /etc/caddy/Caddyfile
+            sudo grep -q ", $ALIAS {" /etc/caddy/Caddyfile || { echo "✗ transformation non appliquée — rollback"; sudo cp -p "/etc/caddy/Caddyfile.bak-n319-$STAMP" /etc/caddy/Caddyfile; exit 1; }
+            echo "── validation de la config :"
+            caddy validate --config /etc/caddy/Caddyfile >/dev/null && echo "caddy validate OK"
+            sudo systemctl reload caddy
+            echo "systemctl reload caddy → $(systemctl is-active caddy)"
+          fi
+          echo
+          echo "── PREUVES ──"
+          echo "1. non-régression : https://api.mikcloud.ftci.fr/ → HTTP $(curl -sS -o /dev/null -w '%{http_code}' --max-time 20 https://api.mikcloud.ftci.fr/ || echo ÉCHEC)"
+          echo "2. nom armé dans la config adaptée : $(sudo caddy adapt --config /etc/caddy/Caddyfile --pretty 2>/dev/null | grep -c "$ALIAS") occurrence(s) de $ALIAS"
+          echo "3. journal caddy (2 min) — la tentative ACME du nouveau nom :"
+          sudo journalctl -u caddy --since "2 minutes ago" --no-pager 2>/dev/null | grep -i "$ALIAS" | tail -4 || echo "   (pas encore de ligne — l'émission sera tentée au prochain cycle)"
+          echo
+          echo "════════ RECETTE DNS PROPRIÉTAIRE (Cloudflare, zone ftci.fr) ═══════"
+          CUR_IP="$(python3 -c 'import socket; print(socket.gethostbyname("api.mikcloud.ftci.fr"))')"
+          echo "  A    $ALIAS  →  $CUR_IP   (DNS only — nuage GRIS, miroir de api.mikcloud.ftci.fr)"
+          echo "  Puis : le certificat ACME se fait SEUL (minutes, cf. journal caddy),"
+          echo "  preuve : curl -sI https://$ALIAS/ → HTTP 200."
+          echo "  SEULEMENT ALORS : bascule env NEXT_PUBLIC_API_BASE (Vercel) — jamais avant."
+          echo "════════════════════════════════════════════════════════════════════"
+          REMOTE
+
+      - name: "Geste hunt_repo_url — rebaser l'URL du dépôt (après renommage GitHub)"
+        if: env.ORACLE_HOST != '' && inputs.gesture == 'hunt_repo_url'
+        env:
+          DEPLOY_USER: ${{ secrets.ORACLE_USER }}
+          SSH_KEY: ${{ secrets.ORACLE_SSH_KEY }}
+          REPO_URL: ${{ inputs.repo_url }}
+        run: |
+          set -euo pipefail
+          install -m 600 /dev/null /tmp/oracle_key
+          printf '%s\n' "$SSH_KEY" > /tmp/oracle_key
+          SSH_OPTS="-i /tmp/oracle_key -o StrictHostKeyChecking=accept-new -o ConnectTimeout=20"
+          ssh $SSH_OPTS "$DEPLOY_USER@$ORACLE_HOST" "REPO_URL='$REPO_URL' bash -s" <<'REMOTE'
+          set -euo pipefail
+          HUNT=/usr/local/bin/mikcloud-hunt-dispatch.sh
+          if ! sudo test -f "$HUNT"; then echo "script absent — geste sans objet"; exit 0; fi
+          if ! sudo grep -q 'ftechnologies18/mikcloud' "$HUNT"; then
+            echo "✓ aucune référence à ftechnologies18/mikcloud — rien à faire :"
+            sudo grep -nE 'github\.com/ftechnologies18|repos/' "$HUNT" \
+              | sed -E 's/(ghp_|gho_|ghs_|github_pat_)[A-Za-z0-9_]+/\1***MASQUÉ***/g' || true
+            exit 0
+          fi
+          STAMP=$(date -u +%Y%m%dT%H%M%SZ)
+          sudo cp -p "$HUNT" "$HUNT.bak-n319-$STAMP"
+          echo "backup : $HUNT.bak-n319-$STAMP"
+          sudo sed -i "s|ftechnologies18/mikcloud|$REPO_URL|g" "$HUNT"
+          echo "── références APRÈS (jetons masqués) :"
+          sudo grep -nE 'github\.com/ftechnologies18|repos/' "$HUNT" \
+            | sed -E 's/(ghp_|gho_|ghs_|github_pat_)[A-Za-z0-9_]+/\1***MASQUÉ***/g'
+          sudo grep -q 'ftechnologies18/mikcloud' "$HUNT" && { echo "✗ référence restante — rollback"; sudo cp -p "$HUNT.bak-n319-$STAMP" "$HUNT"; exit 1; }
+          echo "✓ script de chasse rebasé sur $REPO_URL"
+          REMOTE
+
+      - name: Résumé
+        if: always()
+        run: |
+          {
+            echo "### ops-vm-rebrand — ${{ inputs.gesture }}"
+            echo "- alias armé : \`${{ inputs.alias }}\` (si caddy_alias)"
+            echo "- repo cible : \`${{ inputs.repo_url }}\` (si hunt_repo_url)"
+            echo "- backups : Caddyfile.bak-n319-* / mikcloud-hunt-dispatch.sh.bak-n319-* (rollback = copie inverse)"
+          } >> "$GITHUB_STEP_SUMMARY"

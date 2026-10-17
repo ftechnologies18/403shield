@@ -1,0 +1,246 @@
+name: ops-rebrand-db
+
+# ═══ N°319 — LIBELLÉS DB + OUVERTURE DE LA VITRINE B2C, PAR L'API DE L'APP ═══
+# (le « renommable en 10 s depuis la console », automatisé)
+#
+# Contexte : la phase 2 du rebrand (N°318) a mis les DÉFAUTS DE CODE à
+# 403Shield, mais les LIBELLÉS STOCKÉS EN BASE par l'era MikCloud restent
+# d'époque (docs/MARQUE-403SHIELD.md §6 : « renommables depuis la console »).
+# Ce workflow exécute exactement les gestes que la console super-admin
+# ferait — pas de migration de schéma, pas de colonne nouvelle :
+#
+#   1. INVENTORY (défaut, lecture seule) : platform settings via l'API
+#      admin + libellés stockés via psql (tenant_name, plan_name,
+#      accounts.name, occurrences de marque d'époque) + vitrine publique ;
+#   2. EXECUTER (confirm=EXECUTER) :
+#      a. SQL chirurgical REPLACE('MikCloud'→'403Shield') sur
+#         settings.tenant_name / settings.plan_name / accounts.name —
+#         backup intégral des lignes AVANT remplacement (table
+#         ops_rebrand_backup, rollback = UPDATE depuis old JSONB) ;
+#      b. POST /api/admin/reload — usage documenté du handler : réimporte
+#         l'état PG en mémoire (la synchro différentielle repart alors de
+#         ces valeurs — JAMAIS de SQL sans reload, syncSettings écraserait) ;
+#      c. PUT /api/admin/platform/settings {name, publicVpnShop} — LE geste
+#         console : nom de plateforme + OUVERTURE DE LA VITRINE B2C
+#         (rappel N°316 — doctrine D6 : l'ouverture est un geste délibéré
+#         de l'exploitant, ordonné ici par le propriétaire).
+#
+# Authentification : session admin plateforme sur 127.0.0.1:4000 avec
+# ADMIN_PASSWORD de /etc/mikcloud/mikcloud.env — le mot de passe et le JWT
+# ne sont JAMAIS affichés (extraction en variable, corps masqué).
+#
+# Pièges respectés : DSN jamais affiché ; psql -X -v ON_ERROR_STOP=1 ;
+# TRANSACTION unique pour le geste SQL ; l'ordre SQL → reload → PUT est
+# imposé (un PUT avant le reload serait réimporté puis ré-écrit — inutile) ;
+# preuve finale DEPUIS LE RUNNER sur l'URL publique (le juge de paix).
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "inventory (lecture seule) | executer (gestes + preuves)"
+        type: choice
+        default: "inventory"
+        options:
+          - inventory
+          - executer
+      platform_name:
+        description: "Nom de plateforme cible (geste console)"
+        required: false
+        default: "403Shield"
+      tenant_label:
+        description: "Remplacement appliqué : MikCloud → cette valeur (tenant/comptes/plans)"
+        required: false
+        default: "403Shield"
+      open_shop:
+        description: "Ouvrir la vitrine B2C PublicVpnShop ?"
+        type: choice
+        default: "oui"
+        options:
+          - oui
+          - non
+      confirm:
+        description: "Taper EXECUTER pour autoriser le mode executer"
+        type: string
+        default: ""
+
+permissions: {}
+
+concurrency:
+  group: ops-rebrand-db
+  cancel-in-progress: false
+
+jobs:
+  gestures:
+    name: "DB — ${{ inputs.mode }}"
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      ORACLE_HOST: ${{ secrets.ORACLE_HOST }}
+    steps:
+      - name: Garde — confirmation pour le mode mutatif
+        run: |
+          set -euo pipefail
+          if [ '${{ inputs.mode }}' = 'executer' ] && [ '${{ inputs.confirm }}' != 'EXECUTER' ]; then
+            echo "✗ mode executer : relancer avec confirm=EXECUTER (mesure anti-clic accidentel)"
+            exit 1
+          fi
+          echo "garde OK : mode ${{ inputs.mode }}"
+
+      - name: Notice — VM Oracle pas encore raccordée
+        if: env.ORACLE_HOST == ''
+        run: echo "::notice::VM Oracle non raccordée (secret ORACLE_HOST absent) — geste ignoré."
+
+      - name: Session admin + inventaire + gestes (SSH, tout sur la VM)
+        if: env.ORACLE_HOST != ''
+        env:
+          DEPLOY_USER: ${{ secrets.ORACLE_USER }}
+          SSH_KEY: ${{ secrets.ORACLE_SSH_KEY }}
+          MODE: ${{ inputs.mode }}
+          PLATFORM_NAME: ${{ inputs.platform_name }}
+          TENANT_LABEL: ${{ inputs.tenant_label }}
+          OPEN_SHOP: ${{ inputs.open_shop }}
+        run: |
+          set -euo pipefail
+          install -m 600 /dev/null /tmp/oracle_key
+          printf '%s\n' "$SSH_KEY" > /tmp/oracle_key
+          SSH_OPTS="-i /tmp/oracle_key -o StrictHostKeyChecking=accept-new -o ConnectTimeout=20"
+          ssh $SSH_OPTS "$DEPLOY_USER@$ORACLE_HOST" \
+            "MODE='$MODE' PLATFORM_NAME='$PLATFORM_NAME' TENANT_LABEL='$TENANT_LABEL' OPEN_SHOP='$OPEN_SHOP' bash -s" <<'REMOTE'
+          set -euo pipefail
+          ENV_FILE=/etc/mikcloud/mikcloud.env
+          API=http://127.0.0.1:4000
+
+          echo "── 0. santé backend"
+          curl -fsS -o /dev/null --max-time 20 "$API/" && echo "backend OK (GET / → 200)"
+
+          echo
+          echo "── 1. session admin plateforme (ADMIN_PASSWORD de l'env — jamais affichée)"
+          ADMIN_PW="$(sudo grep -E '^ADMIN_PASSWORD=' "$ENV_FILE" | head -1 | cut -d= -f2-)"
+          if [ -z "$ADMIN_PW" ]; then echo "✗ ADMIN_PASSWORD absente de $ENV_FILE"; exit 1; fi
+          LOGIN_BODY="$(PW="$ADMIN_PW" python3 -c 'import json,os; print(json.dumps({"username":"admin","password":os.environ["PW"]}))')"
+          LOGIN="$(curl -sS --max-time 20 -X POST "$API/api/auth/login" -H 'Content-Type: application/json' -d "$LOGIN_BODY")"
+          TOKEN="$(printf '%s' "$LOGIN" | grep -o '"token":"[^"]*"' | head -1 | cut -d'"' -f4)"
+          if [ -z "$TOKEN" ]; then
+            echo "✗ login admin échoué :"
+            printf '%s' "$LOGIN" | head -c 300; echo
+            case "$LOGIN" in *totp_required*) echo "→ 2FA TOTP active : fournir le code exige la console — geste NON automatisable.";; esac
+            exit 1
+          fi
+          echo "session admin OK (JWT en mémoire, non affiché)"
+          AUTH="Authorization: Bearer $TOKEN"
+
+          echo
+          echo "── 2. INVENTAIRE (lecture seule)"
+          echo "a) platform settings (API admin) :"
+          curl -sS --max-time 20 -H "$AUTH" "$API/api/admin/platform/settings" | python3 -m json.tool
+          DSN="$(sudo grep -E '^DATABASE_URL=' "$ENV_FILE" | head -1 | cut -d= -f2-)"
+          if [ -z "$DSN" ]; then echo "✗ DATABASE_URL absente de $ENV_FILE"; exit 1; fi
+          echo "b) libellés stockés (psql lecture seule — DSN jamais affiché) :"
+          psql "$DSN" -X -v ON_ERROR_STOP=1 -P pager=off <<'SQL'
+          \echo === settings (une ligne par compte SaaS) ===
+          SELECT id, tenant_name, platform_name, plan_name, platform_public_vpn_shop FROM settings ORDER BY id;
+          \echo === accounts ===
+          SELECT id, name, status, usage FROM accounts ORDER BY id;
+          \echo === occurrences de marque d'époque (colonnes libellés) ===
+          SELECT 'settings.tenant_name' AS colonne, id AS row_id, tenant_name AS valeur FROM settings WHERE tenant_name ~* 'mikcloud|miktunnel'
+          UNION ALL
+          SELECT 'settings.plan_name', id, plan_name FROM settings WHERE plan_name ~* 'mikcloud|miktunnel'
+          UNION ALL
+          SELECT 'accounts.name', id, name FROM accounts WHERE name ~* 'mikcloud|miktunnel';
+          SQL
+          echo "c) vitrine publique (depuis la VM, comme un client) :"
+          curl -sS --max-time 20 "$API/api/public/vpn/offers" | head -c 400; echo
+
+          if [ "$MODE" != "executer" ]; then
+            echo
+            echo "── mode inventory : fin (aucune écriture). Relancer mode=executer + confirm=EXECUTER pour poser les gestes."
+            exit 0
+          fi
+
+          echo
+          echo "── 3. GESTE a — SQL chirurgical (backup intégral, transaction unique)"
+          psql "$DSN" -X -v ON_ERROR_STOP=1 -P pager=off <<SQL
+          BEGIN;
+          CREATE TABLE IF NOT EXISTS ops_rebrand_backup (
+                  moment   TEXT NOT NULL DEFAULT to_char(now() AT TIME ZONE 'utc', 'YYYY-MM-DD"T"HH24:MI:SS"Z"'),
+                  table_src TEXT NOT NULL,
+                  row_id    TEXT NOT NULL,
+                  old       JSONB NOT NULL);
+          INSERT INTO ops_rebrand_backup (table_src, row_id, old)
+                  SELECT 'settings.tenant_name', id, to_jsonb(s) FROM settings s
+                  WHERE s.tenant_name ~* 'mikcloud|miktunnel';
+          INSERT INTO ops_rebrand_backup (table_src, row_id, old)
+                  SELECT 'settings.plan_name', id, to_jsonb(s) FROM settings s
+                  WHERE s.plan_name ~* 'mikcloud|miktunnel';
+          INSERT INTO ops_rebrand_backup (table_src, row_id, old)
+                  SELECT 'accounts.name', id, to_jsonb(a) FROM accounts a
+                  WHERE a.name ~* 'mikcloud|miktunnel';
+          UPDATE settings SET tenant_name = regexp_replace(tenant_name, 'MikCloud', '$TENANT_LABEL', 'g'),
+                              plan_name   = regexp_replace(plan_name,   'MikCloud', '$TENANT_LABEL', 'g')
+                  WHERE tenant_name ~* 'mikcloud' OR plan_name ~* 'mikcloud';
+          UPDATE settings SET tenant_name = regexp_replace(tenant_name, 'MikTunnel', '$TENANT_LABEL', 'g'),
+                              plan_name   = regexp_replace(plan_name,   'MikTunnel', '$TENANT_LABEL', 'g')
+                  WHERE tenant_name ~* 'miktunnel' OR plan_name ~* 'miktunnel';
+          UPDATE accounts SET name = regexp_replace(name, 'MikCloud', '$TENANT_LABEL', 'g')
+                  WHERE name ~* 'mikcloud';
+          UPDATE accounts SET name = regexp_replace(name, 'MikTunnel', '$TENANT_LABEL', 'g')
+                  WHERE name ~* 'miktunnel';
+          \echo === lignes sauvegardées ===
+          SELECT table_src, row_id, moment FROM ops_rebrand_backup ORDER BY moment DESC, table_src LIMIT 30;
+          \echo === état APRÈS ===
+          SELECT id, tenant_name, plan_name FROM settings ORDER BY id;
+          SELECT id, name FROM accounts ORDER BY id;
+          COMMIT;
+          SQL
+
+          echo
+          echo "── 3. GESTE b — POST /api/admin/reload (réimport PG → mémoire)"
+          RELOAD="$(curl -sS --max-time 60 -X POST "$API/api/admin/reload" -H "$AUTH")"
+          echo "$RELOAD" | head -c 300; echo
+
+          echo
+          echo "── 3. GESTE c — PUT platform settings (LE geste console : nom + vitrine)"
+          if [ "$OPEN_SHOP" = "oui" ]; then SHOP_JSON='true'; else SHOP_JSON='false'; fi
+          PUT_BODY="$(PN="$PLATFORM_NAME" SH="$SHOP_JSON" python3 -c 'import json,os; print(json.dumps({"name":os.environ["PN"],"publicVpnShop":os.environ["SH"]=="true"}))')"
+          PUT_HTTP="$(curl -sS --max-time 20 -o /tmp/put.json -w '%{http_code}' \
+            -X PUT "$API/api/admin/platform/settings" -H "$AUTH" -H 'Content-Type: application/json' -d "$PUT_BODY")"
+          echo "PUT /api/admin/platform/settings → HTTP $PUT_HTTP"
+          cat /tmp/put.json; echo
+          [ "$PUT_HTTP" = "200" ] || { echo "✗ geste console rejeté"; exit 1; }
+
+          echo
+          echo "── 4. PREUVES (relectures)"
+          echo "a) platform settings APRÈS :"
+          curl -sS --max-time 20 -H "$AUTH" "$API/api/admin/platform/settings" | python3 -m json.tool
+          echo "b) vitrine publique APRÈS :"
+          curl -sS --max-time 20 "$API/api/public/vpn/offers" | python3 -m json.tool | head -40
+          REMOTE
+
+      - name: Preuve externe — l'URL publique parle (le juge de paix)
+        if: env.ORACLE_HOST != '' && inputs.mode == 'executer'
+        run: |
+          set -euo pipefail
+          sleep 3
+          echo "── GET https://api.mikcloud.ftci.fr/api/public/vpn/offers ──"
+          BODY="$(curl -sS --max-time 25 https://api.mikcloud.ftci.fr/api/public/vpn/offers)"
+          echo "$BODY" | jq .
+          ENABLED="$(echo "$BODY" | jq -r '.enabled // false')"
+          LABELS="$(echo "$BODY" | jq -r '[.plans[]?.label] | join(" | ")')"
+          echo "enabled : $ENABLED · labels : ${LABELS:-—}"
+          if [ '${{ inputs.open_shop }}' = 'oui' ]; then
+            [ "$ENABLED" = "true" ] || { echo "✗ vitrine toujours fermée"; exit 1; }
+            case "$LABELS" in *MikCloud*|*MikTunnel*) echo "✗ libellé d'époque dans le catalogue"; exit 1;; esac
+            echo "✓ VITRINE B2C OUVERTE en production — catalogue 403Shield servi."
+          fi
+
+      - name: Résumé
+        if: always()
+        run: |
+          {
+            echo "### ops-rebrand-db — ${{ inputs.mode }}"
+            echo "- platform_name : \`${{ inputs.platform_name }}\`"
+            echo "- remplacement libellés : MikCloud/MikTunnel → \`${{ inputs.tenant_label }}\`"
+            echo "- vitrine B2C : \`${{ inputs.open_shop }}\`"
+            echo "- backup : table \`ops_rebrand_backup\` (rollback documenté dans le README du workflow)"
+          } >> "$GITHUB_STEP_SUMMARY"

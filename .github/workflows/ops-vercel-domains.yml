@@ -1,0 +1,207 @@
+name: ops-vercel-domains
+
+# ═══ N°319 — BOÎTE À OUTILS DOMAINES VERCEL, PILOTÉE DEPUIS LE COFFRE GITHUB ═══
+#
+# Contexte : docs/MARQUE-403SHIELD.md §6 laissait à la main du propriétaire
+# le domaine console.403shield.ftci.fr (« même recette en 4 gestes :
+# DNS → Vercel → CORS → 301 »). Le token Cloudflare DNS de la session N°318
+# ne vit que dans le canal conversation (perdu entre sessions) — mais le
+# token Vercel est DANS le coffre GitHub (secret VERCEL_TOKEN, posé N°269 —
+# cf. docs/RUNBOOK-SECRETS.md §1). Ce workflow automatise donc les gestes
+# VERCEL de la recette ; le geste DNS (Cloudflare) et le 301 (à poser
+# seulement une fois la cible vivante) restent documentés avec leurs
+# valeurs EXACTES.
+#
+#   action=attach   : ajoute le domaine au projet (idempotent — 409 = déjà
+#                     attaché → état affiché) et IMPRIME LA RECETTE DNS
+#                     EXACTE (TXT de vérification + CNAME → cname.vercel-dns.com
+#                     en DNS only — miroir du schéma tunnel.ftci.fr N°318) ;
+#   action=status   : état du domaine (vérification, redirection, cert) ;
+#   action=redirect : pose la 301 (confirm=EXECUTER requis) — REFUSE tant
+#                     que la cible ne répond pas 200 (leçon N°318 : jamais
+#                     de 301 vers un domaine pas encore en ligne — la vitrine
+#                     deviendrait injoignable).
+#
+# Sécurité : le token ne circule qu'en en-tête Authorization (jamais affiché,
+# jamais dans un log) ; les réponses Vercel ci-dessous ne contiennent aucun
+# secret ; workflow_dispatch UNIQUEMENT, permissions vides.
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: "Geste : status | attach | redirect"
+        type: choice
+        default: "status"
+        options:
+          - status
+          - attach
+          - redirect
+      project:
+        description: "Nom (ou ID) du projet Vercel — ex. 403shield-console"
+        required: true
+      domain:
+        description: "Domaine — ex. console.403shield.ftci.fr"
+        required: true
+      redirect_to:
+        description: "Cible du 301 (action=redirect) — ex. https://console.403shield.ftci.fr"
+        required: false
+        default: ""
+      confirm:
+        description: "Taper EXECUTER pour autoriser action=redirect"
+        type: string
+        default: ""
+
+permissions: {}
+
+concurrency:
+  group: ops-vercel-domains
+  cancel-in-progress: false
+
+jobs:
+  vercel:
+    name: "Vercel — ${{ inputs.action }}"
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+    steps:
+      - name: Garde — saisies et confirmation
+        run: |
+          set -euo pipefail
+          ACTION='${{ inputs.action }}'
+          PROJECT='${{ inputs.project }}'
+          DOMAIN='${{ inputs.domain }}'
+          echo "geste : $ACTION · projet : $PROJECT · domaine : $DOMAIN"
+          case "$DOMAIN" in
+            *..*|.*|*[!a-z0-9.-]*|'') echo "✗ domaine invalide : «$DOMAIN»"; exit 1;;
+          esac
+          case "$ACTION" in
+            redirect)
+              TO='${{ inputs.redirect_to }}'
+              if [ '${{ inputs.confirm }}' != 'EXECUTER' ]; then
+                echo "✗ geste mutatif : relancer avec confirm=EXECUTER (mesure anti-clic accidentel)"
+                exit 1
+              fi
+              case "$TO" in https://*) ;; *) echo "✗ redirect_to doit être une URL https:// absolue"; exit 1;; esac
+              ;;
+          esac
+
+      - name: Équipe + projet (découverte, lecture seule)
+        run: |
+          set -euo pipefail
+          # Team : le token peut être scopé équipe (FTech CI) — auto-détection,
+          # les projets vivent alors sous ?teamId=.
+          TEAMS_JSON="$(curl -sS --max-time 30 \
+            -H "Authorization: Bearer $VERCEL_TOKEN" https://api.vercel.com/v2/teams)" || true
+          TEAM_ID="$(printf '%s' "$TEAMS_JSON" | jq -r '.teams[0].id // empty' 2>/dev/null || true)"
+          if [ -n "$TEAM_ID" ]; then
+            TEAM_Q="?teamId=$TEAM_ID"
+            TEAM_NAME="$(printf '%s' "$TEAMS_JSON" | jq -r '.teams[0].name // empty')"
+            echo "équipe détectée : $TEAM_NAME ($TEAM_ID)"
+          else
+            TEAM_Q=""
+            echo "portée personnelle (aucune équipe dans /v2/teams)"
+          fi
+          echo "TEAM_Q=$TEAM_Q" >> "$GITHUB_ENV"
+          # Projet par nom ou par ID.
+          PROJ='${{ inputs.project }}'
+          PROJ_JSON="$(curl -sS --max-time 30 \
+            -H "Authorization: Bearer $VERCEL_TOKEN" "https://api.vercel.com/v9/projects/$PROJ$TEAM_Q")"
+          PROJ_ID="$(printf '%s' "$PROJ_JSON" | jq -r '.id // empty' 2>/dev/null || true)"
+          if [ -z "$PROJ_ID" ] || [ "$PROJ_ID" = "null" ]; then
+            echo "✗ projet introuvable : $PROJ"
+            printf '%s' "$PROJ_JSON" | head -c 400; echo
+            exit 1
+          fi
+          echo "projet : $PROJ → $PROJ_ID"
+          echo "PROJ_ID=$PROJ_ID" >> "$GITHUB_ENV"
+
+      - name: Attach — domaine au projet + RECETTE DNS EXACTE
+        if: inputs.action == 'attach'
+        run: |
+          set -euo pipefail
+          DOMAIN='${{ inputs.domain }}'
+          CODE="$(curl -sS --max-time 30 -o /tmp/domain.json -w '%{http_code}' \
+            -X POST "https://api.vercel.com/v10/projects/$PROJ_ID/domains$TEAM_Q" \
+            -H "Authorization: Bearer $VERCEL_TOKEN" -H "Content-Type: application/json" \
+            -d "{\"name\":\"$DOMAIN\"}")"
+          if [ "$CODE" = "409" ]; then
+            echo "── domaine DÉJÀ attaché au projet — état courant ──"
+            CODE="$(curl -sS --max-time 30 -o /tmp/domain.json -w '%{http_code}' \
+              -H "Authorization: Bearer $VERCEL_TOKEN" \
+              "https://api.vercel.com/v10/projects/$PROJ_ID/domains/$DOMAIN$TEAM_Q")"
+          elif [ "$CODE" != "200" ] && [ "$CODE" != "201" ]; then
+            echo "✗ HTTP $CODE"; cat /tmp/domain.json; exit 1
+          fi
+          echo "── état du domaine (réponse Vercel — rien de secret) ──"
+          jq . /tmp/domain.json
+          echo
+          echo "════════ RECETTE DNS PROPRIÉTAIRE (Cloudflare, zone ftci.fr) ═══════"
+          VERIF_COUNT="$(jq -r '.verification | length' /tmp/domain.json 2>/dev/null || echo 0)"
+          if [ "${VERIF_COUNT:-0}" -gt 0 ] 2>/dev/null; then
+            jq -r '.verification[] | "1. TXT   \(.name // .recordName // "?")  →  \(.value // "?")"' /tmp/domain.json
+          else
+            echo "1. TXT de vérification : AUCUNE demandée (domaine déjà vérifié)"
+          fi
+          echo "2. CNAME  $DOMAIN  →  cname.vercel-dns.com   (DNS only — nuage GRIS)"
+          echo
+          echo "Puis (aucune urgence, minutes) : la vérification Vercel se fait"
+          echo "seule dès les records posés. Contrôler :"
+          echo "  - ce workflow, action=status ;"
+          echo "  - curl -sI https://$DOMAIN → HTTP 200 + certificat émis ;"
+          echo "  - SEULEMENT ALORS action=redirect (confirm=EXECUTER) : 301 de"
+          echo "    l'ancien domaine → https://$DOMAIN (leçon N°318 : jamais avant,"
+          echo "    sinon la vitrine devient injoignable)."
+          echo "════════════════════════════════════════════════════════════════════"
+
+      - name: Status — état du domaine
+        if: inputs.action == 'status'
+        run: |
+          set -euo pipefail
+          DOMAIN='${{ inputs.domain }}'
+          CODE="$(curl -sS --max-time 30 -o /tmp/domain.json -w '%{http_code}' \
+            -H "Authorization: Bearer $VERCEL_TOKEN" \
+            "https://api.vercel.com/v10/projects/$PROJ_ID/domains/$DOMAIN$TEAM_Q")"
+          echo "HTTP $CODE"
+          jq . /tmp/domain.json
+          echo "redirect     : $(jq -r '.redirect // "(aucune)"' /tmp/domain.json)"
+          echo "redirectCode : $(jq -r '.redirectStatusCode // "-"' /tmp/domain.json)"
+          echo "vérification : $(jq -r 'if (.verification // []) | length > 0 then (.verification | tostring) else "vérifié (aucune demandée)" end' /tmp/domain.json)"
+          [ "$CODE" = "200" ] || exit 1
+
+      - name: Redirect — la 301 (cible vivante exigée, puis preuve)
+        if: inputs.action == 'redirect'
+        run: |
+          set -euo pipefail
+          DOMAIN='${{ inputs.domain }}'
+          TO='${{ inputs.redirect_to }}'
+          # Leçon N°318 : JAMAIS de 301 vers une cible pas encore vivante.
+          LIVE="$(curl -sS -o /dev/null -w '%{http_code}' --max-time 25 "$TO" || true)"
+          echo "cible $TO → HTTP ${LIVE:-injoignable}"
+          [ "$LIVE" = "200" ] || { echo "✗ la cible ne répond pas 200 — poser le DNS d'abord, puis vérifier (action=status)"; exit 1; }
+          CODE="$(curl -sS --max-time 30 -o /tmp/domain.json -w '%{http_code}' \
+            -X PATCH "https://api.vercel.com/v10/projects/$PROJ_ID/domains/$DOMAIN$TEAM_Q" \
+            -H "Authorization: Bearer $VERCEL_TOKEN" -H "Content-Type: application/json" \
+            -d "{\"redirect\":\"$TO\",\"redirectStatusCode\":301}")"
+          echo "PATCH HTTP $CODE"
+          jq . /tmp/domain.json
+          [ "$CODE" = "200" ] || exit 1
+          # PREUVE (juge de paix) : le domaine répond désormais 301 → cible.
+          sleep 5
+          PROOF="$(curl -sS -o /dev/null -w '%{http_code} → %{redirect_url}' --max-time 25 "https://$DOMAIN/" || true)"
+          echo "PREUVE : https://$DOMAIN/ → $PROOF"
+          case "$PROOF" in
+            "301"*) echo "✓ 301 en place (chemins + query préservés par Vercel)";;
+            *) echo "⚠ propagation edge Vercel en cours — re-vérifier dans ~1 min";;
+          esac
+
+      - name: Résumé
+        if: always()
+        run: |
+          {
+            echo "### ops-vercel-domains — ${{ inputs.action }}"
+            echo "- projet : \`${{ inputs.project }}\` (\`${PROJ_ID:-?}\`)"
+            echo "- domaine : \`${{ inputs.domain }}\`"
+            echo "- redirect_to : \`${{ inputs.redirect_to || '—' }}\`"
+          } >> "$GITHUB_STEP_SUMMARY"
