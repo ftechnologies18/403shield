@@ -53,16 +53,24 @@ const (
 	PublicVpnOrderExpired     = "expired"
 )
 
-// Genres de commande (N°314) : « sale » = achat classique (nouvel appareil
+// Genres de commande : « sale » = achat classique (nouvel appareil
 // provisionné) ; « renewal » = renouvellement d'une commande EXISTANTE —
 // à la confirmation du paiement, la cible (RenewTargetRef) voit son échéance
 // étendue au lieu qu'un nouveau peer soit posé (l'appareil et sa conf sont
 // conservés, c'est l'argument du renouvellement 1-clic). Si la cible est
 // morte au moment du paiement (révoquée par le balayage entre-temps), la
 // renewal DÉGÉNÈRE honnêtement en vente : nouveau peer, conf neuve livrée.
+// N°315 — « pro » = Accès Pro (LAN étendu, D-T4/D-B1) : un peer « remote »
+// SUPERVISION posé sous le COMPTE GÉRANT apparié par e-mail (isolation
+// multi-tenant D-B2 automatique : les routeurs du compte acceptent les
+// peers du compte et RIEN d'autre), avec extension du routage vers le LAN
+// du routeur (caméras/NAS) dès que le sous-réseau est détecté. Le genre
+// porte la FAMILLE de formule (plan Family « pro ») : la vitrine /vpn ne
+// vend JAMAIS de formule pro (famille b2c exclusivement — doctrine N°301).
 const (
 	PublicVpnKindSale    = "sale"
 	PublicVpnKindRenewal = "renewal"
+	PublicVpnKindPro     = "pro"
 )
 
 // PublicVpnOrder — ligne du registre des commandes B2C (table
@@ -139,20 +147,41 @@ type PublicVpnPlan struct {
 	Months      int    `json:"months"`
 	// BaseFcfa — net cible plateforme (prix catalogue).
 	BaseFcfa int `json:"baseFcfa"`
+	// Family — N°315 — famille de formule : "b2c" (vitrine /vpn — VPN
+	// fulltunnel au client final, doctrine « jamais en concurrence avec ses
+	// revendeurs ») | "pro" (Accès MikTunnel — peer remote supervision + LAN
+	// étendu, vendu depuis la console MikTunnel UNIQUEMENT : le canal est
+	// séparé, la famille aussi — la vitrine REFUSE les formules pro et la
+	// console Pro refuse les formules b2c, garde aux deux bords).
+	Family string `json:"family"`
 }
 
 // IDs de formules (stables — persistés sur les commandes).
 const (
 	PublicVpnPlanMonthID = "vpn-b2c-month"
 	PublicVpnPlanYearID  = "vpn-b2c-year"
+	// N°315 — Accès Pro (console MikTunnel, famille « pro »).
+	PublicVpnProPlanMonthID = "vpn-pro-month"
+	PublicVpnProPlanYearID  = "vpn-pro-year"
+)
+
+// Familles de formules (N°315) : "b2c" (vitrine) | "pro" (console MikTunnel).
+const (
+	PublicVpnPlanFamilyB2C = "b2c"
+	PublicVpnPlanFamilyPro = "pro"
 )
 
 // PublicVpnPlans — catalogue de la vitrine : VPN mensuel et annuel
 // (fulltunnel, sortie par la VM — IP fixe FR). Le prix annuel offre ~2 mois
 // offerts par rapport au mensuel (discipline SaasPlans).
 var PublicVpnPlans = []PublicVpnPlan{
-	{ID: PublicVpnPlanMonthID, Label: "MikCloud VPN Mensuel", PeriodLabel: "1 mois", Months: 1, BaseFcfa: 1500},
-	{ID: PublicVpnPlanYearID, Label: "MikCloud VPN Annuel", PeriodLabel: "12 mois", Months: 12, BaseFcfa: 15000},
+	{ID: PublicVpnPlanMonthID, Label: "MikCloud VPN Mensuel", PeriodLabel: "1 mois", Months: 1, BaseFcfa: 1500, Family: PublicVpnPlanFamilyB2C},
+	{ID: PublicVpnPlanYearID, Label: "MikCloud VPN Annuel", PeriodLabel: "12 mois", Months: 12, BaseFcfa: 15000, Family: PublicVpnPlanFamilyB2C},
+	// N°315 — Accès Pro MikTunnel : peer remote (supervision des routeurs du
+	// compte) + LAN étendu (caméras/NAS) dès détection. Prix premium vs B2C
+	// (produit B2Pro), même discipline annuelle (~2 mois offerts).
+	{ID: PublicVpnProPlanMonthID, Label: "MikTunnel Pro Mensuel", PeriodLabel: "1 mois", Months: 1, BaseFcfa: 3500, Family: PublicVpnPlanFamilyPro},
+	{ID: PublicVpnProPlanYearID, Label: "MikTunnel Pro Annuel", PeriodLabel: "12 mois", Months: 12, BaseFcfa: 35000, Family: PublicVpnPlanFamilyPro},
 }
 
 // ResolvePublicVpnPlan — formule par ID (nil si inconnue).
@@ -163,6 +192,17 @@ func ResolvePublicVpnPlan(id string) *PublicVpnPlan {
 		}
 	}
 	return nil
+}
+
+// PublicVpnPlanFamilyOf — famille de la formule portée par une commande
+// (N°315) : les commandes antérieures portent des IDs b2c — défaut « b2c »
+// (jamais "pro" par accident : une famille inconnue ne peut pas ouvrir le
+// canal Pro).
+func PublicVpnPlanFamilyOf(planID string) string {
+	if p := ResolvePublicVpnPlan(planID); p != nil && p.Family != "" {
+		return p.Family
+	}
+	return PublicVpnPlanFamilyB2C
 }
 
 // ---------------------------------------------------------------------------

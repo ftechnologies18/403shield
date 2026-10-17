@@ -333,10 +333,12 @@ func TestTunnelMe(t *testing.T) {
 		t.Fatalf("réponse illisible : %v", err)
 	}
 	// N°314 — contrat phase2 : portfolio enrichi (kind, drapeaux d'action,
-	// compte d'appareils). La commande de test n'a PAS de PeerID → appareil
-	// incomplet : renewable faux, revealable faux, devices 0 — le drapeau
-	// reste honnête tant que le peer n'existe pas.
-	if out.Client["email"] != "ali@example.com" || out.Scope != "phase2" {
+	// compte d'appareils). N°315 — contrat phase3 : + famille de formule
+	// (b2c|pro — la console propose les BONNES formules de renouvellement).
+	// La commande de test n'a PAS de PeerID → appareil incomplet : renewable
+	// faux, revealable faux, devices 0 — le drapeau reste honnête tant que le
+	// peer n'existe pas.
+	if out.Client["email"] != "ali@example.com" || out.Scope != "phase3" {
 		t.Fatalf("client/scope inattendus : %+v", out)
 	}
 	if len(out.Orders) != 1 || out.Orders[0]["ref"] != "MCV-AAAA1111" {
@@ -344,6 +346,9 @@ func TestTunnelMe(t *testing.T) {
 	}
 	if out.Orders[0]["kind"] != "" || out.Orders[0]["renewTargetRef"] != "" {
 		t.Fatalf("genre de commande inattendu (sale implicite) : %+v", out.Orders[0])
+	}
+	if out.Orders[0]["family"] != model.PublicVpnPlanFamilyB2C {
+		t.Fatalf("famille de formule inattendue (b2c attendu pour un plan vitrine) : %+v", out.Orders[0])
 	}
 	if out.Orders[0]["renewable"] != false || out.Orders[0]["revealable"] != false {
 		t.Fatalf("drapeaux d'action inattendus sans peer lié : %+v", out.Orders[0])

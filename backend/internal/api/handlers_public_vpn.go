@@ -69,6 +69,12 @@ func (a *API) handlePublicVpnOffers(w http.ResponseWriter, r *http.Request) {
 	plans := make([]map[string]any, 0, len(model.PublicVpnPlans))
 	for i := range model.PublicVpnPlans {
 		p := model.PublicVpnPlans[i]
+		// N°315 — la vitrine /vpn ne montre QUE la famille b2c : les
+		// formules Pro vivent dans la console MikTunnel (canal et
+		// famille verrouillés aux deux bords — doctrine N°301).
+		if p.Family != model.PublicVpnPlanFamilyB2C {
+			continue
+		}
 		pr := payPricingOf(p.BaseFcfa)
 		plans = append(plans, map[string]any{
 			"id": p.ID, "label": p.Label, "periodLabel": p.PeriodLabel, "months": p.Months,
@@ -122,6 +128,14 @@ func (a *API) handlePublicVpnOrderCreate(w http.ResponseWriter, r *http.Request)
 	plan := model.ResolvePublicVpnPlan(strings.TrimSpace(req.PlanID))
 	if plan == nil {
 		writeErr(w, http.StatusBadRequest, "Formule inconnue")
+		return
+	}
+	// N°315 — garde de FAMILLE : les formules Pro (Accès MikTunnel) ne se
+	// vendent QUE depuis la console MikTunnel (elle exige l'appariement au
+	// compte gérant) — la vitrine reste fulltunnel b2c exclusivement.
+	if plan.Family != model.PublicVpnPlanFamilyB2C {
+		writeErrCode(w, http.StatusBadRequest, "plan_not_for_vitrine",
+			"Cette formule est réservée à la console MikTunnel (Accès Pro — tunnel.ftci.fr)", nil)
 		return
 	}
 	payMethod := strings.ToLower(strings.TrimSpace(req.PayMethod))
@@ -515,12 +529,40 @@ func (a *API) provisionPublicVpnOrder(orderID string) (model.PublicVpnOrder, err
 			return finalOrder, nil
 		}
 		// Cible morte/invalide : dégénérescence en VENTE (trace visible admin).
+		// N°315 — la dégénérescence RESPECTE LA FAMILLE de la commande : une
+		// renewal PRO repliée en vente reste PRO (même formule, même produit)
+		// — jamais un fulltunnel B2C vendu à un acheteur qui voulait superviser.
 		deadTarget := order.RenewTargetRef
 		order.Kind = model.PublicVpnKindSale
+		if model.PublicVpnPlanFamilyOf(order.PlanID) == model.PublicVpnPlanFamilyPro {
+			order.Kind = model.PublicVpnKindPro
+		}
 		order.RenewTargetRef = ""
 		order.UpdatedAt = model.NowISO()
 		a.logActivity(db, model.AccountMainID, "vpn",
 			"Renouvellement "+order.Ref+" replié en vente neuve : cible "+deadTarget+" indisponible")
+	}
+	// N°315 — ACCÈS PRO : le peer vit sous le COMPTE GÉRANT apparié par
+	// e-mail (l'appariement a été vérifié à la COMMANDE — compte actif +
+	// routeur agent ; ici on re-résout sous verrou : un compte disparu
+	// entre-temps laisse la commande « paid » en erreur explicite, rejouée
+	// par le balayage — l'admin annule/rembourse manuellement, jamais un
+	// provisioning mensonger). Forme « remote » : supervision du compte
+	// + LAN étendu — JAMAIS fulltunnel depuis ce canal.
+	proAccountID := model.AccountMainID
+	peerKind := model.VpnKindFullTunnel
+	if order.Kind == model.PublicVpnKindPro {
+		acc := tunnelProAccountLocked(db, order.Email)
+		if acc == nil {
+			order.ErrorMsg = "compte gérant introuvable pour cet e-mail — Accès Pro impossible (annulation/remboursement manuels)"
+			order.UpdatedAt = model.NowISO()
+			a.store.Save()
+			snapshot := *order
+			a.store.Unlock()
+			return snapshot, fmt.Errorf("%s", order.ErrorMsg)
+		}
+		proAccountID = acc.ID
+		peerKind = model.VpnKindRemote
 	}
 	if model.VpnPeerSlotsUsed(db) >= model.VpnWg0PoolSize {
 		order.ErrorMsg = "pool wg0 épuisé — provisioning différé"
@@ -543,9 +585,12 @@ func (a *API) provisionPublicVpnOrder(orderID string) (model.PublicVpnOrder, err
 		return snapshot, fmt.Errorf("%s", order.ErrorMsg)
 	}
 	label := model.SanitizeDeviceName("B2C " + order.Email)
+	if order.Kind == model.PublicVpnKindPro {
+		label = model.SanitizeDeviceName("Pro " + order.Email)
+	}
 	peer := model.VpnPeer{
-		ID: model.NewID("vp-"), AccountID: model.AccountMainID,
-		Name: name, Label: label, Kind: model.VpnKindFullTunnel,
+		ID: model.NewID("vp-"), AccountID: proAccountID,
+		Name: name, Label: label, Kind: peerKind,
 		State:     model.VpnStatePending,
 		CreatedAt: model.NowISO(), UpdatedAt: model.NowISO(),
 	}
@@ -561,8 +606,12 @@ func (a *API) provisionPublicVpnOrder(orderID string) (model.PublicVpnOrder, err
 
 	// Phase 2 : wg-mini HORS verrou (jamais d'appel réseau sous le verrou global).
 	// N°312 — le canal B2C reste FULLTUNNEL exclusivement (le « remote » est
-	// la forme supervision du gérant, hors sujet vitrine).
-	conf, ip, err := wgMiniAddFn(name, model.VpnKindFullTunnel)
+	// la forme supervision du gérant, hors sujet vitrine) ; N°315 — EXCEPTION
+	// Pro : la commande kind=pro prend la forme « remote » SOUS LE COMPTE
+	// gérant apparié (isolation D-B2 : les routeurs du compte, et rien
+	// d'autre, acceptent ce peer — wgAllowedSourcesLocked s'élargit au
+	// refresh wg_setup ci-dessous).
+	conf, ip, err := wgMiniAddFn(name, peerKind)
 	if err != nil {
 		// Nettoyage best-effort + trace : la commande reste « paid » (rejouée
 		// par le balayage horaire) — jamais définitivement perdue.
@@ -621,10 +670,20 @@ func (a *API) provisionPublicVpnOrder(orderID string) (model.PublicVpnOrder, err
 	order.ExpiresAt = model.AddMonthsISO(paidAt, order.Months)
 	order.ErrorMsg = ""
 	order.UpdatedAt = model.NowISO()
-	a.logActivity(db, model.AccountMainID, "vpn",
-		"VPN B2C provisionné : "+name+" ("+ip+") — commande "+order.Ref+", terme "+order.ExpiresAt)
+	if order.Kind == model.PublicVpnKindPro {
+		a.logActivity(db, model.AccountMainID, "vpn",
+			"Accès Pro provisionné : "+name+" ("+ip+") sous le compte "+proAccountID+" — commande "+order.Ref+", terme "+order.ExpiresAt)
+		// Élargissement allowed-address des routeurs du compte (D-B2) :
+		// le peer Pro rejoint la liste de supervision IMMÉDIATEMENT
+		// (re-file wg_setup aux routeurs agents actifs, ≤ 45 s).
+		a.queueWgSetupRefreshLocked(nil, db, proAccountID, "accès Pro : supervision élargie : "+ip)
+	} else {
+		a.logActivity(db, model.AccountMainID, "vpn",
+			"VPN B2C provisionné : "+name+" ("+ip+") — commande "+order.Ref+", terme "+order.ExpiresAt)
+	}
 	finalOrder := *order
 	finalPeer := *row
+	finalAccountID := proAccountID
 	// Expéditeur (relais plateforme N°150) résolu SOUS verrou, copie VALEUR.
 	var senderCfg model.NotificationSettings
 	senderOK := false
@@ -634,9 +693,30 @@ func (a *API) provisionPublicVpnOrder(orderID string) (model.PublicVpnOrder, err
 	a.store.Save()
 	a.store.Unlock()
 
+	// Phase 3.5 (N°315, Pro) : LAN étendu — application best-effort sur les
+	// routeurs du compte dont le LAN est CONNU (re-application idempotente
+	// avec la liste fraîche de peers + activation des détections en attente
+	// d'un premier peer Pro). HORS verrou (wg-mini) — un échec laisse une
+	// trace admin, jamais un provisioning mensonger.
+	if finalOrder.Kind == model.PublicVpnKindPro {
+		a.tunnelProApplyLanAllRouters(finalAccountID, finalOrder.Email)
+		// La conf à livrer peut avoir été ÉTENDUE par le LAN (AllowedIPs
+		// 3e entrée) : on relit la vérité FRAÎCHE du coffre (verrou bref)
+		// — l'e-mail ne repart JAMAIS avec une copie antérieure.
+		a.store.Lock()
+		if p := model.FindVpnPeerByID(a.store.Data(), finalOrder.PeerID); p != nil && p.Conf != "" {
+			conf = p.Conf
+		}
+		a.store.Unlock()
+	}
+
 	// Phase 4 : e-mail de livraison (asynchrone — jamais sous verrou).
 	if senderOK {
-		a.dispatchPublicVpnConfEmail(senderCfg, finalOrder, finalPeer, conf)
+		if finalOrder.Kind == model.PublicVpnKindPro {
+			a.dispatchPublicVpnProEmail(senderCfg, finalOrder, finalPeer, conf)
+		} else {
+			a.dispatchPublicVpnConfEmail(senderCfg, finalOrder, finalPeer, conf)
+		}
 	} else {
 		a.logActivityBestEffort(order.Ref, "E-MAIL INDISPONIBLE : conf non livrée automatiquement (relais plateforme absent) — re-livraison possible via /vpn (récupération)")
 	}
@@ -745,6 +825,86 @@ func publicVpnEmailBodies(order model.PublicVpnOrder, peer model.VpnPeer, conf s
 		"<pre style=\"white-space:pre-wrap;background:#f5f5f5;padding:12px;border-radius:8px\">" + html.EscapeString(conf) + "</pre>" +
 		"<p style=\"color:#888;font-size:12px\">Gardez votre référence " + html.EscapeString(order.Ref) + " : elle permet de récupérer cette configuration sur la page MikCloud VPN (rubrique « Récupérer ma configuration »). Gardez cette configuration secrète : elle donne un accès complet.</p>"
 	return title, textBody, htmlBody
+}
+
+// ---------------------------------------------------------------------------
+// N°315 — e-mail de livraison ACCÈS PRO (supervision + LAN étendu)
+// ---------------------------------------------------------------------------
+
+// publicVpnProEmailBodies — texte + HTML de la conf Pro livrée : le produit
+// est la conf (supervision des routeurs + LAN étendu si déjà appliqué —
+// sinon la consigne honnête d'activation dans l'espace MikTunnel), jamais un
+// fulltunnel déguisé. Instructions calquées sur vpnDeliveryBody remote
+// (import WireGuard, périmètre de routage dit HONNÊTE).
+func publicVpnProEmailBodies(order model.PublicVpnOrder, peer model.VpnPeer, conf string) (title, textBody, htmlBody string) {
+	title = "MikTunnel — Votre Accès Pro est prêt (" + order.Ref + ")"
+	lanExtended := strings.Contains(conf, "AllowedIPs = 10.8.0.0/24, 10.8.2.0/24, ")
+	perimeter := "vos routeurs MikroTik (segment tunnel 10.8.0.0/24 + votre accès 10.8.2.0/24)"
+	if lanExtended {
+		perimeter = "vos routeurs MikroTik ET votre réseau local derrière eux (caméras, NAS — cf. AllowedIPs de la configuration)"
+	}
+	var sb strings.Builder
+	sb.WriteString("MikTunnel — Votre Accès Pro (powered by FTech CI)\n\n")
+	sb.WriteString("Commande : " + order.Ref + "\n")
+	if plan := model.ResolvePublicVpnPlan(order.PlanID); plan != nil {
+		sb.WriteString("Formule : " + plan.Label + " (" + plan.PeriodLabel + ")\n")
+	}
+	sb.WriteString("Valide jusqu'au : " + order.ExpiresAt + "\n")
+	sb.WriteString("Adresse tunnel de cet appareil : " + peer.IPv4 + "\n\n")
+	sb.WriteString("Cet accès PRO supervise " + perimeter + ".\n")
+	if !lanExtended {
+		sb.WriteString("Le LAN étendu (caméras/NAS) s'active en un clic dans votre espace MikTunnel :\n")
+		sb.WriteString("tunnel.ftci.fr → connexion par code → page « Accès Pro » → « Étendre au LAN ».\n\n")
+	}
+	sb.WriteString("1. Installez l'application WireGuard (App Store / Google Play / wireguard.com/install).\n")
+	sb.WriteString("2. Enregistrez la configuration ci-dessous dans un fichier miktunnel.conf, puis dans WireGuard : « + » → « Importer depuis un fichier ».\n")
+	sb.WriteString("3. Activez le tunnel : vos routeurs deviennent joignables (Winbox : http://" + peer.IPv4 + " reste votre propre adresse — vos routeurs répondent sur 10.8.0.x).\n\n")
+	sb.WriteString("Le tunnel ne route RIEN d'autre — ni votre navigation Internet, ni votre DNS : supervision et LAN de VOS équipements, rien de plus.\n\n")
+	sb.WriteString("Gardez cette référence (" + order.Ref + ") et votre espace MikTunnel (tunnel.ftci.fr) : configuration récupérable à tout moment, renouvellement en un clic.\n\n")
+	sb.WriteString(conf)
+	textBody = sb.String()
+
+	htmlBody = "<div style=\"font-family:system-ui,Segoe UI,Arial,sans-serif;max-width:480px;margin:0 auto;padding:24px\">" +
+		"<h2 style=\"color:#0f766e;margin:0 0 16px\">MikTunnel — Accès Pro prêt</h2>" +
+		"<p style=\"color:#334155;font-size:15px\">Commande <code>" + html.EscapeString(order.Ref) + "</code> — <b>valide jusqu'au</b> " + html.EscapeString(order.ExpiresAt) + "</p>" +
+		"<p style=\"color:#0f172a;font-size:15px\">Cet accès supervise <b>" + html.EscapeString(perimeter) + "</b>.</p>"
+	if !lanExtended {
+		htmlBody += "<p style=\"color:#334155;font-size:14px\">Le LAN étendu (caméras/NAS) s'active en un clic dans votre <a href=\"https://tunnel.ftci.fr/pro\">espace MikTunnel</a> (page « Accès Pro » → « Étendre au LAN »).</p>"
+	}
+	htmlBody += "<p style=\"color:#334155;font-size:14px\">1. Installez <b>WireGuard</b> (App Store / Google Play / <a href=\"https://www.wireguard.com/install/\">wireguard.com</a>).<br>" +
+		"2. Enregistrez la configuration ci-dessous en <b>miktunnel.conf</b>, puis « + » → « Importer depuis un fichier ».<br>" +
+		"3. Activez le tunnel.</p>" +
+		"<pre style=\"white-space:pre-wrap;background:#f5f5f5;padding:12px;border-radius:8px\">" + html.EscapeString(conf) + "</pre>" +
+		"<p style=\"color:#64748b;font-size:13px\">Le tunnel ne route rien d'autre — ni votre navigation, ni votre DNS : supervision et LAN de vos équipements, rien de plus.</p>" +
+		"<p style=\"color:#94a3b8;font-size:12px\">— MikTunnel (powered by FTech CI)</p></div>"
+	return title, textBody, htmlBody
+}
+
+// dispatchPublicVpnProEmail — envoi asynchrone + trace NotifLog SANS secret
+// (pattern dispatchPublicVpnConfEmail : jamais d'envoi réseau sous le
+// verrou, un échec d'e-mail n'abat rien — le reveal de l'espace reste la
+// voie de secours).
+func (a *API) dispatchPublicVpnProEmail(senderCfg model.NotificationSettings, order model.PublicVpnOrder, peer model.VpnPeer, conf string) {
+	title, textBody, htmlBody := publicVpnProEmailBodies(order, peer, conf)
+	cfgCopy := senderCfg
+	to := order.Email
+	logBody := "Conf Accès Pro " + order.Ref + " livrée à " + to
+	emailTaskDispatch()(func() {
+		sendErr := accountEmailSender()(&cfgCopy, to, title, textBody, htmlBody)
+		status, errText := "sent", ""
+		if sendErr != nil {
+			status, errText = "error", sendErr.Error()
+		}
+		a.store.Lock()
+		db := a.store.Data()
+		db.NotifLog = append(db.NotifLog, model.NotificationLog{
+			ID: model.NewID("n-"), Status: status, Error: errText,
+			Channel: "email", Kind: "vpn_pro",
+			Title: title, Body: logBody, At: model.NowISO(),
+		})
+		a.store.Save()
+		a.store.Unlock()
+	})
 }
 
 // dispatchPublicVpnConfEmail — envoi asynchrone + trace NotifLog SANS secret

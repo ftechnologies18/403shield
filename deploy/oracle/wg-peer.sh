@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # wg-peer.sh — cycle de vie des peers WireGuard (N°284, v2 N°285, v3 N°312,
-# v4 N°313) — ROOT only
+# v4 N°313, v5 N°315) — ROOT only
 #
 # usage:
 #   wg-peer.sh add <nom> [forme]     — peer client (clé générée ici, conf client .conf).
@@ -13,6 +13,15 @@
 #                                      dégradation propre)
 #   wg-peer.sh add-router <nom> <pub> — peer ROUTEUR MikroTik (clé publique fournie par le
 #                                       routeur, livret .router.txt pour la console MikCloud)
+#   wg-peer.sh set-lan <nom> <cidr>   — v5/N°315 (D-B1 brique 2) : étend l'AllowedIPs du PEER
+#                                       ROUTEUR dans wg0.conf («10.8.0.N/32, <cidr>») — la VM
+#                                       route le sous-réseau LAN vers ce routeur. Idempotent,
+#                                       collision REFUSÉE (un préfixe = un routeur, cryptokey
+#                                       routing), /24 privé RFC1918 hors 10.8.0.0/16 SEULEMENT.
+#   wg-peer.sh lan-extend <nom> <cidr> — v5/N°315 : étend la CONF CLIENTE d'un peer remote
+#                                       (AllowedIPs = 10.8.0.0/24, 10.8.2.0/24, <cidr> — les
+#                                       autres LAN déjà étendus préservés) ; la conf relue par
+#                                       wg-mini sert de preuve au cloud (mise à jour copie).
 #   wg-peer.sh remove <nom>           — révocation (bloc + fichiers livrables supprimés)
 #   wg-peer.sh qr <nom>               — QR de la conf client (les deux formes)
 #   wg-peer.sh show-router <nom>      — ré-affiche le livret d'un routeur
@@ -55,9 +64,22 @@ EP_FILE=/opt/wireguard/endpoint
 [ "$(id -u)" = "0" ] || { echo "root requis"; exit 1; }
 [ -f "$WG_CONF" ] || { echo "wg0.conf absent — lancer mode=install d'abord"; exit 1; }
 cmd="${1:-}"; name="${2:-}"
-usage(){ echo "usage: wg-peer.sh add <nom> [fulltunnel|remote] | add-router <nom> <pubkey> | remove <nom> | qr <nom> | show-router <nom> | reip <ip> | list"; exit 1; }
+usage(){ echo "usage: wg-peer.sh add <nom> [fulltunnel|remote] | add-router <nom> <pubkey> | set-lan <nom> <cidr> | lan-extend <nom> <cidr> | remove <nom> | qr <nom> | show-router <nom> | reip <ip> | list"; exit 1; }
 name2pub(){ awk -v n="$1" 'BEGIN{RS=""} index($0,"# peer: "n"\n")==1{c=split($0,L,"\n"); for(i=1;i<=c;i++) if(L[i]~/^PublicKey = /){sub("PublicKey = ","",L[i]);print L[i]}}' "$WG_CONF"; }
 apply(){ wg syncconf wg0 <(wg-quick strip wg0); }
+
+# ── LAN étendu (v5 — N°315, D-B1) ─────────────────────────────────────────
+# valid_lan — un CIDR LAN /24 PRIVÉ (RFC1918), hors de TOUT l'espace du pool
+# tunnel : 10.8.0.0/16 ENTIÈRMENT refusé (segments 10.8.0/1/2 réservés au
+# tunnel + marge future — un LAN qui s'y chevaucherait casserait le cryptokey
+# routing de wg0 et volerait des adresses du pool). Même règle côté cloud
+# (agent.ValidWgLanCIDR) et côté backend : défense aux trois frontières.
+valid_lan(){
+  local LAN="${1:-}"
+  echo "$LAN" | grep -qE '^(10\.([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])|172\.(1[6-9]|2[0-9]|3[01])|192\.168)\.([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])\.0/24$' || return 1
+  case "$LAN" in 10.8.*) return 1 ;; esac
+  return 0
+}
 # alloc <préfixe-segment> — prochaine adresse libre du segment (N ≥ 2 : le .1
 # est la gateway du segment, posée par ensure_segments). v4 : le préfixe
 # détermine le segment ; les peers des AUTRES segments ne comptent pas.
@@ -226,6 +248,71 @@ LIVRET
     echo "   livret (600 root, SECRET) : $PEERS_DIR/${name}.router.txt"
     echo "   → coller les 4 valeurs dans la console MikCloud (Routeur → Tunnel WireGuard → Paramètres serveur)"
     echo "   ré-affichage : sudo /opt/wireguard/wg-peer.sh show-router $name"
+    ;;
+  set-lan)
+    # N°315 (v5, D-B1 brique 2) — AllowedIPs du PEER ROUTEUR côté wg0.conf :
+    # « 10.8.0.N/32, <lan> ». La VM route alors le sous-réseau LAN vers ce
+    # routeur (cryptokey routing wg0). Idempotent : le <lan> du bloc est
+    # REMPLACÉ (un routeur = UN LAN étendu v1), le /32 de gestion est
+    # préservé (on ne retire JAMAIS la porte de gestion). Collision refusée :
+    # un cidr déjà porté par le peer d'un AUTRE routeur ne peut pas être
+    # routé deux fois (wg choisirait un seul gagnant — refus explicite plutôt
+    # qu'un routage silencieux arbitraire, fail-closed).
+    LAN="${3:-}"
+    [ -n "$name" ] || usage
+    valid_lan "$LAN" || { echo "❌ sous-réseau LAN invalide : «${LAN:-vide}» (attendu : /24 privé RFC1918, hors 10.8.0.0/16 — ex. 192.168.88.0/24)"; exit 1; }
+    [ -n "$(name2pub "$name")" ] || { echo "❌ peer '$name' introuvable"; exit 1; }
+    BASE=$(awk -v n="# peer: $name" 'BEGIN{RS=""} index($0,n"\n")==1{for(i=1;i<=split($0,L,"\n");i++) if(L[i]~/^AllowedIPs = /){a=L[i]; sub("AllowedIPs = ","",a); split(a,B,","); gsub(/^[ \t]+|[ \t]+$/,"",B[1]); print B[1]; exit}}' "$WG_CONF")
+    echo "$BASE" | grep -qE '^10\.8\.0\.([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])/32$' || { echo "❌ '$name' n'est pas un peer routeur (AllowedIPs de gestion 10.8.0.N/32 introuvables)"; exit 1; }
+    CLAIMER=$(awk -v lan="$LAN" 'BEGIN{RS=""} /^# peer: /{c=split($0,L,"\n"); n=L[1]; sub("# peer: ","",n); for(i=2;i<=c;i++) if(L[i]~/^AllowedIPs = /){a=L[i]; sub("AllowedIPs = ","",a); k=split(a,A,","); for(j=1;j<=k;j++){gsub(/^[ \t]+|[ \t]+$/,"",A[j]); if(A[j]==lan){print n; exit}}}}' "$WG_CONF")
+    if [ -n "$CLAIMER" ] && [ "$CLAIMER" != "$name" ]; then
+      echo "❌ $LAN déjà routé vers le routeur '$CLAIMER' — un sous-réseau ne peut être étendu qu'à UN routeur (renumérotez le LAN, ex. 10.10.x, ou retirez l'extension de l'autre routeur)"
+      exit 1
+    fi
+    NEWLINE="AllowedIPs = ${BASE}, ${LAN}"
+    if grep -qxF "$NEWLINE" "$WG_CONF"; then
+      echo "✅ LAN $LAN déjà étendu sur le routeur '$name' — AllowedIPs = ${BASE}, ${LAN} (idempotent, rien à faire)"
+      exit 0
+    fi
+    BEFORE=$(grep -c '^\[Peer\]' "$WG_CONF")
+    awk -v m="# peer: ${name}" -v nl="$NEWLINE" 'BEGIN{RS="";ORS=""} { if(index($0,m"\n")==1){ c=split($0,L,"\n"); rebuilt=L[1]; for(i=2;i<=c;i++){ if(L[i]~/^AllowedIPs = /){rebuilt=rebuilt"\n"nl} else {rebuilt=rebuilt"\n"L[i]} }; $0=rebuilt } if(out!="")out=out"\n\n"; out=out $0 } END{print out"\n"}' "$WG_CONF" > /tmp/wg0.lan.$$
+    AFTER=$(grep -c '^\[Peer\]' /tmp/wg0.lan.$$ || true)
+    [ "$AFTER" = "$BEFORE" ] || { echo "❌ réécriture AllowedIPs ratée (peers $BEFORE→$AFTER)"; rm -f /tmp/wg0.lan.$$; exit 1; }
+    install -m 600 /tmp/wg0.lan.$$ "$WG_CONF"; rm -f /tmp/wg0.lan.$$
+    apply
+    echo "✅ LAN étendu sur le routeur '$name' — AllowedIPs = ${BASE}, ${LAN} (syncconf à chaud, peers intacts)"
+    ;;
+  lan-extend)
+    # N°315 (v5) — AllowedIPs de la CONF CLIENTE d'un peer remote : les deux
+    # segments tunnel + le LAN demandé (les autres LAN déjà étendus — autres
+    # routeurs du compte — sont PRÉSERVÉS). Un peer fulltunnel (0.0.0.0/0)
+    # est REFUSÉ : le produit B2C ne touche jamais au LAN d'un routeur. La
+    # conf relue par wg-mini sert de PREUVE au cloud (il remplace sa copie
+    # chiffrée par cette vérité VM — jamais de confiance à un flag).
+    LAN="${3:-}"
+    [ -n "$name" ] || usage
+    valid_lan "$LAN" || { echo "❌ sous-réseau LAN invalide : «${LAN:-vide}» (attendu : /24 privé RFC1918, hors 10.8.0.0/16 — ex. 192.168.88.0/24)"; exit 1; }
+    CONF="$PEERS_DIR/${name}.conf"
+    [ -f "$CONF" ] || { echo "❌ conf cliente inexistante pour '$name' (peer routeur ou inconnu)"; exit 1; }
+    CUR=$(grep -m1 '^AllowedIPs = ' "$CONF" | sed 's/^AllowedIPs = //')
+    echo "$CUR" | grep -q '^10\.8\.0\.0/24, 10\.8\.2\.0/24' || { echo "❌ '$name' n'est pas un peer remote (AllowedIPs inattendus : «$CUR»)"; exit 1; }
+    NEW="10.8.0.0/24, 10.8.2.0/24"
+    FOUND=0
+    NLANS=0
+    REST=$(printf '%s\n' "$CUR" | tr ',' '\n' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | grep -v '^10\.8\.[02]\.0/24$' || true)
+    while IFS= read -r it; do
+      [ -n "$it" ] || continue
+      NLANS=$((NLANS+1))
+      [ "$it" = "$LAN" ] && FOUND=1
+      NEW="${NEW}, ${it}"
+    done <<< "$REST"
+    if [ "$FOUND" = "0" ]; then
+      [ "$NLANS" -lt 6 ] || { echo "❌ trop de LAN étendus dans la conf de '$name' (borne v1 : 6)"; exit 1; }
+      NEW="${NEW}, ${LAN}"
+    fi
+    sed -i "s#^AllowedIPs = .*#AllowedIPs = ${NEW}#" "$CONF"
+    chmod 600 "$CONF"
+    echo "✅ LAN $LAN étendu dans la conf de '$name' — AllowedIPs = ${NEW}"
     ;;
   remove)
     [ -n "$name" ] || usage

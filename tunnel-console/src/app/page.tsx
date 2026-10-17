@@ -1,9 +1,10 @@
 "use client";
 
-// page.tsx — N°313 — vitrine de la console tunnel (phase 1 : fondations).
+// page.tsx — vitrine de la console tunnel (N°313, Pro N°315).
 // Promesses HONNÊTES uniquement : la vente VPN grand public est DÉJÀ ouverte
-// (vitrine MikCloud /vpn), l'espace client est la phase 2 (N°314), l'accès
-// distant Pro la phase 3 (N°315). Footer collant (min-h-screen + mt-auto).
+// (vitrine MikCloud /vpn), l'espace client est livré (N°314), l'ACCÈS PRO à
+// distance + LAN étendu (caméras/NAS) est DISPONIBLE depuis CETTE console
+// (N°315 — page /pro). Footer collant (min-h-screen + mt-auto).
 
 import Link from "next/link";
 import { ArrowRight, KeyRound, Lock, Router, ShieldCheck } from "lucide-react";
@@ -27,7 +28,9 @@ const features = [
     icon: Router,
     title: "Accès distant Pro",
     desc: "Supervisez vos routeurs MikroTik — puis vos caméras et vos NAS — à travers le même tunnel chiffré, où que vous soyez.",
-    tag: "Phase suivante",
+    tag: "Disponible",
+    href: "/pro",
+    cta: "Voir l'offre Accès Pro",
   },
 ];
 

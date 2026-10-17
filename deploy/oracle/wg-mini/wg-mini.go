@@ -1,5 +1,6 @@
-// wg-mini — N°291 (v2 : N°307, v3 : N°312, v4 : N°313) — passerelle locale
-// WireGuard pour MikCloud (chantier ⑦, décision D3-a de N°289).
+// wg-mini — N°291 (v2 : N°307, v3 : N°312, v4 : N°313, v5 : N°315) —
+// passerelle locale WireGuard pour MikCloud (chantier ⑦, décision D3-a de
+// N°289).
 //
 // RÔLE : le backend MikCloud tourne dans un conteneur distroless — il ne
 // peut ni sudo ni toucher /etc/wireguard. wg-mini est une unité systemd
@@ -9,9 +10,11 @@
 //      POST /v1/add         {"name":"vpn-…","kind":"fulltunnel|remote"} → wg-peer.sh add <nom> [forme] → {"ok":true,"conf":"…","ip":"10.8.0.N"}
 //      POST /v1/add-router  {"name":"r-…","pub":"44car="} → wg-peer.sh add-router  → {"ok":true,"address":"…","serverPub":"…","psk":"…","endpoint":"…"}
 //      POST /v1/remove      {"name":"vpn-…|r-…"}          → wg-peer.sh remove      → {"ok":true}
+//      POST /v1/set-lan     {"name":"r-…","lan":"192.168.88.0/24"} → wg-peer.sh set-lan → {"ok":true,"allowed":"10.8.0.N/32, 192.168.88.0/24"}
+//      POST /v1/lan-extend  {"name":"vpn-…","lan":"192.168.88.0/24"} → wg-peer.sh lan-extend → {"ok":true,"conf":"…","ip":"10.8.2.N"}
 //      GET  /v1/conf?name=vpn-…                             → lecture conf           → {"ok":true,"conf":"…"}
 //      GET  /v1/list                                          → wg-peer.sh list        → {"ok":true,"peers":[…]}
-//      GET  /v1/ping                                          → {"ok":true,"service":"wg-mini","version":"v3"}
+//      GET  /v1/ping                                          → {"ok":true,"service":"wg-mini","version":"v5"}
 //
 // v2 (N°307) : /v1/add-router ouvre le provisionnement AUTOMATIQUE du
 // renfort WireGuard des routeurs (la clé publique vient du routeur — générée
@@ -35,6 +38,17 @@
 // « AllowedIPs = 10.8.0.0/24, 10.8.2.0/24 » (preuve par la conf) : une VM
 // v3 rend « 10.8.0.0/24 » seul → refus explicite + consigne exploitant
 // (ops-wg-mini-install) — dégradation honnête, identique au passage v2→v3.
+//
+// v5 (N°315 — Accès Pro / LAN étendu, D-B1) : DEUX routes nouvelles pour
+// les briques 2 et 3 du design — /v1/set-lan (AllowedIPs du PEER ROUTEUR
+// côté wg0.conf : la VM route le sous-réseau LAN vers ce routeur) et
+// /v1/lan-extend (AllowedIPs de la CONF CLIENTE d'un peer remote : le LAN
+// entre dans le tunnel côté gérant). PREUVE PAR LA CONF, discipline v3/v4 :
+// set-lan RELIT l'AllowedIPs du peer dans wg0.conf et le renvoie (« allowed »)
+// ; lan-extend RELIT la conf et la renvoie INTEGRALEMENT — le backend
+// vérifie (cidr présent, forme remote intacte, jamais 0.0.0.0/0) avant de
+// croire le geste. Un wg-mini v4 répond 404 sur ces routes : le backend
+// traduit en consigne exploitant (ops-wg-mini-install, hot upgrade ~1 s).
 //
 // SÉCURITÉ (conventions §8 de docs/RUNBOOK-HEBERGEMENT.md) :
 //   - bind 127.0.0.1:4020 UNIQUEMENT (port à réserver au registre) — aucune
@@ -73,12 +87,13 @@ import (
         "time"
 )
 
-const version = "v4"
+const version = "v5"
 
 var (
         addr       = envOr("WG_MINI_ADDR", "127.0.0.1:4020")
         scriptPath = envOr("WG_PEER_SCRIPT", "/opt/wireguard/wg-peer.sh")
         peersDir   = envOr("WG_PEERS_DIR", "/opt/wireguard/peers")
+        wgConfPath = envOr("WG_CONF", "/etc/wireguard/wg0.conf")
         secret     = strings.TrimSpace(os.Getenv("WG_MINI_SECRET"))
 )
 
@@ -101,6 +116,19 @@ var pubKeyRe = regexp.MustCompile(`^[A-Za-z0-9+/]{43}=$`)
 // routeurs de gestion) : la révocation automatique N°307 en dépend. Un
 // remove sur un nom inexistant échoue proprement côté wg-peer.sh.
 var peerAnyRe = regexp.MustCompile(`^[a-z0-9][a-z0-9-]{0,31}$`)
+
+// lanRe — N°315 — un sous-réseau LAN étendu : /24 STRICT, dernier octet 0,
+// espace privé RFC1918 (10.x | 172.16-31.x | 192.168.x). L'exclusion de
+// TOUT l'espace du pool tunnel (10.8.0.0/16 — segments wg0 + marge future)
+// est portée par validLanCIDR : même règle que agent.ValidWgLanCIDR côté
+// cloud et valid_lan dans wg-peer.sh — défense aux TROIS frontières.
+var lanRe = regexp.MustCompile(`^(10\.(\d{1,2}|1\d{2}|2[0-4]\d|25[0-5])|172\.(1[6-9]|2\d|3[01])|192\.168)\.(\d{1,2}|1\d{2}|2[0-4]\d|25[0-5])\.0/24$`)
+
+// validLanCIDR — la règle complète (RFC1918 /24 ET hors 10.8.0.0/16).
+func validLanCIDR(s string) bool {
+        s = strings.TrimSpace(s)
+        return s != "" && lanRe.MatchString(s) && !strings.HasPrefix(s, "10.8.")
+}
 
 // scriptTimeout — wg-peer.sh add génère des clés + syncconf : quelques ms
 // sur la VM ; 20 s couvre une VM fatiguée sans laisser pendre une requête.
@@ -421,6 +449,137 @@ func handlePing(w http.ResponseWriter, r *http.Request) {
         writeJSON(w, http.StatusOK, map[string]any{"ok": true, "service": "wg-mini", "version": version})
 }
 
+// peerAllowedIPs — N°315 — relit la ligne AllowedIPs du bloc [Peer] d'un
+// peer de wg0.conf (même parcours par marqueur « # peer: » que name2pub côté
+// script). Information NON secrète (aucune clé touchée) : c'est la matière
+// de la PREUVE PAR LA CONF de /v1/set-lan.
+func peerAllowedIPs(name string) string {
+        raw, err := os.ReadFile(wgConfPath)
+        if err != nil {
+                return ""
+        }
+        want := "# peer: " + name
+        inBlock := false
+        for _, line := range strings.Split(string(raw), "\n") {
+                line = strings.TrimSpace(line)
+                if strings.HasPrefix(line, "# peer: ") {
+                        inBlock = line == want
+                        continue
+                }
+                if inBlock && strings.HasPrefix(line, "AllowedIPs = ") {
+                        return strings.TrimSpace(strings.TrimPrefix(line, "AllowedIPs = "))
+                }
+        }
+        return ""
+}
+
+// handleSetLan — N°315 (D-B1 brique 2) — POST /v1/set-lan
+// {"name":"r-…","lan":"192.168.88.0/24"} : wg-peer.sh set-lan étend
+// l'AllowedIPs du PEER ROUTEUR dans wg0.conf («10.8.0.N/32, <lan>») +
+// syncconf à chaud — la VM route désormais le sous-réseau LAN vers ce
+// routeur (cryptokey routing). PREUVE PAR LA CONF : l'AllowedIPs du peer
+// est RELU dans wg0.conf après le geste et renvoyé (« allowed ») — le
+// backend vérifie qu'il contient le cidr demandé avant d'accepter le geste
+// (jamais de confiance aveugle à un exit code).
+func handleSetLan(w http.ResponseWriter, r *http.Request) {
+        var req struct {
+                Name string `json:"name"`
+                Lan  string `json:"lan"`
+        }
+        if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+                fail(w, http.StatusBadRequest, "corps invalide")
+                return
+        }
+        name := strings.TrimSpace(req.Name)
+        lan := strings.TrimSpace(req.Lan)
+        if !routerNameRe.MatchString(name) || strings.HasPrefix(name, "vpn-") {
+                fail(w, http.StatusBadRequest, "nom de peer routeur invalide (minuscules/chiffres/tirets, sans préfixe vpn-)")
+                return
+        }
+        if !validLanCIDR(lan) {
+                fail(w, http.StatusBadRequest, "sous-réseau LAN invalide (/24 privé RFC1918 attendu, hors 10.8.0.0/16 — ex. 192.168.88.0/24)")
+                return
+        }
+        start := time.Now()
+        if _, err := runScript(r.Context(), "set-lan", name, lan); err != nil {
+                log.Printf("[set-lan] %s échec (%s) : %v", name, time.Since(start).Round(time.Millisecond), err)
+                fail(w, http.StatusBadGateway, err.Error())
+                return
+        }
+        allowed := peerAllowedIPs(name)
+        // Preuve par la conf : le cidr doit figurer PARMI LES ITEMS de l'AllowedIPs
+        // relu (comparaison exacte par item — jamais une sous-chaîne approximative).
+        lanPresent := false
+        for _, it := range strings.Split(allowed, ",") {
+                if strings.TrimSpace(it) == lan {
+                        lanPresent = true
+                        break
+                }
+        }
+        if !lanPresent {
+                log.Printf("[set-lan] %s geste exécuté mais AllowedIPs relu sans %s — wg-peer.sh avarié ?", name, lan)
+                fail(w, http.StatusInternalServerError, "AllowedIPs du peer sans le sous-réseau demandé — vérifiez wg-peer.sh sur la VM")
+                return
+        }
+        log.Printf("[set-lan] %s ok (%s, %s)", name, lan, time.Since(start).Round(time.Millisecond))
+        writeJSON(w, http.StatusOK, map[string]any{"ok": true, "name": name, "lan": lan, "allowed": allowed})
+}
+
+// handleLanExtend — N°315 — POST /v1/lan-extend
+// {"name":"vpn-…","lan":"192.168.88.0/24"} : wg-peer.sh lan-extend réécrit
+// l'AllowedIPs de la CONF CLIENTE d'un peer remote (10.8.0.0/24,
+// 10.8.2.0/24, <lan> — les autres LAN déjà étendus préservés), puis la conf
+// FRAÎCHE est relue et renvoyée INTEGRALEMENT : le cloud remplace sa copie
+// chiffrée par cette vérité VM — la réponse EST la preuve (forme remote
+// intacte + cidr présent + jamais 0.0.0.0/0, vérifié ici ET côté backend).
+func handleLanExtend(w http.ResponseWriter, r *http.Request) {
+        var req struct {
+                Name string `json:"name"`
+                Lan  string `json:"lan"`
+        }
+        if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+                fail(w, http.StatusBadRequest, "corps invalide")
+                return
+        }
+        name := strings.TrimSpace(req.Name)
+        lan := strings.TrimSpace(req.Lan)
+        if !nameRe.MatchString(name) {
+                fail(w, http.StatusBadRequest, "nom de peer invalide (attendu vpn-… minuscules/tirets)")
+                return
+        }
+        if !validLanCIDR(lan) {
+                fail(w, http.StatusBadRequest, "sous-réseau LAN invalide (/24 privé RFC1918 attendu, hors 10.8.0.0/16 — ex. 192.168.88.0/24)")
+                return
+        }
+        start := time.Now()
+        if _, err := runScript(r.Context(), "lan-extend", name, lan); err != nil {
+                log.Printf("[lan-extend] %s échec (%s) : %v", name, time.Since(start).Round(time.Millisecond), err)
+                fail(w, http.StatusBadGateway, err.Error())
+                return
+        }
+        raw, err := os.ReadFile(confPath(name))
+        if err != nil {
+                log.Printf("[lan-extend] %s étendu mais conf illisible : %v", name, err)
+                fail(w, http.StatusInternalServerError, "conf illisible après extension — vérifiez "+peersDir)
+                return
+        }
+        conf := string(raw)
+        if !strings.Contains(conf, "AllowedIPs = 10.8.0.0/24, 10.8.2.0/24") || !strings.Contains(conf, lan) || strings.Contains(conf, "0.0.0.0/0") {
+                log.Printf("[lan-extend] %s conf relue non conforme (forme remote ou cidr) — wg-peer.sh avarié ?", name)
+                fail(w, http.StatusInternalServerError, "conf sans l'extension LAN attendue (forme remote + cidr) — vérifiez wg-peer.sh sur la VM")
+                return
+        }
+        log.Printf("[lan-extend] %s ok (%s, %s)", name, lan, time.Since(start).Round(time.Millisecond))
+        writeJSON(w, http.StatusOK, map[string]any{
+                "ok":   true,
+                "name": name,
+                "lan":  lan,
+                "ip":   parseIPFromConf(conf),
+                "conf": conf,
+                "_":    "lan étendu", // trace courte (la conf ne se logue JAMAIS)
+        })
+}
+
 // ---------------------------------------------------------------------------
 // Serveur
 // ---------------------------------------------------------------------------
@@ -455,6 +614,8 @@ func main() {
         mux.HandleFunc("POST /v1/add", signed(handleAdd))
         mux.HandleFunc("POST /v1/add-router", signed(handleAddRouter))
         mux.HandleFunc("POST /v1/remove", signed(handleRemove))
+        mux.HandleFunc("POST /v1/set-lan", signed(handleSetLan))
+        mux.HandleFunc("POST /v1/lan-extend", signed(handleLanExtend))
         mux.HandleFunc("GET /v1/conf", signed(handleConf))
         mux.HandleFunc("GET /v1/list", signed(handleList))
         mux.HandleFunc("GET /v1/ping", signed(handlePing))

@@ -354,6 +354,18 @@ func (a *API) Handler() http.Handler {
 	// /api/tunnel/* ONLY — jamais publiques, jamais rang console SaaS).
 	mux.HandleFunc("POST /api/tunnel/orders/{ref}/reveal", a.handleTunnelReveal)
 	mux.HandleFunc("POST /api/tunnel/orders/{ref}/renew", a.handleTunnelRenew)
+	// N°315 — ACCÈS PRO + LAN ÉTENDU (offre « Pro » de cette console, D-T4) :
+	// statut (éligibilité compte gérant + routeurs + LAN), détection agent
+	// (wg_lan_detect, lecture pure), poll d'état, APPLICATION D-B1 (set-lan VM
+	// + règles mikcloud-wg-lan routeur + extension des confs peers Pro) et
+	// commande Pro (famille pro VERROUILLÉE, GeniusPay/manual). JWT rôle
+	// tunnel, whitelist /api/tunnel/* ONLY ; statut/poll non limités (poll
+	// console), gestes d'écriture sous quota tunnelAction.
+	mux.HandleFunc("GET /api/tunnel/pro", a.handleTunnelProStatus)
+	mux.HandleFunc("POST /api/tunnel/pro/detect", a.handleTunnelProDetect)
+	mux.HandleFunc("GET /api/tunnel/pro/lan/{routerId}", a.handleTunnelProLanPoll)
+	mux.HandleFunc("POST /api/tunnel/pro/lan/{routerId}", a.handleTunnelProLan)
+	mux.HandleFunc("POST /api/tunnel/pro/order", a.handleTunnelProOrder)
 	// N°293 — PPPoE Phase A (chantier ⑥ de N°289, Option V lot 3) :
 	// abonnés PPPoE d'un pppoe-server EXISTANT (D2) pilotés par l'agent
 	// (D1 — commandes ppp_*, zéro cred, zéro port). Segment ISP TRANSVERSE

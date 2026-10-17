@@ -537,6 +537,12 @@ func (b Builder) ScriptFor(cmd model.Command) (string, error) {
 	// zéro saisie — auto-détection LAN + /24 libre côté routeur).
 	case model.CmdPppProvision:
 		return b.buildPppProvision(cmd), nil
+	// N°315 — Accès Pro / LAN étendu (D-B1) : détection (lecture pure,
+	// pattern ppp_provision) puis règles marquées mikcloud-wg-lan.
+	case model.CmdWgLanDetect:
+		return b.buildWgLanDetect(cmd), nil
+	case model.CmdWgLan:
+		return b.buildWgLan(cmd), nil
 	default:
 		return "", fmt.Errorf("kind de commande inconnu : %s", cmd.Kind)
 	}

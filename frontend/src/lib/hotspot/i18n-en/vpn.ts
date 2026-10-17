@@ -82,7 +82,7 @@ export const enVpn: Record<string, string> = {
   "vpn.addWarning":
     "The client's traffic exits through YOUR server: keep an eye on usage (egress ~10 TB/month on the Always Free tier) and revoke dormant accesses.",
   "vpn.addWarning.remote":
-    "Supervision opens NO door to the Internet: the tunnel routes only the MikCloud network (10.8.0.0/24). LAN cameras and NAS stay out of scope — full LAN access is the next step.",
+    "Supervision opens NO door to the Internet: the tunnel routes only the MikCloud network (10.8.0.0/24, 10.8.2.0/24). Cameras and NAS: full LAN access is now delivered with the MikTunnel Pro offer (tunnel.ftci.fr/pro).",
   "vpn.addCta": "Generate & sell",
   "vpn.addToast": "VPN access created",
   "vpn.addToast.remote": "Remote access created — your active routers accept it within ≤ 45 s",

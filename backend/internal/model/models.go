@@ -373,6 +373,18 @@ type Router struct {
 	// — pattern Password P0 #6). Livrés au routeur via wg_setup uniquement.
 	WgServerPub string `json:"-"`
 	WgPSK       string `json:"-"`
+	// WgLan — N°315 (Accès Pro / LAN étendu, D-B1 brique 2) : sous-réseau LAN
+	// ÉTENDU vers le tunnel pour ce routeur (ex. « 192.168.88.0/24 »), validé
+	// RFC1918 /24 hors espace tunnel (agent.ValidWgLanCIDR). Vide = aucun LAN
+	// étendu : le peer remote supervise le routeur seul (comportement N°312,
+	// inchangé). Posé par l'application Pro (POST /api/tunnel/pro/lan) après
+	// détection agent (wg_lan_detect) — la vérité ROUTAGE vit côté VM
+	// (AllowedIPs du peer routeur dans wg0.conf, wg-peer.sh set-lan) et la
+	// vérité NAT côté routeur (règles marquées mikcloud-wg-lan) ; cette
+	// colonne est la mémoire CLOUD de l'intention (re-application au
+	// renouvellement, affichage console, idempotence). Colonne posée par
+	// ALTER idempotent au boot, défaut '' — aucun backfill.
+	WgLan string `json:"wgLan,omitempty"`
 }
 
 // SchedulerSecEffective — pas de scheduler connu du routeur (N°75). 0 =

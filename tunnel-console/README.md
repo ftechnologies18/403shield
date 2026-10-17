@@ -10,7 +10,7 @@
 ## Ce que c'est
 
 La sous-marque **MikTunnel** (powered by FTech CI) : vitrine + espace client
-du service de tunnels WireGuard. Phase 2 livrée (N°314) :
+du service de tunnels WireGuard. Phase 3 livrée (N°315) :
 
 - **Vitrine** (`/`) — promesses honnêtes, lien vers la vente MikCloud VPN
   déjà ouverte (`mikcloud.ftci.fr/vpn`) ;
@@ -22,7 +22,13 @@ du service de tunnels WireGuard. Phase 2 livrée (N°314) :
   d'appareils (migration douce : tout achat vitrine avec cet e-mail apparaît
   ici), re-livraison de la configuration dans l'espace (reveal + copie),
   renouvellement 1-clic (Wave/carte GeniusPay, canal manuel en repli —
-  `POST /api/tunnel/orders/{ref}/reveal` et `/renew`, JWT rôle tunnel).
+  `POST /api/tunnel/orders/{ref}/reveal` et `/renew`, JWT rôle tunnel) ;
+- **Accès Pro + LAN étendu** (`/pro`, N°315 — design D-B1) : l'offre « Pro »
+  de CETTE console (D-T4) — peer remote de supervision posé sous le COMPTE
+  GÉRANT apparié par e-mail + extension du tunnel vers le LAN du routeur
+  (caméras/NAS) : détection agent (`wg_lan_detect`), application en un clic
+  (`set-lan` VM + règles `mikcloud-wg-lan` routeur + conf étendue —
+  `GET/POST /api/tunnel/pro/*`, `backend/internal/api/handlers_tunnel_pro.go`).
 
 ## Développement
 
@@ -49,18 +55,20 @@ Variables d'environnement :
 2. **Variable de production** POSÉE : `NEXT_PUBLIC_API_BASE=https://api.mikcloud.ftci.fr`.
 3. **URL live** : **https://miktunnel.vercel.app** (alias git :
    `miktunnel-ftech-ci.vercel.app`).
-4. **Domaine dédié `tunnel.ftci.fr`** : AJOUTÉ au projet Vercel (état
-   « pending domain verification ») — reste le geste DNS Cloudflare du
-   propriétaire : CNAME `tunnel` → `cname.vercel-dns.com` (ou A 76.76.21.21
-   à l'apex). Token Cloudflare invalide = dette connue.
+4. **Domaine dédié `tunnel.ftci.fr`** : VÉRIFIÉ ET EN LIGNE depuis le
+   17/10/2026 — CNAME `tunnel` → `cname.vercel-dns.com` posé dans Cloudflare
+   (DNS only) + TXT `_vercel` de vérification ; certificat émis, HTTP 200
+   servi (vitrine + `/pro` + `/me`).
 
-## Périmètre et limites (phase 2)
+## Périmètre et limites (phase 3)
 
-- Aucune vente NEUVE depuis cette console (la vitrine `/vpn` de MikCloud
-  reste LE canal B2C — doctrine N°301 « jamais en concurrence avec ses
-  revendeurs » inchangée) ; la console ne vend que le RENOUVELLEMENT de ce
-  que l'e-mail possède déjà ;
-- L'accès distant Pro (remote, N°312) et le LAN étendu (caméras/NAS, phase 3
-  N°315) ne sont pas encore exposés ici — la vitrine le dit honnêtement ;
+- Vente NEUVE B2C (fulltunnel) : REFUSÉE depuis cette console (la vitrine
+  `/vpn` de MikCloud reste LE canal B2C — doctrine N°301 « jamais en
+  concurrence avec ses revendeurs ») ; la console ne vend que le
+  RENOUVELLEMENT B2C et l'ACCÈS PRO (famille « pro », canal séparé,
+  verrouillé des deux bords) ;
+- L'Accès Pro exige un COMPTE GÉRANT MikCloud apparié par e-mail (au moins
+  un routeur en mode agent) — la page `/pro` le DIT au lieu de vendre un
+  accès qui ne servirait à rien ;
 - Les tokens « tunnel » vivent 24 h et ne sortent JAMAIS de `/api/tunnel/*`
   (whitelist middleware, miroir du rôle reseller).

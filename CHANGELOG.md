@@ -6,6 +6,148 @@ aux dates de livraison — le déploiement est continu : chaque push `main` pass
 la CI puis se déploie automatiquement (frontend Vercel, backend Oracle E5
 depuis le T2 N°266 — Render suspendu N°303).
 
+## 2026-10-17 — N°315 — **PROGRAMME TUNNEL, PHASE 3 : ACCÈS PRO + LAN ÉTENDU (caméras/NAS) — design D-B1 livré comme offre « Pro » de la console MikTunnel (D-T4), wg-peer.sh/wg-mini v5**
+
+### Problème
+La promesse P-A de N°289 restait à moitié tenue : « un peer WireGuard donne au
+gérant l'accès à SON réseau (routeur, caméras, NAS) ». Le remote N°312
+supervisait le ROUTEUR seul (Winbox, API, SSH, web — 10.8.0.0/24 +
+10.8.2.0/24, fail-closed) ; les caméras et les NAS du LAN restaient hors
+périmètre — l'avertissement honnête de la console le disait (« prochaine
+étape »), la carte vitrine MikTunnel le disait (« Phase suivante »). Le
+design D-B1 (N°312) attendait son heure : trois briques prêtes, aucune livrée.
+
+### Décisions de conception (D-B1 de N°312, enfin exécuté)
+- **Brique 1 — détection LAN agent (pattern ppp_provision N°310)** :
+  commande `wg_lan_detect`, LECTURE PURE sur le routeur (bridge/ether active
+  portant une adresse, /24 dérivé de l'adresse locale — la même heuristique
+  éprouvée) ; le rapport vit dans `Command.Result` (lan + iface), la
+  VALIDATION (RFC1918 /24, hors espace tunnel) vit côté cloud
+  (`agent.ValidWgLanCIDR`), côté VM (`wg-peer.sh valid_lan`) et côté
+  mini-service — défense aux TROIS frontières.
+- **Brique 2 — AllowedIPs du PEER ROUTEUR côté wg0.conf (wg-peer.sh v5)** :
+  geste `set-lan <routeur> <cidr>` — « 10.8.0.N/32, <lan> », la VM route le
+  sous-réseau vers ce routeur (cryptokey routing). Idempotent, collision
+  REFUSÉE si le cidr est déjà porté par un autre routeur (un préfixe = un
+  gagnant chez wg : refus explicite + conseil de renumérotation, jamais un
+  routage arbitraire silencieux) ; TOUT 10.8.0.0/16 est interdit (espace du
+  pool tunnel, marge future comprise).
+- **Brique 3 — srcnat marqué côté routeur (commande `wg_lan`)** : pour chaque
+  peer Pro, un accept forward (src=peer/32 dst=LAN) + un masquerade srcnat
+  (les caméras/NAS voient le ROUTEUR comme source — réponse garantie sans
+  route de retour), règles marquées `mikcloud-wg-lan`, remove-then-add
+  idempotent (pattern pooldoctor), périmètre SCOPÉ aux seuls peers Pro
+  (jamais le /24 remote entier).
+- **Conf client étendue (`wg-peer.sh lan-extend`)** : AllowedIPs =
+  « 10.8.0.0/24, 10.8.2.0/24, <lan> » — la conf FRAÎCHE relue par wg-mini
+  est renvoyée INTEGRALEMENT au backend qui REMPLACE sa copie chiffrée :
+  preuve par la conf (jamais un flag cru sur parole), comme la discipline
+  v3/v4.
+
+### Livré
+- **VM v5** : `wg-peer.sh` (set-lan + lan-extend + valid_lan, 12 tests de
+  harnais local verts : idempotence, collision, refus tunnel-cidr, refus
+  fulltunnel, cumul multi-LAN préservé, permissions 600) + `wg-mini` v5
+  (routes `/v1/set-lan` et `/v1/lan-extend` signées HMAC, preuve par la conf
+  RELUE — l'AllowedIPs du peer dans wg0.conf pour set-lan, la conf complète
+  pour lan-extend ; VM v4 → 404 → consigne exploitant ops-wg-mini-install).
+- **Backend — module tunnel Pro** (`handlers_tunnel_pro.go`) : 5 routes JWT
+  rôle tunnel (whitelist /api/tunnel/* ONLY) — `GET /api/tunnel/pro`
+  (éligibilité compte gérant apparié par e-mail + routeurs + état LAN +
+  portefeuille + formules pro), `POST /api/tunnel/pro/detect` (enfile la
+  lecture pure, pré-achat autorisé : le gérant voit ce qu'il achèterait),
+  `GET /api/tunnel/pro/lan/{routerId}` (poll PUR — pattern ppp_provision :
+  l'application reste un POST explicite, jamais un effet de bord de GET),
+  `POST /api/tunnel/pro/lan/{routerId}` (l'APPLICATION D-B1 : noyau commun
+  au provisioning et à l'activation manuelle — collecte sous verrou, set-lan
+  VM hors verrou, re-verrou WgLan APRÈS succès VM + commande wg_lan, confs
+  peers Pro étendues), `POST /api/tunnel/pro/order` (commande kind pro,
+  éligibilité vérifiée AVANT encaissement, GeniusPay/manual miroir renew).
+- **Backend — familles de formules verrouillées** : `Family` sur
+  `PublicVpnPlan` (« b2c » vitrine /vpn | « pro » console MikTunnel) — la
+  vitrine REFUSE les formules pro (garde plan_not_for_vitrine), le canal Pro
+  refuse les b2c, le renouvellement refuse le croisement
+  (plan_family_mismatch) et la DÉGÉNÉRESCENCE d'une renewal Pro reste Pro
+  (jamais un fulltunnel vendu à un acheteur qui voulait superviser). Catalogue
+  : MikTunnel Pro Mensuel 3 500 FCFA / Annuel 35 000 FCFA (~2 mois offerts,
+  discipline B2C).
+- **Backend — provisioning Pro** (`provisionPublicVpnOrder` branche pro) : le
+  peer « remote » vit sous le COMPTE GÉRANT apparié par e-mail (isolation
+  D-B2 AUTOMATIQUE : `wgAllowedSourcesLocked` élargit l'allowed-address des
+  routeurs du compte — re-file wg_setup immédiat, les peers d'un autre compte
+  restent droppés PAR LE ROUTEUR), e-mail `vpn_pro` avec la conf FRAÎCHE
+  (relue après application LAN — jamais une copie antérieure), LAN appliqué
+  d'emblée quand il est déjà connu (best-effort par routeur, trace admin sur
+  échec, activation manuelle reste possible).
+- **Console MikTunnel `/pro`** : la carte vitrine passe « Disponible » avec
+  CTA ; la page porte l'offre honnête (prérequis compte gérant DIT, pas
+  vendu), les routeurs avec état LAN (détection enfilée + poll ≤ 45 s,
+  « Étendre au LAN », « Re-apply » idempotent, messages de renumérotation en
+  cas de collision), l'achat Wave/carte, le portefeuille Pro avec reveal de
+  conf ; `/me` affiche le badge « Accès Pro », propose les BONNES formules de
+  renouvellement par famille et pointe vers /pro.
+- **DB** : colonne `routers.wg_lan` (TEXT NOT NULL DEFAULT '', posée par
+  ALTER idempotent au boot — les TROIS listes DDL/SELECT/UPSERT concordent,
+  leçon N°302 ; sauvegardée uniquement APRÈS un set-lan VM réussi : la
+  colonne reste un statut VÉRIDIQUE, jamais un mensonge). AUCUNE autre table
+  ni colonne : la vérité routage vit côté VM (AllowedIPs wg0.conf), la
+  vérité NAT côté routeur (règles marquées), la détection dans
+  Command.Result.
+- **Commandes agent** : `wg_lan_detect` + `wg_lan` (security.go, builders
+  `agent/wglan.go`, dispatch) — scripts CONTRACTUELS testés (lecture pure
+  sans AUCUNE écriture pour la détection ; remove-then-add marqué, une règle
+  forward + une srcnat PAR peer, KO honnête sur payload avarié, aucune
+  valeur hostile embarquée).
+- **Sécurité inchangée** : le segment remote reste FAIL-CLOSED (aucune
+  MASQUERADE vers Internet — le LAN étendu n'ouvre QUE le chemin peer Pro →
+  LAN du compte) ; l'appariement compte↔e-mail repose sur la possession du
+  code (même frontière de confiance que le reveal N°314 et la récupération
+  vitrine N°301) ; anti-énumération 404 uniforme sur les routeurs étrangers.
+- **Honnêteté console SaaS** : `vpn.addWarning.remote` (FR/EN) updated — le
+  LAN n'est plus « prochaine étape » mais livré via l'Accès Pro MikTunnel.
+
+### Vérifié
+- gofmt 0 · go vet OK · `go build` OK · `go test` **11/11 packages** (dont 8
+  nouveaux tests Pro : statut/éligibilité, commande + honeypot + refus b2c,
+  provisioning complet — peer sous le compte, wg_setup re-filé avec
+  allowedSources élargi, set-lan + wg_lan + conf étendue, e-mail vpn_pro ;
+  provisioning sans LAN (supervision seule + consigne) ; garde de famille du
+  renouvellement ; dégénérescence Pro→Pro ; application LAN manuelle complète
+  (WgLan posé après succès VM, conf chiffrée remplacée) ; détection enfilée ;
+  découverte pré-achat (needPro) ; collision → 502 et WgLan JAMAIS posé ;
+  détection + poll pur + anti-énumération ; vitrine refuse pro ; 401 sur les
+  5 routes via le mux réel) + 4 nouveaux tests agent (ValidWgLanCIDR — RFC1918
+  /24 strict, tout 10.8.0.0/16 refusé, injections ; forme des deux builders).
+- `wg-peer.sh` v5 : `bash -n` OK + harnais local 12/12 (set-lan, lan-extend,
+  idempotence, collision, permissions) ; `wg-mini` v5 : build + vet OK
+  (linux + ARM).
+- Console : ESLint 0 · `tsc` 0 · `next build` OK (6 routes dont `/pro`).
+- Sentinelle `TestTunnelMe` évoluée vers le contrat phase3 (family) —
+  évolution voulue, documentée ici.
+
+### Suites exploitant
+1. Après push : workflow **ops-wg-mini-install** à déclencher (la preuve de
+   version lit `const version = "v5"` dans la source — ping signé v5 exigé,
+   le run devient ROUGE sinon) : wg-peer.sh v5 + wg-mini v5 posés et
+   RESTARTÉS sur la VM (~2 min, hot upgrade).
+2. Smoke test terrain conseillé : login code MikTunnel avec l'e-mail du
+   compte gérant → `/pro` (routeurs listés) → « Détecter mon réseau » →
+   convergence ≤ 45 s → « Étendre au LAN » → reveal (AllowedIPs 3 entrées) →
+   import WireGuard → ping caméra/NAS → puis révocation éventuelle du peer de
+   test. Collision 192.168.88.0/24 : le second site doit renuméroter
+   (candidats 10.10.x, N°310) — message honnête des deux côtés.
+
+### Non-objectifs
+- Vente neuve Pro depuis la vitrine /vpn : REFUSÉE (famille verrouillée —
+  doctrine N°301, canal séparé D-T3).
+- QR code en console : toujours différé (design produit à venir).
+- Dé-collision automatique des LAN homonymes (renumérotation assistée,
+  NAT par site) : v2 si le terrain le demande — la collision est refusée
+  proprement avec un message actionnable.
+- Ménage des règles mikcloud-wg-lan au terme d'un Pro (règles scopées à
+  l'IP d'un peer mort = inertes) : re-application au renouvellement suffit ;
+  hygiene manuelle au besoin.
+
 ## 2026-10-13 — N°314 — **PROGRAMME TUNNEL, PHASE 2 : ESPACE CLIENT B2C COMPLET (portefeuille d'appareils + re-livraison dans l'espace + renouvellement 1-clic + migration douce des commandes MCV-)**
 
 ### Problème

@@ -35,6 +35,7 @@ import (
 	"strings"
 	"time"
 
+	"mikcloud/hotspot-api/internal/agent"
 	"mikcloud/hotspot-api/internal/model"
 )
 
@@ -255,17 +256,96 @@ func wgMiniConfigured() bool {
 	return strings.TrimSpace(os.Getenv("WG_MINI_SECRET")) != ""
 }
 
+// wgMiniSetLan — N°315 (D-B1 brique 2) — wg-peer.sh set-lan <name> <lan> :
+// étend l'AllowedIPs du PEER ROUTEUR dans wg0.conf («10.8.0.N/32, <lan>») —
+// la VM route le sous-réseau LAN vers ce routeur (cryptokey routing wg0).
+// PREUVE PAR LA CONF (discipline v3/v4) : la réponse porte l'AllowedIPs RELU
+// dans wg0.conf après le geste (« allowed ») — vérifié ICI aussi (le cidr
+// doit y figurer) avant de croire le geste : trois frontières valident
+// (cloud avant l'appel, wg-mini après le geste, backend sur la réponse).
+// Une VM v4 répond 404 sur la route → consigne exploitant explicite.
+func wgMiniSetLan(name, lan string) error {
+	if !agent.ValidWgPeerName(name) || strings.HasPrefix(name, "vpn-") {
+		return fmt.Errorf("nom de peer routeur invalide : %q", name)
+	}
+	if !agent.ValidWgLanCIDR(lan) {
+		return fmt.Errorf("sous-réseau LAN invalide : %q (/24 privé RFC1918 attendu, hors 10.8.0.0/16)", lan)
+	}
+	raw, err := wgMiniCallFn(http.MethodPost, "/v1/set-lan", map[string]string{"name": name, "lan": lan})
+	if err != nil {
+		if strings.Contains(err.Error(), "404") {
+			return errors.New("wg-mini v4 détecté sur la VM — le LAN étendu exige wg-peer.sh/wg-mini v5 : lancez le workflow ops-wg-mini-install (repose v5 + RESTART, ~2 min — cf. deploy/oracle/wg-mini/README.md)")
+		}
+		return err
+	}
+	var env struct {
+		Allowed string `json:"allowed"`
+	}
+	if err := json.Unmarshal(raw, &env); err != nil {
+		return fmt.Errorf("wg-mini : réponse set-lan illisible : %w", err)
+	}
+	lanPresent := false
+	for _, it := range strings.Split(env.Allowed, ",") {
+		if strings.TrimSpace(it) == lan {
+			lanPresent = true
+			break
+		}
+	}
+	if !lanPresent {
+		return fmt.Errorf("wg-mini : AllowedIPs relu sans le sous-réseau demandé (%q) — vérifiez wg-peer.sh sur la VM", env.Allowed)
+	}
+	return nil
+}
+
+// wgMiniLanExtend — N°315 — wg-peer.sh lan-extend <name> <lan> : réécrit
+// l'AllowedIPs de la CONF CLIENTE d'un peer remote (10.8.0.0/24,
+// 10.8.2.0/24, <lan> — autres LAN préservés) et RETOURNE la conf fraîche
+// relue côté VM : le cloud remplace sa copie chiffrée par cette vérité — la
+// réponse EST la preuve (cidr présent, forme remote intacte, JAMAIS
+// 0.0.0.0/0 — vérifié côté VM ET ici, double preuve par la conf).
+func wgMiniLanExtend(name, lan string) (conf, ip string, err error) {
+	if !agent.ValidWgPeerName(name) {
+		return "", "", fmt.Errorf("nom de peer invalide : %q", name)
+	}
+	if !agent.ValidWgLanCIDR(lan) {
+		return "", "", fmt.Errorf("sous-réseau LAN invalide : %q (/24 privé RFC1918 attendu, hors 10.8.0.0/16)", lan)
+	}
+	raw, err := wgMiniCallFn(http.MethodPost, "/v1/lan-extend", map[string]string{"name": name, "lan": lan})
+	if err != nil {
+		if strings.Contains(err.Error(), "404") {
+			return "", "", errors.New("wg-mini v4 détecté sur la VM — le LAN étendu exige wg-peer.sh/wg-mini v5 : lancez le workflow ops-wg-mini-install (repose v5 + RESTART, ~2 min — cf. deploy/oracle/wg-mini/README.md)")
+		}
+		return "", "", err
+	}
+	var env struct {
+		Conf string `json:"conf"`
+		IP   string `json:"ip"`
+	}
+	if err := json.Unmarshal(raw, &env); err != nil {
+		return "", "", fmt.Errorf("wg-mini : réponse lan-extend illisible : %w", err)
+	}
+	if strings.TrimSpace(env.Conf) == "" {
+		return "", "", errors.New("wg-mini : conf client vide après extension — vérifiez wg-peer.sh sur la VM")
+	}
+	if !strings.Contains(env.Conf, "AllowedIPs = 10.8.0.0/24, 10.8.2.0/24") || !strings.Contains(env.Conf, lan) || strings.Contains(env.Conf, "0.0.0.0/0") {
+		return "", "", errors.New("wg-mini : conf sans l'extension LAN attendue (forme remote + cidr, jamais 0.0.0.0/0) — vérifiez wg-peer.sh sur la VM")
+	}
+	return env.Conf, env.IP, nil
+}
+
 // wgMiniPingFn — indirection pour les tests (même discipline).
 var wgMiniPingFn = wgMiniPing
 
 // wgMiniListFn — indirection pour les tests.
 var wgMiniListFn = wgMiniList
 
-// wgMiniAddFn / wgMiniRemoveFn / wgMiniConfFn / wgMiniAddRouterFn —
-// indirections pour les tests.
+// wgMiniAddFn / wgMiniRemoveFn / wgMiniConfFn / wgMiniAddRouterFn /
+// wgMiniSetLanFn / wgMiniLanExtendFn — indirections pour les tests.
 var (
 	wgMiniAddFn       = wgMiniAdd
 	wgMiniRemoveFn    = wgMiniRemove
 	wgMiniConfFn      = wgMiniConf
 	wgMiniAddRouterFn = wgMiniAddRouter
+	wgMiniSetLanFn    = wgMiniSetLan
+	wgMiniLanExtendFn = wgMiniLanExtend
 )

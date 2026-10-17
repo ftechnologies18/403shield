@@ -1,4 +1,4 @@
-# wg-mini — passerelle locale WireGuard de MikCloud (N°291 v2 : N°307, v3 : N°312)
+# wg-mini — passerelle locale WireGuard de MikCloud (N°291 v2 : N°307, v3 : N°312, v4 : N°313, v5 : N°315)
 
 Le backend MikCloud tourne dans un conteneur distroless : il ne peut ni
 `sudo` ni toucher `/etc/wireguard`. **wg-mini** est une unité systemd ROOT
@@ -11,9 +11,11 @@ technique à saisir par le gérant).
 
 | Endpoint | Rôle | wg-peer.sh |
 |---|---|---|
-| `POST /v1/add {"name":"vpn-…","kind":"fulltunnel\|remote"}` | génère clés + conf client CÔTÉ VM (v3 : **kind optionnel** — absent/vide = `fulltunnel` rétro-compatible ; `remote` = supervision B2B du gérant, conf `AllowedIPs = 10.8.0.0/24`) | `add <nom> [forme]` |
+| `POST /v1/add {"name":"vpn-…","kind":"fulltunnel\|remote"}` | génère clés + conf client CÔTÉ VM (v3 : **kind optionnel** ; v4 : remote = segments `10.8.0.0/24, 10.8.2.0/24` — preuve par la conf côté backend) | `add <nom> [forme]` |
 | `POST /v1/add-router {"name":"r-…","pub":"…="}` | **v2** : embarque le peer ROUTEUR (clé publique fournie par le routeur) et retourne le livret (address/server_pub/psk/endpoint) | `add-router <nom> <pub>` |
 | `POST /v1/remove {"name":"vpn-…\|r-…"}` | retire le peer (B2C **ou** routeur — révocation auto au démontage), syncconf à chaud | `remove <nom>` |
+| `POST /v1/set-lan {"name":"r-…","lan":"192.168.88.0/24"}` | **v5 (N°315, D-B1 brique 2)** : étend l'AllowedIPs du PEER ROUTEUR dans wg0.conf (la VM route le LAN vers ce routeur) — preuve par la conf RELUE (`allowed` renvoyé, cidr vérifié) | `set-lan <nom> <cidr>` |
+| `POST /v1/lan-extend {"name":"vpn-…","lan":"192.168.88.0/24"}` | **v5 (N°315)** : étend la CONF CLIENTE d'un peer remote (`AllowedIPs = 10.8.0.0/24, 10.8.2.0/24, <lan>`) et renvoie la conf FRAÎCHE intégrale (le backend remplace sa copie chiffrée) | `lan-extend <nom> <cidr>` |
 | `GET /v1/conf?name=vpn-…` | relit une conf (re-livraison) | — (cat 600 root) |
 | `GET /v1/list` | réconciliation cloud ↔ VM (check D4) | `list` |
 | `GET /v1/ping` | santé (dot console, version) | — |
@@ -24,6 +26,25 @@ schéma que les webhooks GeniusPay du backend, inversé. Les peers `vpn-*`
 restent réservés au B2C ; les peers ROUTEURS (tunnel de gestion N°285)
 arrivent via `/v1/add-router` **sans** préfixe `vpn-` (espaces de noms
 distincts, `remove` accepte les deux).
+
+
+## v5 (N°315) — Accès Pro / LAN étendu (design D-B1)
+
+Deux routes nouvelles pour les briques 2 et 3 du design D-B1 :
+
+- `POST /v1/set-lan` : wg-peer.sh `set-lan` étend l'AllowedIPs du **peer
+  ROUTEUR** dans wg0.conf (« 10.8.0.N/32, <lan> ») — la VM route le
+  sous-réseau LAN vers ce routeur (cryptokey routing). Collision refusée
+  (un préfixe = un routeur), tout `10.8.0.0/16` interdit, /24 privé
+  RFC1918 exigé — validé aux TROIS frontières (cloud, mini, script).
+- `POST /v1/lan-extend` : wg-peer.sh `lan-extend` réécrit l'AllowedIPs de
+  la **conf cliente** d'un peer remote (les deux segments + le LAN, les
+  autres LAN déjà étendus préservés) puis la conf fraîche est RELUE et
+  renvoyée INTEGRALEMENT — le backend remplace sa copie chiffrée par cette
+  vérité VM (preuve par la conf, discipline v3/v4).
+
+Un wg-mini v4 répond 404 sur ces routes : le backend traduit en consigne
+exploitant (workflow `ops-wg-mini-install`, hot upgrade ~1 s).
 
 ## v3 (N°312) — forme « remote » : l'accès distant du gérant
 
@@ -59,7 +80,7 @@ voie experte wg-params inchangée). Vérification :
 
 ```bash
 curl -s http://127.0.0.1:4020/v1/ping   # 401 attendu SANS signature
-# avec signature : {"ok":true,"service":"wg-mini","version":"v3"}
+# avec signature : {"ok":true,"service":"wg-mini","version":"v5"}
 ```
 
 ## Installation (recette §8, ~10 minutes)
@@ -105,12 +126,12 @@ curl -s -X POST http://127.0.0.1:4020/v1/add -H "Content-Type: application/json"
 workflow `ops-wg-mini-install` du dépôt (GitHub → Actions → Run workflow,
 branche main, ~2 min de run) — il reconstruit depuis main, pose le binaire,
 **RESTART le service** et **PROUVE la version** par un ping signé
-(`{"version":"v3"}` attendu — run ROUGE sinon). Il repose AUSSI
-`/opt/wireguard/wg-peer.sh` depuis `deploy/oracle/wg-peer.sh` (v3 : 3e
+(`{"version":"v5"}` attendu — run ROUGE sinon). Il repose AUSSI
+`/opt/wireguard/wg-peer.sh` depuis `deploy/oracle/wg-peer.sh` (v5 : 3e/4e
 argument de `add`) — les deux briques montent ensemble, même run.
 
 ⚠️ Piège documenté (N°308) : un simple `systemctl enable --now` ne
-redémarre PAS un service déjà actif — poser le binaire v3 sans restart
+redémarre PAS un service déjà actif — poser le binaire v5 sans restart
 laisse le processus v2 répondre depuis son inode orphelin (tout semble
 vert, la voie royale reste éteinte). La preuve de version signée est LE
 juge de paix : le ping SANS signature (401) ne dit rien de la version.
@@ -124,7 +145,7 @@ S=$(sudo grep -oP '(?<=WG_MINI_SECRET=).*' /etc/mikcloud/wg-mini.env)
 TS=$(date +%s)
 SIG=$(printf '%s.%s' "$TS" '' | openssl dgst -sha256 -hmac "$S" -hex | sed 's/^.* //')
 curl -s -H "X-WGMini-Timestamp: $TS" -H "X-WGMini-Signature: $SIG" \
-     http://127.0.0.1:4020/v1/ping   # → {"ok":true,"service":"wg-mini","version":"v3"}
+     http://127.0.0.1:4020/v1/ping   # → {"ok":true,"service":"wg-mini","version":"v5"}
 ```
 
 `wg-peer.sh` reste re-posé à chaque dispatch ops (discipline §9 inchangée) :

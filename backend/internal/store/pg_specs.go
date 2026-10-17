@@ -100,7 +100,10 @@ var routerSpec = entitySpec[model.Router]{
 		"site_id", "portal_override",
 		// N°285 — renfort WireGuard (PSK chiffré au repos, pattern Password).
 		"wg_state", "wg_pub", "wg_peer_name", "wg_ipv4", "wg_endpoint",
-		"wg_error", "wg_applied_at", "wg_server_pub", "wg_psk"},
+		"wg_error", "wg_applied_at", "wg_server_pub", "wg_psk",
+		// N°315 — Accès Pro / LAN étendu (D-B1) : sous-réseau LAN étendu
+		// vers le tunnel pour ce routeur ('' = aucun).
+		"wg_lan"},
 	idOf: func(x *model.Router) string { return x.ID },
 	scan: func(r *sql.Rows) (model.Router, error) {
 		var x model.Router
@@ -118,7 +121,8 @@ var routerSpec = entitySpec[model.Router]{
 			&x.QoSEnabled, &x.QoSTarget, &x.QoSMaxUpBps, &x.QoSMaxDownBps, &x.QoSSig, &x.QoSAppliedAt,
 			&x.SiteID, &x.PortalOverride,
 			&x.WgState, &x.WgPub, &x.WgPeerName, &x.WgIPv4, &x.WgEndpoint,
-			&x.WgError, &x.WgAppliedAt, &x.WgServerPub, &wgPSKEnc)
+			&x.WgError, &x.WgAppliedAt, &x.WgServerPub, &wgPSKEnc,
+			&x.WgLan)
 		// Sécurité P0 #6 — le mot de passe routeur est stocké chiffré
 		// (AES-256-GCM) : lecture = déchiffrement (passthrough si valeur
 		// antérieure au correctif, migration assurée par
@@ -147,7 +151,8 @@ var routerSpec = entitySpec[model.Router]{
 			x.QoSEnabled, x.QoSTarget, x.QoSMaxUpBps, x.QoSMaxDownBps, x.QoSSig, x.QoSAppliedAt,
 			x.SiteID, x.PortalOverride,
 			x.WgState, x.WgPub, x.WgPeerName, x.WgIPv4, x.WgEndpoint,
-			x.WgError, x.WgAppliedAt, x.WgServerPub, secretbox.Encrypt(x.WgPSK)}
+			x.WgError, x.WgAppliedAt, x.WgServerPub, secretbox.Encrypt(x.WgPSK),
+			x.WgLan}
 	},
 	hashOf: hashEntity[model.Router],
 }

@@ -239,6 +239,15 @@ func (a *API) handleTunnelRenew(w http.ResponseWriter, r *http.Request) {
 			"Cet accès n'est plus actif — souscrivez un nouvel accès sur la vitrine MikCloud VPN (mikcloud.ftci.fr/vpn)", nil)
 		return
 	}
+	// N°315 — garde de FAMILLE : on renouvelle un accès Pro avec une
+	// formule Pro, un B2C avec une formule b2c (prix ET produit — jamais
+	// un Pro étendu au tarif B2C, jamais un B2C converti en supervision).
+	if fam := model.PublicVpnPlanFamilyOf(plan.ID); fam != model.PublicVpnPlanFamilyOf(target.PlanID) {
+		a.store.Unlock()
+		writeErrCode(w, http.StatusBadRequest, "plan_family_mismatch",
+			"Formule non applicable à cet accès (un Accès Pro se renouvelle avec une formule Pro, un VPN B2C avec une formule B2C)", nil)
+		return
+	}
 	settings := ensureSettings(db, model.AccountMainID)
 	if !(settings.Platform != nil && settings.Platform.PublicVpnShopEnabled()) {
 		a.store.Unlock()

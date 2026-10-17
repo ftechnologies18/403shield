@@ -1219,6 +1219,10 @@ func (p *PG) ensureSchema() error {
 		`ALTER TABLE routers ADD COLUMN IF NOT EXISTS wg_applied_at TEXT NOT NULL DEFAULT ''`,
 		`ALTER TABLE routers ADD COLUMN IF NOT EXISTS wg_server_pub TEXT NOT NULL DEFAULT ''`,
 		`ALTER TABLE routers ADD COLUMN IF NOT EXISTS wg_psk        TEXT NOT NULL DEFAULT ''`,
+		// N°315 — Accès Pro / LAN étendu (D-B1 brique 2) : sous-réseau
+		// LAN étendu vers le tunnel pour ce routeur ('' = aucun — le
+		// comportement N°312 « supervision seule » est inchangé).
+		`ALTER TABLE routers ADD COLUMN IF NOT EXISTS wg_lan        TEXT NOT NULL DEFAULT ''`,
 	}
 	// N°166 — RLS systématique : sur un hébergeur mutualisé doté d'une API
 	// Data (Supabase : PostgREST + clé publishable), une table sans RLS

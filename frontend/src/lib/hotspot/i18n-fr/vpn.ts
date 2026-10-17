@@ -82,7 +82,7 @@ export const frVpn: Record<string, string> = {
   "vpn.addWarning":
     "Le trafic du client sort par VOTRE serveur : gardez un œil sur la consommation (sortie ~10 To/mois sur l'offre Always Free) et révoquez les accès dormants.",
   "vpn.addWarning.remote":
-    "La supervision n'ouvre AUCUNE porte vers Internet : le tunnel ne route que le réseau MikCloud (10.8.0.0/24). Caméras et NAS du LAN restent hors périmètre — accès complet au LAN : prochaine étape.",
+    "La supervision n'ouvre AUCUNE porte vers Internet : le tunnel ne route que le réseau MikCloud (10.8.0.0/24, 10.8.2.0/24). Caméras et NAS : l'accès complet au LAN est désormais livré avec l'Accès Pro MikTunnel (tunnel.ftci.fr/pro).",
   "vpn.addCta": "Générer et vendre",
   "vpn.addToast": "Accès VPN créé",
   "vpn.addToast.remote": "Accès distant créé — vos routeurs actifs l'acceptent sous ≤ 45 s",

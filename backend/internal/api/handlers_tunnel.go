@@ -347,6 +347,10 @@ func (a *API) handleTunnelMe(w http.ResponseWriter, r *http.Request) {
 			"createdAt": o.CreatedAt, "expiresAt": o.ExpiresAt,
 			"months": o.Months, "amountFcfa": o.AmountFcfa, "payMethod": o.PayMethod,
 			"kind": o.Kind, "renewTargetRef": o.RenewTargetRef,
+			// N°315 — famille de formule : la console propose les
+			// BONNES formules de renouvellement (Pro pour un Pro,
+			// b2c pour un B2C) et oriente vers /pro pour les Pro.
+			"family":    model.PublicVpnPlanFamilyOf(o.PlanID),
 			"renewable": isDevice,
 			"revealable": o.Status == model.PublicVpnOrderProvisioned &&
 				(o.ExpiresAt == "" || o.ExpiresAt >= now) &&
@@ -361,7 +365,7 @@ func (a *API) handleTunnelMe(w http.ResponseWriter, r *http.Request) {
 		},
 		"orders":  orders,
 		"devices": devices,
-		"scope":   "phase2", // espace client complet : appareils + reveal + renouvellement (N°314)
+		"scope":   "phase3", // espace client + Accès Pro / LAN étendu (N°315)
 	}
 	a.store.Unlock()
 	writeJSON(w, http.StatusOK, out)

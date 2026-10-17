@@ -126,6 +126,35 @@ func ValidWgHost(s string) bool { return wgHostRe.MatchString(s) }
 // ValidWgPort — port d'endpoint (1-65535).
 func ValidWgPort(p int) bool { return p >= 1 && p <= 65535 }
 
+// wgLanRe — un sous-réseau LAN étendu : /24 STRICT, dernier octet 0, espace
+// privé RFC1918 (10.x | 172.16-31.x | 192.168.x). N°315 (D-B1 brique 2).
+var wgLanRe = regexp.MustCompile(`^(10\.(\d{1,2}|1\d{2}|2[0-4]\d|25[0-5])|172\.(1[6-9]|2\d|3[01])|192\.168)\.(\d{1,2}|1\d{2}|2[0-4]\d|25[0-5])\.0/24$`)
+
+// ValidWgLanCIDR — N°315 — un sous-réseau LAN étendu au tunnel (caméras/NAS)
+// : /24 privé RFC1918 STRICT (aucune espace, forme exacte — les trois
+// frontières cloud/VM/backend valident la MÊME règle), HORS de l'espace du
+// pool tunnel — tout 10.8.0.0/16 est REFUSÉ (les segments wg0 10.8.0/1/2
+// sont réservés au tunnel lui-même : un LAN qui s'y chevaucherait casserait
+// le cryptokey routing de wg0 et volerait les adresses du pool — fail-closed
+// sur tout le /16, marge future comprise).
+func ValidWgLanCIDR(s string) bool {
+	if s == "" || !wgLanRe.MatchString(s) {
+		return false
+	}
+	return !strings.HasPrefix(s, "10.8.")
+}
+
+// WgLanMarker — commentaire RouterOS des règles du LAN étendu (N°315) :
+// filter forward + nat srcnat posées par la commande wg_lan — l'idempotence
+// (remove-then-add) et le ménage s'appuient dessus (pattern mikcloud-wg /
+// mikcloud-pool-nat).
+const WgLanMarker = "mikcloud-wg-lan"
+
+// MaxWgLanPeers — borne honnête du nombre de peers Pro scannés par la règle
+// wg_lan (caméras/NAS) : un compte gérant a peu d'appareils Pro ; au-delà,
+// l'application refuse proprement plutôt que de poser une table NAT délirante.
+const MaxWgLanPeers = 8
+
 // SanitizeWgAllowedSources — N°312 — valide/assainit la liste d'allowed-address
 // du peer serveur (clé « allowedSources » du payload wg_setup) : items
 // « 10.8.0.N/32 » (gestion + remote historiques) ou « 10.8.2.N/32 » (remote

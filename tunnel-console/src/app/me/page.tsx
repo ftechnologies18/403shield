@@ -51,6 +51,14 @@ const plans = [
   { id: "vpn-b2c-year", label: "12 mois (≈ 2 mois offerts)", amount: 15000 },
 ] as const;
 
+// N°315 — formules famille « pro » (renouvellement d'un Accès Pro : prix ET
+// produit — le backend refuse le croisement des familles, la console propose
+// la BONNE liste d'emblée).
+const proPlans = [
+  { id: "vpn-pro-month", label: "1 mois", amount: 3500 },
+  { id: "vpn-pro-year", label: "12 mois (≈ 2 mois offerts)", amount: 35000 },
+] as const;
+
 function formatDate(iso: string): string {
   if (!iso) return "—";
   try {
@@ -333,6 +341,9 @@ export default function MePage() {
                       };
                       const left = daysLeft(o.expiresAt);
                       const isRenewal = o.kind === "renewal";
+                      // N°315 — famille de formule : badge Accès Pro + orientation
+                      // vers la page dédiée (LAN étendu, re-apply, appareils).
+                      const isPro = o.family === "pro";
                       return (
                         <li
                           key={o.ref}
@@ -340,7 +351,14 @@ export default function MePage() {
                         >
                           <div className="flex flex-wrap items-start justify-between gap-3">
                             <div className="min-w-0">
-                              <p className="font-mono text-sm font-medium text-slate-100">{o.ref}</p>
+                              <p className="flex flex-wrap items-center gap-2 font-mono text-sm font-medium text-slate-100">
+                                {o.ref}
+                                {isPro && (
+                                  <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-emerald-300">
+                                    Accès Pro
+                                  </span>
+                                )}
+                              </p>
                               <p className="mt-0.5 text-xs text-slate-500">
                                 {isRenewal ? "Renouvellement" : o.plan}
                                 {o.renewTargetRef ? ` de ${o.renewTargetRef}` : ""}
@@ -350,6 +368,14 @@ export default function MePage() {
                                   ? ` · ${formatFcfa(o.amountFcfa)}`
                                   : ""}
                               </p>
+                              {isPro && (
+                                <p className="mt-1 text-xs text-emerald-400/80">
+                                  Routeurs + caméras/NAS — gestion sur la{" "}
+                                  <a href="/pro" className="underline underline-offset-2 hover:text-emerald-300">
+                                    page Accès Pro
+                                  </a>
+                                </p>
+                              )}
                             </div>
                             <span
                               className={`rounded-full border px-3 py-1 text-xs font-medium ${s.classes}`}
@@ -390,6 +416,9 @@ export default function MePage() {
                                 <button
                                   onClick={() => {
                                     setRenewFor(o);
+                                    // N°315 — la formule par défaut suit la FAMILLE de
+                                    // l'accès (un Pro se renouvelle en Pro).
+                                    setRenewPlan(isPro ? "vpn-pro-month" : "vpn-b2c-month");
                                     setRenewError("");
                                     setRenewNotice("");
                                   }}
@@ -542,7 +571,7 @@ export default function MePage() {
                 Formule
               </legend>
               <div className="mt-2 space-y-2">
-                {plans.map((p) => (
+                {(renewFor?.family === "pro" ? proPlans : plans).map((p) => (
                   <label
                     key={p.id}
                     className={`flex cursor-pointer items-center justify-between rounded-xl border px-4 py-3 text-sm transition ${
@@ -560,7 +589,8 @@ export default function MePage() {
                         onChange={() => setRenewPlan(p.id)}
                         className="accent-emerald-500"
                       />
-                      MikCloud VPN — {p.label}
+                      {renewFor?.family === "pro" ? "MikTunnel Pro — " : "MikCloud VPN — "}
+                      {p.label}
                     </span>
                     <span className="font-medium tabular-nums">{formatFcfa(p.amount)}</span>
                   </label>

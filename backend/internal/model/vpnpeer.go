@@ -169,6 +169,23 @@ func FindVpnPeerScoped(db *DB, id, accountID string) *VpnPeer {
 	return nil
 }
 
+// FindVpnPeerByID — retrouve un peer par son ID exact SANS périmètre de
+// compte (N°315, Accès Pro : le compte est apparié par e-mail et re-vérifié
+// par l'APPELANT — tunnelProPeersLocked revérifie AccountID lui-même ; ce
+// finder ne sert qu'à tester l'EXISTENCE du peer d'une commande, jamais à
+// exposer des données d'un autre compte).
+func FindVpnPeerByID(db *DB, id string) *VpnPeer {
+	if id == "" {
+		return nil
+	}
+	for i := range db.VpnPeers {
+		if db.VpnPeers[i].ID == id {
+			return &db.VpnPeers[i]
+		}
+	}
+	return nil
+}
+
 // VpnPeerNameTaken — le nom est-il déjà pris, TOUT COMPTE CONFONDU ? Le pool
 // wg0 est global à la VM : un nom vpn-* réservé par un autre compte bloque,
 // ET les peers de gestion routeurs (Router.WgPeerName) aussi.
