@@ -1,14 +1,15 @@
-// lib/api.ts — N°313 — client API de la console tunnel (module backend
-// /api/tunnel/*, hotspot-api). Appel DIRECT via NEXT_PUBLIC_API_BASE — le CORS
-// du backend est contrôlé par la whitelist ALLOWED_ORIGIN (corsMiddleware,
-// main.go — fail-closed P1 #16) : tunnel.ftci.fr y figure depuis N°316
-// (geste ops-cors-whitelist.yml) ; en développement, TUNNEL_DEV_API_PROXY=1
-// route /api vers localhost:4000.
+// lib/api.ts — N°313 — client API de la console (N°317 : 403Shield Console,
+// ex MikTunnel — module backend /api/tunnel/*, hotspot-api). Appel DIRECT
+// via NEXT_PUBLIC_API_BASE — le CORS du backend est contrôlé par la whitelist
+// ALLOWED_ORIGIN (corsMiddleware, main.go — fail-closed P1 #16) :
+// tunnel.ftci.fr y figure depuis N°316 (geste ops-cors-whitelist.yml) ; en
+// développement, TUNNEL_DEV_API_PROXY=1 route /api vers localhost:4000.
 
 export const API_BASE =
   process.env.NEXT_PUBLIC_API_BASE ?? "https://api.mikcloud.ftci.fr";
 
-const TOKEN_KEY = "miktunnel_token";
+const TOKEN_KEY = "miktunnel_token"; // N°317 — clé historique conservée à
+// l'identique : la renommer déconnecterait tous les clients existants.
 
 export function getToken(): string | null {
   if (typeof window === "undefined") return null;

@@ -1,4 +1,4 @@
-// Landing page MikCloud « Clay » — copie marketing bilingue FR/EN.
+// Landing page 403Shield « Clay » — copie marketing bilingue FR/EN.
 //
 // Auto-contenue (à part du dictionnaire applicatif i18n) : la vitrine a un
 // volume de copie marketing important qui n'a pas vocation à vivre dans le
@@ -21,8 +21,48 @@
 // Positionnement : marché africain pan-continental (UEMOA + CEMAC + Afrique
 // de l'Est + Nigeria + Ghana). Multi mobile-money (Wave, Orange Money, MTN
 // MoMo, Moov, MPesa, Airtel Money), multi-devises (FCFA, NGN, GHS, KES...).
+//
+// N°317 — rebrand : MikCloud & MikTunnel disparaissent au profit de la marque
+// unifiée 403Shield (Option A de l'étude N°316, modèle Cloudflare/OVH : UN
+// site marketing multipage à menu complet + UNE console transactionnelle).
+// La vitrine devient le site unifié : Hotspot · VPN · Tunnels, endossée
+// « powered by FTech CI » (ftci.fr). Nouveau bloc `pages` (copie des pages
+// produit /hotspot, /vpn, /tunnels) et menu complet `header.nav`. Les prix
+// VPN ne sont PAS codés en dur ici : la page /vpn renvoie à la boutique pour
+// les prix live.
 
 export type Lang = "fr" | "en";
+
+export interface ProductPageCopy {
+  meta: { title: string; description: string };
+  hero: {
+    badge: string;
+    title1: string;
+    titleAccent: string;
+    title2: string;
+    subtitle: string;
+    ctaPrimary: string;
+    /** "#signup" ouvre la modale d'inscription ; "#signin" va à /login ; chemin interne ("/tunnels") ou URL https externe. */
+    ctaPrimaryHref: string;
+    ctaSecondary: string;
+    ctaSecondaryHref: string;
+  };
+  features: {
+    eyebrow: string;
+    title: string;
+    cards: { title: string; desc: string }[];
+  };
+  note?: { title: string; body: string };
+  cta: {
+    kicker: string;
+    title: string;
+    body: string;
+    primary: string;
+    primaryHref: string;
+    secondary: string;
+    secondaryHref: string;
+  };
+}
 
 export interface LandingCopy {
   rail: {
@@ -39,8 +79,14 @@ export interface LandingCopy {
     signUp: string;
     langLabel: string;
     homeLink: string;
-    /** N°316 — lien famille vers la sous-marque MikTunnel (externe). */
-    vpn: string;
+    /** N°317 — menu complet du site unifié (voie Cloudflare/OVH). */
+    nav: {
+      home: string;
+      hotspot: string;
+      vpn: string;
+      tunnels: string;
+      pricing: string;
+    };
   };
   hero: {
     badge: string;
@@ -167,6 +213,12 @@ export interface LandingCopy {
     /** N°70 — libellé du lien vers /legal/confidentialite. */
     legal: string;
   };
+  /** N°317 — pages produit du site unifié (multipage, menu complet). */
+  pages: {
+    hotspot: ProductPageCopy;
+    vpn: ProductPageCopy;
+    tunnels: ProductPageCopy;
+  };
 }
 
 const fr: LandingCopy = {
@@ -179,29 +231,38 @@ const fr: LandingCopy = {
     pricing: "Tarifs",
   },
   header: {
-    brand: "MikCloud",
+    brand: "403Shield",
     signIn: "Se connecter",
     signUp: "Essai gratuit",
     langLabel: "EN",
     homeLink: "Retour à l'accueil",
-    vpn: "VPN & Tunnels",
+    nav: {
+      home: "Accueil",
+      hotspot: "Hotspot",
+      vpn: "VPN",
+      tunnels: "Tunnels",
+      pricing: "Tarifs",
+    },
   },
   hero: {
-    badge: "Gestion Hotspot · Pare-feu HomeNet · Cloud MikroTik",
-    title1: "Votre WiFi,",
-    titleAccent: "blindé",
-    title2: "par le cloud.",
+    badge: "403Shield · Hotspot · VPN · Tunnels",
+    title1: "Votre réseau, sous",
+    titleAccent: "bouclier.",
+    title2: "",
     subtitle:
-      "Que vous exploitiez un hotspot public ou protégiez votre domicile avec HomeNet, MikCloud réunit vouchers, portails captifs à votre marque, quatre boucliers pare-feu et pilotage complet de votre parc MikroTik — une seule console, réparée automatiquement depuis le cloud.",
+      "L'erreur 403, c'est pour les autres. Hotspot WiFi public rentable, VPN WireGuard à IP fixe France et tunnels chiffrés dans le cloud : 403Shield réunit une suite complète de sécurité réseau pour les travailleurs nomades, les entreprises et les particuliers — powered by FTech CI.",
     ctaPrimary: "Protéger mon réseau",
-    ctaSecondary: "Découvrir la plateforme",
+    ctaSecondary: "Découvrir la suite",
     trialHint: "Essai gratuit · sans carte bancaire — 60 jours Hotspot · 30 jours HomeNet",
-    chips: ["4/4 protections actives", "500 vouchers par lot", "Agent · check-in 45 s"],
+    chips: ["Erreur 403 — aux autres", "4/4 protections actives", "500 vouchers par lot"],
   },
   marquee: [
     "Vouchers & codes d'accès",
+    "VPN WireGuard · IP fixe France",
     "Filtrage DNS Quad9",
+    "Tunnels cloud chiffrés",
     "Anti-piratage WiFi",
+    "Accès distant Pro — routeurs, caméras, NAS",
     "Couvre-feu internet",
     "HomeNet · Sécurité internet résidentiel",
     "Bloque-VPN",
@@ -209,20 +270,18 @@ const fr: LandingCopy = {
     "Mode Vente revendeurs",
     "Mise à jour RouterOS",
     "Portail captif à votre marque",
-    "WiFi jetable par QR",
-    "Notifications Telegram",
-    "Paiement Wave",
+    "Paiement Wave & Mobile Money",
   ],
   powers: {
-    eyebrow: "Une console, trois super-pouvoirs",
+    eyebrow: "Une suite, trois super-pouvoirs",
     title: "Tout ce qu'il faut pour régner sur votre réseau.",
     subtitle:
-      "Gestion hotspot, protection cloud et pilotage du parc : MikCloud réunit en une seule interface tout ce que votre infrastructure réclame — sans Winbox, sans serveur à maintenir.",
+      "Gestion hotspot, protection cloud et pilotage du parc : 403Shield réunit en une seule interface tout ce que votre infrastructure réclame — sans Winbox, sans serveur à maintenir.",
     cards: [
       {
         tag: "Fondation",
         title: "Gestion Hotspot",
-        desc: "Le cœur historique de MikCloud, devenu adulte : portails captifs à votre marque, vouchers par lots, quotas et bridage au forfait, sessions en direct.",
+        desc: "Le pilier fondateur de la suite : portails captifs à votre marque, vouchers par lots, quotas et bridage au forfait, sessions en direct.",
         items: [
           "Portail captif 100 % à votre marque",
           "Vouchers par lots jusqu'à 500",
@@ -297,7 +356,7 @@ const fr: LandingCopy = {
   hotspot: {
     kicker: "Gestion hotspot",
     title: "Un portail captif dont vous serez fier.",
-    body: "Offrez à vos clients une connexion fluide et soignée — à votre marque, sans aucune mention MikCloud. Vouchers à durée, quota ou multi-appareils : vous gardez le contrôle total. Vos revendeurs ? Ils vendent depuis leur téléphone : PWA protégée par PIN, stock transféré, ventes hors-ligne, rapport de journée.",
+    body: "Offrez à vos clients une connexion fluide et soignée — à votre marque, sans aucune mention 403Shield. Vouchers à durée, quota ou multi-appareils : vous gardez le contrôle total. Vos revendeurs ? Ils vendent depuis leur téléphone : PWA protégée par PIN, stock transféré, ventes hors-ligne, rapport de journée.",
     audience: ["Hôtels", "Cybercafés", "Maquis", "Boutiques", "Campus", "Restaurants"],
     audienceLabel: "Pour qui ?",
     feats: [
@@ -323,7 +382,7 @@ const fr: LandingCopy = {
   fleet: {
     kicker: "Parc & flotte",
     title: "Votre parc MikroTik, sans quitter la console.",
-    body: "L'agent MikCloud sort du routeur vers le cloud : il fonctionne derrière CGNAT, Orange ou Starlink, sans IP publique ni port ouvert. Puis chaque routeur se pilote à distance — jusqu'à la mise à jour RouterOS de toute la flotte.",
+    body: "L'agent 403Shield sort du routeur vers le cloud : il fonctionne derrière CGNAT, Orange ou Starlink, sans IP publique ni port ouvert. Puis chaque routeur se pilote à distance — jusqu'à la mise à jour RouterOS de toute la flotte.",
     feats: [
       {
         title: "Mise à jour RouterOS en 1 clic",
@@ -359,7 +418,7 @@ const fr: LandingCopy = {
     eyebrow: "Tarifs",
     title: "Deux modes, un nuage.",
     subtitle:
-      "Exploitez un réseau public ou protégez votre foyer : MikCloud s'adapte. L'essai est offert dans les deux cas, sans engagement.",
+      "Exploitez un réseau public ou protégez votre foyer : 403Shield s'adapte. L'essai est offert dans les deux cas, sans engagement.",
     modesLabel: "Choisir votre mode",
     segments: [
       {
@@ -372,7 +431,7 @@ const fr: LandingCopy = {
         name: "Découverte",
         price: "0",
         period: "FCFA · 60 jours",
-        tagline: "Pour découvrir MikCloud sans risque",
+        tagline: "Pour découvrir 403Shield sans risque",
         cta: "Commencer gratuitement",
         highlight: false,
         features: [
@@ -474,7 +533,7 @@ const fr: LandingCopy = {
     openLabel: "Ouvrir la discussion",
     closeLabel: "Fermer la discussion",
     tease: "Une question ? Écrivez-la ici !",
-    title: "Assistant MikCloud",
+    title: "Assistant 403Shield",
     statusBot: "Assistant · réponses instantanées",
     statusHuman: "Un conseiller vous répond",
     statusClosed: "Conversation clôturée",
@@ -482,8 +541,8 @@ const fr: LandingCopy = {
     send: "Envoyer",
     humanBtn: "Parler à un humain",
     newConv: "Nouvelle conversation",
-    handoffNote: "Transmis à l'équipe MikCloud — vos prochains messages partent directement au conseiller.",
-    closedNote: "Cette conversation est terminée. À bientôt sur MikCloud !",
+    handoffNote: "Transmis à l'équipe 403Shield — vos prochains messages partent directement au conseiller.",
+    closedNote: "Cette conversation est terminée. À bientôt sur 403Shield !",
     suggestions: [
       "Hotspot ou HomeNet ?",
       "Quels sont les tarifs ?",
@@ -496,7 +555,7 @@ const fr: LandingCopy = {
   },
   finalCta: {
     kicker: "Prêt·e à passer au niveau supérieur ?",
-    title: "Blindez votre WiFi en moins de 5 minutes.",
+    title: "Blindez votre réseau en moins de 5 minutes.",
     subtitle:
       "Créez votre compte, collez le script agent sur votre routeur, activez vos protections. Sans carte bancaire, sans serveur à maintenir.",
     primary: "Créer mon compte gratuit",
@@ -504,16 +563,16 @@ const fr: LandingCopy = {
   },
   footer: {
     tagline:
-      "Le cloud qui protège : hotspot, pare-feu et pilotage MikroTik réunis dans un seul outil.",
+      "La suite sécurité réseau cloud : Hotspot, VPN WireGuard et tunnels chiffrés — powered by FTech CI.",
     columns: [
       {
         title: "Produit",
         links: [
-          { label: "Super-pouvoirs", href: "#pouvoirs" },
-          { label: "Protection cloud", href: "#protection" },
-          { label: "Hotspot", href: "#hotspot" },
-          { label: "Parc routeurs", href: "#parc" },
-          { label: "Tarifs", href: "#tarifs" },
+          { label: "Hotspot", href: "/hotspot" },
+          { label: "VPN", href: "/vpn" },
+          { label: "Tunnels", href: "/tunnels" },
+          { label: "Protection cloud", href: "/#protection" },
+          { label: "Tarifs", href: "/#tarifs" },
         ],
       },
       {
@@ -531,14 +590,174 @@ const fr: LandingCopy = {
         links: [{ label: "Politique de confidentialité", href: "/legal/confidentialite" }],
       },
       {
-        // N°316 — famille : la maison MikCloud renvoie vers sa sous-marque.
-        title: "Famille",
+        // N°317 — écosystème : maison-mère FTech CI, console et boutique VPN.
+        title: "Écosystème",
         links: [
-          { label: "MikTunnel — VPN & accès distants", href: "https://tunnel.ftci.fr", external: true },
+          { label: "FTech CI", href: "https://ftci.fr", external: true },
+          { label: "Console 403Shield", href: "https://tunnel.ftci.fr", external: true },
+          { label: "Boutique VPN", href: "https://tunnel.ftci.fr/shop", external: true },
         ],
       },
     ],
     legal: "Politique de confidentialité",
+  },
+
+  /* N°317 — pages produit du site unifié (/hotspot, /vpn, /tunnels). */
+  pages: {
+    hotspot: {
+      meta: {
+        title: "403Shield Hotspot — WiFi public rentable et blindé",
+        description:
+          "Vouchers par lots de 500, portail captif 100 % à votre marque, Mode Vente et revendeurs, 4 boucliers pare-feu : exploitez un WiFi public rentable, piloté depuis le cloud.",
+      },
+      hero: {
+        badge: "403Shield Hotspot",
+        title1: "Votre WiFi public,",
+        titleAccent: "rentable",
+        title2: "et blindé.",
+        subtitle:
+          "Hôtels, cybercafés, maquis, boutiques, campus : vendez l'accès internet par vouchers, à votre marque, avec vos revendeurs — pendant que quatre boucliers pare-feu veillent sur le réseau. Essai gratuit 60 jours, sans carte bancaire.",
+        ctaPrimary: "Démarrer l'essai gratuit",
+        ctaPrimaryHref: "#signup",
+        ctaSecondary: "Voir les tarifs",
+        ctaSecondaryHref: "/#tarifs",
+      },
+      features: {
+        eyebrow: "Ce que fait 403Shield Hotspot",
+        title: "Le WiFi public, transformé en business.",
+        cards: [
+          {
+            title: "Portail captif 100 % à votre marque",
+            desc: "Mode commercial avec grille tarifaire et paiement Wave, ou mode hospitalité avec promos et réseaux sociaux. Vos clients ne voient que vous.",
+          },
+          {
+            title: "Vouchers & forfaits",
+            desc: "Durée, quota de données, débit, 1 à 10 appareils — et à l'épuisement : couper ou brider en douceur. Jusqu'à 500 vouchers par lot.",
+          },
+          {
+            title: "Mode Vente & revendeurs",
+            desc: "Vos revendeurs vendent depuis leur téléphone : PWA protégée par PIN, stock transféré, ventes hors-ligne, rapport de journée.",
+          },
+          {
+            title: "Statistiques en direct",
+            desc: "Affluence horaire, revenus, marge par profil, canaux directs et revendeurs — tout ce qui se mesure se pilote.",
+          },
+        ],
+      },
+      cta: {
+        kicker: "Prêt à lancer votre hotspot ?",
+        title: "60 jours d'essai, sans carte bancaire.",
+        body: "Créez votre compte, collez le script agent sur votre routeur MikroTik, configurez votre premier forfait. Sans serveur à maintenir, sans Winbox.",
+        primary: "Créer mon compte gratuit",
+        primaryHref: "#signup",
+        secondary: "Voir les tarifs",
+        secondaryHref: "/#tarifs",
+      },
+    },
+    vpn: {
+      meta: {
+        title: "403Shield VPN — IP fixe France sur WireGuard",
+        description:
+          "Un VPN WireGuard qui sort par notre serveur de Marseille avec une IP fixe France dédiée. Activation en 30 secondes, paiement Wave ou carte, géré depuis votre espace sans mot de passe.",
+      },
+      hero: {
+        badge: "403Shield VPN",
+        title1: "Une IP fixe France.",
+        titleAccent: "À vous seul.",
+        title2: "",
+        subtitle:
+          "Votre trafic, chiffré de bout en bout par WireGuard, sort par notre serveur de Marseille avec une adresse IP dédiée. Activation en 30 secondes — sans toucher à un fichier de configuration.",
+        ctaPrimary: "Acheter mon VPN",
+        ctaPrimaryHref: "https://tunnel.ftci.fr/shop",
+        ctaSecondary: "Découvrir les tunnels",
+        ctaSecondaryHref: "/tunnels",
+      },
+      features: {
+        eyebrow: "Pourquoi 403Shield VPN",
+        title: "Le VPN qui ne vous enferme pas.",
+        cards: [
+          {
+            title: "IP fixe dédiée",
+            desc: "Une adresse française rien qu'à vous : banques, services publics et plateformes qui refusent les IP partagées vous reconnaissent enfin.",
+          },
+          {
+            title: "WireGuard, audité et léger",
+            desc: "Le protocole moderne, plus rapide et plus léger que les VPN d'ancienne génération. Votre configuration reste votre propriété.",
+          },
+          {
+            title: "Mobile Money & carte",
+            desc: "Payez en Wave ou par carte bancaire, en FCFA. Le provisioning est automatique : la configuration part par e-mail dès l'encaissement confirmé.",
+          },
+          {
+            title: "Sans mot de passe",
+            desc: "Un code à 6 chiffres reçu par e-mail suffit : achats, renouvellement 1-clic et récupération de configuration depuis votre espace.",
+          },
+        ],
+      },
+      note: {
+        title: "Deux formules, un seul produit",
+        body: "Mensuel sans engagement, ou annuel — 10 mois payés, 2 offerts. Prix en FCFA sur la boutique, remise mobile money incluse : c'est là que la commande se passe.",
+      },
+      cta: {
+        kicker: "Prêt à chiffrer votre trafic ?",
+        title: "Votre configuration part par e-mail en 30 secondes.",
+        body: "Choisissez votre formule sur la boutique, payez en Wave ou par carte : la configuration WireGuard complète arrive par e-mail, prête à importer.",
+        primary: "Acheter mon VPN",
+        primaryHref: "https://tunnel.ftci.fr/shop",
+        secondary: "J'ai déjà un VPN — mon espace",
+        secondaryHref: "https://tunnel.ftci.fr",
+      },
+    },
+    tunnels: {
+      meta: {
+        title: "403Shield Tunnels — accès distant chiffré : routeurs, caméras, NAS",
+        description:
+          "Supervisez vos routeurs MikroTik, caméras et NAS à travers un tunnel WireGuard chiffré, où que vous soyez. Console sans mot de passe, payable en Mobile Money.",
+      },
+      hero: {
+        badge: "403Shield Tunnels",
+        title1: "Vos réseaux distants,",
+        titleAccent: "à portée",
+        title2: "de main.",
+        subtitle:
+          "Supervisez vos routeurs MikroTik — puis vos caméras et vos NAS — à travers le même tunnel chiffré WireGuard, où que vous soyez. Achat, gestion et renouvellement au même endroit.",
+        ctaPrimary: "Ouvrir la console",
+        ctaPrimaryHref: "https://tunnel.ftci.fr",
+        ctaSecondary: "Découvrir le VPN",
+        ctaSecondaryHref: "/vpn",
+      },
+      features: {
+        eyebrow: "Pourquoi 403Shield Tunnels",
+        title: "Le pont privé entre vous et vos réseaux.",
+        cards: [
+          {
+            title: "VPN de voyage",
+            desc: "Un VPN WireGuard à IP fixe France pour vos déplacements : trafic chiffré de bout en bout, sortant de Marseille.",
+          },
+          {
+            title: "Accès Pro — routeurs",
+            desc: "Supervision distante de vos routeurs MikroTik à travers le tunnel — sans exposer votre interface d'administration sur Internet.",
+          },
+          {
+            title: "LAN étendu — caméras & NAS",
+            desc: "L'Accès Pro étend le tunnel à votre LAN : caméras, NAS et autres équipements restent joignables en privé, jamais exposés.",
+          },
+          {
+            title: "Console sans mot de passe",
+            desc: "Un code e-mail à 6 chiffres suffit : espace client, portefeuille d'appareils, renouvellement 1-clic, révélation de configuration.",
+          },
+        ],
+      },
+      cta: {
+        kicker: "Vos réseaux vous attendent",
+        title: "Ouvrez votre tunnel en moins de 5 minutes.",
+        body: "Code e-mail, boutique Wave/carte, configuration livrée par e-mail : le tunnel s'installe sans toucher à un fichier de configuration.",
+        primary: "Ouvrir la console",
+        primaryHref: "https://tunnel.ftci.fr",
+        secondary: "Voir la boutique VPN",
+        secondaryHref: "https://tunnel.ftci.fr/shop",
+      },
+    },
   },
 };
 
@@ -552,29 +771,38 @@ const en: LandingCopy = {
     pricing: "Pricing",
   },
   header: {
-    brand: "MikCloud",
+    brand: "403Shield",
     signIn: "Sign in",
     signUp: "Free trial",
     langLabel: "FR",
     homeLink: "Back to home",
-    vpn: "VPN & Tunnels",
+    nav: {
+      home: "Home",
+      hotspot: "Hotspot",
+      vpn: "VPN",
+      tunnels: "Tunnels",
+      pricing: "Pricing",
+    },
   },
   hero: {
-    badge: "Hotspot management · HomeNet residential firewall · MikroTik cloud",
-    title1: "Your WiFi,",
-    titleAccent: "shielded",
-    title2: "by the cloud.",
+    badge: "403Shield · Hotspot · VPN · Tunnels",
+    title1: "Your network,",
+    titleAccent: "shielded.",
+    title2: "",
     subtitle:
-      "Whether you run a public hotspot or shield your home with HomeNet, MikCloud brings vouchers, white-label captive portals, four firewall shields and full MikroTik fleet control together — one console, self-healed from the cloud.",
+      "Error 403 is for the others. A revenue-ready public Hotspot, a WireGuard VPN with a dedicated fixed French IP and cloud-encrypted tunnels: 403Shield brings together a complete network security suite for nomadic workers, businesses and households — powered by FTech CI.",
     ctaPrimary: "Protect my network",
-    ctaSecondary: "Explore the platform",
+    ctaSecondary: "Explore the suite",
     trialHint: "Free trial · no credit card — 60 days Hotspot · 30 days HomeNet",
-    chips: ["4/4 protections active", "500 vouchers per batch", "Agent · 45 s check-in"],
+    chips: ["Error 403 — for the others", "4/4 protections active", "500 vouchers per batch"],
   },
   marquee: [
     "Vouchers & access codes",
+    "WireGuard VPN · fixed French IP",
     "Quad9 DNS filtering",
+    "Encrypted cloud tunnels",
     "WiFi anti-hacking",
+    "Pro remote access — routers, cameras, NAS",
     "Internet curfew",
     "HomeNet · Residential internet security",
     "VPN blocker",
@@ -582,20 +810,18 @@ const en: LandingCopy = {
     "Reseller Sell Mode",
     "RouterOS updates",
     "White-label captive portal",
-    "QR throwaway WiFi",
-    "Telegram alerts",
-    "Wave payments",
+    "Wave & Mobile Money payments",
   ],
   powers: {
-    eyebrow: "One console, three superpowers",
+    eyebrow: "One suite, three superpowers",
     title: "Everything you need to rule your network.",
     subtitle:
-      "Hotspot management, cloud protection and fleet control: MikCloud gathers in a single interface everything your infrastructure demands — no Winbox, no server to maintain.",
+      "Hotspot management, cloud protection and fleet control: 403Shield gathers in a single interface everything your infrastructure demands — no Winbox, no server to maintain.",
     cards: [
       {
         tag: "Foundation",
         title: "Hotspot Management",
-        desc: "MikCloud's historic core, all grown up: white-label captive portals, batch vouchers, per-plan quotas and throttling, live sessions.",
+        desc: "The suite's founding pillar: white-label captive portals, batch vouchers, per-plan quotas and throttling, live sessions.",
         items: [
           "100% white-label captive portal",
           "Voucher batches up to 500",
@@ -670,7 +896,7 @@ const en: LandingCopy = {
   hotspot: {
     kicker: "Hotspot management",
     title: "A captive portal you'll be proud of.",
-    body: "Give your customers a smooth, polished connection — under your brand, with zero MikCloud mention. Duration, quota or multi-device vouchers: you keep total control. Your resellers? They sell straight from their phone: PIN-protected PWA, transferred stock, offline sales, end-of-day report.",
+    body: "Give your customers a smooth, polished connection — under your brand, with zero 403Shield mention. Duration, quota or multi-device vouchers: you keep total control. Your resellers? They sell straight from their phone: PIN-protected PWA, transferred stock, offline sales, end-of-day report.",
     audience: ["Hotels", "Cybercafés", "Bars", "Shops", "Campuses", "Restaurants"],
     audienceLabel: "Who is it for?",
     feats: [
@@ -696,7 +922,7 @@ const en: LandingCopy = {
   fleet: {
     kicker: "Fleet & routers",
     title: "Your MikroTik fleet, without leaving the console.",
-    body: "The MikCloud agent dials out from the router to the cloud: it works behind CGNAT, Orange or Starlink, with no public IP and no open port. Then every router is remote-controlled — down to fleet-wide RouterOS updates.",
+    body: "The 403Shield agent dials out from the router to the cloud: it works behind CGNAT, Orange or Starlink, with no public IP and no open port. Then every router is remote-controlled — down to fleet-wide RouterOS updates.",
     feats: [
       {
         title: "One-click RouterOS updates",
@@ -731,7 +957,7 @@ const en: LandingCopy = {
   pricing: {
     eyebrow: "Pricing",
     title: "Two modes, one cloud.",
-    subtitle: "Run a public network or shield your home: MikCloud adapts. The trial is free in both cases, no commitment.",
+    subtitle: "Run a public network or shield your home: 403Shield adapts. The trial is free in both cases, no commitment.",
     modesLabel: "Choose your mode",
     segments: [
       {
@@ -744,7 +970,7 @@ const en: LandingCopy = {
         name: "Discovery",
         price: "0",
         period: "FCFA · 60 days",
-        tagline: "To discover MikCloud risk-free",
+        tagline: "To discover 403Shield risk-free",
         cta: "Start for free",
         highlight: false,
         features: [
@@ -846,7 +1072,7 @@ const en: LandingCopy = {
     openLabel: "Open the conversation",
     closeLabel: "Close the conversation",
     tease: "Got a question? Ask away!",
-    title: "MikCloud Assistant",
+    title: "403Shield Assistant",
     statusBot: "Assistant · instant answers",
     statusHuman: "An advisor is replying to you",
     statusClosed: "Conversation closed",
@@ -854,8 +1080,8 @@ const en: LandingCopy = {
     send: "Send",
     humanBtn: "Talk to a human",
     newConv: "New conversation",
-    handoffNote: "Handed over to the MikCloud team — your next messages go straight to the advisor.",
-    closedNote: "This conversation is over. See you soon on MikCloud!",
+    handoffNote: "Forwarded to the 403Shield team — your next messages go straight to the advisor.",
+    closedNote: "This conversation is over. See you soon on 403Shield!",
     suggestions: [
       "Hotspot or HomeNet?",
       "What are the prices?",
@@ -868,7 +1094,7 @@ const en: LandingCopy = {
   },
   finalCta: {
     kicker: "Ready to level up?",
-    title: "Shield your WiFi in under 5 minutes.",
+    title: "Shield your network in under 5 minutes.",
     subtitle:
       "Create your account, paste the agent script on your router, switch on your protections. No credit card, no server to maintain.",
     primary: "Create my free account",
@@ -876,16 +1102,16 @@ const en: LandingCopy = {
   },
   footer: {
     tagline:
-      "The cloud that protects: hotspot, firewall and MikroTik control united in a single tool.",
+      "The cloud network-security suite: Hotspot, WireGuard VPN and encrypted tunnels — powered by FTech CI.",
     columns: [
       {
         title: "Product",
         links: [
-          { label: "Superpowers", href: "#pouvoirs" },
-          { label: "Cloud protection", href: "#protection" },
-          { label: "Hotspot", href: "#hotspot" },
-          { label: "Router fleet", href: "#parc" },
-          { label: "Pricing", href: "#tarifs" },
+          { label: "Hotspot", href: "/hotspot" },
+          { label: "VPN", href: "/vpn" },
+          { label: "Tunnels", href: "/tunnels" },
+          { label: "Cloud protection", href: "/#protection" },
+          { label: "Pricing", href: "/#tarifs" },
         ],
       },
       {
@@ -903,14 +1129,174 @@ const en: LandingCopy = {
         links: [{ label: "Privacy policy", href: "/legal/confidentialite" }],
       },
       {
-        // N°316 — family: the MikCloud house links to its sub-brand.
-        title: "Family",
+        // N°317 — ecosystem: FTech CI parent company, console and VPN shop.
+        title: "Ecosystem",
         links: [
-          { label: "MikTunnel — VPN & remote access", href: "https://tunnel.ftci.fr", external: true },
+          { label: "FTech CI", href: "https://ftci.fr", external: true },
+          { label: "403Shield Console", href: "https://tunnel.ftci.fr", external: true },
+          { label: "VPN shop", href: "https://tunnel.ftci.fr/shop", external: true },
         ],
       },
     ],
     legal: "Privacy policy",
+  },
+
+  /* N°317 — product pages of the unified site (/hotspot, /vpn, /tunnels). */
+  pages: {
+    hotspot: {
+      meta: {
+        title: "403Shield Hotspot — revenue-ready, hardened public WiFi",
+        description:
+          "Batch vouchers up to 500, a 100% white-label captive portal, Sell Mode with resellers and four firewall shields: run a profitable public WiFi, driven from the cloud.",
+      },
+      hero: {
+        badge: "403Shield Hotspot",
+        title1: "Your public WiFi,",
+        titleAccent: "profitable",
+        title2: "and hardened.",
+        subtitle:
+          "Hotels, cybercafés, eateries, shops and campuses: sell internet access with vouchers, under your brand, through your resellers — while four firewall shields watch over the network. 60-day free trial, no credit card.",
+        ctaPrimary: "Start the free trial",
+        ctaPrimaryHref: "#signup",
+        ctaSecondary: "See pricing",
+        ctaSecondaryHref: "/#tarifs",
+      },
+      features: {
+        eyebrow: "What 403Shield Hotspot does",
+        title: "Public WiFi, turned into a business.",
+        cards: [
+          {
+            title: "100% white-label captive portal",
+            desc: "Commercial mode with rate card and Wave payments, or hospitality mode with promos and social links. Your customers only see you.",
+          },
+          {
+            title: "Vouchers & plans",
+            desc: "Duration, data quota, bandwidth, 1 to 10 devices — and on depletion: cut off or throttle gently. Up to 500 vouchers per batch.",
+          },
+          {
+            title: "Sell Mode & resellers",
+            desc: "Your resellers sell from their phone: PIN-protected PWA, transferred stock, offline sales, end-of-day report.",
+          },
+          {
+            title: "Live statistics",
+            desc: "Hourly footfall, revenue, margin per profile, direct and reseller channels — what gets measured gets managed.",
+          },
+        ],
+      },
+      cta: {
+        kicker: "Ready to launch your hotspot?",
+        title: "60 days free, no credit card.",
+        body: "Create your account, paste the agent script onto your MikroTik router, configure your first plan. No server to maintain, no Winbox.",
+        primary: "Create my free account",
+        primaryHref: "#signup",
+        secondary: "See pricing",
+        secondaryHref: "/#tarifs",
+      },
+    },
+    vpn: {
+      meta: {
+        title: "403Shield VPN — fixed French IP over WireGuard",
+        description:
+          "A WireGuard VPN exiting through our Marseille server with a dedicated fixed French IP. 30-second activation, Wave or card payment, managed from your passwordless account.",
+      },
+      hero: {
+        badge: "403Shield VPN",
+        title1: "A fixed French IP.",
+        titleAccent: "Yours alone.",
+        title2: "",
+        subtitle:
+          "Your traffic, end-to-end encrypted by WireGuard, exits through our Marseille server with a dedicated IP address. 30-second activation — without touching a single config file.",
+        ctaPrimary: "Buy my VPN",
+        ctaPrimaryHref: "https://tunnel.ftci.fr/shop",
+        ctaSecondary: "Explore tunnels",
+        ctaSecondaryHref: "/tunnels",
+      },
+      features: {
+        eyebrow: "Why 403Shield VPN",
+        title: "The VPN that doesn't lock you in.",
+        cards: [
+          {
+            title: "Dedicated fixed IP",
+            desc: "A French address just for you: banks, public services and platforms that reject shared IPs finally recognize you.",
+          },
+          {
+            title: "WireGuard, audited & lightweight",
+            desc: "The modern protocol, faster and lighter than legacy VPNs. Your configuration remains your property.",
+          },
+          {
+            title: "Mobile Money & card",
+            desc: "Pay with Wave or bank card, in FCFA. Provisioning is automatic: your configuration is emailed as soon as payment is confirmed.",
+          },
+          {
+            title: "No password",
+            desc: "A 6-digit code received by email is enough: purchases, 1-click renewal and configuration recovery from your account.",
+          },
+        ],
+      },
+      note: {
+        title: "Two plans, one product",
+        body: "Monthly with no commitment, or yearly — pay 10 months, get 2 offered. Prices in FCFA on the shop, mobile-money discount included: that's where the order happens.",
+      },
+      cta: {
+        kicker: "Ready to encrypt your traffic?",
+        title: "Your configuration is emailed within 30 seconds.",
+        body: "Pick your plan on the shop, pay with Wave or card: the full WireGuard configuration arrives by email, ready to import.",
+        primary: "Buy my VPN",
+        primaryHref: "https://tunnel.ftci.fr/shop",
+        secondary: "I already have a VPN — my account",
+        secondaryHref: "https://tunnel.ftci.fr",
+      },
+    },
+    tunnels: {
+      meta: {
+        title: "403Shield Tunnels — encrypted remote access: routers, cameras, NAS",
+        description:
+          "Supervise your MikroTik routers, cameras and NAS through an encrypted WireGuard tunnel, from anywhere. Passwordless console, payable with Mobile Money.",
+      },
+      hero: {
+        badge: "403Shield Tunnels",
+        title1: "Your remote networks,",
+        titleAccent: "within",
+        title2: "reach.",
+        subtitle:
+          "Supervise your MikroTik routers — then your cameras and NAS — through the same encrypted WireGuard tunnel, wherever you are. Purchase, management and renewal in one place.",
+        ctaPrimary: "Open the console",
+        ctaPrimaryHref: "https://tunnel.ftci.fr",
+        ctaSecondary: "Explore the VPN",
+        ctaSecondaryHref: "/vpn",
+      },
+      features: {
+        eyebrow: "Why 403Shield Tunnels",
+        title: "The private bridge between you and your networks.",
+        cards: [
+          {
+            title: "Travel VPN",
+            desc: "A WireGuard VPN with a fixed French IP for your trips: end-to-end encrypted traffic, exiting from Marseille.",
+          },
+          {
+            title: "Pro Access — routers",
+            desc: "Remote supervision of your MikroTik routers through the tunnel — without exposing your admin interface to the Internet.",
+          },
+          {
+            title: "Extended LAN — cameras & NAS",
+            desc: "Pro Access extends the tunnel to your LAN: cameras, NAS and other equipment stay privately reachable, never exposed.",
+          },
+          {
+            title: "Passwordless console",
+            desc: "A 6-digit email code is enough: client area, device wallet, 1-click renewal, configuration reveal.",
+          },
+        ],
+      },
+      cta: {
+        kicker: "Your networks are waiting",
+        title: "Open your tunnel in under 5 minutes.",
+        body: "Email code, Wave/card shop, configuration delivered by email: the tunnel installs itself without touching a config file.",
+        primary: "Open the console",
+        primaryHref: "https://tunnel.ftci.fr",
+        secondary: "Browse the VPN shop",
+        secondaryHref: "https://tunnel.ftci.fr/shop",
+      },
+    },
   },
 };
 

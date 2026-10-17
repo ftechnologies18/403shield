@@ -13,7 +13,7 @@ export const enShell: Record<string, string> = {
   "shell.settings": "Settings",
   "shell.logout": "Sign out",
   "shell.refreshed": "Refreshed",
-  "shell.logoAlt": "MikCloud logo",
+  "shell.logoAlt": "403Shield logo",
   "shell.goPlatform": "Platform console",
   "shell.goClient": "Client console",
   "shell.pickAccountTitle": "Open a client console",

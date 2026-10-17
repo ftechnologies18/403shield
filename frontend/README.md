@@ -1,7 +1,8 @@
-# MikCloud — Frontend
+# 403Shield — Frontend
 
-Application Next.js 16 (App Router, React 19, TypeScript strict) — interface de
-gestion hotspot MikroTik : dashboard temps réel, vouchers imprimables,
+Application Next.js 16 (App Router, React 19, TypeScript strict) — site unifié
+403Shield (rebrand N°317 : Hotspot · VPN · Tunnels, powered by FTech CI) et
+console de gestion hotspot MikroTik : dashboard temps réel, vouchers imprimables,
 revendeurs, routeurs, rapports.
 
 ## Démarrage

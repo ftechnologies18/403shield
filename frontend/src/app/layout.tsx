@@ -25,10 +25,15 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "MikCloud — Hotspot, protection cloud & pilotage MikroTik",
+  // N°317 — rebrand : la vitrine devient le site unifié 403Shield
+  // (Hotspot · VPN · Tunnels), powered by FTech CI.
+  title: "403Shield — Hotspot, VPN & tunnels : la suite sécurité réseau cloud",
   description:
-    "MikCloud, le cloud qui protège : gestion hotspot MikroTik (vouchers, portail captif, Mode Vente), 4 boucliers pare-feu (filtrage DNS, anti-piratage, couvre-feu, bloque-VPN) et pilotage du parc — télémétrie et mises à jour RouterOS.",
+    "403Shield, la suite sécurité réseau cloud de FTech CI : gestion hotspot MikroTik (vouchers, portail captif), pare-feu cloud 4 boucliers, VPN WireGuard IP fixe France et tunnels d'accès distant — pilotage complet de votre parc.",
   keywords: [
+    "403Shield",
+    "VPN WireGuard",
+    "tunnels chiffrés",
     "MikroTik",
     "hotspot",
     "RouterOS",
@@ -42,7 +47,7 @@ export const metadata: Metadata = {
   ],
   // Favicon via conventions fichiers : src/app/icon.png + apple-icon.png.
   // N°8 — PWA installable (manifest via src/app/manifest.ts + /sw.js).
-  appleWebApp: { capable: true, statusBarStyle: "black-translucent", title: "MikCloud" },
+  appleWebApp: { capable: true, statusBarStyle: "black-translucent", title: "403Shield" },
 };
 
 // N°60 — capture PRÉ-hydratation de beforeinstallprompt : Chrome peut
@@ -91,7 +96,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    // Nuit par défaut (identité MikCloud), bascule Jour via next-themes.
+    // Nuit par défaut (identité 403Shield — rebrand N°317), bascule Jour via next-themes.
     <html lang="fr" suppressHydrationWarning>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-background text-foreground`}

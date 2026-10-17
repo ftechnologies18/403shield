@@ -1,10 +1,11 @@
 // shop-copy.ts — N°316 — copie bilingue AUTO-CONTENUE de la vitrine d'achat
-// « MikTunnel VPN » (/shop), portée depuis frontend/src/components/vpn-shop/
-// vpn-shop-copy.ts (N°301) lors du déménagement du canal B2C vers CE foyer
-// (arbitrage N°316 — option C : maison MikCloud, sous-marque MikTunnel
-// endossée). Uniquement des promesses RÉELLES (fulltunnel wg0 VM, livraison
-// e-mail, récupération self-service, terme réglé à l'avance, espace client
-// MikTunnel pour gérer et renouveler).
+// (/shop), portée depuis frontend/src/components/vpn-shop/vpn-shop-copy.ts
+// (N°301) lors du déménagement du canal B2C vers CE foyer (la vitrine fut
+// « MikTunnel VPN », arbitrage N°316 option C). N°317 — rebrand : la marque
+// unifiée est « 403Shield » — boutique « 403Shield VPN » dans la console
+// « 403Shield Console », powered by FTech CI. Uniquement des promesses
+// RÉELLES (fulltunnel wg0 VM, livraison e-mail, récupération self-service,
+// terme réglé à l'avance, espace client 403Shield pour gérer et renouveler).
 
 export type ShopLang = "fr" | "en";
 
@@ -96,8 +97,8 @@ export interface ShopCopy {
 }
 
 const fr: ShopCopy = {
-  brand: "MikTunnel",
-  endorsed: "by MikCloud",
+  brand: "403Shield",
+  endorsed: "Console",
   nav: {
     product: "Le VPN",
     pricing: "Tarifs",
@@ -106,11 +107,11 @@ const fr: ShopCopy = {
     login: "Mon espace",
   },
   hero: {
-    eyebrow: "MikTunnel — by MikCloud · VPN WireGuard",
+    eyebrow: "403Shield — VPN WireGuard · powered by FTech CI",
     title: "Votre trafic, chiffré de bout en bout,",
     titleEm: "avec une IP fixe France.",
     lead:
-      "MikTunnel bâtit un tunnel WireGuard vers notre serveur de Marseille : Wi-Fi public blindé, opérateur aveugle, et une IP française où que vous soyez. Sans compte à créer — la configuration EST le produit.",
+      "403Shield bâtit un tunnel WireGuard vers notre serveur de Marseille : Wi-Fi public blindé, opérateur aveugle, et une IP française où que vous soyez. Sans compte à créer — la configuration EST le produit.",
     cta: "Choisir ma formule",
     ctaSecondary: "Récupérer une configuration",
     hint: "Activation en 30 secondes dans l'application WireGuard gratuite.",
@@ -148,19 +149,19 @@ const fr: ShopCopy = {
       "Tunnel WireGuard fulltunnel (IP France)",
       "Configuration livrée par e-mail, importable en 30 secondes",
       "Re-livraison self-service avec votre référence",
-      "Espace MikTunnel : portefeuille et renouvellement 1-clic",
+      "Espace 403Shield : portefeuille et renouvellement 1-clic",
       "Support par e-mail",
     ],
     cta: () => "Souscrire",
     closedTitle: "La vente directe arrive bientôt",
     closedDesc:
-      "MikTunnel VPN est en cours d'ouverture. Revenez bientôt — ou demandez l'accès à votre gérant MikCloud local (il vend le même produit au quartier).",
+      "403Shield VPN est en cours d'ouverture. Revenez bientôt — ou demandez l'accès à votre gérant 403Shield local (il vend le même produit au quartier).",
     onlineNote: "Paiement en ligne sécurisé (Wave / carte).",
     manualNote:
-      "Règlement par virement : votre accès est activé dès confirmation de l'équipe MikTunnel.",
+      "Règlement par virement : votre accès est activé dès confirmation de l'équipe 403Shield.",
   },
   buy: {
-    title: "Souscrire MikTunnel VPN",
+    title: "Souscrire 403Shield VPN",
     desc: "Votre configuration WireGuard part par e-mail dès le paiement confirmé — l'activation prend une trentaine de secondes.",
     email: "Adresse e-mail (livraison de la configuration)",
     emailPlaceholder: "vous@exemple.com",
@@ -177,7 +178,7 @@ const fr: ShopCopy = {
     redirected: "Redirection vers la page de paiement…",
     manualTitle: "Commande enregistrée",
     manualDesc:
-      "Réglez par virement en indiquant la référence ci-dessous : votre VPN est provisionné automatiquement dès confirmation par l'équipe MikTunnel.",
+      "Réglez par virement en indiquant la référence ci-dessous : votre VPN est provisionné automatiquement dès confirmation par l'équipe 403Shield.",
     ref: "Référence de commande",
     errPending: "Une commande est déjà en attente pour cet e-mail",
     close: "Fermer",
@@ -220,7 +221,7 @@ const fr: ShopCopy = {
       },
       {
         q: "Où gérer mon abonnement ?",
-        a: "Dans votre espace MikTunnel : connectez-vous avec votre e-mail (un code à 6 chiffres suffit, sans mot de passe) — vos accès, leur échéance et un renouvellement en un clic y vivent, aux côtés de l'Accès Pro pour superviser vos routeurs.",
+        a: "Dans votre espace 403Shield : connectez-vous avec votre e-mail (un code à 6 chiffres suffit, sans mot de passe) — vos accès, leur échéance et un renouvellement en un clic y vivent, aux côtés de l'Accès Pro pour superviser vos routeurs.",
       },
       {
         q: "Que reçois-je exactement ?",
@@ -241,22 +242,22 @@ const fr: ShopCopy = {
     ],
   },
   footer: {
-    tagline: "Le VPN de la maison MikCloud — chiffré, français, sans détour.",
+    tagline: "Le VPN 403Shield — chiffré, français, sans détour.",
     links: [
-      { label: "Accueil MikTunnel", href: "/" },
+      { label: "Accueil 403Shield", href: "/" },
       { label: "Accès Pro", href: "/pro" },
       { label: "Connexion à mon espace", href: "/login" },
-      { label: "MikCloud — plateforme Hotspot & HomeNet", href: "https://mikcloud.ftci.fr", external: true },
+      { label: "403Shield — site", href: "https://mikcloud.ftci.fr", external: true },
     ],
     legal:
-      "MikTunnel — by MikCloud · powered by FTech CI. Service VPN fourni « en l'état » ; usage conforme aux lois locales.",
-    house: "Une famille : MikCloud (plateforme) · MikTunnel (tunnels) · FTech CI (maison-mère)",
+      "403Shield Console · powered by FTech CI. Service VPN fourni « en l'état » ; usage conforme aux lois locales.",
+    house: "Une marque : 403Shield · powered by FTech CI — vous êtes sur la console & la boutique",
   },
 };
 
 const en: ShopCopy = {
-  brand: "MikTunnel",
-  endorsed: "by MikCloud",
+  brand: "403Shield",
+  endorsed: "Console",
   nav: {
     product: "The VPN",
     pricing: "Pricing",
@@ -265,11 +266,11 @@ const en: ShopCopy = {
     login: "My space",
   },
   hero: {
-    eyebrow: "MikTunnel — by MikCloud · WireGuard VPN",
+    eyebrow: "403Shield — WireGuard VPN · powered by FTech CI",
     title: "Your traffic, end-to-end encrypted,",
     titleEm: "with a fixed French IP.",
     lead:
-      "MikTunnel builds a WireGuard tunnel to our Marseille server: public Wi-Fi hardened, carrier blinded, and a French IP wherever you roam. No account to create — the configuration IS the product.",
+      "403Shield builds a WireGuard tunnel to our Marseille server: public Wi-Fi hardened, carrier blinded, and a French IP wherever you roam. No account to create — the configuration IS the product.",
     cta: "Choose my plan",
     ctaSecondary: "Recover a configuration",
     hint: "Live in 30 seconds inside the free WireGuard app.",
@@ -307,18 +308,18 @@ const en: ShopCopy = {
       "WireGuard fulltunnel (French IP)",
       "Configuration delivered by email, importable in 30 seconds",
       "Self-service re-delivery with your reference",
-      "MikTunnel space: device wallet and 1-click renewal",
+      "403Shield space: device wallet and 1-click renewal",
       "Email support",
     ],
     cta: () => "Subscribe",
     closedTitle: "Direct sales coming soon",
     closedDesc:
-      "MikTunnel VPN is opening up. Come back soon — or ask your local MikCloud manager for access (they sell the same product in your area).",
+      "403Shield VPN is opening up. Come back soon — or ask your local 403Shield manager for access (they sell the same product in your area).",
     onlineNote: "Secure online payment (Wave / card).",
-    manualNote: "Pay by transfer: your access is activated as soon as the MikTunnel team confirms.",
+    manualNote: "Pay by transfer: your access is activated as soon as the 403Shield team confirms.",
   },
   buy: {
-    title: "Subscribe to MikTunnel VPN",
+    title: "Subscribe to 403Shield VPN",
     desc: "Your WireGuard configuration is emailed as soon as payment is confirmed — activation takes about thirty seconds.",
     email: "Email address (configuration delivery)",
     emailPlaceholder: "you@example.com",
@@ -335,7 +336,7 @@ const en: ShopCopy = {
     redirected: "Redirecting to the payment page…",
     manualTitle: "Order recorded",
     manualDesc:
-      "Pay by transfer quoting the reference below: your VPN is provisioned automatically as soon as the MikTunnel team confirms.",
+      "Pay by transfer quoting the reference below: your VPN is provisioned automatically as soon as the 403Shield team confirms.",
     ref: "Order reference",
     errPending: "An order is already pending for this email",
     close: "Close",
@@ -378,7 +379,7 @@ const en: ShopCopy = {
       },
       {
         q: "Where do I manage my subscription?",
-        a: "In your MikTunnel space: sign in with your email (a 6-digit code suffices — no password) — your accesses, their expiry and one-click renewal live there, alongside Pro Access for supervising your routers.",
+        a: "In your 403Shield space: sign in with your email (a 6-digit code suffices — no password) — your accesses, their expiry and one-click renewal live there, alongside Pro Access for supervising your routers.",
       },
       {
         q: "What exactly do I receive?",
@@ -399,16 +400,16 @@ const en: ShopCopy = {
     ],
   },
   footer: {
-    tagline: "The MikCloud house VPN — encrypted, French, straightforward.",
+    tagline: "The 403Shield VPN — encrypted, French, straightforward.",
     links: [
-      { label: "MikTunnel home", href: "/" },
+      { label: "403Shield home", href: "/" },
       { label: "Pro Access", href: "/pro" },
       { label: "Sign in to my space", href: "/login" },
-      { label: "MikCloud — Hotspot & HomeNet platform", href: "https://mikcloud.ftci.fr", external: true },
+      { label: "403Shield — website", href: "https://mikcloud.ftci.fr", external: true },
     ],
     legal:
-      "MikTunnel — by MikCloud · powered by FTech CI. VPN service provided \"as is\"; use in accordance with local laws.",
-    house: "One family: MikCloud (platform) · MikTunnel (tunnels) · FTech CI (parent company)",
+      "403Shield Console · powered by FTech CI. VPN service provided \"as is\"; use in accordance with local laws.",
+    house: "One brand: 403Shield · powered by FTech CI — you are on the console & shop",
   },
 };
 

@@ -125,7 +125,7 @@ function BrandPanel() {
             className="mik-rise mt-7 bg-gradient-to-br from-primary via-emerald-300 to-teal-200 bg-clip-text text-4xl font-semibold tracking-tight text-transparent xl:text-5xl"
             style={{ animationDelay: "0.18s" }}
           >
-            MikCloud
+            403Shield
           </h1>
           <p
             className="mik-rise mt-3 text-lg font-medium text-foreground/90"
@@ -463,7 +463,7 @@ export default function LoginScreen({ onBack, onSignUp }: { onBack?: () => void;
                 className="rounded-xl shadow-lg shadow-primary/20"
               />
               <div className="text-left">
-                <h1 className="text-xl font-semibold tracking-tight">MikCloud</h1>
+                <h1 className="text-xl font-semibold tracking-tight">403Shield</h1>
                 <p className="text-xs text-muted-foreground">{t("login.tagline")}</p>
               </div>
             </div>

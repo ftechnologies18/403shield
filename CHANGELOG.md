@@ -1,12 +1,75 @@
-# CHANGELOG — MikCloud
+# CHANGELOG — 403Shield
 
 Historique des évolutions notables du projet. Format inspiré de
 [Keep a Changelog](https://keepachangelog.com/) ; les versions correspondent
 aux dates de livraison — le déploiement est continu : chaque push `main` passe
 la CI puis se déploie automatiquement (frontend Vercel, backend Oracle E5
-depuis le T2 N°266 — Render suspendu N°303).
+depuis le T2 N°266 — Render suspendu N°303). N°317 : le projet change de nom
+de marque — MikCloud et MikTunnel deviennent **403Shield** (marque unifiée,
+sous-marque FTech CI) ; l'historique ci-dessous conserve les noms d'époque.
 
-## 2026-10-18 — N°316 — **ARCHITECTURE DE MARQUE (arbitrage option C) : la maison MikCloud, la sous-marque MikTunnel endossée — le canal B2C déménage sur tunnel.ftci.fr (/shop), 301 permanent sur /vpn**
+## 2026-10-17 — N°317 — **PIVOT DE MARQUE 403SHIELD : retour à l'Option A (marque unifiée), voie Cloudflare/OVH — site unifié multipage + console renommée, rien du N°316 n'est défait**
+
+### Décision (propriétaire, à la suite de l'étude N°316 livrée)
+Dans la foulée de l'exécution de l'Option C (maison MikCloud, sous-marque
+MikTunnel endossée — livrée quelques heures plus tôt), le propriétaire arbitre
+différemment : **nouveau nom
+403Shield** (le « 403 » HTTP comme promesse — accès refusé aux indésirables),
+**retour à l'Option A** (marque unifiée — l'étude la notait 42/50 : friction
+nulle, un seul nom à marketer), **voie Cloudflare/OVH** : un site marketing
+multipage à menu complet + une console transactionnelle, comme
+cloudflare.com / dash.cloudflare.com. Décision enregistrée dans
+`docs/MARQUE-403SHIELD.md` (architecture cible, phases, actifs de marque).
+
+### Livré — frontend (site unifié, mikcloud.ftci.fr)
+- Rebrand complet de la copie FR/EN (`landing-copy.ts`) : hero « Votre réseau,
+  sous bouclier. », badge « 403Shield · Hotspot · VPN · Tunnels », marquee
+  élargi à la suite, footer Écosystème (ftci.fr · console · boutique), chat
+  et essai rebrandés.
+- **Menu complet** (le geste Cloudflare) : Accueil · Hotspot · VPN · Tunnels ·
+  Tarifs — topbar desktop (lien actif souligné via usePathname), sous-nav
+  mobile scrollable sous sm.
+- **Trois pages produit** `/hotspot`, `/vpn`, `/tunnels` : composant Clay
+  réutilisable `ProductPage` (hero + bouclier clay, 4 cartes, note formules
+  VPN sans prix codé en dur, CTA finaux), layouts serveur avec metadata FR
+  indexables, pages publiques visitables même connecté, SignupModal câblée.
+- `vercel.json` : le 301 `/vpn` → boutique devient **conditionnel à la query
+  `?order=`** (liens de retour GeniusPay historiques préservés) — `/vpn`
+  propre sert désormais la page produit.
+- Identité : logo bouclier clay (public/logo.png, icon.png, apple-icon.png,
+  logo.svg), metadata racine + manifest PWA « 403Shield », pass léger console
+  SaaS (écran de connexion, topbar, nom PWA, toasts d'inscription).
+
+### Livré — tunnel-console (403Shield Console, tunnel.ftci.fr)
+- Barre écosystème « Écosystème FTech CI · ftci.fr ↗ · 403Shield — site ↗ ·
+  Console & boutique — ici », header logo bouclier émeraude + « 403Shield » +
+  badge « Console », footers croisés « powered by FTech CI ».
+- Rebrand intégral des 6 surfaces (/, /shop, /me, /pro, /login, /verify) :
+  29 remplacements FR+EN dans `shop-copy.ts`, métadonnées rebrandées avec
+  **noindex strictement conservé** sur les routes privées.
+- **Références MCV- intactes** (contrat GeniusPay), clés localStorage
+  `miktunnel_*` intactes (renommer = déconnexion de tous les clients
+  existants), logique JWT/API/renouvellement inchangée.
+
+### Volontairement conservé (honnêteté documentaire)
+URLs fonctionnelles (`api.mikcloud.ftci.fr`, `mikcloud.ftci.fr` tant que le
+DNS n'a pas bougé), `mikcloud.conf` (nom de fichier réellement instruit par
+les e-mails backend), ~300 occurrences « MikCloud » du dictionnaire i18n
+profond et des guides (phase 2), e-mails transactionnels backend « MikTunnel
+(by MikCloud · …) » (phase 2). Corrections documentaires : dates N°316 du
+CHANGELOG alignées sur les commits réels (2026-10-17).
+
+### Vérifié
+frontend lint 0 · tsc 0 ; tunnel-console lint 0 · tsc 0 · build 7 routes ;
+logos validés visuellement (VLM) ; navigation production vérifiée (vitrine
+403Shield, pages produit, console, 308 `/vpn?order=` → boutique).
+
+### Phases suivantes
+Phase 2 (tuteur) : e-mails backend, i18n profond SaaS, renommage projets
+Vercel. Phase 3 (propriétaire, DNS) : `403shield.ftci.fr` → Vercel puis 301
+des anciens domaines. Détail dans `docs/MARQUE-403SHIELD.md`.
+
+## 2026-10-17 — N°316 — **ARCHITECTURE DE MARQUE (arbitrage option C) : la maison MikCloud, la sous-marque MikTunnel endossée — le canal B2C déménage sur tunnel.ftci.fr (/shop), 301 permanent sur /vpn**
 
 ### Problème
 Trois vitrines vivantes pour deux produits réels : mikcloud.ftci.fr (SaaS

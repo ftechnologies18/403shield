@@ -13,7 +13,7 @@ export const frShell: Record<string, string> = {
   "shell.settings": "Paramètres",
   "shell.logout": "Se déconnecter",
   "shell.refreshed": "Actualisé",
-  "shell.logoAlt": "Logo MikCloud",
+  "shell.logoAlt": "Logo 403Shield",
   "shell.goPlatform": "Console plateforme",
   "shell.goClient": "Console client",
   "shell.pickAccountTitle": "Ouvrir la console d'un client",

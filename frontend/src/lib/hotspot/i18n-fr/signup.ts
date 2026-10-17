@@ -38,6 +38,6 @@ export const frSignup: Record<string, string> = {
   "signup.profileNote": "Ces informations restent confidentielles et servent au support et à la segmentation.",
   "signup.privacyPrefix": "J'ai lu et j'accepte la",
   "signup.privacyLink": "politique de confidentialité",
-  "signup.success": "Compte créé — bienvenue sur MikCloud !",
+  "signup.success": "Compte créé — bienvenue sur 403Shield !",
   "signup.failed": "Inscription impossible",
 };

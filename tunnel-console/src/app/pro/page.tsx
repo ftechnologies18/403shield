@@ -1,8 +1,9 @@
 "use client";
 
 // pro/page.tsx — N°315 — offre ACCÈS PRO + LAN ÉTENDU (caméras/NAS) de la
-// console MikTunnel (design D-B1, décision D-T4 : le LAN étendu est livré
-// comme offre « Pro » de CETTE console).
+// console (design D-B1, décision D-T4 : le LAN étendu est livré comme offre
+// « Pro » de CETTE console — fut la « console MikTunnel » N°313-316, rebrandée
+// « 403Shield Console » en N°317).
 //
 // Contrat backend (handlers_tunnel_pro.go, N°315) :
 //   GET  /api/tunnel/pro                    → éligibilité + routeurs + LAN + portefeuille
@@ -11,10 +12,11 @@
 //   POST /api/tunnel/pro/lan/{routerId}     → APPLICATION (set-lan VM + règles routeur)
 //   POST /api/tunnel/pro/order              → commande Pro (Wave/carte/manual)
 //
-// Honnêteté produit : l'Accès Pro relie VOS routeurs supervisés par MikCloud
-// (compte gérant apparié par e-mail) — sans compte, la page le DIT au lieu
-// de vendre un accès qui ne servirait à rien.
+// Honnêteté produit : l'Accès Pro relie VOS routeurs supervisés par la
+// plateforme 403Shield (compte gérant apparié par e-mail) — sans compte, la
+// page le DIT au lieu de vendre un accès qui ne servirait à rien.
 
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
@@ -22,7 +24,6 @@ import {
   Check,
   Copy,
   CreditCard,
-  KeyRound,
   Lightbulb,
   Loader2,
   LogOut,
@@ -310,12 +311,10 @@ export default function ProPage() {
       <header className="border-b border-slate-800/60">
         <div className="mx-auto flex max-w-4xl items-center justify-between px-4 py-4 sm:px-6">
           <div className="flex items-center gap-2.5">
-            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-500/15 text-emerald-400">
-              <KeyRound className="h-4 w-4" aria-hidden />
-            </span>
+            <Image src="/logo.png" alt="403Shield" width={32} height={32} className="h-8 w-8 rounded-lg" />
             <div className="flex flex-wrap items-center gap-2 leading-tight">
-              <p className="text-sm font-semibold tracking-tight text-slate-100">MikTunnel · Accès Pro</p>
-              <span className="rounded-full border border-emerald-500/40 px-1.5 py-0.5 text-[9px] font-medium text-emerald-300">by MikCloud</span>
+              <p className="text-sm font-semibold tracking-tight text-slate-100">403Shield · Accès Pro</p>
+              <span className="rounded-full border border-emerald-500/40 px-1.5 py-0.5 text-[9px] font-medium text-emerald-300">Console</span>
               <p className="text-[11px] text-slate-500">powered by FTech CI</p>
             </div>
           </div>
@@ -399,24 +398,26 @@ export default function ProPage() {
                 <section className="mt-6 rounded-2xl border border-amber-500/30 bg-amber-500/10 p-5 text-sm text-amber-200">
                   <p className="flex items-center gap-2 font-medium">
                     <Lightbulb className="h-4 w-4 shrink-0" aria-hidden />
-                    L&apos;Accès Pro relie VOS routeurs supervisés par MikCloud
+                    L&apos;Accès Pro relie VOS routeurs supervisés par 403Shield
                   </p>
                   <p className="mt-2 text-amber-200/80">
-                    Connectez-vous avec l&apos;<strong>e-mail de votre compte gérant MikCloud</strong>{" "}
+                    Connectez-vous avec l&apos;<strong>e-mail de votre compte gérant 403Shield</strong>{" "}
                     (celui utilisé à l&apos;inscription, avec au moins un routeur en mode agent).
                     Pas encore de compte ?{" "}
                     <a
                       href="https://mikcloud.ftci.fr"
+                      target="_blank"
+                      rel="noopener noreferrer"
                       className="font-medium underline underline-offset-2"
                     >
-                      Découvrez MikCloud
+                      Découvrez 403Shield
                     </a>{" "}
                     — puis revenez ici : vos routeurs apparaîtront automatiquement.
                   </p>
                   <p className="mt-2 text-amber-200/60">
                     Vous cherchez un VPN pour votre téléphone ?{" "}
                     <a href="/shop" className="underline underline-offset-2">
-                      La boutique MikTunnel
+                      La boutique 403Shield
                     </a>{" "}
                     est faite pour ça.
                   </p>
@@ -657,13 +658,18 @@ export default function ProPage() {
 
       <footer className="mt-auto border-t border-slate-800/60">
         <div className="mx-auto flex max-w-4xl flex-col items-start justify-between gap-2 px-4 py-6 text-xs text-slate-500 sm:flex-row sm:items-center sm:px-6">
-          <p>MikTunnel — by MikCloud · powered by FTech CI · Accès Pro : tunnels WireGuard hébergés à Marseille</p>
+          <p>403Shield Console · powered by FTech CI · Accès Pro : tunnels WireGuard hébergés à Marseille</p>
           <div className="flex gap-4">
             <a href="/shop" className="hover:text-slate-300">
               Boutique VPN
             </a>
-            <a href="https://mikcloud.ftci.fr" className="hover:text-slate-300">
-              MikCloud
+            <a
+              href="https://mikcloud.ftci.fr"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-slate-300"
+            >
+              Site 403Shield
             </a>
           </div>
         </div>

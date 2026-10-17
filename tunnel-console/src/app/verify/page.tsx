@@ -3,10 +3,12 @@
 // verify/page.tsx — N°313 — vérification du code à 6 chiffres :
 // POST /api/tunnel/auth/verify {email, code} → {token, client} → le token
 // (JWT rôle « tunnel », 24 h) part en localStorage → /me.
+// N°317 — rebrand « 403Shield Console » (ex MikTunnel N°313-316).
 
+import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
-import { KeyRound, ShieldCheck } from "lucide-react";
+import { ShieldCheck } from "lucide-react";
 import { apiFetch, setToken, type VerifyResponse } from "@/lib/api";
 
 function VerifyForm() {
@@ -39,12 +41,10 @@ function VerifyForm() {
   return (
     <div className="w-full max-w-md">
       <div className="mb-6 flex items-center gap-2.5">
-        <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-500/15 text-emerald-400">
-          <KeyRound className="h-4.5 w-4.5" aria-hidden />
-        </span>
+        <Image src="/logo.png" alt="403Shield" width={36} height={36} className="h-9 w-9 rounded-lg" />
         <div className="flex flex-wrap items-center gap-2 leading-tight">
-          <p className="font-semibold tracking-tight text-slate-100">MikTunnel</p>
-          <span className="rounded-full border border-emerald-500/40 px-1.5 py-0.5 text-[9px] font-medium text-emerald-300">by MikCloud</span>
+          <p className="font-semibold tracking-tight text-slate-100">403Shield</p>
+          <span className="rounded-full border border-emerald-500/40 px-1.5 py-0.5 text-[9px] font-medium text-emerald-300">Console</span>
           <p className="text-[11px] text-slate-500">powered by FTech CI</p>
         </div>
       </div>

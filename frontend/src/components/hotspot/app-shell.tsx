@@ -103,7 +103,7 @@ const PlatformFleetView = dynamic(() => import("./views/platform-fleet-view"), {
 const PlatformChatView = dynamic(() => import("./views/platform-chat-view"), { loading: () => ViewFallback });
 const PlatformSettingsView = dynamic(() => import("./views/platform-settings-view"), { loading: () => ViewFallback });
 const PlatformTeamView = dynamic(() => import("./views/platform-team-view"), { loading: () => ViewFallback });
-// N°152 — diffusion d'annonces aux clients MikCloud (console plateforme).
+// N°152 — diffusion d'annonces aux clients 403Shield (console plateforme).
 const PlatformAnnouncementsView = dynamic(() => import("./views/platform-announcements-view"), { loading: () => ViewFallback });
 // N°301 — console « VPN & Vente directe » : le grossiste (pool wg0 global,
 // octroi du module, commandes B2C de la vitrine /vpn, réconciliation).
@@ -297,7 +297,7 @@ function ViewTransition({ viewKey, children }: { viewKey: ViewId; children: Reac
   );
 }
 
-/** En-tête de marque — logo + nom MikCloud. N°196 : le bouton latéral
+/** En-tête de marque — logo + nom 403Shield (N°317). N°196 : le bouton latéral
  *  ouvre un MENU DE CHOIX DU MODE (Étendu / Réduit / Survol, coche sur
  *  l'actif) sur le modèle des consoles Azure/OneDrive — retour opérateur :
  *  le sélecteur au menu de la carte utilisateur était une surcharge, ce menu
@@ -357,7 +357,7 @@ function BrandHeader({
     <div className="flex items-center gap-3 px-5 py-5">
       {logo}
       <div className="flex min-w-0 flex-1 items-center gap-2">
-        <span className="text-aurora truncate text-base font-semibold tracking-tight">MikCloud</span>
+        <span className="text-aurora truncate text-base font-semibold tracking-tight">403Shield</span>
         <Badge
           variant="outline"
           className="badge-pro border-primary/25 bg-primary/10 px-1.5 py-0 text-[10px] font-semibold tracking-wide text-primary"
@@ -1239,7 +1239,7 @@ export default function AppShell() {
       <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
         <SheetContent side="left" className="sidebar-aurora flex w-72 flex-col gap-0 p-0">
           <SheetHeader className="border-b border-sidebar-border pb-0">
-            <SheetTitle className="sr-only">MikCloud</SheetTitle>
+            <SheetTitle className="sr-only">403Shield</SheetTitle>
             <BrandHeader />
           </SheetHeader>
           {zoneRender ? <SettingsSidebar onBack={handleZoneBack} /> : <NavList />}

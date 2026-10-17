@@ -3,10 +3,12 @@
 // login/page.tsx — N°313 — demande du code de connexion (passwordless) :
 // POST /api/tunnel/auth/request-code {email, website (honeypot)} → le code
 // part par e-mail (TTL 10 min) → redirection vers /verify?email=…
+// N°317 — rebrand « 403Shield Console » (ex MikTunnel N°313-316).
 
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { KeyRound, MailCheck, Send } from "lucide-react";
+import { MailCheck, Send } from "lucide-react";
 import { apiFetch } from "@/lib/api";
 
 export default function LoginPage() {
@@ -38,12 +40,10 @@ export default function LoginPage() {
     <main className="hero-glow flex flex-1 flex-col items-center justify-center px-4 py-16">
       <div className="w-full max-w-md">
         <div className="mb-6 flex items-center gap-2.5">
-          <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-500/15 text-emerald-400">
-            <KeyRound className="h-4.5 w-4.5" aria-hidden />
-          </span>
+          <Image src="/logo.png" alt="403Shield" width={36} height={36} className="h-9 w-9 rounded-lg" />
           <div className="flex flex-wrap items-center gap-2 leading-tight">
-            <p className="font-semibold tracking-tight text-slate-100">MikTunnel</p>
-            <span className="rounded-full border border-emerald-500/40 px-1.5 py-0.5 text-[9px] font-medium text-emerald-300">by MikCloud</span>
+            <p className="font-semibold tracking-tight text-slate-100">403Shield</p>
+            <span className="rounded-full border border-emerald-500/40 px-1.5 py-0.5 text-[9px] font-medium text-emerald-300">Console</span>
             <p className="text-[11px] text-slate-500">powered by FTech CI</p>
           </div>
         </div>
@@ -56,7 +56,7 @@ export default function LoginPage() {
           <p className="mt-2 text-sm leading-relaxed text-slate-400">
             Entrez votre e-mail : nous vous envoyons un code à 6 chiffres,
             valable 10 minutes. Aucun mot de passe à retenir — votre adresse
-            e-mail est votre identité MikTunnel.
+            e-mail est votre identité 403Shield.
           </p>
 
           <form onSubmit={submit} className="mt-6 space-y-4">
@@ -106,7 +106,7 @@ export default function LoginPage() {
         </div>
 
         <p className="mt-6 text-center text-xs text-slate-500">
-          Déjà client MikCloud VPN sans compte ? Utilisez l'e-mail de vos
+          Déjà client 403Shield VPN sans compte ? Utilisez l'e-mail de vos
           commandes : vos achats apparaîtront dans votre espace.
         </p>
       </div>

@@ -38,6 +38,6 @@ export const enSignup: Record<string, string> = {
   "signup.profileNote": "This information remains confidential and is used for support and segmentation.",
   "signup.privacyPrefix": "I have read and accept the",
   "signup.privacyLink": "privacy policy",
-  "signup.success": "Account created — welcome to MikCloud!",
+  "signup.success": "Account created — welcome to 403Shield!",
   "signup.failed": "Sign-up failed",
 };

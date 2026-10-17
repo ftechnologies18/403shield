@@ -106,7 +106,7 @@ export default function ResetPasswordPage() {
         <div className="mb-5 flex flex-col items-center gap-2 text-center">
           <Image
             src="/logo.png"
-            alt="MikCloud"
+            alt="403Shield"
             width={64}
             height={64}
             priority

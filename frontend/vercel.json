@@ -5,6 +5,7 @@
   "redirects": [
     {
       "source": "/vpn",
+      "has": [{ "type": "query", "key": "order" }],
       "destination": "https://tunnel.ftci.fr/shop",
       "permanent": true
     }

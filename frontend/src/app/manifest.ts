@@ -1,14 +1,14 @@
 import type { MetadataRoute } from "next";
 
 // N°8 — Manifeste PWA : la console ET le Mode Vente s'installent sur l'écran
-// d'accueil du revendeur (Android/iOS), plein écran, thème MikCloud.
+// d'accueil du revendeur (Android/iOS), plein écran, thème 403Shield (N°317).
 //
 // N°60 — « Installation riche » (audit PWA, action 2) :
 // - `id` : identité STABLE de l'app. Sans lui, un futur changement de
 //   start_url/scope créerait une seconde icône chez les revendeurs déjà
 //   installés ;
 // - `launch_handler` : focus sur l'instance existante plutôt qu'une nouvelle
-//   fenêtre quand un lien MikCloud est ouvert depuis WhatsApp/le navigateur ;
+//   fenêtre quand un lien 403Shield est ouvert depuis WhatsApp/le navigateur ;
 // - `screenshots` : captures RÉELLES de la production — Android remplace la
 //   mini-infobar grise par le dialogue d'installation riche dès qu'au moins
 //   une capture `narrow` existe ;
@@ -32,8 +32,8 @@ import type { MetadataRoute } from "next";
 export default function manifest(): MetadataRoute.Manifest {
   return {
     id: "/",
-    name: "MikCloud — Hotspot & Ventes",
-    short_name: "MikCloud",
+    name: "403Shield — Hotspot & Ventes",
+    short_name: "403Shield",
     description:
       "Hotspot MikroTik multi-routeurs : sessions et vouchers par point d'accès, portail captif personnalisable, Mode Vente revendeur.",
     start_url: "/",
@@ -86,7 +86,7 @@ export default function manifest(): MetadataRoute.Manifest {
         sizes: "780x1688",
         type: "image/jpeg",
         form_factor: "narrow",
-        label: "Vitrine MikCloud",
+        label: "Vitrine 403Shield",
       },
       {
         src: "/screenshots/login-narrow.jpg",

@@ -1,16 +1,18 @@
 "use client";
 
 // me/page.tsx — N°314 — espace client COMPLET : portefeuille de commandes et
-// d'appareils (migration douce : tout ce qui a été acheté sur la vitrine
-// MikCloud avec CET e-mail apparaît ici), re-livraison de la configuration
-// (reveal — la conf ne quitte jamais le coffre sans action explicite) et
-// renouvellement 1-clic (Wave/carte via GeniusPay, canal manuel en repli).
+// d'appareils (migration douce : tout ce qui a été acheté avec CET e-mail —
+// y compris sur l'ancienne vitrine déménagée ici en N°316 — apparaît ici),
+// re-livraison de la configuration (reveal — la conf ne quitte jamais le
+// coffre sans action explicite) et renouvellement 1-clic (Wave/carte via
+// GeniusPay, canal manuel en repli). N°317 — rebrand « 403Shield Console ».
 //
 // Contrat backend (handlers_tunnel_orders.go, N°314) :
 //   GET  /api/tunnel/me                       → profil + orders[] enrichies
 //   POST /api/tunnel/orders/{ref}/reveal      → {conf, ipv4, expiresAt…}
 //   POST /api/tunnel/orders/{ref}/renew       → {ref, paymentUrl, online…}
 
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
@@ -19,7 +21,6 @@ import {
   Copy,
   CreditCard,
   HardDrive,
-  KeyRound,
   LogOut,
   Receipt,
   RefreshCw,
@@ -233,12 +234,10 @@ export default function MePage() {
       <header className="border-b border-slate-800/60">
         <div className="mx-auto flex max-w-4xl items-center justify-between px-4 py-4 sm:px-6">
           <div className="flex items-center gap-2.5">
-            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-500/15 text-emerald-400">
-              <KeyRound className="h-4 w-4" aria-hidden />
-            </span>
+            <Image src="/logo.png" alt="403Shield" width={32} height={32} className="h-8 w-8 rounded-lg" />
             <div className="flex flex-wrap items-center gap-2 leading-tight">
-              <p className="text-sm font-semibold tracking-tight text-slate-100">MikTunnel</p>
-              <span className="rounded-full border border-emerald-500/40 px-1.5 py-0.5 text-[9px] font-medium text-emerald-300">by MikCloud</span>
+              <p className="text-sm font-semibold tracking-tight text-slate-100">403Shield</p>
+              <span className="rounded-full border border-emerald-500/40 px-1.5 py-0.5 text-[9px] font-medium text-emerald-300">Console</span>
               <p className="text-[11px] text-slate-500">powered by FTech CI</p>
             </div>
           </div>
@@ -297,7 +296,7 @@ export default function MePage() {
                 </p>
                 <h1 className="mt-1 text-xl font-semibold text-slate-100">{me.client.email}</h1>
                 <p className="mt-1 text-sm text-slate-500">
-                  Client MikTunnel depuis le {formatDate(me.client.createdAt)}
+                  Client 403Shield depuis le {formatDate(me.client.createdAt)}
                   {typeof me.devices === "number"
                     ? ` · ${me.devices} appareil${me.devices > 1 ? "s" : ""} actif${me.devices > 1 ? "s" : ""}`
                     : ""}
@@ -328,7 +327,7 @@ export default function MePage() {
                         href="/shop"
                         className="font-medium text-emerald-400 hover:text-emerald-300"
                       >
-                        boutique MikTunnel
+                        boutique 403Shield
                       </a>{" "}
                       avec cette adresse apparaîtront ici.
                     </p>
@@ -590,7 +589,7 @@ export default function MePage() {
                         onChange={() => setRenewPlan(p.id)}
                         className="accent-emerald-500"
                       />
-                      {renewFor?.family === "pro" ? "MikTunnel Pro — " : "MikTunnel VPN — "}
+                      {renewFor?.family === "pro" ? "403Shield Pro — " : "403Shield VPN — "}
                       {p.label}
                     </span>
                     <span className="font-medium tabular-nums">{formatFcfa(p.amount)}</span>
@@ -687,7 +686,7 @@ export default function MePage() {
 
       <footer className="mt-auto border-t border-slate-800/60">
         <div className="mx-auto max-w-4xl px-4 py-5 text-xs text-slate-500 sm:px-6">
-          MikTunnel — by MikCloud · powered by FTech CI · Tunnels WireGuard hébergés à Marseille
+          403Shield Console · powered by FTech CI · Tunnels WireGuard hébergés à Marseille
         </div>
       </footer>
     </div>

@@ -1,12 +1,13 @@
 /* ============================================================
-   MIKCLOUD « CLAY » — Landing page FreeTech
+   403SHIELD « CLAY » — Landing + pages produit FreeTech (N°317)
    Claymorphisme & Flat Design · Palette FreeTech
    ------------------------------------------------------------
    Ivoire        #FDF9EE     Jaune crème   #F5E3A8 / #EFCE62
    Vert sarcelle #0E7C7B     Menthe claire #BFE8D5
    Encre         #123B3A
    ------------------------------------------------------------
-   Portée : UNIQUEMENT la vitrine (/). Toutes les classes sont
+   Portée : la vitrine (/) ET les pages produit du site unifié
+   (/hotspot, /vpn, /tunnels — N°317). Toutes les classes sont
    préfixées mkl- et toutes les variables --mkl-* : zéro collision
    avec le thème shadcn « Aurora Emerald » de la console.
    Z-index : blobs 0 · grain 1 · contenu 2 · topbar 30 · rail 40
@@ -111,7 +112,7 @@
 .mkl-rail:focus-within {
   width: 218px;
 }
-/* N°124 — le VRAI logo MikCloud (même design que le favicon) coiffe le
+/* N°124/N°317 — le VRAI logo 403Shield (même design que le favicon) coiffe le
    rail : tile navy sur ivoire, ombre clay douce, pas de bordure dure. */
 .mkl-rail-logo {
   width: 44px;
@@ -215,6 +216,21 @@
 }
 .mkl-brand:hover .mkl-brand-logo {
   transform: rotate(-4deg) scale(1.06);
+}
+
+/* N°317 — lien actif du menu complet du site unifié (topbar des pages
+   produit + sous-nav mobile) : souligné sarcelle, la classe mkl-active
+   marque la page courante (usePathname côté product-page.tsx). */
+.mkl-topbar nav a.mkl-active {
+  color: var(--mkl-teal-dark);
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 6px;
+}
+/* N°317 — barre secondaire mobile des pages produit : rangée fine sous
+   la rangée principale du topbar, masquée ≥ sm par product-page.tsx. */
+.mkl-topbar .mkl-subnav {
+  border-top: 1px solid rgba(18, 59, 58, 0.08);
 }
 
 /* ============ BOUTONS CLAY ============ */
@@ -454,7 +470,7 @@
   display: grid;
   place-items: center;
 }
-/* N°124 — le logo MikCloud assis sur la sculpture cloud : tile navy
+/* N°124/N°317 — le logo 403Shield assis sur la sculpture cloud : tile navy
    arrondi ~30 %, halo ivoire pour le détacher du nuage, ombre clay
    dure et flottement doux (mkl-bob, coupé en reduced-motion). */
 .mkl-hero-logo {
@@ -1919,6 +1935,12 @@
   }
   .mkl-topbar .mkl-link-quiet {
     display: none;
+  }
+  /* N°317 — la sous-nav mobile (.mkl-subnav) des pages produit garde ses
+     liens visibles : la règle ci-dessus ne vise que la rangée haute du
+     topbar, dont la nav est déjà repliée sous sm. */
+  .mkl-topbar .mkl-subnav a.mkl-link-quiet {
+    display: inline-flex;
   }
   .mkl-page section {
     padding: 64px 0;

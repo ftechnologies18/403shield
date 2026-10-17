@@ -1,11 +1,13 @@
 "use client";
 
-// shop-page.tsx — N°316 — vitrine d'achat « MikTunnel VPN » (/shop), portée
-// depuis frontend/src/components/vpn-shop/vpn-shop-page.tsx (N°301) lors du
-// déménagement du canal B2C vers CE foyer (arbitrage N°316 — option C).
-// Charte émeraude nuit de la sous-marque (zéro clay, zéro dépendance radix :
-// dialog et radios MAISON — l'app tunnel-console reste légère), hooks locaux
-// (pas de react-query), langue FR/EN locale (pas de store global).
+// shop-page.tsx — N°316 — vitrine d'achat (/shop), portée depuis
+// frontend/src/components/vpn-shop/vpn-shop-page.tsx (N°301) lors du
+// déménagement du canal B2C vers CE foyer (la vitrine fut « MikTunnel VPN »,
+// arbitrage N°316 option C). N°317 — rebrand « 403Shield » : la boutique
+// « 403Shield VPN » vit dans la console 403Shield. Charte émeraude nuit
+// (zéro clay, zéro dépendance radix : dialog et radios MAISON — l'app
+// tunnel-console reste légère), hooks locaux (pas de react-query), langue
+// FR/EN locale (pas de store global).
 //
 // PARCOURS (inchangé — l'acheteur n'a PAS de compte, apiFetch public) :
 //   1. Catalogue : GET /api/public/vpn/offers — fermé → état « bientôt » ;
@@ -21,6 +23,7 @@
 // Honeypot « website » invisible sur les deux POST — et cette fois la valeur
 // est RÉELLEMENT transmise (rempli = robot : le backend part en silence).
 
+import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import {
@@ -28,7 +31,6 @@ import {
   CheckCircle2,
   ChevronDown,
   ExternalLink,
-  KeyRound,
   Loader2,
   Mail,
   ShieldCheck,
@@ -48,6 +50,8 @@ import {
 } from "@/lib/api";
 import { shopCopy, type ShopLang } from "./shop-copy";
 
+// N°317 — clé historique conservée à l'identique : la renommer réinitialiserait
+// la préférence de langue des visiteurs existants.
 const LANG_KEY = "miktunnel_shop_lang";
 
 function scrollTo(id: string) {
@@ -228,9 +232,7 @@ export default function ShopPage({ initialOrderRef = "" }: ShopPageProps) {
       <header className="border-b border-slate-800/60 bg-slate-950/80 backdrop-blur">
         <div className="mx-auto flex w-full max-w-5xl items-center justify-between gap-3 px-4 py-3.5 sm:px-6">
           <Link href="/shop" className="flex items-center gap-2.5" aria-label={copy.brand}>
-            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-500/15 text-emerald-400">
-              <KeyRound className="h-4 w-4" aria-hidden />
-            </span>
+            <Image src="/logo.png" alt="403Shield" width={32} height={32} className="h-8 w-8 rounded-lg" />
             <span className="flex flex-wrap items-center gap-2 leading-tight">
               <span className="text-sm font-semibold tracking-tight text-slate-100">{copy.brand}</span>
               <span className="rounded-full border border-emerald-500/40 px-1.5 py-0.5 text-[9px] font-medium text-emerald-300">
@@ -589,9 +591,7 @@ export default function ShopPage({ initialOrderRef = "" }: ShopPageProps) {
           <div className="grid gap-8 md:grid-cols-2">
             <div>
               <div className="flex items-center gap-2.5">
-                <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-500/15 text-emerald-400">
-                  <KeyRound className="h-4 w-4" aria-hidden />
-                </span>
+                <Image src="/logo.png" alt="403Shield" width={32} height={32} className="h-8 w-8 rounded-lg" />
                 <span className="flex flex-wrap items-center gap-2">
                   <span className="text-sm font-semibold tracking-tight text-slate-100">{copy.brand}</span>
                   <span className="rounded-full border border-emerald-500/40 px-1.5 py-0.5 text-[9px] font-medium text-emerald-300">

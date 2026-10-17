@@ -138,7 +138,7 @@ export default function SignupModal({ open, onOpenChange }: SignupModalProps) {
         usage,
       });
       setAuth(res.token, res.user);
-      toast.success(t("signup.success", "Compte créé — bienvenue sur MikCloud !"));
+      toast.success(t("signup.success", "Compte créé — bienvenue sur 403Shield !"));
       onOpenChange(false);
       resetForm();
     } catch (err) {

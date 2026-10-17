@@ -1,8 +1,10 @@
 "use client";
 
 /* ============================================================
-   MIKCLOUD « CLAY » — Landing page FreeTech (N°120 / N°124)
+   403SHIELD « CLAY » — Landing page FreeTech (N°120 / N°124)
    ------------------------------------------------------------
+   Rebrand N°317 : MikCloud devient 403Shield, marque unifiée du site
+   multipage (Hotspot · VPN · Tunnels) — voir landing-copy.ts.
    Reconstruction complète de la vitrine : Claymorphisme & Flat
    Design, palette FreeTech (ivoire, jaune crème, vert sarcelle,
    vert menthe), rail vertical qui s'étend au survol (desktop) /
@@ -16,7 +18,6 @@
 import { useEffect, useRef, useState, type ComponentType } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { Fraunces, Manrope } from "next/font/google";
 import { motion, useInView, useReducedMotion } from "framer-motion";
 import {
   Activity,
@@ -41,24 +42,15 @@ import {
   type LucideProps,
 } from "lucide-react";
 
-import { FtciCredit } from "@/components/ftci-credit";
 import { useHotspotStore } from "@/lib/hotspot/store";
 import { landingCopy, type Lang } from "./landing-copy";
 import { LandingChatWidget } from "./chat-widget";
+import { LandingFooter } from "./landing-footer";
+import { Reveal } from "./reveal";
+import { fraunces, manrope } from "./landing-fonts";
 import "./landing-clay.css";
 
-/* ─── Polices display (serif Fraunces) & texte (Manrope) ─── */
-const fraunces = Fraunces({
-  subsets: ["latin"],
-  variable: "--font-fraunces",
-  display: "swap",
-  axes: ["opsz"],
-});
-const manrope = Manrope({
-  subsets: ["latin"],
-  variable: "--font-manrope",
-  display: "swap",
-});
+/* ─── Polices display & texte : instances partagées ./landing-fonts.ts (N°317) ─── */
 
 /* ─── Icônes des sections du rail (name → lucide) ─── */
 const RAIL_ICONS: Record<string, ComponentType<LucideProps>> = {
@@ -75,30 +67,7 @@ const HOTSPOT_FEAT_ICONS = [Palette, Ticket, BarChart3];
 const FLEET_FEAT_ICONS = [RefreshCw, Activity, Bell];
 const CHIP_ICONS = [ShieldCheck, Ticket, Zap];
 
-/* ─── Reveal on scroll (respecte prefers-reduced-motion) ─── */
-function Reveal({
-  children,
-  className,
-  delay = 0,
-}: {
-  children: React.ReactNode;
-  className?: string;
-  delay?: number;
-}) {
-  const reduce = useReducedMotion();
-  if (reduce) return <div className={className}>{children}</div>;
-  return (
-    <motion.div
-      className={className}
-      initial={{ opacity: 0, y: 34 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, margin: "-60px" }}
-      transition={{ duration: 0.7, delay, ease: [0.22, 1, 0.36, 1] }}
-    >
-      {children}
-    </motion.div>
-  );
-}
+/* ─── Reveal on scroll — module partagé ./reveal.tsx (N°317) ─── */
 
 /* ─── Compteur animé (bandeau stats) ─── */
 function CountUp({ value, lang }: { value: number; lang: Lang }) {
@@ -174,9 +143,10 @@ function CloudStage({ chips }: { chips: string[] }) {
       <div className="mkl-clay-circle mkl-c3" />
       <div className="mkl-clay-circle mkl-c4" />
       <div className="mkl-cloud-body">
-        {/* N°124 — le VRAI logo MikCloud (nuage blanc + routeur rouge +
-            signal Wi-Fi vert, même design que le favicon) assis sur la
-            sculpture clay ; décoratif dans un conteneur aria-hidden. */}
+        {/* N°124/N°317 — le VRAI logo 403Shield (bouclier sarcelle,
+            cœur menthe et étoile ambrée, même design que le favicon)
+            assis sur la sculpture clay ; décoratif dans un conteneur
+            aria-hidden. */}
         <Image
           src="/logo.png"
           alt=""
@@ -345,7 +315,7 @@ export default function LandingPage({ onSignIn, onSignUp }: LandingPageProps) {
         {/* N°124 — signature : le logo réel coiffe le rail. */}
         <Image
           src="/logo.png"
-          alt="MikCloud"
+          alt="403Shield"
           width={88}
           height={88}
           priority
@@ -408,7 +378,7 @@ export default function LandingPage({ onSignIn, onSignUp }: LandingPageProps) {
               {/* N°124 — le logo réel (favicon) remplace le badge clay. */}
               <Image
                 src="/logo.png"
-                alt="Logo MikCloud"
+                alt="Logo 403Shield"
                 width={84}
                 height={84}
                 priority
@@ -417,15 +387,28 @@ export default function LandingPage({ onSignIn, onSignUp }: LandingPageProps) {
               {copy.header.brand}
             </a>
             <div className="flex items-center gap-2">
-              {/* N°316 — lien famille : la sous-marque MikTunnel (tunnel.ftci.fr). */}
-              <a
-                href="https://tunnel.ftci.fr"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="mkl-link-quiet"
+              {/* N°317 — menu complet du site unifié (voie Cloudflare/OVH) :
+                  les pages produit vivent sur ce domaine, plus de lien externe.
+                  Caché sous sm (et sous 860 px par la règle .mkl-topbar
+                  .mkl-link-quiet de landing-clay.css) : sur mobile, la nav
+                  passe par le footer et les liens de contenu. */}
+              <nav
+                className="hidden items-center gap-2 sm:flex"
+                aria-label={`${copy.header.brand} — ${copy.header.nav.hotspot} · ${copy.header.nav.vpn} · ${copy.header.nav.tunnels}`}
               >
-                {copy.header.vpn} ↗
-              </a>
+                <Link href="/hotspot" className="mkl-link-quiet">
+                  {copy.header.nav.hotspot}
+                </Link>
+                <Link href="/vpn" className="mkl-link-quiet">
+                  {copy.header.nav.vpn}
+                </Link>
+                <Link href="/tunnels" className="mkl-link-quiet">
+                  {copy.header.nav.tunnels}
+                </Link>
+                <a href="#tarifs" onClick={goTo("tarifs")} className="mkl-link-quiet">
+                  {copy.header.nav.pricing}
+                </a>
+              </nav>
               <button className="mkl-lang" onClick={toggleLang} aria-label="Switch language">
                 {copy.header.langLabel}
               </button>
@@ -806,50 +789,9 @@ export default function LandingPage({ onSignIn, onSignUp }: LandingPageProps) {
           </Reveal>
         </section>
 
-        {/* ═══ FOOTER ═══ */}
-        <footer className="mkl-footer">
-          <div className="mkl-wrap">
-            <div className="mkl-foot-grid">
-              <div>
-                <a href="#top" onClick={goTo("top")} className="mkl-brand" style={{ marginBottom: 14 }}>
-                  <Image
-                    src="/logo.png"
-                    alt="Logo MikCloud"
-                    width={84}
-                    height={84}
-                    className="mkl-brand-logo"
-                  />
-                  {copy.header.brand}
-                </a>
-                <p className="mkl-foot-tagline">{copy.footer.tagline}</p>
-              </div>
-              {copy.footer.columns.map((col) => (
-                <div key={col.title}>
-                  <h5>{col.title}</h5>
-                  {col.links.map((link) =>
-                    link.href.startsWith("/") ? (
-                      <Link key={link.label} href={link.href}>
-                        {link.label}
-                      </Link>
-                    ) : link.href.startsWith("https://") ? (
-                      // N°316 — lien famille externe (sous-marque MikTunnel).
-                      <a key={link.label} href={link.href} target="_blank" rel="noopener noreferrer">
-                        {link.label} ↗
-                      </a>
-                    ) : (
-                      <a key={link.label} href={link.href} onClick={goTo(link.href.slice(1))}>
-                        {link.label}
-                      </a>
-                    ),
-                  )}
-                </div>
-              ))}
-            </div>
-            <div className="mkl-foot-bottom">
-              <FtciCredit className="text-xs" />
-            </div>
-          </div>
-        </footer>
+        {/* ═══ FOOTER (N°317 — composant partagé landing-footer.tsx,
+            utilisé aussi par les pages produit du site unifié) ═══ */}
+        <LandingFooter copy={copy} />
       </div>
 
       {/* ═══ ASSISTANT CHAT (N°127 — remplace la FAQ) ═══ */}

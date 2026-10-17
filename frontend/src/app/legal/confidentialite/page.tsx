@@ -74,7 +74,7 @@ export default function LegalConfidentialityPage() {
           >
             <Image
               src="/logo.png"
-              alt="Logo MikCloud"
+              alt="Logo 403Shield"
               width={36}
               height={36}
               className="rounded-lg shadow-md shadow-primary/20"
