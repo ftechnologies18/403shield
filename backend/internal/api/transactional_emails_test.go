@@ -110,7 +110,7 @@ func TestReceiptEmailBuilders(t *testing.T) {
 	paidAt := time.Date(2026, 3, 18, 14, 30, 0, 0, time.UTC)
 	d := receiptEmailData{
 		AccountID:    "acc-x",
-		PlanLabel:    "MikCloud Hotspot Mensuel",
+		PlanLabel:    "403Shield Hotspot Mensuel",
 		PeriodLabel:  "1 mois",
 		AmountFcfa:   15000,
 		Method:       "carte bancaire (Stripe)",
@@ -121,7 +121,7 @@ func TestReceiptEmailBuilders(t *testing.T) {
 	}
 	text := buildReceiptEmailText(d, "Awa Koné", "Cyber Yopougon")
 	for _, want := range []string{
-		"Awa Koné", "Cyber Yopougon", "MikCloud Hotspot Mensuel", "1 mois",
+		"Awa Koné", "Cyber Yopougon", "403Shield Hotspot Mensuel", "1 mois",
 		"15 000 FCFA", "carte bancaire (Stripe)", "MC-AB12CD",
 		"18 mars 2026", "Actif jusqu'au : 18 avril 2026",
 	} {
@@ -180,7 +180,7 @@ func TestWelcomeEmailBuildersHotspot(t *testing.T) {
 	}
 	html := buildWelcomeEmailHTML(d)
 	for _, want := range []string{
-		"VOTRE HOTSPOT", "Bienvenue sur MikCloud", "60 JOURS", "Connectez votre routeur", "ESSAI GRATUIT",
+		"VOTRE HOTSPOT", "Bienvenue sur 403Shield", "60 JOURS", "Connectez votre routeur", "ESSAI GRATUIT",
 		"Ouvrir ma console", "mikcloud.ftci.fr/app",
 	} {
 		if !strings.Contains(html, want) {
@@ -262,7 +262,7 @@ func TestRegisterSendsWelcomeEmail(t *testing.T) {
 	if m.to != "awa@example.ci" {
 		t.Errorf("destinataire = %q", m.to)
 	}
-	if !strings.Contains(m.title, "Bienvenue sur MikCloud") {
+	if !strings.Contains(m.title, "Bienvenue sur 403Shield") {
 		t.Errorf("sujet = %q", m.title)
 	}
 	for _, want := range []string{"60 jours", "awa-welcome", "Awa Koné", "vouchers"} {
@@ -270,7 +270,7 @@ func TestRegisterSendsWelcomeEmail(t *testing.T) {
 			t.Errorf("bienvenue texte : %q absent", want)
 		}
 	}
-	if !strings.Contains(m.html, "Bienvenue sur MikCloud") || !strings.Contains(m.html, "60 JOURS") {
+	if !strings.Contains(m.html, "Bienvenue sur 403Shield") || !strings.Contains(m.html, "60 JOURS") {
 		t.Error("bienvenue HTML : blocs brandés absents")
 	}
 	// Trace d'historique : kind welcome, statut envoyé.
@@ -343,7 +343,7 @@ func TestAdminResolveMarkPaidSendsReceipt(t *testing.T) {
 		t.Errorf("sujet = %q", m.title)
 	}
 	for _, want := range []string{
-		"Awa Koné", "MikCloud Hotspot Mensuel", "2 500 FCFA", "Wave", "MC-TEST0001",
+		"Awa Koné", "403Shield Hotspot Mensuel", "2 500 FCFA", "Wave", "MC-TEST0001",
 	} {
 		if !strings.Contains(m.body, want) {
 			t.Errorf("reçu texte : %q absent", want)

@@ -218,7 +218,7 @@ export const enVouchers: Record<string, string> = {
   "vouchers.gen.routerLabel": "Router (hotspot server)",
   "vouchers.gen.userModeSame": "Password = username",
   "vouchers.gen.charset": "Character set",
-  "vouchers.gen.charset.mikcloud": "MikCloud (recommended)",
+  "vouchers.gen.charset.mikcloud": "403Shield (recommended)",
   "vouchers.gen.charset.abc": "abcd — lowercase",
   "vouchers.gen.charset.ABC": "ABCD — uppercase",
   "vouchers.gen.charset.aBc": "aBcD — letters (lower + upper)",

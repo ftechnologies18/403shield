@@ -1,6 +1,6 @@
 "use client";
 
-// N°115 — Mise à jour RouterOS depuis MikCloud : vérification (le routeur
+// N°115 — Mise à jour RouterOS depuis 403Shield : vérification (le routeur
 // interroge LUI-MÊME les serveurs MikroTik — la vérité du canal du routeur,
 // stable par défaut) puis installation (téléchargement + installation +
 // REDÉMARRAGE). Parc concerné : agents RouterOS v7.

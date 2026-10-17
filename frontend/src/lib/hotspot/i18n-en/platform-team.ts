@@ -4,7 +4,7 @@
 
 export const enPlatformTeam: Record<string, string> = {
   "platformTeam.title": "Platform team",
-  "platformTeam.description": "MikCloud super-admins — redundancy for the team running the platform.",
+  "platformTeam.description": "403Shield super-admins — redundancy for the team running the platform.",
   "platformTeam.add": "Add admin",
   "platformTeam.addTitle": "New platform admin",
   "platformTeam.addDesc": "They will have the same powers as you across the platform.",

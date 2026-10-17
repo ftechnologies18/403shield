@@ -182,7 +182,7 @@ export default function RegistrationsView() {
   const currency = useCurrency();
   const queryClient = useQueryClient();
   const { data: settings } = useSettings();
-  const tenantName = settings?.tenant.name || "MikCloud";
+  const tenantName = settings?.tenant.name || "403Shield";
 
   // Onglet actif : Demandes (défaut) ou Liens & QR.
   const [tab, setTab] = useState<"requests" | "links">("requests");

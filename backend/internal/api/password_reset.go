@@ -240,7 +240,7 @@ func (a *API) handleForgotPassword(w http.ResponseWriter, r *http.Request) {
 	// clients sans HTML) et corps HTML brandé « Aurora Emerald » (N°79).
 	base := passwordResetLinkBase(r)
 	link := base + "/reset-password?token=" + url.QueryEscape(token)
-	title := "MikCloud — Réinitialisation de votre mot de passe"
+	title := "403Shield — Réinitialisation de votre mot de passe"
 	mail := resetEmailData{
 		OwnerName:    ownerName,
 		AccountName:  accName,

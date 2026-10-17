@@ -1,4 +1,4 @@
-// Formateurs partagés MikCloud
+// Formateurs partagés 403Shield
 
 import type { Lang } from "./i18n";
 

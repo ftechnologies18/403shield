@@ -169,7 +169,7 @@ func (a *API) handleBillingInvoice(w http.ResponseWriter, r *http.Request) {
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Facture %s — MikCloud</title>
+<title>Facture %s — 403Shield</title>
 <style>
   :root { color-scheme: light; }
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -202,7 +202,7 @@ func (a *API) handleBillingInvoice(w http.ResponseWriter, r *http.Request) {
 <body>
 <div class="sheet">
   <header>
-    <div class="brand">MikCloud<small>Freelance Technologies (FTCI)<br>freelancetechnologies.ci@gmail.com<br>Abidjan, Côte d'Ivoire</small></div>
+    <div class="brand">403Shield<small>Freelance Technologies (FTCI)<br>freelancetechnologies.ci@gmail.com<br>Abidjan, Côte d'Ivoire</small></div>
     <div class="meta"><b>Facture %s</b><br>Émise le %s<br><span class="badge">Payée — %s</span></div>
   </header>
 
@@ -226,7 +226,7 @@ func (a *API) handleBillingInvoice(w http.ResponseWriter, r *http.Request) {
     <thead><tr><th>Désignation</th><th>Période</th><th class="amount">Montant</th></tr></thead>
     <tbody>
       <tr>
-        <td>Abonnement MikCloud %s%s</td>
+        <td>Abonnement 403Shield %s%s</td>
         <td>%s</td>
         <td class="amount">%s FCFA</td>
       </tr>
@@ -235,7 +235,7 @@ func (a *API) handleBillingInvoice(w http.ResponseWriter, r *http.Request) {
   </table>
 
   <div class="foot">
-    Facture générée par MikCloud — plateforme de gestion de hotspot MikroTik.<br>
+    Facture générée par 403Shield — plateforme de gestion de hotspot MikroTik.<br>
     Ce document tient lieu de justificatif de paiement. Conservez-le pour vos archives comptables.
   </div>
 
@@ -297,7 +297,7 @@ func resolverDisplay(by string) string {
 		return "Wave (automatique)"
 	}
 	if by == "" {
-		return "Plateforme MikCloud"
+		return "Plateforme 403Shield"
 	}
 	return by
 }

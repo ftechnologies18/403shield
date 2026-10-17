@@ -10,7 +10,7 @@ export const frTemplates: Record<string, string> = {
   "templates.new": "Nouveau modèle",
   "templates.preview": "Aperçu d'impression",
   "templates.empty": "Aucun modèle",
-  "templates.emptyDesc": "Créez votre premier gabarit — trois presets MikCloud (A4, 58 mm, 80 mm) sont prêts à l'emploi.",
+  "templates.emptyDesc": "Créez votre premier gabarit — trois presets 403Shield (A4, 58 mm, 80 mm) sont prêts à l'emploi.",
   "templates.default": "Par défaut",
   "templates.edit": "Éditer",
   "templates.setDefault": "Définir par défaut",

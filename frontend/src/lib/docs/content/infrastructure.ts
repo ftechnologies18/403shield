@@ -343,7 +343,7 @@ export const INFRASTRUCTURE_GUIDES: Guide[] = [
     sectionId: "infrastructure",
     vague: "V2",
     quoi:
-      "Le portail captif est la page de connexion WiFi que voit le client (générée par MikCloud, servie par le routeur — login CHAP sécurisé, avec pub optionnelle et offres). Paramètres → Hotspot → Portail est l'éditeur de marque : logo, couleurs, texte, slides d'attente, publicités.\n\nLa personnalisation suit une CASCADE : compte → site → routeur. Le routeur hérite du site, qui hérite du compte — chaque niveau peut SURCHARGER (un routeur « spécial event » garde sa marque propre, le reste suit le site). Les modèles de tickets (Paramètres → Hotspot → Modèles) suivent la même logique pour l'impression.",
+      "Le portail captif est la page de connexion WiFi que voit le client (générée par 403Shield, servie par le routeur — login CHAP sécurisé, avec pub optionnelle et offres). Paramètres → Hotspot → Portail est l'éditeur de marque : logo, couleurs, texte, slides d'attente, publicités.\n\nLa personnalisation suit une CASCADE : compte → site → routeur. Le routeur hérite du site, qui hérite du compte — chaque niveau peut SURCHARGER (un routeur « spécial event » garde sa marque propre, le reste suit le site). Les modèles de tickets (Paramètres → Hotspot → Modèles) suivent la même logique pour l'impression.",
     difference: [
       {
         with: "Le walled-garden",
@@ -356,9 +356,9 @@ export const INFRASTRUCTURE_GUIDES: Guide[] = [
           "Le jetable distribue des codes offerts ; le portail est la porte par TOUS : jetable comme payant. Un site jetable personnalise son portail de la même façon.",
       },
       {
-        with: "La vitrine mikcloud.ftci.fr",
+        with: "La vitrine 403shield.ftci.fr",
         body:
-          "La vitrine parle de MIKCloud (produit) ; votre portail parle de VOUS (votre marque, vos offres) — le client final ne voit jamais la vitrine.",
+          "La vitrine parle de 403Shield (produit) ; votre portail parle de VOUS (votre marque, vos offres) — le client final ne voit jamais la vitrine.",
       },
     ],
     recoit: [

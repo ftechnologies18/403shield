@@ -24,7 +24,7 @@ export function StatCard({ title, value, sub, icon: Icon, live, trend, valueClas
         className,
       )}
     >
-      {/* Halo aurora en coin — signature MikCloud */}
+      {/* Halo aurora en coin — signature 403Shield */}
       <span
         aria-hidden
         className="pointer-events-none absolute -right-8 -top-8 size-28 rounded-full bg-primary/10 blur-2xl"

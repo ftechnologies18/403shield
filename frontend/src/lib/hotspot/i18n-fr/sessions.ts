@@ -64,7 +64,7 @@ export const frSessions: Record<string, string> = {
   "sessions.detailSoldViaSellMode": "Mode Vente (app revendeur)",
   "sessions.detailSoldViaAuto": "Connexion du client (vente auto)",
   "sessions.detailDirectSale": "Comptoir (gérant)",
-  "sessions.detailOffRegistry": "Utilisateur hors registre MikCloud (créé directement sur le routeur) : consommation et quotas indisponibles.",
+  "sessions.detailOffRegistry": "Utilisateur hors registre 403Shield (créé directement sur le routeur) : consommation et quotas indisponibles.",
   "sessions.detailExpiresAt": "Expire le",
   "sessions.detailLoadError": "Impossible de charger les détails de connexion.",
 };

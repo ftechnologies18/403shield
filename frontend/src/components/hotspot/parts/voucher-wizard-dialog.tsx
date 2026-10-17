@@ -100,7 +100,7 @@ const CHARSET_ALPHABETS: Record<string, string> = {
 
 // Pilules de charset : preset à la User Manager + sous-titre localisé.
 const CHARSET_PILLS = [
-  { value: "mikcloud", name: "MikCloud", subKey: "vouchers.wizard.charsetSub.mikcloud", star: true },
+  { value: "mikcloud", name: "403Shield", subKey: "vouchers.wizard.charsetSub.mikcloud", star: true },
   { value: "abc", name: "abcd", subKey: "vouchers.wizard.charsetSub.abc" },
   { value: "ABC", name: "ABCD", subKey: "vouchers.wizard.charsetSub.ABC" },
   { value: "aBc", name: "aBcD", subKey: "vouchers.wizard.charsetSub.aBc" },
@@ -398,7 +398,7 @@ export function VoucherWizardDialog({
 
   const formatRecap = tf("vouchers.wizard.recapFormatValue", {
     n: codeLength,
-    charset: charset === "mikcloud" ? "MikCloud" : CHARSET_PILLS.find((c) => c.value === charset)?.name ?? charset,
+    charset: charset === "mikcloud" ? "403Shield" : CHARSET_PILLS.find((c) => c.value === charset)?.name ?? charset,
     mode: t("vouchers.wizard.modeSameShort"),
   });
 

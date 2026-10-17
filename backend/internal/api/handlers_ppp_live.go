@@ -20,7 +20,7 @@
 //
 // Provisioning assisté (D2 phase B) : génération d'un script .rsc IDEMPOTENT
 // (garde :if [:len …] = 0 sur chaque bloc) que le WISP colle dans son
-// terminal — MikCloud ne touche JAMAIS au routeur ici : c'est un livrable de
+// terminal — 403Shield ne touche JAMAIS au routeur ici : c'est un livrable de
 // documentation exécutable, sans aucun secret.
 package api
 
@@ -416,7 +416,7 @@ func (a *API) handlePppProvisioningScript(w http.ResponseWriter, r *http.Request
 	poolName := "mikcloud-ppp-pool"
 	var sb strings.Builder
 	sb.WriteString("# ============================================================\n")
-	sb.WriteString("# MikCloud — provisioning assisté du serveur PPPoE (phase B)\n")
+	sb.WriteString("# 403Shield — provisioning assisté du serveur PPPoE (phase B)\n")
 	if name != "" {
 		sb.WriteString("# Routeur : " + name + "\n")
 	}
@@ -447,7 +447,7 @@ func (a *API) handlePppProvisioningScript(w http.ResponseWriter, r *http.Request
 	sb.WriteString(`/interface pppoe-server server
 :if ([:len [find service-name="` + service + `"]] = 0) do={ add service-name="` + service + `" interface=` + iface + ` default-profile="` + profile + `" disabled=no one-session-per-host=yes }
 `)
-	sb.WriteString("\n# Les abonnés se créent ensuite dans la console MikCloud (Abonnés PPPoE)\n# — le profil « " + profile + " » est alors référencé tel quel.\n")
+	sb.WriteString("\n# Les abonnés se créent ensuite dans la console 403Shield (Abonnés PPPoE)\n# — le profil « " + profile + " » est alors référencé tel quel.\n")
 
 	writeJSON(w, http.StatusOK, map[string]any{
 		"ok": true, "script": sb.String(),

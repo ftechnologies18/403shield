@@ -41,8 +41,8 @@ func toTeamMember(u *model.AdminUser) teamMember {
 // Les administrateurs plateforme (opérateurs SaaS sans compte client) ne
 // sont listés QUE lorsque l'appelant est lui-même un admin plateforme —
 // typiquement en session support (impersonation) pour voir l'équipe du
-// compte consulté. Un client normal ne voit JAMAIS les opérateurs MikCloud
-// dans son équipe (L — sinon « Administrateur MikCloud » s'affichait chez
+// compte consulté. Un client normal ne voit JAMAIS les opérateurs 403Shield
+// dans son équipe (L — sinon « Administrateur 403Shield » s'affichait chez
 // tous les clients).
 func (a *API) handleTeamList(w http.ResponseWriter, r *http.Request) {
 	acc := accountScope(r)
@@ -179,7 +179,7 @@ func (a *API) handleTeamUpdate(w http.ResponseWriter, r *http.Request) {
 	// Un owner de compte ne touche pas un super-admin plateforme.
 	if (target.Role == model.RolePlatformAdmin || target.Role == "admin") && !isPlatformAdmin(r) {
 		a.store.Unlock()
-		writeErr(w, http.StatusForbidden, "Ce membre est géré par la plateforme MikCloud")
+		writeErr(w, http.StatusForbidden, "Ce membre est géré par la plateforme 403Shield")
 		return
 	}
 	// Interdit : changer son propre rôle (auto-rétrogradation/surélévation).
@@ -264,7 +264,7 @@ func (a *API) handleTeamDelete(w http.ResponseWriter, r *http.Request) {
 	target := db.Users[idx]
 	if (target.Role == model.RolePlatformAdmin || target.Role == "admin") && !isPlatformAdmin(r) {
 		a.store.Unlock()
-		writeErr(w, http.StatusForbidden, "Ce membre est géré par la plateforme MikCloud")
+		writeErr(w, http.StatusForbidden, "Ce membre est géré par la plateforme 403Shield")
 		return
 	}
 	if target.Role == model.RoleOwner {

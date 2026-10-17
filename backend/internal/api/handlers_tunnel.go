@@ -154,7 +154,7 @@ func (a *API) handleTunnelAuthCode(w http.ResponseWriter, r *http.Request) {
 	} else {
 		a.store.Unlock()
 		writeErrCode(w, http.StatusServiceUnavailable, "email_relay_unavailable",
-			"Canal e-mail non configuré — contactez le support MikCloud", nil)
+			"Canal e-mail non configuré — contactez le support 403Shield", nil)
 		return
 	}
 	a.store.Unlock()
@@ -277,7 +277,7 @@ func (a *API) handleTunnelAuthVerify(w http.ResponseWriter, r *http.Request) {
 	} else {
 		if client.Status != model.TunnelClientActive {
 			a.store.Unlock()
-			writeErr(w, http.StatusForbidden, "Compte bloqué — contactez le support MikCloud")
+			writeErr(w, http.StatusForbidden, "Compte bloqué — contactez le support 403Shield")
 			return
 		}
 		client.UpdatedAt = model.NowISO()
@@ -378,17 +378,17 @@ func (a *API) handleTunnelMe(w http.ResponseWriter, r *http.Request) {
 // tunnelCodeEmailBodies — titre + texte de repli + HTML sobre (le code est
 // un secret de session à 10 min : pas de logo lourd, pas de suivi).
 func tunnelCodeEmailBodies(code string) (title, textBody, htmlBody string) {
-	title = "Votre code MikTunnel"
-	textBody = "Bonjour,\n\nVotre code de connexion MikTunnel : " + code + "\n\n" +
+	title = "Votre code 403Shield"
+	textBody = "Bonjour,\n\nVotre code de connexion 403Shield : " + code + "\n\n" +
 		"Il est valable 10 minutes et ne peut être utilisé qu'une fois.\n" +
 		"Si vous n'êtes pas à l'origine de cette demande, ignorez simplement cet e-mail.\n\n" +
-		"— MikTunnel (powered by FTech CI)"
+		"— 403Shield (powered by FTech CI)"
 	htmlBody = "<div style=\"font-family:system-ui,Segoe UI,Arial,sans-serif;max-width:480px;margin:0 auto;padding:24px\">" +
-		"<h2 style=\"color:#0f766e;margin:0 0 16px\">MikTunnel</h2>" +
+		"<h2 style=\"color:#0f766e;margin:0 0 16px\">403Shield</h2>" +
 		"<p style=\"color:#334155;font-size:15px\">Votre code de connexion :</p>" +
 		"<p style=\"font-size:30px;letter-spacing:8px;font-weight:700;color:#0f172a;background:#ccfbf1;border-radius:12px;padding:16px;text-align:center\">" + code + "</p>" +
 		"<p style=\"color:#64748b;font-size:13px\">Valable 10 minutes, à usage unique. Si vous n'êtes pas à l'origine de cette demande, ignorez cet e-mail.</p>" +
-		"<p style=\"color:#94a3b8;font-size:12px\">— MikTunnel (powered by FTech CI)</p></div>"
+		"<p style=\"color:#94a3b8;font-size:12px\">— 403Shield (powered by FTech CI)</p></div>"
 	return title, textBody, htmlBody
 }
 
@@ -398,7 +398,7 @@ func tunnelCodeEmailBodies(code string) (title, textBody, htmlBody string) {
 func (a *API) dispatchTunnelCodeEmail(senderCfg model.NotificationSettings, to, code string) {
 	title, textBody, htmlBody := tunnelCodeEmailBodies(code)
 	cfgCopy := senderCfg
-	logBody := "Code de connexion MikTunnel envoyé à " + to
+	logBody := "Code de connexion 403Shield envoyé à " + to
 	emailTaskDispatch()(func() {
 		sendErr := accountEmailSender()(&cfgCopy, to, title, textBody, htmlBody)
 		status, errText := "sent", ""

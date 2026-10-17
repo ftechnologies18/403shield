@@ -5,7 +5,7 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Guides plateforme — MikCloud (privé)",
+  title: "Guides plateforme — 403Shield (privé)",
   robots: { index: false, follow: false, nocache: true },
 };
 

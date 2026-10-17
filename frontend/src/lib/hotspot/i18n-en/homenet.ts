@@ -43,13 +43,13 @@ export const enHomeNet: Record<string, string> = {
 
   // N°102 — "agent mode required" hint: routers exist but none in agent
   // mode → the inventory (and the dinner pause) cannot live.
-  "home.agentHint": "Home devices are discovered by your MikroTik box connected to MikCloud in agent mode — the inventory and the dinner pause live on its DHCP leases.",
+  "home.agentHint": "Home devices are discovered by your MikroTik box connected to 403Shield in agent mode — the inventory and the dinner pause live on its DHCP leases.",
   "home.agentHintCta": "View my routers",
 
   // No router — the honest invitation (the rest of the console stays empty
   // until the box is connected: no fake zeros).
   "home.empty.title": "Your home is waiting for its router",
-  "home.empty.desc": "Add your MikroTik box: MikCloud will watch your network, your devices and your family protection.",
+  "home.empty.desc": "Add your MikroTik box: 403Shield will watch your network, your devices and your family protection.",
   "home.empty.cta": "Add my router",
 
   // — devices (home devices — N°101: DHCP leases) —
@@ -100,7 +100,7 @@ export const enHomeNet: Record<string, string> = {
   "devices.empty.title": "No devices yet",
   "devices.empty.desc": "Devices joining your box's WiFi appear here automatically.",
   "devices.empty.routerTitle": "The inventory awaits your box",
-  "devices.empty.routerDesc": "Devices are discovered by your MikroTik router connected to MikCloud (agent mode).",
+  "devices.empty.routerDesc": "Devices are discovered by your MikroTik router connected to 403Shield (agent mode).",
   "devices.noMatch": "No matching device",
   "devices.noMatchDesc": "Adjust your search to find a device.",
 };

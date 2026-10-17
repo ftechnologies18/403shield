@@ -6,7 +6,7 @@ export const enSettings: Record<string, string> = {
 
   // — settings —
   "settings.title": "Settings",
-  "settings.description": "Your MikCloud workspace configuration",
+  "settings.description": "Your 403Shield workspace configuration",
 
   // N°57-c — back button of the zone sidebar (returns to the last business
   // view visited).
@@ -23,7 +23,7 @@ export const enSettings: Record<string, string> = {
   "settings.securityActivityDesc": "Latest recorded actions on your workspace.",
   "settings.securitySeeLogs": "Open the full log",
   "settings.subscriptionCard": "Subscription",
-  "settings.subscriptionCardDesc": "MikCloud plan of your workspace.",
+  "settings.subscriptionCardDesc": "403Shield plan of your workspace.",
   "settings.subscriptionManage": "Manage subscription",
   "settings.organization": "Organization",
   "settings.organizationDesc": "Display name, currency and time zone of your workspace.",
@@ -32,13 +32,13 @@ export const enSettings: Record<string, string> = {
   "settings.orgNamePlaceholder": "e.g. ProMax Wifi",
   "settings.waveLink": "Wave merchant link (mobile payment)",
   "settings.waveLinkPlaceholder": "https://pay.wave.com/m/M_xxxxx/c/ci/",
-  "settings.waveLinkDesc": "Paste your Wave store URL: MikCloud builds payment requests by amount (Wave CI has no public API). Empty = disabled.",
+  "settings.waveLinkDesc": "Paste your Wave store URL: 403Shield builds payment requests by amount (Wave CI has no public API). Empty = disabled.",
   "settings.currency": "Currency",
   "settings.timezone": "Time zone",
   "settings.savedToast": "Settings saved",
   "settings.subscription": "Subscription",
   "settings.subscriptionDesc": "All features, no limits.",
-  "settings.planCurrent": "Current plan — MikCloud Pro",
+  "settings.planCurrent": "Current plan — 403Shield Pro",
   "settings.planRouters": "Unlimited routers",
   "settings.planUsers": "Unlimited users",
   "settings.planResellers": "Unlimited resellers",
@@ -162,14 +162,14 @@ export const enSettings: Record<string, string> = {
   // — N°139: support WhatsApp number of the captive portal —
   "settings.wa.card": "Portal: support WhatsApp number",
   "settings.wa.cardDesc":
-    "The number guests tap on the portal (login, logout, error) to reach you — your own, not the MikCloud support line.",
+    "The number guests tap on the portal (login, logout, error) to reach you — your own, not the 403Shield support line.",
   "settings.wa.number": "WhatsApp number (international format)",
   "settings.wa.numberPh": "2250708091012",
   "settings.wa.label": "Display label (optional)",
   "settings.wa.labelPh": "07 08 09 10 12",
   "settings.wa.preview": "Link served on the portal",
   "settings.wa.hint":
-    "International digits only, no + or spaces (e.g. 2250708091012 for Côte d'Ivoire). Spaces and + are stripped automatically. Leave empty to show the MikCloud support line (01 5049 1807). Any change is redeployed to your routers automatically (≤ 45 s) and refreshed live on already-open portals.",
+    "International digits only, no + or spaces (e.g. 2250708091012 for Côte d'Ivoire). Spaces and + are stripped automatically. Leave empty to show the 403Shield support line (01 5049 1807). Any change is redeployed to your routers automatically (≤ 45 s) and refreshed live on already-open portals.",
   "settings.hosp.imageFail": "Image upload failed",
   "settings.slides.card": "Portal: carousel images",
   "settings.slides.cardDesc": "Replace the 3 generic promo pictures of the captive portal with your own images (commercial mode).",
@@ -178,12 +178,12 @@ export const enSettings: Record<string, string> = {
   "settings.slides.hint": "Image formats, 2 MB max per file — stored in the cloud (permanent URL). Router portals update automatically at the next check-in (≤ 45 s).",
   "settings.slides.add": "Add an image",
   "settings.slides.remove": "Remove",
-  "settings.autoImport.title": "Automatic import of non-MikCloud users",
+  "settings.autoImport.title": "Automatic import of non-403Shield users",
   "settings.autoImport.desc": "How the agent sync handles accounts created directly on the routers.",
   "settings.autoImport.switchLabel": "Automatically import unknown users",
-  "settings.autoImport.enabledDesc": "When enabled, accounts created directly on the router (Winbox, another system) are automatically added to MikCloud on every sync.",
+  "settings.autoImport.enabledDesc": "When enabled, accounts created directly on the router (Winbox, another system) are automatically added to 403Shield on every sync.",
   "settings.autoImport.disabledDesc": "When disabled, these accounts stay on the router and are listed in the router health for manual adoption.",
-  "settings.autoImport.aria": "Automatic import of non-MikCloud users",
+  "settings.autoImport.aria": "Automatic import of non-403Shield users",
   "settings.joinButton.title": "Signup on the captive portal",
   "settings.joinButton.desc": "Whether the “Sign up” button is shown on the WiFi portal login page (agent routers).",
   "settings.joinButton.switchLabel": "Show the “Sign up” button on the portal",
@@ -224,7 +224,7 @@ export const enSettings: Record<string, string> = {
   "settings.exp.tabGuardStay": "Stay on this tab",
   "settings.exp.tabGuardLeave": "Leave without saving",
   "settings.security": "Security",
-  "settings.securityDesc": "Change your MikCloud account password.",
+  "settings.securityDesc": "Change your 403Shield account password.",
 
   // — Security S4: TOTP 2FA —
   "settings.totp.title": "Two-factor authentication",
@@ -272,7 +272,7 @@ export const enSettings: Record<string, string> = {
   "settings.purge.toast": "Purge complete — {summary}",
   "settings.purge.toastEmpty": "Nothing to delete — data already absent",
   "settings.purge.routerWarningTitle": "Real routers not affected — 30-day re-import block",
-  "settings.purge.routerWarning": "The purge removes this data from the MikCloud cloud, but NOT from the real MikroTik routers. To prevent their resurgence, re-importing them through the agent sync will be automatically blocked for 30 days (purge tombstones).",
+  "settings.purge.routerWarning": "The purge removes this data from the 403Shield cloud, but NOT from the real MikroTik routers. To prevent their resurgence, re-importing them through the agent sync will be automatically blocked for 30 days (purge tombstones).",
   "settings.purge.alsoRouter": "Full purge — also delete these accounts ON THE ROUTERS (disconnects connected clients)",
   "settings.purge.alsoRouterWarning": "Irreversible action on the routers: the selected accounts will be deleted from the real MikroTik and connected clients will be disconnected immediately.",
   "settings.purge.alsoRouterConfirmHint": "Type SUPPRIMER to enable the full purge.",
@@ -306,7 +306,7 @@ export const enSettings: Record<string, string> = {
   "settings.purge.cat.tombstones": "{n} re-import block marker(s) (30 d)",
   "settings.purge.cat.routerRemovals": "{n} router removal(s) ordered",
   "settings.language.title": "Language / Langue",
-  "settings.language.desc": "MikCloud interface language — applied immediately.",
+  "settings.language.desc": "403Shield interface language — applied immediately.",
   "settings.language.french": "Français",
   "settings.language.english": "English",
 };

@@ -31,7 +31,7 @@
 // N°141 — audit PWA « pages qui restent blanches » : TOUTES les navigations
 // sont désormais bornées et disposent d'un repli shell. Avant ce changement,
 // seules les non-/sell étaient network-first SANS délai : derrière un portail
-// captif (le cas d'usage CENTRAL de MikCloud — le téléphone du revendeur vit
+// captif (le cas d'usage CENTRAL de 403Shield — le téléphone du revendeur vit
 // sur le hotspot qu'il vend), un fetch de navigation peut PENDRE 75 s+ sans
 // rejeter : pendant toute cette attente la navigation n'est pas commise et
 // l'app reste sur un écran VIDE. Chaque navigation réussie (2xx non

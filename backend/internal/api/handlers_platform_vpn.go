@@ -103,7 +103,7 @@ func (a *API) handlePlatformVpnOverview(w http.ResponseWriter, r *http.Request) 
 		}
 	}
 	if row, ok := peersByAcc[model.AccountMainID]; ok {
-		row.AccountName = "MikCloud (vente directe B2C)"
+		row.AccountName = "403Shield (vente directe B2C)"
 	}
 	accounts := make([]accRow, 0, len(peersByAcc))
 	for _, row := range peersByAcc {
@@ -206,7 +206,7 @@ func (a *API) handlePlatformVpnPeers(w http.ResponseWriter, r *http.Request) {
 	for i := range db.Accounts {
 		accountNames[db.Accounts[i].ID] = db.Accounts[i].Name
 	}
-	accountNames[model.AccountMainID] = "MikCloud (vente directe B2C)"
+	accountNames[model.AccountMainID] = "403Shield (vente directe B2C)"
 	ordersByPeer := map[string]model.PublicVpnOrder{}
 	for i := range db.PublicVpnOrders {
 		if db.PublicVpnOrders[i].PeerID != "" {

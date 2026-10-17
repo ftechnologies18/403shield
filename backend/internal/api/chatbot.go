@@ -54,8 +54,8 @@ var chatIntents = []chatIntent{
 			"maison", "foyer", "famille", "mode", "modes",
 			"which mode", "home network", "home internet",
 		},
-		answerFr: "Le mode Hotspot s'adresse aux réseaux publics que vous exploitez (cybercafé, maquis, boutique) : vouchers, portail captif, revendeurs. Le mode HomeNet, c'est la sécurité internet résidentiel : pare-feu cloud, filtrage DNS, couvre-feu et contrôle des appareils pour votre foyer. Même console MikCloud, mêmes protections — seuls les tarifs diffèrent (HomeNet paie deux fois moins cher).",
-		answerEn: "Hotspot mode targets the public networks you operate (cybercafé, bar, shop): vouchers, captive portal, resellers. HomeNet is residential internet security: cloud firewall, DNS filtering, curfew and device control for your household. Same MikCloud console, same protections — only the prices differ (HomeNet pays half the Hotspot rate).",
+		answerFr: "Le mode Hotspot s'adresse aux réseaux publics que vous exploitez (cybercafé, maquis, boutique) : vouchers, portail captif, revendeurs. Le mode HomeNet, c'est la sécurité internet résidentiel : pare-feu cloud, filtrage DNS, couvre-feu et contrôle des appareils pour votre foyer. Même console 403Shield, mêmes protections — seuls les tarifs diffèrent (HomeNet paie deux fois moins cher).",
+		answerEn: "Hotspot mode targets the public networks you operate (cybercafé, bar, shop): vouchers, captive portal, resellers. HomeNet is residential internet security: cloud firewall, DNS filtering, curfew and device control for your household. Same 403Shield console, same protections — only the prices differ (HomeNet pays half the Hotspot rate).",
 	},
 	{
 		id: "pricing",
@@ -89,8 +89,8 @@ var chatIntents = []chatIntent{
 			"configurer", "mise en place", "brancher",
 			"router", "hardware", "setup", "install", "configure", "public ip",
 		},
-		answerFr: "MikCloud pilote les routeurs MikroTik sous RouterOS (hEX, RB, CHR…). L'agent sort du routeur vers le cloud : il fonctionne derrière CGNAT, Orange ou Starlink, sans IP publique ni port ouvert — un script à coller dans Winbox, environ 40 secondes. Toute la configuration est poussée automatiquement, rien à maintenir côté serveur.",
-		answerEn: "MikCloud drives MikroTik routers running RouterOS (hEX, RB, CHR…). The agent dials out from the router to the cloud: it works behind CGNAT, Orange or Starlink, with no public IP and no open port — one script to paste into Winbox, about 40 seconds. The whole configuration is pushed automatically, nothing to maintain on the server side.",
+		answerFr: "403Shield pilote les routeurs MikroTik sous RouterOS (hEX, RB, CHR…). L'agent sort du routeur vers le cloud : il fonctionne derrière CGNAT, Orange ou Starlink, sans IP publique ni port ouvert — un script à coller dans Winbox, environ 40 secondes. Toute la configuration est poussée automatiquement, rien à maintenir côté serveur.",
+		answerEn: "403Shield drives MikroTik routers running RouterOS (hEX, RB, CHR…). The agent dials out from the router to the cloud: it works behind CGNAT, Orange or Starlink, with no public IP and no open port — one script to paste into Winbox, about 40 seconds. The whole configuration is pushed automatically, nothing to maintain on the server side.",
 	},
 	{
 		id: "protections",
@@ -159,8 +159,8 @@ var chatIntents = []chatIntent{
 			"uemoa", "cemac", "international", "monde", "europe",
 			"country", "countries", "available", "africa", "abroad",
 		},
-		answerFr: "MikCloud tourne dans le cloud : le service est utilisable partout où votre routeur a internet. Il est conçu pour le marché africain — multi mobile-money (Wave, Orange Money, MTN MoMo, Moov, MPesa, Airtel Money) et multi-devises (FCFA, NGN, GHS, KES…) — et la carte bancaire ouvre le reste du monde.",
-		answerEn: "MikCloud runs in the cloud: the service works anywhere your router has internet. It is designed for the African market — multi mobile-money (Wave, Orange Money, MTN MoMo, Moov, MPesa, Airtel Money) and multi-currency (FCFA, NGN, GHS, KES…) — and the credit card opens up the rest of the world.",
+		answerFr: "403Shield tourne dans le cloud : le service est utilisable partout où votre routeur a internet. Il est conçu pour le marché africain — multi mobile-money (Wave, Orange Money, MTN MoMo, Moov, MPesa, Airtel Money) et multi-devises (FCFA, NGN, GHS, KES…) — et la carte bancaire ouvre le reste du monde.",
+		answerEn: "403Shield runs in the cloud: the service works anywhere your router has internet. It is designed for the African market — multi mobile-money (Wave, Orange Money, MTN MoMo, Moov, MPesa, Airtel Money) and multi-currency (FCFA, NGN, GHS, KES…) — and the credit card opens up the rest of the world.",
 	},
 	{
 		id: "greeting",
@@ -168,8 +168,8 @@ var chatIntents = []chatIntent{
 			"bonjour", "bonsoir", "salut", "coucou", "hello", "hey",
 			"good morning", "good evening", "good afternoon", "hi",
 		},
-		answerFr: "Bonjour ! Je suis l'assistant MikCloud. Je peux vous renseigner sur les modes Hotspot et HomeNet, les tarifs, l'essai gratuit, la compatibilité routeur ou les protections — touchez une suggestion ou posez votre question. Et si vous préférez un humain, demandez-le à tout moment.",
-		answerEn: "Hello! I'm the MikCloud assistant. I can tell you about the Hotspot and HomeNet modes, pricing, the free trial, router compatibility or the protections — tap a suggestion or ask your question. And if you'd rather talk to a human, just ask at any time.",
+		answerFr: "Bonjour ! Je suis l'assistant 403Shield. Je peux vous renseigner sur les modes Hotspot et HomeNet, les tarifs, l'essai gratuit, la compatibilité routeur ou les protections — touchez une suggestion ou posez votre question. Et si vous préférez un humain, demandez-le à tout moment.",
+		answerEn: "Hello! I'm the 403Shield assistant. I can tell you about the Hotspot and HomeNet modes, pricing, the free trial, router compatibility or the protections — tap a suggestion or ask your question. And if you'd rather talk to a human, just ask at any time.",
 	},
 	{
 		id: "thanks",
@@ -189,14 +189,14 @@ const chatIntentHuman = "human"
 const (
 	chatFallbackFr = "Je n'ai pas de réponse certaine à cette question. Vous pouvez la reformuler, toucher une suggestion ci-dessous — ou demander un conseiller humain : je vous transmets en un clic."
 	chatFallbackEn = "I'm not sure about that one. You can rephrase it, tap a suggestion below — or ask for a human advisor: I'll transfer you in one tap."
-	chatWelcomeFr  = "Bonjour et bienvenue sur MikCloud. Je suis l'assistant de la vitrine : modes Hotspot et HomeNet, tarifs, essai gratuit, compatibilité routeur, protections… Posez votre question ou touchez une suggestion. Vous pouvez aussi demander un humain à tout moment."
-	chatWelcomeEn  = "Hello and welcome to MikCloud. I'm the MikCloud assistant: Hotspot and HomeNet modes, pricing, free trial, router compatibility, protections… Ask your question or tap a suggestion. You can also ask for a human at any time."
-	chatHandoffFr  = "Je vous transmets à un membre de l'équipe MikCloud. Il reprendra cette conversation depuis la console de support — patientez un instant, vos prochains messages lui parviennent directement."
-	chatHandoffEn  = "I'm handing you over to a member of the MikCloud team. They will pick up this conversation from the support console — hold on a moment, your next messages go straight to them."
-	chatClosedFr   = "Conversation clôturée par le support MikCloud. Merci de votre visite — vous pouvez rouvrir une nouvelle conversation à tout moment."
-	chatClosedEn   = "Conversation closed by MikCloud support. Thanks for visiting — you can start a new conversation at any time."
-	chatInactiveFr = "Pas de nouveau message depuis 15 minutes — la conversation est fermée automatiquement. Vous pouvez en ouvrir une nouvelle à tout moment : l'assistant et les conseillers MikCloud restent disponibles."
-	chatInactiveEn = "No new message for 15 minutes — this conversation has been closed automatically. You can start a new one at any time: the MikCloud assistant and advisors remain available."
+	chatWelcomeFr  = "Bonjour et bienvenue sur 403Shield. Je suis l'assistant de la vitrine : modes Hotspot et HomeNet, tarifs, essai gratuit, compatibilité routeur, protections… Posez votre question ou touchez une suggestion. Vous pouvez aussi demander un humain à tout moment."
+	chatWelcomeEn  = "Hello and welcome to 403Shield. I'm the 403Shield assistant: Hotspot and HomeNet modes, pricing, free trial, router compatibility, protections… Ask your question or tap a suggestion. You can also ask for a human at any time."
+	chatHandoffFr  = "Je vous transmets à un membre de l'équipe 403Shield. Il reprendra cette conversation depuis la console de support — patientez un instant, vos prochains messages lui parviennent directement."
+	chatHandoffEn  = "I'm handing you over to a member of the 403Shield team. They will pick up this conversation from the support console — hold on a moment, your next messages go straight to them."
+	chatClosedFr   = "Conversation clôturée par le support 403Shield. Merci de votre visite — vous pouvez rouvrir une nouvelle conversation à tout moment."
+	chatClosedEn   = "Conversation closed by 403Shield support. Thanks for visiting — you can start a new conversation at any time."
+	chatInactiveFr = "Pas de nouveau message depuis 15 minutes — la conversation est fermée automatiquement. Vous pouvez en ouvrir une nouvelle à tout moment : l'assistant et les conseillers 403Shield restent disponibles."
+	chatInactiveEn = "No new message for 15 minutes — this conversation has been closed automatically. You can start a new one at any time: the 403Shield assistant and advisors remain available."
 )
 
 // chatDeaccent — remplace les caractères latins accentués courants par

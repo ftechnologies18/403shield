@@ -7,7 +7,7 @@
 //     renouvellement ;
 //   • échéance dans ≤ 7 jours → rappel doux refermable pour la session.
 // VERROU FACTURATION : le renouvellement est un flux PAYANT (demande + lien
-// Wave, activation par MikCloud après encaissement) — jamais un clic gratuit.
+// Wave, activation par 403Shield après encaissement) — jamais un clic gratuit.
 
 import { useState } from "react";
 import { CalendarClock, ShieldAlert } from "lucide-react";

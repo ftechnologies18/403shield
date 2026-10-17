@@ -139,7 +139,7 @@ func pppAgentOnly(rr *model.Router) string {
 	if rr.Mode == "agent" {
 		return ""
 	}
-	return "PPPoE est piloté par l'agent MikCloud (mode agent requis) — basculez ce routeur en mode agent pour gérer les abonnés"
+	return "PPPoE est piloté par l'agent 403Shield (mode agent requis) — basculez ce routeur en mode agent pour gérer les abonnés"
 }
 
 // pppSecretCountLocked — secrets du ROUTER (plafond MaxPppSecretsPerRouter).
@@ -655,7 +655,7 @@ func (a *API) handlePppSecretKick(w http.ResponseWriter, r *http.Request) {
 
 // pppDiscoverRow — une ligne de /ppp/secret/print rapportée par
 // ppp_read_secrets (découverte des secrets EXISTANTS du pppoe-server —
-// créés hors MikCloud : MikTik/Winbox/Mikhmon — D2 « gérer l'existant »).
+// créés hors 403Shield : MikTik/Winbox/Mikhmon — D2 « gérer l'existant »).
 type pppDiscoverRow struct {
 	Name     string `json:"name"`
 	Profile  string `json:"profile"`
@@ -707,7 +707,7 @@ func parsePppActiveRows(rows [][]string) []pppActiveRow {
 
 // handlePppDiscover — GET /api/routers/{routerID}/ppp/discover : cache du
 // rapport ppp_read_secrets (TTL 120 s, pattern outils F9) — les secrets du
-// routeur vus par le routeur lui-même, y compris ceux créés hors MikCloud.
+// routeur vus par le routeur lui-même, y compris ceux créés hors 403Shield.
 // Frais → 200 {queued:false, data, updatedAt} ; sinon → 202 {queued:true}
 // (une commande part, dédupliquée — le front re-poll).
 func (a *API) handlePppDiscover(w http.ResponseWriter, r *http.Request) {

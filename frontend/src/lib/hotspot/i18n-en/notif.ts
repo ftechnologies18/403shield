@@ -38,20 +38,20 @@ export const enNotif: Record<string, string> = {
   "notif.tgHelp3": "3. Get your chat ID from @userinfobot.",
   // N°150 — platform Telegram channel (FTCI bot, magic link).
   "notif.tgPlatformDesc": "Instant alerts on your phone — one click to connect, zero setup.",
-  "notif.tgPlatformNote": "Official MikCloud bot — press “Connect Telegram”, then press Start in Telegram. No account to create.",
+  "notif.tgPlatformNote": "Official 403Shield bot — press “Connect Telegram”, then press Start in Telegram. No account to create.",
   "notif.tgConnect": "Connect Telegram",
   "notif.tgPending": "Press “Start” in Telegram — this page detects the connection automatically.",
   "notif.tgOpenAgain": "Reopen Telegram",
   "notif.tgCancel": "Cancel",
   "notif.tgLinked": "Telegram connected",
-  "notif.tgLinkedHint": "You will receive MikCloud alerts in your conversation with the bot.",
+  "notif.tgLinkedHint": "You will receive 403Shield alerts in your conversation with the bot.",
   "notif.tgPairExpired": "Pairing code expired — generate a new one.",
   "notif.tgNewCode": "New code",
   "notif.tgPairError": "Connection failed — try again in a moment.",
   "notif.tgAdvanced": "My own Telegram bot (advanced)",
   "notif.tgManual": "Manual configuration",
   // N°150 — platform email relay.
-  "notif.emailRelayNote": "Sent through the MikCloud platform — just enter your address, no server to configure.",
+  "notif.emailRelayNote": "Sent through the 403Shield platform — just enter your address, no server to configure.",
   "notif.emailAdvanced": "My own email server (advanced)",
   // N°153 — main account console (platform super-admin): the view switches
   // voice — YOUR credentials carry the relay for every client.
@@ -113,7 +113,7 @@ export const enNotif: Record<string, string> = {
   "notif.failed": "Failed",
   "notif.unknownError": "Unknown error",
   "notif.section.rules": "Alert rules",
-  "notif.section.rulesDesc": "Triggers monitored by MikCloud and the daily report.",
+  "notif.section.rulesDesc": "Triggers monitored by 403Shield and the daily report.",
   "notif.section.channels": "Webhooks & channels",
   "notif.section.channelsDesc": "Alert destinations: Telegram, WhatsApp Cloud API and email.",
   "notif.section.log": "Delivery log",

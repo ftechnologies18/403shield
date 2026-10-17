@@ -59,7 +59,7 @@ const (
 	CharsetDigMix  = "5aB" // chiffres + lettres    — preset « 5aB2c34D »
 	// Parité Mikhmon : jeu « 1234 » (chiffres purs, très demandé pour les
 	// codes courts revendus par les revendeurs). Alphabet = digitSafe (sans
-	// 0/1) pour conserver la règle « zéro caractère ambigu » de MikCloud.
+	// 0/1) pour conserver la règle « zéro caractère ambigu » de 403Shield.
 	CharsetNum = "num" // chiffres purs          — preset « 1234 »
 )
 
@@ -84,10 +84,10 @@ var CharsetAlphabets = map[string]string{
 }
 
 // RandomCodeFrom génère un code de n caractères dans l'alphabet du preset
-// demandé (charset vide ou inconnu → alphabet MikCloud par défaut).
+// demandé (charset vide ou inconnu → alphabet 403Shield par défaut).
 
 // RandomCodeFrom génère un code de n caractères dans l'alphabet du preset
-// demandé (charset vide ou inconnu → alphabet MikCloud par défaut).
+// demandé (charset vide ou inconnu → alphabet 403Shield par défaut).
 func RandomCodeFrom(n int, charset string) string {
 	alphabet, ok := CharsetAlphabets[charset]
 	if !ok || alphabet == "" {

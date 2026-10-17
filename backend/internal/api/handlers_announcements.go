@@ -1,5 +1,5 @@
 // handlers_announcements.go — N°152 : diffusion de messages de la plateforme
-// aux comptes clients MikCloud (super-admin).
+// aux comptes clients 403Shield (super-admin).
 //
 // Console plateforme (rang 3) :
 //
@@ -398,7 +398,7 @@ func (a *API) handleClientAnnouncements(w http.ResponseWriter, r *http.Request) 
 // (l'expéditeur et la trace vivent dans dispatchAccountEmail). Le texte est
 // suffixé du nom du destinataire par l'appelant (salutation personnalisée).
 func buildAnnouncementEmail(ann model.Announcement) (title, textBody, htmlBody string) {
-	title = "MikCloud — Annonce : " + ann.Title
+	title = "403Shield — Annonce : " + ann.Title
 	// N°179 — 5 niveaux : l'émeraude passe aux nouveautés, la sarcelle à la
 	// maintenance, l'info redevient neutre (miroir du bandeau console).
 	levelLabel := map[string]string{
@@ -413,7 +413,7 @@ func buildAnnouncementEmail(ann model.Announcement) (title, textBody, htmlBody s
 	}
 
 	var b strings.Builder
-	b.WriteString("MikCloud — " + levelLabel + "\n\n")
+	b.WriteString("403Shield — " + levelLabel + "\n\n")
 	b.WriteString(ann.Title + "\n")
 	if ann.Body != "" {
 		b.WriteString(strings.Repeat("-", 40) + "\n" + ann.Body + "\n" + strings.Repeat("-", 40) + "\n")
@@ -423,7 +423,7 @@ func buildAnnouncementEmail(ann model.Announcement) (title, textBody, htmlBody s
 			b.WriteString("\nCette annonce s'affiche dans votre console jusqu'au " + formatDateFr(t) + ".\n")
 		}
 	}
-	b.WriteString("\nL'annonce reste disponible dans la cloche de votre console MikCloud.\n\n— L'équipe MikCloud\n")
+	b.WriteString("\nL'annonce reste disponible dans la cloche de votre console 403Shield.\n\n— L'équipe 403Shield\n")
 	textBody = b.String()
 
 	// ── HTML ──
@@ -474,7 +474,7 @@ func buildAnnouncementEmail(ann model.Announcement) (title, textBody, htmlBody s
 	year := time.Now().UTC().Year()
 	htmlBody = fmt.Sprintf(`<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
 <body style="margin:0;padding:0;background-color:#F2F6F4;">
-<div style="display:none;max-height:0;overflow:hidden;">Annonce MikCloud — %s</div>
+<div style="display:none;max-height:0;overflow:hidden;">Annonce 403Shield — %s</div>
 <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%%" style="background-color:#F2F6F4;padding:24px 12px;">
 <tr><td align="center">
 <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%%" style="max-width:560px;background-color:#FFFFFF;border-radius:14px;overflow:hidden;box-shadow:0 2px 12px rgba(16,32,25,.08);">
@@ -491,9 +491,9 @@ func buildAnnouncementEmail(ann model.Announcement) (title, textBody, htmlBody s
 </td></tr>
 <tr><td bgcolor="#009558" height="6" style="background-color:#009558;background-image:%s;border-radius:0 0 14px 14px;font-size:0;line-height:6px;">&nbsp;</td></tr>
 <tr><td style="padding:24px 16px 8px;font-family:%s;font-size:12px;line-height:1.7;color:#7C8F85;text-align:center;">
-<p style="margin:0 0 4px;"><span style="font-weight:700;color:#53645C;">MikCloud</span> · la console de gestion hotspot MikroTik</p>
-<p style="margin:0;font-size:11px;color:#6B7F76;">Vous recevez cet e-mail car un compte MikCloud est enregistré avec cette adresse.</p>
-<p style="margin:10px 0 0;font-size:11px;color:#6B7F76;">© %d MikCloud · FTech CI</p>
+<p style="margin:0 0 4px;"><span style="font-weight:700;color:#53645C;">403Shield</span> · la console de gestion hotspot MikroTik</p>
+<p style="margin:0;font-size:11px;color:#6B7F76;">Vous recevez cet e-mail car un compte 403Shield est enregistré avec cette adresse.</p>
+<p style="margin:10px 0 0;font-size:11px;color:#6B7F76;">© %d 403Shield · FTech CI</p>
 </td></tr>
 </table>
 </td></tr></table>

@@ -1,5 +1,5 @@
 // Package notify — sendeurs multi-canaux (Telegram, WhatsApp Cloud API, Email
-// SMTP direct ou API Resend) + livraison des notifications MikCloud. Fonctions
+// SMTP direct ou API Resend) + livraison des notifications 403Shield. Fonctions
 // libres sans état : utilisables depuis le moniteur (goroutine) comme depuis
 // les handlers API (test de canal).
 package notify
@@ -47,7 +47,7 @@ var TelegramPlatformToken = ""
 // resendDefaultFrom — expéditeur par défaut quand ResendFrom est vide : le
 // domaine d'essai Resend ne délivre qu'à l'adresse du propriétaire du compte
 // Resend ; en production, renseignez ResendFrom avec un domaine vérifié.
-const resendDefaultFrom = "MikCloud <onboarding@resend.dev>"
+const resendDefaultFrom = "403Shield <onboarding@resend.dev>"
 
 // Kinds de notification (colonne kind de NotificationLog).
 const (
@@ -405,7 +405,7 @@ func sendWhatsApp(accessToken, phoneNumberID, to, title, body string) error {
 
 // sendEmailResend — POST /emails de l'API Resend (https://resend.com/docs).
 // Un statut 2xx (202 Accepted en pratique) suffit : l'identifiant renvoyé
-// n'est pas conservé (l'historique notif_log trace le résultat côté MikCloud).
+// n'est pas conservé (l'historique notif_log trace le résultat côté 403Shield).
 // N°79 : htmlBody non vide → champ "html" du payload (Resend délivre alors
 // text ET html — chaque client affiche sa meilleure pièce).
 func sendEmailResend(apiKey, from, to, title, textBody, htmlBody string) error {
@@ -555,7 +555,7 @@ func smtpSend(client *smtp.Client, from, to string, msg []byte) error {
 func buildMessage(from, to, title, textBody, htmlBody string) []byte {
 	subject := "=?UTF-8?B?" + base64.StdEncoding.EncodeToString([]byte(title)) + "?="
 	var sb strings.Builder
-	sb.WriteString("From: MikCloud <" + from + ">\r\n")
+	sb.WriteString("From: 403Shield <" + from + ">\r\n")
 	sb.WriteString("To: <" + to + ">\r\n")
 	sb.WriteString("Subject: " + subject + "\r\n")
 	sb.WriteString("MIME-Version: 1.0\r\n")

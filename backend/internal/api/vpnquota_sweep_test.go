@@ -287,7 +287,7 @@ func TestVpnQuotaSweepUnlimited(t *testing.T) {
 	settings := ensureSettings(db, model.AccountMainID)
 	zero := 0
 	if settings.Platform == nil {
-		settings.Platform = &model.PlatformConfig{Name: "MikCloud", RegisterOpen: true}
+		settings.Platform = &model.PlatformConfig{Name: "403Shield", RegisterOpen: true}
 	}
 	settings.Platform.WgVpnMonthlyQuotaGB = &zero
 	db.SettingsByAccount[model.AccountMainID] = settings

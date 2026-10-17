@@ -330,7 +330,7 @@ export default function ResellersView() {
           });
     try {
       if (navigator.share) {
-        await navigator.share({ title: "MikCloud", text });
+        await navigator.share({ title: "403Shield", text });
       } else {
         await navigator.clipboard.writeText(text);
         toast.success(t("resellers.receiptShared"));

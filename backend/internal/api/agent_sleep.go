@@ -1,6 +1,6 @@
 // agent_sleep.go — N°75 — veille adaptative des agents routeurs.
 //
-// AVANT : le scheduler MikCloud posé à l'installation tourne à 45 s À JAMAIS.
+// AVANT : le scheduler 403Shield posé à l'installation tourne à 45 s À JAMAIS.
 // Un check-in = ~400 o (réponse gzip), 1 920/jour/routeur → ~23 Mo/mois de
 // bande passante par routeur sur le seul battement de cœur. Le mur « plan
 // gratuit Render 5 Go » tombait vers ~100 routeurs, quel que soit l'usage
@@ -41,7 +41,7 @@ import (
 	"mikcloud/hotspot-api/internal/model"
 )
 
-// Pas du scheduler MikCloud (secondes).
+// Pas du scheduler 403Shield (secondes).
 const (
 	// agentFastSec — mode actif : l'installation pose cet intervalle, le
 	// cloud le rétablit dès qu'une attention existe.

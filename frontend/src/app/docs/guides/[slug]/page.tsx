@@ -22,9 +22,9 @@ export function generateStaticParams() {
 export async function generateMetadata({ params }: Params): Promise<Metadata> {
   const { slug } = await params;
   const guide = getPublicGuide(slug);
-  if (!guide) return { title: "Guide introuvable — MikCloud" };
+  if (!guide) return { title: "Guide introuvable — 403Shield" };
   return {
-    title: `${guide.title} — Guides MikCloud`,
+    title: `${guide.title} — Guides 403Shield`,
     description: guide.summary,
     openGraph: {
       title: guide.title,

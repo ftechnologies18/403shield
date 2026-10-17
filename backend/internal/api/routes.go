@@ -173,7 +173,7 @@ func (a *API) Handler() http.Handler {
 
 	mux.HandleFunc("GET /{$}", a.handleHealth)
 
-	// Agent MikCloud (routeur -> cloud, HTTP-poll sortant) + provisionning console
+	// Agent 403Shield (routeur -> cloud, HTTP-poll sortant) + provisionning console
 	a.registerAgentRoutes(mux)
 
 	// Notifications (réglages canaux, test, historique)
@@ -505,7 +505,7 @@ func (a *API) Handler() http.Handler {
 	// Bascule support : ouvrir la console d'un compte client à la demande
 	// (token scoping le compte, rôle plateforme conservé, action tracée).
 	mux.HandleFunc("POST /api/admin/accounts/{id}/impersonate", a.requireRole(3, a.handleAdminImpersonate))
-	// Console plateforme (super-admin MikCloud, multi-comptes).
+	// Console plateforme (super-admin 403Shield, multi-comptes).
 	mux.HandleFunc("GET /api/admin/overview", a.requireRole(3, a.handleAdminOverview))
 	mux.HandleFunc("GET /api/admin/activity", a.requireRole(3, a.handleAdminActivity))
 	// N°117 — parc routeurs global : mise à jour RouterOS de FLOTTE. La vue

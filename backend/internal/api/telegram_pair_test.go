@@ -60,7 +60,7 @@ func newPairServer(t *testing.T, cap *tgCapture) (*httptest.Server, *store.Store
 	t.Cleanup(func() { notify.TelegramPlatformToken = oldTok })
 
 	oldGetMe, oldSend := telegramGetMeFn, telegramSendFn
-	telegramGetMeFn = func(string) (string, error) { return "MikCloudAlertesBot", nil }
+	telegramGetMeFn = func(string) (string, error) { return "403ShieldAlertesBot", nil }
 	if cap != nil {
 		telegramSendFn = func(_, chatID, text string) error {
 			cap.add(chatID, text)
@@ -116,7 +116,7 @@ func TestTelegramPairFlow(t *testing.T) {
 	if code == "" || len(code) != 8 {
 		t.Fatalf("code éphémère attendu (8 car.), obtenu %q", code)
 	}
-	if url != "https://t.me/MikCloudAlertesBot?start="+code {
+	if url != "https://t.me/403ShieldAlertesBot?start="+code {
 		t.Errorf("lien magique incorrect : %q", url)
 	}
 
@@ -154,7 +154,7 @@ func TestTelegramPairFlow(t *testing.T) {
 	if out["telegramPlatformAvailable"] != true {
 		t.Errorf("telegramPlatformAvailable attendu (token posé) : %v", out["telegramPlatformAvailable"])
 	}
-	if out["telegramBotUsername"] != "MikCloudAlertesBot" {
+	if out["telegramBotUsername"] != "403ShieldAlertesBot" {
 		t.Errorf("telegramBotUsername attendu : %v", out["telegramBotUsername"])
 	}
 
@@ -255,7 +255,7 @@ func TestNotifTestEmailViaRelay(t *testing.T) {
 		AccountID:     model.AccountMainID,
 		EmailProvider: "resend",
 		ResendAPIKey:  "re_main",
-		ResendFrom:    "MikCloud <alertes@ftci.fr>",
+		ResendFrom:    "403Shield <alertes@ftci.fr>",
 	})
 	st.Save()
 	st.Unlock()
@@ -270,7 +270,7 @@ func TestNotifTestEmailViaRelay(t *testing.T) {
 			gotPlatformKey = platformEmail.ResendAPIKey
 		}
 		mu.Unlock()
-		return []model.NotificationLog{notify.LogEntry(cfg, "email", notify.KindTest, "MikCloud — Test de notification", "", nil)}
+		return []model.NotificationLog{notify.LogEntry(cfg, "email", notify.KindTest, "403Shield — Test de notification", "", nil)}
 	}
 	t.Cleanup(func() { deliverNotif = oldDeliver })
 
@@ -352,7 +352,7 @@ func TestNotifTestBodyPlatformAccount(t *testing.T) {
 		mu.Lock()
 		gotBodies[channel+"/"+cfg.AccountID] = body
 		mu.Unlock()
-		return []model.NotificationLog{notify.LogEntry(cfg, channel, notify.KindTest, "MikCloud — Test de notification", "", nil)}
+		return []model.NotificationLog{notify.LogEntry(cfg, channel, notify.KindTest, "403Shield — Test de notification", "", nil)}
 	}
 	t.Cleanup(func() { deliverNotif = oldDeliver })
 

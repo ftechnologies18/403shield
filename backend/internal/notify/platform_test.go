@@ -160,7 +160,7 @@ func TestDeliverEmailPlatformRelay(t *testing.T) {
 		AccountID:     "acc-main",
 		EmailProvider: "resend",
 		ResendAPIKey:  "re_main",
-		ResendFrom:    "MikCloud <alertes@ftci.fr>",
+		ResendFrom:    "403Shield <alertes@ftci.fr>",
 	}
 	cfg := model.NotificationSettings{
 		AccountID:    "acc-client",
@@ -193,7 +193,7 @@ func TestTelegramGetMeSetWebhook(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch {
 		case strings.HasSuffix(r.URL.Path, "/getMe"):
-			_, _ = w.Write([]byte(`{"ok":true,"result":{"username":"MikCloudAlertesBot"}}`))
+			_, _ = w.Write([]byte(`{"ok":true,"result":{"username":"403ShieldAlertesBot"}}`))
 		case strings.HasSuffix(r.URL.Path, "/setWebhook"):
 			var payload map[string]any
 			_ = json.NewDecoder(r.Body).Decode(&payload)
@@ -210,7 +210,7 @@ func TestTelegramGetMeSetWebhook(t *testing.T) {
 	t.Cleanup(func() { telegramEndpoint = old })
 
 	me, err := TelegramGetMe("777:FTCI")
-	if err != nil || me != "MikCloudAlertesBot" {
+	if err != nil || me != "403ShieldAlertesBot" {
 		t.Fatalf("getMe : %q, %v", me, err)
 	}
 	if err := TelegramSetWebhook("777:FTCI", "https://exemple.ci/api/webhooks/telegram", "s3cret"); err != nil {

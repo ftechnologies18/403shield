@@ -109,7 +109,7 @@ func TestTunnelAuthCodeRequest(t *testing.T) {
 	if code == "" {
 		t.Fatalf("code à 6 chiffres absent du corps : %q", calls[0].body)
 	}
-	if !strings.Contains(calls[0].title, "MikTunnel") {
+	if !strings.Contains(calls[0].title, "403Shield") {
 		t.Errorf("titre inattendu : %q", calls[0].title)
 	}
 

@@ -12,7 +12,7 @@ export const frPrint: Record<string, string> = {
   "print.resellerNotice": "{n} ticket{p} attribué{p} à un revendeur ({names}) — impression pour son compte, action tracée dans le journal d’activité. La vente reste créditée au revendeur.",
   "print.template": "Modèle",
   "print.templateAria": "Modèle de voucher pour l'impression",
-  "print.standard": "Ticket standard MikCloud",
+  "print.standard": "Ticket standard 403Shield",
   "print.defaultSuffix": " (défaut)",
   "print.generating": "Génération de l'aperçu…",
   "print.previewFailed": "Aperçu indisponible — le modèle n'a pas pu être rendu.",

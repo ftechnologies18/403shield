@@ -46,14 +46,14 @@ type BillingRequest struct {
 // GeniusPay). Créé une fois par le client (POST /api/subscription/stripe),
 // débité automatiquement à chaque échéance par Stripe ; chaque facture payée
 // (webhook subscription.payment_succeeded, ou resynchronisation au retour du
-// client) active/empile la période MikCloud correspondante — la source unique
+// client) active/empile la période 403Shield correspondante — la source unique
 // du calcul de période reste applySubscriptionLocked.
 
 // GeniusPaySub — abonnement RÉCURRENT par carte bancaire (Stripe via
 // GeniusPay). Créé une fois par le client (POST /api/subscription/stripe),
 // débité automatiquement à chaque échéance par Stripe ; chaque facture payée
 // (webhook subscription.payment_succeeded, ou resynchronisation au retour du
-// client) active/empile la période MikCloud correspondante — la source unique
+// client) active/empile la période 403Shield correspondante — la source unique
 // du calcul de période reste applySubscriptionLocked.
 type GeniusPaySub struct {
 	// UUID — identifiant GeniusPay (sub_…), clé primaire locale.

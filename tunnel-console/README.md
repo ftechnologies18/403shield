@@ -13,7 +13,9 @@
 > dash.cloudflare.com pour la marque : on y achète (`/shop`), gère (`/me`) et
 > opère (`/pro`) les tunnels et VPN WireGuard. Maison-mère : **FTech CI**
 > (ftci.fr), endossement « powered by FTech CI » ; le site marketing unifié
-> vit sur mikcloud.ftci.fr.
+> vit sur 403shield.ftci.fr (ex mikcloud.ftci.fr — 301 permanent posé en
+> N°318 ; le DNS et la vérification Vercel ont été créés par le tuteur la
+> même journée).
 
 ## Ce que c'est
 
@@ -59,15 +61,16 @@ Variables d'environnement :
 
 | Variable | Défaut | Rôle |
 |---|---|---|
-| `NEXT_PUBLIC_API_BASE` | `https://api.mikcloud.ftci.fr` | Base de l'API — CORS WHITELIST côté backend (`corsMiddleware`, `main.go` — fail-closed P1 #16) : `https://tunnel.ftci.fr` et `https://miktunnel.vercel.app` figurent dans `ALLOWED_ORIGIN` de la VM (geste `ops-cors-whitelist.yml`, N°316 — non-régression `mikcloud.ftci.fr` prouvée par le workflow) |
+| `NEXT_PUBLIC_API_BASE` | `https://api.mikcloud.ftci.fr` | Base de l'API — CORS WHITELIST côté backend (`corsMiddleware`, `main.go` — fail-closed P1 #16) : `tunnel.ftci.fr`, `miktunnel.vercel.app` (N°316) puis `403shield.ftci.fr`, `403shield.vercel.app`, `403shield-console.vercel.app` (N°318) figurent dans `ALLOWED_ORIGIN` de la VM (geste `ops-cors-whitelist.yml` — PARAMÉTRABLE depuis N°318 : les origines se passent en input du dispatch, non-régression prouvée par le workflow) |
 | `TUNNEL_DEV_API_PROXY` | — | `=1` en dev local : proxy `/api/*` → `http://localhost:4000` (backend local) |
 
 Côté BACKEND (N°316) : `TUNNEL_PUBLIC_URL` (défaut `https://tunnel.ftci.fr`)
 porte l'origine canonique de la console — retours de paiement GeniusPay
 de la boutique (`/shop?order=…`), replis renouvellement/Pro (`/me`) et liens
-des e-mails MCV- (rebrandés « MikTunnel (by MikCloud · powered by FTech CI) »
-en N°316 — le rebrand des e-mails vers 403Shield relève du backend, hors
-périmètre de cette app). `APP_PUBLIC_URL` reste l'origine du SaaS (reçus,
+des e-mails MCV-. N°318 : les e-mails transactionnels backend SONT rebrandés
+« 403Shield (powered by FTech CI) » — la consigne de fichier passa de
+`mikcloud.conf` à `403shield.conf`, la FAQ ci-dessus et l'e-mail de livraison
+sont alignés. `APP_PUBLIC_URL` reste l'origine du SaaS (reçus,
 resets).
 
 ## Déploiement (Vercel) — FAIT le 13/10/2026 (N°314, session de pilotage)
@@ -78,8 +81,10 @@ resets).
    (root `frontend/`) n'est pas touché. Les déploiements suivent les pushes
    `main` automatiquement (webhook Vercel).
 2. **Variable de production** POSÉE : `NEXT_PUBLIC_API_BASE=https://api.mikcloud.ftci.fr`.
-3. **URL live** : **https://miktunnel.vercel.app** (alias git :
-   `miktunnel-ftech-ci.vercel.app`).
+3. **URL live** : https://miktunnel.vercel.app puis, après le RENOMMAGE N°318
+   du projet (miktunnel → **403shield-console**) :
+   **https://403shield-console.vercel.app** (l'ancienne URL miktunnel.vercel.app
+   est libérée par le renommage — elle reste dans la whitelist CORS, inoffensive).
 4. **Domaine dédié `tunnel.ftci.fr`** : VÉRIFIÉ ET EN LIGNE depuis le
    17/10/2026 — CNAME `tunnel` → `cname.vercel-dns.com` posé dans Cloudflare
    (DNS only) + TXT `_vercel` de vérification ; certificat émis, HTTP 200
@@ -92,7 +97,7 @@ resets).
   ses revendeurs » préservée : l'ancienne vitrine `/vpn` répond 301) ;
   familles de formules VERROUILLÉES (la boutique ne montre/jamais ne
   vend que la famille b2c, le canal Pro reste séparé) ;
-- L'Accès Pro exige un COMPTE GÉRANT de la plateforme 403Shield (mikcloud.ftci.fr)
+- L'Accès Pro exige un COMPTE GÉRANT de la plateforme 403Shield (403shield.ftci.fr)
   apparié par e-mail (au moins un routeur en mode agent) — la page `/pro` le
   DIT au lieu de vendre un accès qui ne servirait à rien ;
 - Les tokens « tunnel » vivent 24 h et ne sortent JAMAIS de `/api/tunnel/*`

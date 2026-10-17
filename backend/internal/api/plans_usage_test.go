@@ -103,14 +103,14 @@ func TestApplySubscriptionUsagePricing(t *testing.T) {
 		wantLabel string
 	}
 	cas := []attendu{
-		{"legacy essentiel hotspot 3 routeurs", "acc-hot", "essentiel", 1, 3, "hotspot-mensuel", 7500, 3, "MikCloud Hotspot Mensuel"},
-		{"hotspot mensuel explicite", "acc-hot", "hotspot-mensuel", 1, 2, "hotspot-mensuel", 5000, 2, "MikCloud Hotspot Mensuel"},
-		{"hotspot annuel 12 mois", "acc-hot", "hotspot-annuel", 12, 0, "hotspot-annuel", 25000, 0, "MikCloud Hotspot Annuel"},
-		{"hotspot annuel 24 mois (empilement tarifaire)", "acc-hot", "hotspot-annuel", 24, 0, "hotspot-annuel", 50000, 0, "MikCloud Hotspot Annuel"},
-		{"legacy essentiel homenet (park 0 → plancher 1)", "acc-home", "essentiel", 1, 0, "homenet-mensuel", 1250, 1, "MikCloud HomeNet Mensuel"},
-		{"homenet mensuel explicite", "acc-home", "homenet-mensuel", 1, 1, "homenet-mensuel", 1250, 1, "MikCloud HomeNet Mensuel"},
-		{"legacy illimite homenet", "acc-home", "illimite", 12, 0, "homenet-annuel", 12000, 0, "MikCloud HomeNet Annuel"},
-		{"homenet annuel explicite", "acc-home", "homenet-annuel", 12, 0, "homenet-annuel", 12000, 0, "MikCloud HomeNet Annuel"},
+		{"legacy essentiel hotspot 3 routeurs", "acc-hot", "essentiel", 1, 3, "hotspot-mensuel", 7500, 3, "403Shield Hotspot Mensuel"},
+		{"hotspot mensuel explicite", "acc-hot", "hotspot-mensuel", 1, 2, "hotspot-mensuel", 5000, 2, "403Shield Hotspot Mensuel"},
+		{"hotspot annuel 12 mois", "acc-hot", "hotspot-annuel", 12, 0, "hotspot-annuel", 25000, 0, "403Shield Hotspot Annuel"},
+		{"hotspot annuel 24 mois (empilement tarifaire)", "acc-hot", "hotspot-annuel", 24, 0, "hotspot-annuel", 50000, 0, "403Shield Hotspot Annuel"},
+		{"legacy essentiel homenet (park 0 → plancher 1)", "acc-home", "essentiel", 1, 0, "homenet-mensuel", 1250, 1, "403Shield HomeNet Mensuel"},
+		{"homenet mensuel explicite", "acc-home", "homenet-mensuel", 1, 1, "homenet-mensuel", 1250, 1, "403Shield HomeNet Mensuel"},
+		{"legacy illimite homenet", "acc-home", "illimite", 12, 0, "homenet-annuel", 12000, 0, "403Shield HomeNet Annuel"},
+		{"homenet annuel explicite", "acc-home", "homenet-annuel", 12, 0, "homenet-annuel", 12000, 0, "403Shield HomeNet Annuel"},
 		{"essai reste hors catalogue", "acc-hot", "essai", 1, 0, "essai", 0, 1, "Essai"},
 	}
 	for _, c := range cas {

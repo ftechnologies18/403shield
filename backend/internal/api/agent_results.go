@@ -287,7 +287,7 @@ func (a *API) applyReadState(db *model.DB, router *model.Router, vals url.Values
 	autoImport := importAutoEnabled(db, router.AccountID)
 	unknownCount := 0
 
-	// Sync des utilisateurs créés hors MikCloud (inconnus du cloud)
+	// Sync des utilisateurs créés hors 403Shield (inconnus du cloud)
 	known := map[string]bool{}
 	for i := range db.HotspotUsers {
 		if db.HotspotUsers[i].RouterID == router.ID {

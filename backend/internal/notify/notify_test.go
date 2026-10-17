@@ -99,7 +99,7 @@ func (errTest) Error() string { return "erreur simulée" }
 func TestBuildMessage(t *testing.T) {
 	msg := string(buildMessage("from@example.ci", "to@example.ci", "Routeur hors ligne", "Le routeur A ne répond plus.", ""))
 	for _, attendu := range []string{
-		"From: MikCloud <from@example.ci>",
+		"From: 403Shield <from@example.ci>",
 		"To: <to@example.ci>",
 		"MIME-Version: 1.0",
 		"Content-Type: text/plain; charset=UTF-8",
@@ -234,10 +234,10 @@ func TestSendEmailResend(t *testing.T) {
 
 	// From explicite conservé tel quel + N°79 : le HTML est transmis tel
 	// quel dans le payload (pièce text/html chez Resend).
-	if err := sendEmailResend("re_test", "MikCloud <alertes@ftci.fr>", "dest@example.ci", "T", "B", "<p>HTML brandé</p>"); err != nil {
+	if err := sendEmailResend("re_test", "403Shield <alertes@ftci.fr>", "dest@example.ci", "T", "B", "<p>HTML brandé</p>"); err != nil {
 		t.Fatalf("envoi avec from explicite attendu, obtenu %v", err)
 	}
-	if gotFrom != "MikCloud <alertes@ftci.fr>" {
+	if gotFrom != "403Shield <alertes@ftci.fr>" {
 		t.Fatalf("from explicite doit être conservé, obtenu %q", gotFrom)
 	}
 	if gotHTML != "<p>HTML brandé</p>" {
@@ -348,7 +348,7 @@ func TestBuildDailyReport(t *testing.T) {
 	db.Routers = []model.Router{{AccountID: "acc-1", Status: "online"}, {AccountID: "acc-1", Status: "offline"}}
 
 	title, body := buildDailyReport(db, "acc-1", now, model.NotificationSettings{})
-	if !strings.Contains(title, "15/06/2025") || !strings.Contains(title, "Rapport MikCloud") {
+	if !strings.Contains(title, "15/06/2025") || !strings.Contains(title, "Rapport 403Shield") {
 		t.Fatalf("titre du rapport incorrect : %q", title)
 	}
 	for _, attendu := range []string{

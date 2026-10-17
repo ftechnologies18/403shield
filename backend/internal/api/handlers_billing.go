@@ -1,5 +1,5 @@
 // Package api — file des demandes de renouvellement + encaissement Wave
-// (console plateforme, facturation SaaS MikCloud).
+// (console plateforme, facturation SaaS 403Shield).
 //
 // Le verrou du cycle de facturation (POST /api/subscription) transforme la
 // souscription client en DEMANDE tracée dans le journal. Ce fichier ajoute :

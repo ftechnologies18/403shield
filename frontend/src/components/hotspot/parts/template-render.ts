@@ -338,7 +338,7 @@ export async function renderTemplate(
   // Data URL : base64 sans caractères spéciaux HTML — injectable telle quelle dans src="".
   html = replaceAllLiteral(html, "{{qrCode}}", qrCode);
   html = replaceAllLiteral(html, "{{logo}}", ctx.logoUrl || TRANSPARENT_PIXEL);
-  html = replaceAllLiteral(html, "{{hotspotName}}", escapeHtml(ctx.tenantName || "MikCloud"));
+  html = replaceAllLiteral(html, "{{hotspotName}}", escapeHtml(ctx.tenantName || "403Shield"));
   html = replaceAllLiteral(html, "{{dnsName}}", escapeHtml(ctx.dnsName ?? ""));
   html = replaceAllLiteral(html, "{{num}}", String(num));
   html = replaceAllLiteral(html, "{{comment}}", escapeHtml(voucher.comment ?? ""));

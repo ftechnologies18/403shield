@@ -1,6 +1,6 @@
 "use client";
 
-// Dictionnaire anglais MikCloud — extrait de i18n.ts (N°78) : chargé
+// Dictionnaire anglais 403Shield — extrait de i18n.ts (N°78) : chargé
 // UNIQUEMENT pour les utilisateurs EN, via import() dynamique
 // (ensureEnDict dans i18n.ts). Les utilisateurs FR ne le téléchargent
 // jamais — c'est ~37 Ko gzip qui sortent du bundle initial pour la

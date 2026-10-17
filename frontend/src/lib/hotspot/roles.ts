@@ -68,7 +68,7 @@ const VIEW_MIN_RANK: Record<string, number> = {
   devices: 1,
 };
 
-/** Vues de la CONSOLE PLATEFORME — réservées au super-admin MikCloud
+/** Vues de la CONSOLE PLATEFORME — réservées au super-admin 403Shield
  * (platform_admin, ou « admin » historique). Le reste de la navigation
  * appartient à la console client. */
 const PLATFORM_VIEWS: ReadonlySet<string> = new Set(["platform", "platformFleet", "platformChat", "platformLogs", "platformTeam", "billingRequests", "platformSettings", "platformAnnouncements", "platformNotifications", "platformVpn"]); // N°153 — notifications du compte principal ; N°301 — VPN & Vente directe (grossiste)

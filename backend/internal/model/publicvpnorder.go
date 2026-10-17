@@ -1,5 +1,5 @@
 // PublicVpnOrder — N°301 — commande VPN WireGuard B2C « vente directe
-// plateforme » : la vitrine publique MikCloud (/vpn, hors zone des gérants —
+// plateforme » : la vitrine publique 403Shield (/vpn, hors zone des gérants —
 // doctrine « jamais en concurrence avec ses revendeurs ») vend un accès
 // fulltunnel au client final SANS compte SaaS, le provisioning est AUTOMATIQUE
 // (peer wg0 posé par wg-mini au nom du compte principal, refacturé à nul
@@ -149,8 +149,8 @@ type PublicVpnPlan struct {
 	BaseFcfa int `json:"baseFcfa"`
 	// Family — N°315 — famille de formule : "b2c" (vitrine /vpn — VPN
 	// fulltunnel au client final, doctrine « jamais en concurrence avec ses
-	// revendeurs ») | "pro" (Accès MikTunnel — peer remote supervision + LAN
-	// étendu, vendu depuis la console MikTunnel UNIQUEMENT : le canal est
+	// revendeurs ») | "pro" (Accès 403Shield — peer remote supervision + LAN
+	// étendu, vendu depuis la console 403Shield UNIQUEMENT : le canal est
 	// séparé, la famille aussi — la vitrine REFUSE les formules pro et la
 	// console Pro refuse les formules b2c, garde aux deux bords).
 	Family string `json:"family"`
@@ -175,13 +175,13 @@ const (
 // (fulltunnel, sortie par la VM — IP fixe FR). Le prix annuel offre ~2 mois
 // offerts par rapport au mensuel (discipline SaasPlans).
 var PublicVpnPlans = []PublicVpnPlan{
-	{ID: PublicVpnPlanMonthID, Label: "MikCloud VPN Mensuel", PeriodLabel: "1 mois", Months: 1, BaseFcfa: 1500, Family: PublicVpnPlanFamilyB2C},
-	{ID: PublicVpnPlanYearID, Label: "MikCloud VPN Annuel", PeriodLabel: "12 mois", Months: 12, BaseFcfa: 15000, Family: PublicVpnPlanFamilyB2C},
+	{ID: PublicVpnPlanMonthID, Label: "403Shield VPN Mensuel", PeriodLabel: "1 mois", Months: 1, BaseFcfa: 1500, Family: PublicVpnPlanFamilyB2C},
+	{ID: PublicVpnPlanYearID, Label: "403Shield VPN Annuel", PeriodLabel: "12 mois", Months: 12, BaseFcfa: 15000, Family: PublicVpnPlanFamilyB2C},
 	// N°315 — Accès Pro MikTunnel : peer remote (supervision des routeurs du
 	// compte) + LAN étendu (caméras/NAS) dès détection. Prix premium vs B2C
 	// (produit B2Pro), même discipline annuelle (~2 mois offerts).
-	{ID: PublicVpnProPlanMonthID, Label: "MikTunnel Pro Mensuel", PeriodLabel: "1 mois", Months: 1, BaseFcfa: 3500, Family: PublicVpnPlanFamilyPro},
-	{ID: PublicVpnProPlanYearID, Label: "MikTunnel Pro Annuel", PeriodLabel: "12 mois", Months: 12, BaseFcfa: 35000, Family: PublicVpnPlanFamilyPro},
+	{ID: PublicVpnProPlanMonthID, Label: "403Shield Pro Mensuel", PeriodLabel: "1 mois", Months: 1, BaseFcfa: 3500, Family: PublicVpnPlanFamilyPro},
+	{ID: PublicVpnProPlanYearID, Label: "403Shield Pro Annuel", PeriodLabel: "12 mois", Months: 12, BaseFcfa: 35000, Family: PublicVpnPlanFamilyPro},
 }
 
 // ResolvePublicVpnPlan — formule par ID (nil si inconnue).

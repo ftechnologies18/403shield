@@ -60,7 +60,7 @@ var passwordDenylist = map[string]struct{}{
 	// Clavier / usages français courants.
 	"azerty": {}, "azertyuiop": {}, "motdepasse": {}, "motdepasse1": {},
 	"qsdfgh": {}, "wxcvbn": {}, "soleil": {}, "chocolat": {}, "lalala": {},
-	// Métier MikCloud / écosystème MikroTik.
+	// Métier 403Shield / écosystème MikroTik.
 	"mikrotik": {}, "mikcloud": {}, "hotspot": {}, "wifi": {},
 	"voucher": {}, "vouchers": {}, "routerboard": {}, "winbox": {},
 	"mikcloud123": {}, "mikrotik123": {}, "hotspot123": {},

@@ -4,7 +4,7 @@
 //   - buildResetEmailText : texte pur (pièce text/plain du multipart, repli
 //     des clients sans HTML — libellés N°68 inchangés) ;
 //   - buildResetEmailHTML : version brandée « Aurora Emerald », l'identité
-//     visuelle MikCloud (frontend/src/app/globals.css) portée en e-mail :
+//     visuelle 403Shield (frontend/src/app/globals.css) portée en e-mail :
 //     · mode CLAIR garanti — fond papier menthe #F4F9F5, carte blanche,
 //     encre émeraude #102019, <meta name="color-scheme" content="light">
 //     et couleurs explicites sur CHAQUE contenant (les clients sombres
@@ -14,7 +14,7 @@
 //     · wordmark duotone « Mik » blanc + « Cloud » menthe clair — écho du
 //     .text-aurora de la console, lisible même si le logo est bloqué ;
 //     · LE CLIN D'ŒIL PRODUIT : le lien est présenté en TICKET pointillé
-//     (comme les vouchers MikCloud) — pastille « ⏱ 60 MIN », mention
+//     (comme les vouchers 403Shield) — pastille « ⏱ 60 MIN », mention
 //     « usage unique », la réinitialisation devient un ticket d'accès.
 //
 // Compatibilité e-mail (Gmail, Outlook, Apple Mail…) : tables
@@ -35,7 +35,7 @@ import (
 // resetEmailData — champs du courriel de réinitialisation (texte + HTML).
 type resetEmailData struct {
 	OwnerName    string // nom affiché du propriétaire du compte
-	AccountName  string // nom du compte MikCloud
+	AccountName  string // nom du compte 403Shield
 	Username     string // identifiant de connexion
 	Link         string // lien de réinitialisation (token URL-encodé)
 	TTLMinutes   int    // durée de validité du lien
@@ -51,11 +51,11 @@ const emailFontStack = "-apple-system,'Segoe UI',Roboto,'Helvetica Neue',Arial,s
 func buildResetEmailText(d resetEmailData) string {
 	var b strings.Builder
 	b.WriteString("Bonjour " + d.OwnerName + ",\n\n")
-	b.WriteString("Vous (ou quelqu'un utilisant cette adresse) avez demandé la réinitialisation du mot de passe du compte MikCloud « " + d.AccountName + " » (identifiant : " + d.Username + ").\n\n")
+	b.WriteString("Vous (ou quelqu'un utilisant cette adresse) avez demandé la réinitialisation du mot de passe du compte 403Shield « " + d.AccountName + " » (identifiant : " + d.Username + ").\n\n")
 	b.WriteString("Choisissez votre nouveau mot de passe via ce lien, valable " + strconv.Itoa(d.TTLMinutes) + " minutes et utilisable une seule fois :\n\n")
 	b.WriteString(d.Link + "\n\n")
 	b.WriteString("Si vous n'êtes pas à l'origine de cette demande, ignorez simplement cet e-mail : votre mot de passe actuel reste inchangé.\n\n")
-	b.WriteString("— MikCloud")
+	b.WriteString("— 403Shield")
 	return b.String()
 }
 
@@ -82,12 +82,12 @@ func buildResetEmailHTML(d resetEmailData) string {
 <meta name="x-apple-disable-message-reformatting">
 <meta name="color-scheme" content="light">
 <meta name="supported-color-schemes" content="light">
-<title>MikCloud — Réinitialisation de votre mot de passe</title>
+<title>403Shield — Réinitialisation de votre mot de passe</title>
 </head>
 <body style="margin:0;padding:0;background-color:#F4F9F5;word-spacing:normal;color-scheme:light;">`)
 	// Pré-en-tête caché : texte d'aperçu dans la boîte de réception.
 	b.WriteString(`
-<div style="display:none;max-height:0;overflow:hidden;mso-hide:all;opacity:0;">Un lien unique, valable ` + ttl + ` minutes, pour définir votre nouveau mot de passe MikCloud.</div>
+<div style="display:none;max-height:0;overflow:hidden;mso-hide:all;opacity:0;">Un lien unique, valable ` + ttl + ` minutes, pour définir votre nouveau mot de passe 403Shield.</div>
 `)
 	// Fond papier menthe + conteneur 600 px.
 	b.WriteString(`
@@ -99,7 +99,7 @@ func buildResetEmailHTML(d resetEmailData) string {
 	b.WriteString(`<tr><td bgcolor="#008B57" style="background-color:#008B57;background-image:linear-gradient(135deg,#009558 0%,#008687 100%);border-radius:14px 14px 0 0;padding:24px 28px;">
 <table role="presentation" border="0" cellpadding="0" cellspacing="0"><tr>
 <td style="padding-right:12px;font-size:0;line-height:0;">
-<img src="` + logoURL + `" width="40" height="40" alt="MikCloud" style="display:block;border:0;border-radius:9px;width:40px;height:40px;">
+<img src="` + logoURL + `" width="40" height="40" alt="403Shield" style="display:block;border:0;border-radius:9px;width:40px;height:40px;">
 </td>
 <td style="font-family:` + emailFontStack + `;font-size:20px;font-weight:700;color:#FFFFFF;letter-spacing:.2px;">Mik<span style="color:#CFF5E1;">Cloud</span></td>
 </tr></table>
@@ -112,7 +112,7 @@ func buildResetEmailHTML(d resetEmailData) string {
 <p style="margin:0 0 12px;font-size:15px;line-height:1.65;color:#53645C;">Bonjour ` + name + `,</p>
 <p style="margin:0 0 6px;font-size:15px;line-height:1.65;color:#53645C;">Vous — ou quelqu'un utilisant cette adresse — avez demandé la réinitialisation du mot de passe du compte <strong style="color:#102019;">` + account + `</strong> (identifiant&nbsp;: <strong style="color:#102019;">` + username + `</strong>).</p>
 `)
-	// ── Ticket sécurisé : bordure pointillée façon voucher MikCloud ──
+	// ── Ticket sécurisé : bordure pointillée façon voucher 403Shield ──
 	b.WriteString(`<table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="width:100%;margin:24px 0 0;background-color:#F4F9F5;border:1px dashed #66C79E;border-radius:12px;">
 <tr><td style="padding:20px 22px 22px;">
 <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="width:100%;"><tr>
@@ -146,10 +146,10 @@ func buildResetEmailHTML(d resetEmailData) string {
 `)
 	// ── Pied de page ──
 	b.WriteString(`<tr><td style="padding:26px 16px 8px;font-family:` + emailFontStack + `;font-size:12px;line-height:1.7;color:#7C8F85;text-align:center;">
-<p style="margin:0 0 4px;"><span style="font-weight:700;color:#53645C;">MikCloud</span> · la console de gestion hotspot MikroTik</p>
+<p style="margin:0 0 4px;"><span style="font-weight:700;color:#53645C;">403Shield</span> · la console de gestion hotspot MikroTik</p>
 <p style="margin:0 0 10px;"><a href="` + site + `" style="color:#008B57;text-decoration:none;">` + siteHost + `</a></p>
 <p style="margin:0;font-size:11px;color:#6B7F76;">Cet e-mail automatique a été envoyé car une réinitialisation a été demandée pour votre compte. Aucune action n'est requise si vous en ignorez la cause.</p>
-<p style="margin:10px 0 0;font-size:11px;color:#6B7F76;">© ` + year + ` MikCloud · FTech CI</p>
+<p style="margin:10px 0 0;font-size:11px;color:#6B7F76;">© ` + year + ` 403Shield · FTech CI</p>
 </td></tr>
 </table>
 </td></tr>

@@ -70,7 +70,7 @@ export const SUPERVISION_GUIDES: Guide[] = [
           "annexes/mobile-dashboard.png",
           390,
           844,
-          "Tableau de bord MikCloud sur téléphone mobile",
+          "Tableau de bord 403Shield sur téléphone mobile",
           "Le tableau de bord sur mobile.",
         ),
       },
@@ -229,14 +229,14 @@ export const SUPERVISION_GUIDES: Guide[] = [
     id: "protection",
     title: "Protéger le réseau (SafeWiFi, Shield, FamilyGuard, AntiVPN)",
     summary:
-      "Les 4 boucliers MikCloud posés sur le routeur : filtrage des contenus, anti-piratage, couvre-feu familial et blocage des VPN — activation, portée et limites.",
+      "Les 4 boucliers 403Shield posés sur le routeur : filtrage des contenus, anti-piratage, couvre-feu familial et blocage des VPN — activation, portée et limites.",
     roles: "Propriétaire · Gérant",
     minutes: 5,
     updated: "2026-10-12",
     sectionId: "supervision",
     vague: "V2",
     quoi:
-      "Supervision → Protection concentre les 4 boucliers de MikCloud. Ils se posent sur le routeur via l'agent (règles pare-feu, DNS filtrant, scheduler) — donc actifs MÊME pour les clients du hotspot, et administrables à distance.\n\nSafeWiFi filtre les contenus (DNS catégorisé) ; Shield durcit le routeur contre les attaques (ports, brute-force, scans) ; FamilyGuard applique un couvre-feu et un filtrage renforcé sur des appareils désignés (usage foyer) ; AntiVPN empêche les clients de masquer leur trafic avec un VPN (équité de bande et conformité).",
+      "Supervision → Protection concentre les 4 boucliers de 403Shield. Ils se posent sur le routeur via l'agent (règles pare-feu, DNS filtrant, scheduler) — donc actifs MÊME pour les clients du hotspot, et administrables à distance.\n\nSafeWiFi filtre les contenus (DNS catégorisé) ; Shield durcit le routeur contre les attaques (ports, brute-force, scans) ; FamilyGuard applique un couvre-feu et un filtrage renforcé sur des appareils désignés (usage foyer) ; AntiVPN empêche les clients de masquer leur trafic avec un VPN (équité de bande et conformité).",
     difference: [
       {
         with: "La QoS du routeur",

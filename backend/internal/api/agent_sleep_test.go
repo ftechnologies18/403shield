@@ -1,7 +1,7 @@
 package api
 
 // Tests N°75 — veille adaptative des agents : le cloud pilote le pas du
-// scheduler MikCloud (45 s actif ↔ 180 s veille) via des commandes
+// scheduler 403Shield (45 s actif ↔ 180 s veille) via des commandes
 // scheduler_set ordinaires. Les pièges couverts :
 //   - le cadenceur read_state (2 min, N°74) file TOUJOURS une commande au
 //     moment de décider → les commandes de BALAYAGE ne doivent pas réveiller

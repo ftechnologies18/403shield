@@ -133,7 +133,7 @@ type receiptEmailData struct {
 // welcomeEmailData — champs du courriel de bienvenue (texte + HTML).
 type welcomeEmailData struct {
 	OwnerName    string // nom affiché du propriétaire
-	AccountName  string // nom du compte MikCloud
+	AccountName  string // nom du compte 403Shield
 	Username     string // identifiant de connexion
 	Usage        string // hotspot | homenet — copie et étapes adaptées
 	TrialDays    int    // 60 (Hotspot) / 30 (HomeNet)
@@ -187,7 +187,7 @@ func usageLabelFr(usage string) string {
 func buildReceiptEmailText(d receiptEmailData, ownerName, accountName string) string {
 	var b strings.Builder
 	b.WriteString("Bonjour " + ownerName + ",\n\n")
-	b.WriteString("Nous confirmons la réception de votre paiement pour le compte MikCloud « " + accountName + " ».\n\n")
+	b.WriteString("Nous confirmons la réception de votre paiement pour le compte 403Shield « " + accountName + " ».\n\n")
 	b.WriteString("— Reçu de paiement —\n")
 	b.WriteString("Abonnement : " + d.PlanLabel + " (" + d.PeriodLabel + ")\n")
 	b.WriteString("Montant : " + formatFcfaMail(d.AmountFcfa) + "\n")
@@ -198,7 +198,7 @@ func buildReceiptEmailText(d receiptEmailData, ownerName, accountName string) st
 		b.WriteString("Actif jusqu'au : " + end + "\n")
 	}
 	b.WriteString("\nVotre abonnement est actif — merci de votre confiance.\n\n")
-	b.WriteString("— MikCloud")
+	b.WriteString("— 403Shield")
 	return b.String()
 }
 
@@ -231,7 +231,7 @@ func buildReceiptEmailHTML(d receiptEmailData, ownerName, accountName string) st
 <meta name="x-apple-disable-message-reformatting">
 <meta name="color-scheme" content="light">
 <meta name="supported-color-schemes" content="light">
-<title>MikCloud — Reçu de paiement</title>
+<title>403Shield — Reçu de paiement</title>
 </head>
 <body style="margin:0;padding:0;background-color:#F4F9F5;word-spacing:normal;color-scheme:light;">`)
 	// Pré-en-tête caché : aperçu dans la boîte de réception.
@@ -247,7 +247,7 @@ func buildReceiptEmailHTML(d receiptEmailData, ownerName, accountName string) st
 	b.WriteString(`<tr><td bgcolor="#008B57" style="background-color:#008B57;background-image:linear-gradient(135deg,#009558 0%,#008687 100%);border-radius:14px 14px 0 0;padding:24px 28px;">
 <table role="presentation" border="0" cellpadding="0" cellspacing="0"><tr>
 <td style="padding-right:12px;font-size:0;line-height:0;">
-<img src="` + logoURL + `" width="40" height="40" alt="MikCloud" style="display:block;border:0;border-radius:9px;width:40px;height:40px;">
+<img src="` + logoURL + `" width="40" height="40" alt="403Shield" style="display:block;border:0;border-radius:9px;width:40px;height:40px;">
 </td>
 <td style="font-family:` + emailFontStack + `;font-size:20px;font-weight:700;color:#FFFFFF;letter-spacing:.2px;">Mik<span style="color:#CFF5E1;">Cloud</span></td>
 </tr></table>
@@ -260,7 +260,7 @@ func buildReceiptEmailHTML(d receiptEmailData, ownerName, accountName string) st
 <p style="margin:0 0 6px;font-size:15px;line-height:1.65;color:#53645C;">Bonjour ` + name + `,</p>
 <p style="margin:0;font-size:15px;line-height:1.65;color:#53645C;">Nous confirmons la réception de votre paiement pour le compte <strong style="color:#102019;">` + account + `</strong>. Voici votre reçu&nbsp;:</p>
 `)
-	// ── Ticket reçu : bordure pointillée façon voucher MikCloud ──
+	// ── Ticket reçu : bordure pointillée façon voucher 403Shield ──
 	b.WriteString(`<table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="width:100%;margin:24px 0 0;background-color:#F4F9F5;border:1px dashed #66C79E;border-radius:12px;">
 <tr><td style="padding:20px 22px 22px;">
 <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="width:100%;"><tr>
@@ -309,10 +309,10 @@ Conservez cet e-mail&nbsp;: il tient lieu de reçu pour votre paiement ` + metho
 	// ── Liseré aurora + pied de page ──
 	b.WriteString(`<tr><td bgcolor="#009558" height="6" style="background-color:#009558;background-image:linear-gradient(90deg,#009558 0%,#009073 55%,#008687 100%);border-radius:0 0 14px 14px;font-size:0;line-height:6px;">&nbsp;</td></tr>
 <tr><td style="padding:26px 16px 8px;font-family:` + emailFontStack + `;font-size:12px;line-height:1.7;color:#7C8F85;text-align:center;">
-<p style="margin:0 0 4px;"><span style="font-weight:700;color:#53645C;">MikCloud</span> · la console de gestion hotspot MikroTik</p>
+<p style="margin:0 0 4px;"><span style="font-weight:700;color:#53645C;">403Shield</span> · la console de gestion hotspot MikroTik</p>
 <p style="margin:0 0 10px;"><a href="` + site + `" style="color:#008B57;text-decoration:none;">` + siteHost + `</a></p>
-<p style="margin:0;font-size:11px;color:#6B7F76;">Cet e-mail automatique confirme un paiement reçu sur votre compte MikCloud.</p>
-<p style="margin:10px 0 0;font-size:11px;color:#6B7F76;">© ` + year + ` MikCloud · FTech CI</p>
+<p style="margin:0;font-size:11px;color:#6B7F76;">Cet e-mail automatique confirme un paiement reçu sur votre compte 403Shield.</p>
+<p style="margin:10px 0 0;font-size:11px;color:#6B7F76;">© ` + year + ` 403Shield · FTech CI</p>
 </td></tr>
 </table>
 </td></tr>
@@ -330,9 +330,9 @@ func buildWelcomeEmailText(d welcomeEmailData) string {
 	var b strings.Builder
 	b.WriteString("Bonjour " + d.OwnerName + ",\n\n")
 	if d.Usage == model.AccountUsageHomeNet {
-		b.WriteString("Bienvenue sur MikCloud ! Votre compte maison « " + d.AccountName + " » est prêt : pilotez votre réseau familial (appareils, protection, couvre-feu) depuis une seule console.\n\n")
+		b.WriteString("Bienvenue sur 403Shield ! Votre compte maison « " + d.AccountName + " » est prêt : pilotez votre réseau familial (appareils, protection, couvre-feu) depuis une seule console.\n\n")
 	} else {
-		b.WriteString("Bienvenue sur MikCloud ! Votre compte hotspot « " + d.AccountName + " » est prêt : générez vos vouchers, suivez vos sessions et vendez du Wi-Fi payant comme un pro.\n\n")
+		b.WriteString("Bienvenue sur 403Shield ! Votre compte hotspot « " + d.AccountName + " » est prêt : générez vos vouchers, suivez vos sessions et vendez du Wi-Fi payant comme un pro.\n\n")
 	}
 	b.WriteString("— Votre essai gratuit —\n")
 	b.WriteString("Durée : " + strconv.Itoa(d.TrialDays) + " jours\n")
@@ -345,12 +345,12 @@ func buildWelcomeEmailText(d welcomeEmailData) string {
 		b.WriteString("2. Découvrez vos appareils connectés, bail par bail\n")
 		b.WriteString("3. Protégez votre famille (contrôle parental, couvre-feu)\n")
 	} else {
-		b.WriteString("1. Connectez votre routeur MikroTik (agent MikCloud)\n")
+		b.WriteString("1. Connectez votre routeur MikroTik (agent 403Shield)\n")
 		b.WriteString("2. Générez vos premiers vouchers Wi-Fi\n")
 		b.WriteString("3. Installez l'app mobile (PWA) pour vendre partout\n")
 	}
 	b.WriteString("\nOuvrez votre console : " + strings.TrimRight(d.FrontendBase, "/") + "/app\n\n")
-	b.WriteString("— MikCloud")
+	b.WriteString("— 403Shield")
 	return b.String()
 }
 
@@ -376,7 +376,7 @@ func buildWelcomeEmailHTML(d welcomeEmailData) string {
 		eyebrow = "VOTRE RÉSEAU MAISON"
 		intro = "Votre compte maison <strong style=\"color:#102019;\">" + account + "</strong> est prêt. Pilotez votre réseau familial — appareils, protection, couvre-feu — depuis une seule console."
 		steps = [3][2]string{
-			{"Ajoutez votre box", "Déclarez votre box ou routeur MikroTik : MikCloud découvre votre réseau."},
+			{"Ajoutez votre box", "Déclarez votre box ou routeur MikroTik : 403Shield découvre votre réseau."},
 			{"Regardez vos appareils", "La liste des appareils connectés, bail par bail, en temps réel."},
 			{"Protégez votre famille", "Contrôle parental, blocage des contenus et couvre-feu des enfants."},
 		}
@@ -384,7 +384,7 @@ func buildWelcomeEmailHTML(d welcomeEmailData) string {
 		eyebrow = "VOTRE HOTSPOT"
 		intro = "Votre compte hotspot <strong style=\"color:#102019;\">" + account + "</strong> est prêt. Générez vos vouchers, suivez vos sessions et vendez du Wi-Fi payant comme un pro."
 		steps = [3][2]string{
-			{"Connectez votre routeur", "L'agent MikCloud relie votre MikroTik à la console en quelques minutes."},
+			{"Connectez votre routeur", "L'agent 403Shield relie votre MikroTik à la console en quelques minutes."},
 			{"Générez vos vouchers", "Créez vos tickets Wi-Fi, imprimez-les ou envoyez-les par WhatsApp."},
 			{"Vendez partout", "Installez l'app mobile (PWA) : vos revendeurs vendent même sans réseau."},
 		}
@@ -399,11 +399,11 @@ func buildWelcomeEmailHTML(d welcomeEmailData) string {
 <meta name="x-apple-disable-message-reformatting">
 <meta name="color-scheme" content="light">
 <meta name="supported-color-schemes" content="light">
-<title>MikCloud — Bienvenue !</title>
+<title>403Shield — Bienvenue !</title>
 </head>
 <body style="margin:0;padding:0;background-color:#F4F9F5;word-spacing:normal;color-scheme:light;">`)
 	b.WriteString(`
-<div style="display:none;max-height:0;overflow:hidden;mso-hide:all;opacity:0;">Votre compte MikCloud est prêt — essai gratuit ` + days + ` jours, jusqu'au ` + until + `.</div>
+<div style="display:none;max-height:0;overflow:hidden;mso-hide:all;opacity:0;">Votre compte 403Shield est prêt — essai gratuit ` + days + ` jours, jusqu'au ` + until + `.</div>
 `)
 	b.WriteString(`
 <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color:#F4F9F5;">
@@ -414,7 +414,7 @@ func buildWelcomeEmailHTML(d welcomeEmailData) string {
 	b.WriteString(`<tr><td bgcolor="#008B57" style="background-color:#008B57;background-image:linear-gradient(135deg,#009558 0%,#008687 100%);border-radius:14px 14px 0 0;padding:24px 28px;">
 <table role="presentation" border="0" cellpadding="0" cellspacing="0"><tr>
 <td style="padding-right:12px;font-size:0;line-height:0;">
-<img src="` + logoURL + `" width="40" height="40" alt="MikCloud" style="display:block;border:0;border-radius:9px;width:40px;height:40px;">
+<img src="` + logoURL + `" width="40" height="40" alt="403Shield" style="display:block;border:0;border-radius:9px;width:40px;height:40px;">
 </td>
 <td style="font-family:` + emailFontStack + `;font-size:20px;font-weight:700;color:#FFFFFF;letter-spacing:.2px;">Mik<span style="color:#CFF5E1;">Cloud</span></td>
 </tr></table>
@@ -423,7 +423,7 @@ func buildWelcomeEmailHTML(d welcomeEmailData) string {
 	// ── Carte principale ──
 	b.WriteString(`<tr><td bgcolor="#FFFFFF" style="background-color:#FFFFFF;padding:34px 30px 26px;font-family:` + emailFontStack + `;">
 <p style="margin:0 0 8px;font-size:11px;font-weight:700;letter-spacing:1.6px;color:#008B57;">` + eyebrow + `</p>
-<h1 style="margin:0 0 16px;font-size:22px;line-height:1.3;font-weight:700;color:#102019;">Bienvenue sur MikCloud, ` + name + `&nbsp;!</h1>
+<h1 style="margin:0 0 16px;font-size:22px;line-height:1.3;font-weight:700;color:#102019;">Bienvenue sur 403Shield, ` + name + `&nbsp;!</h1>
 <p style="margin:0;font-size:15px;line-height:1.65;color:#53645C;">` + intro + `</p>
 `)
 	// ── Ticket essai : bordure pointillée façon voucher ──
@@ -480,7 +480,7 @@ func buildWelcomeEmailHTML(d welcomeEmailData) string {
 	// ── Note assistance ──
 	b.WriteString(`<table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="width:100%;margin:20px 0 0;background-color:#EAF5EE;border-radius:10px;">
 <tr><td style="padding:14px 16px;font-family:` + emailFontStack + `;font-size:13px;line-height:1.6;color:#3B5248;">
-<strong style="color:#102019;">Une question&nbsp;?</strong> L'assistant MikCloud répond directement dans la console — ou écrivez-nous en répondant à cet e-mail.
+<strong style="color:#102019;">Une question&nbsp;?</strong> L'assistant 403Shield répond directement dans la console — ou écrivez-nous en répondant à cet e-mail.
 </td></tr>
 </table>
 </td></tr>
@@ -488,10 +488,10 @@ func buildWelcomeEmailHTML(d welcomeEmailData) string {
 	// ── Liseré aurora + pied de page ──
 	b.WriteString(`<tr><td bgcolor="#009558" height="6" style="background-color:#009558;background-image:linear-gradient(90deg,#009558 0%,#009073 55%,#008687 100%);border-radius:0 0 14px 14px;font-size:0;line-height:6px;">&nbsp;</td></tr>
 <tr><td style="padding:26px 16px 8px;font-family:` + emailFontStack + `;font-size:12px;line-height:1.7;color:#7C8F85;text-align:center;">
-<p style="margin:0 0 4px;"><span style="font-weight:700;color:#53645C;">MikCloud</span> · la console de gestion hotspot MikroTik</p>
+<p style="margin:0 0 4px;"><span style="font-weight:700;color:#53645C;">403Shield</span> · la console de gestion hotspot MikroTik</p>
 <p style="margin:0 0 10px;"><a href="` + site + `" style="color:#008B57;text-decoration:none;">` + siteHost + `</a></p>
-<p style="margin:0;font-size:11px;color:#6B7F76;">Cet e-mail vous a été envoyé car un compte MikCloud vient d'être créé avec cette adresse.</p>
-<p style="margin:10px 0 0;font-size:11px;color:#6B7F76;">© ` + year + ` MikCloud · FTech CI</p>
+<p style="margin:0;font-size:11px;color:#6B7F76;">Cet e-mail vous a été envoyé car un compte 403Shield vient d'être créé avec cette adresse.</p>
+<p style="margin:10px 0 0;font-size:11px;color:#6B7F76;">© ` + year + ` 403Shield · FTech CI</p>
 </td></tr>
 </table>
 </td></tr>
@@ -582,7 +582,7 @@ func (a *API) queueReceiptEmail(db *model.DB, rc receiptEmailData) {
 		ownerName = acc.Name
 	}
 	to := acc.Email
-	title := "MikCloud — Reçu de paiement " + formatFcfaMail(rc.AmountFcfa)
+	title := "403Shield — Reçu de paiement " + formatFcfaMail(rc.AmountFcfa)
 	logBody := "Reçu de paiement — abonnement " + rc.PlanLabel + " (" + rc.PeriodLabel + "), " +
 		formatFcfaMail(rc.AmountFcfa) + " via " + rc.Method + ", réf. " + rc.Ref
 	textBody := buildReceiptEmailText(rc, ownerName, acc.Name)
@@ -622,7 +622,7 @@ func (a *API) queueWelcomeEmail(db *model.DB, acc model.Account, owner model.Adm
 		FrontendBase: frontendBase,
 	}
 	to := acc.Email
-	title := "Bienvenue sur MikCloud, " + d.OwnerName + " !"
+	title := "Bienvenue sur 403Shield, " + d.OwnerName + " !"
 	logBody := "E-mail de bienvenue envoyé à " + to + " (essai " + strconv.Itoa(d.TrialDays) +
 		" jours, " + usageLabelFr(d.Usage) + ")"
 	textBody := buildWelcomeEmailText(d)

@@ -234,11 +234,11 @@ func (a *API) dispatchVpnQuotaNotice(db *model.DB, peer model.VpnPeer, usedBytes
 	if !emailOK && !telegramOK {
 		return // aucun canal : le journal d'activité garde la trace
 	}
-	title := "MikCloud — Peer VPN révoqué (quota mensuel dépassé)"
+	title := "403Shield — Peer VPN révoqué (quota mensuel dépassé)"
 	body := "Le peer VPN « " + model.VpnPeerLabel(peer) + " » (" + peer.Name + ") a dépassé son quota mensuel de trafic : " +
 		gib(usedBytes) + " Go consommés sur une limite de " + gib(limitBytes) + " Go.\n" +
 		"Le peer a été révoqué automatiquement — le client n'a plus d'accès (les autres peers sont intacts).\n" +
-		"Recréez le peer depuis la console MikCloud — VPN si le client doit repartir : le compteur repart de zéro au changement de mois.\n" +
+		"Recréez le peer depuis la console 403Shield — VPN si le client doit repartir : le compteur repart de zéro au changement de mois.\n" +
 		"Ce garde-fou protège la bande passante de la plateforme (réglable : console plateforme — Paramètres — quota mensuel VPN)."
 	accID, label, name := peer.AccountID, model.VpnPeerLabel(peer), peer.Name
 	emailTaskDispatch()(func() {

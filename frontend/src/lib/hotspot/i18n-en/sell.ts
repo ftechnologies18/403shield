@@ -71,7 +71,7 @@ export const enSell: Record<string, string> = {
   "sell.dayReportEmpty": "No sales recorded today.",
   "sell.dayReportShare": "Share report",
   "sell.dayReportShared": "Report shared ✓",
-  "sell.dayReportTextHeader": "📊 MikCloud report — {date}",
+  "sell.dayReportTextHeader": "📊 403Shield report — {date}",
   "sell.dayReportDetail": "Sales detail:",
   "sell.returnBtn": "Return / Transfer",
   "sell.returnSelectHint": "Tap the vouchers to return to the manager or transfer to another reseller, then confirm.",

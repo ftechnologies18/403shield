@@ -405,7 +405,7 @@ export default function ProPage() {
                     (celui utilisé à l&apos;inscription, avec au moins un routeur en mode agent).
                     Pas encore de compte ?{" "}
                     <a
-                      href="https://mikcloud.ftci.fr"
+                      href="https://403shield.ftci.fr"
                       target="_blank"
                       rel="noopener noreferrer"
                       className="font-medium underline underline-offset-2"
@@ -664,7 +664,7 @@ export default function ProPage() {
               Boutique VPN
             </a>
             <a
-              href="https://mikcloud.ftci.fr"
+              href="https://403shield.ftci.fr"
               target="_blank"
               rel="noopener noreferrer"
               className="hover:text-slate-300"

@@ -1,4 +1,4 @@
-// Package api — console plateforme MikCloud (super-admin, multi-comptes).
+// Package api — console plateforme 403Shield (super-admin, multi-comptes).
 //
 // L'admin plateforme est le PROPRIÉTAIRE du SaaS, pas un client : ces
 // endpoints lui donnent un cockpit d'opérateur — vue d'ensemble (KPIs

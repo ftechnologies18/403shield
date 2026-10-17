@@ -138,7 +138,7 @@ func normalizeWGHost(raw string) string {
 // « déjà appliqué sur ce routeur » d'« à (re)appliquer » sans table
 // supplémentaire.
 // N°48 — sel wg-v2-api : la v1 ne posait que des règles « page » (variante
-// proxy du hotspot = HTTP pur, port 80) + DNS. Or l'API MikCloud (claim,
+// proxy du hotspot = HTTP pur, port 80) + DNS. Or l'API 403Shield (claim,
 // /portal, /join) est intégralement en HTTPS (Render/Vercel) : le TLS 443
 // pré-auth restait bloqué et le fetch du claim échouait côté client
 // (« Service WiFi offert momentanément indisponible »). La v2 ajoute les
@@ -152,7 +152,7 @@ func normalizeWGHost(raw string) string {
 // « déjà appliqué sur ce routeur » d'« à (re)appliquer » sans table
 // supplémentaire.
 // N°48 — sel wg-v2-api : la v1 ne posait que des règles « page » (variante
-// proxy du hotspot = HTTP pur, port 80) + DNS. Or l'API MikCloud (claim,
+// proxy du hotspot = HTTP pur, port 80) + DNS. Or l'API 403Shield (claim,
 // /portal, /join) est intégralement en HTTPS (Render/Vercel) : le TLS 443
 // pré-auth restait bloqué et le fetch du claim échouait côté client
 // (« Service WiFi offert momentanément indisponible »). La v2 ajoute les

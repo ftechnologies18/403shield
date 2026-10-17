@@ -218,7 +218,7 @@ export const frVouchers: Record<string, string> = {
   "vouchers.gen.routerLabel": "Routeur (serveur hotspot)",
   "vouchers.gen.userModeSame": "Mot de passe = nom d'utilisateur",
   "vouchers.gen.charset": "Jeu de caractères",
-  "vouchers.gen.charset.mikcloud": "MikCloud (recommandé)",
+  "vouchers.gen.charset.mikcloud": "403Shield (recommandé)",
   "vouchers.gen.charset.abc": "abcd — minuscules",
   "vouchers.gen.charset.ABC": "ABCD — majuscules",
   "vouchers.gen.charset.aBc": "aBcD — lettres (min + maj)",

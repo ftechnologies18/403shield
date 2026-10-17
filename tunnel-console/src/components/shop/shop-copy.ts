@@ -217,7 +217,7 @@ const fr: ShopCopy = {
     items: [
       {
         q: "Comment j'active mon VPN ?",
-        a: "Installez l'application WireGuard (gratuite — App Store, Google Play, wireguard.com/install). Ouvrez l'e-mail de livraison, enregistrez la configuration en fichier mikcloud.conf, puis dans WireGuard : « + » → « Importer depuis un fichier ». Activez le tunnel : votre trafic sort par Marseille.",
+        a: "Installez l'application WireGuard (gratuite — App Store, Google Play, wireguard.com/install). Ouvrez l'e-mail de livraison, enregistrez la configuration en fichier 403shield.conf, puis dans WireGuard : « + » → « Importer depuis un fichier ». Activez le tunnel : votre trafic sort par Marseille.",
       },
       {
         q: "Où gérer mon abonnement ?",
@@ -247,7 +247,7 @@ const fr: ShopCopy = {
       { label: "Accueil 403Shield", href: "/" },
       { label: "Accès Pro", href: "/pro" },
       { label: "Connexion à mon espace", href: "/login" },
-      { label: "403Shield — site", href: "https://mikcloud.ftci.fr", external: true },
+      { label: "403Shield — site", href: "https://403shield.ftci.fr", external: true },
     ],
     legal:
       "403Shield Console · powered by FTech CI. Service VPN fourni « en l'état » ; usage conforme aux lois locales.",
@@ -375,7 +375,7 @@ const en: ShopCopy = {
     items: [
       {
         q: "How do I activate my VPN?",
-        a: "Install the WireGuard app (free — App Store, Google Play, wireguard.com/install). Open the delivery email, save the configuration as mikcloud.conf, then in WireGuard: \"+\" → \"Import from file\". Toggle the tunnel on: your traffic exits through Marseille.",
+        a: "Install the WireGuard app (free — App Store, Google Play, wireguard.com/install). Open the delivery email, save the configuration as 403shield.conf, then in WireGuard: \"+\" → \"Import from file\". Toggle the tunnel on: your traffic exits through Marseille.",
       },
       {
         q: "Where do I manage my subscription?",
@@ -405,7 +405,7 @@ const en: ShopCopy = {
       { label: "403Shield home", href: "/" },
       { label: "Pro Access", href: "/pro" },
       { label: "Sign in to my space", href: "/login" },
-      { label: "403Shield — website", href: "https://mikcloud.ftci.fr", external: true },
+      { label: "403Shield — website", href: "https://403shield.ftci.fr", external: true },
     ],
     legal:
       "403Shield Console · powered by FTech CI. VPN service provided \"as is\"; use in accordance with local laws.",

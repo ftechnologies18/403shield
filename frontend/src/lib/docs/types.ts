@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// /docs/guides — modèle de contenu des guides MikCloud (N°304).
+// /docs/guides — modèle de contenu des guides 403Shield (N°304).
 //
 // Un guide documente UNE surface de la console selon le gabarit Q&A validé
 // avec l'exploitant (Tâche 4) :

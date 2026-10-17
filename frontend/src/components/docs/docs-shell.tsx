@@ -2,7 +2,7 @@
 
 // Coquille /docs/guides (N°304) — 3 colonnes style documentation moderne :
 // navigation arborescente (gauche) · contenu (centre) · sommaire sticky
-// (droite). Mobile : nav en sheet, sommaire en repli. Thème MikCloud
+// (droite). Mobile : nav en sheet, sommaire en repli. Thème 403Shield
 // « Charbon & Corail » (jour/nuit via tokens existants).
 
 import { useEffect, useState } from "react";
@@ -161,19 +161,19 @@ export function DocsShell({
                 onClick={() => setNavOpen(false)}
                 className="mb-4 flex items-center gap-2 px-2 text-sm font-semibold text-foreground"
               >
-                <span className="flex size-7 items-center justify-center rounded-lg bg-gradient-to-br from-primary to-primary/80 text-[13px] font-bold text-primary-foreground">M</span>
-                MikCloud · Guides
+                <span className="flex size-7 items-center justify-center rounded-lg bg-gradient-to-br from-primary to-primary/80 text-[11px] font-bold text-primary-foreground">403</span>
+                403Shield · Guides
               </Link>
               <DocsNav sections={sections} currentId={currentId} onNavigate={() => setNavOpen(false)} />
             </SheetContent>
           </Sheet>
 
           <Link href="/docs/guides" className="flex items-center gap-2.5 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-            <span className="flex size-7 items-center justify-center rounded-lg bg-gradient-to-br from-primary to-primary/80 text-sm font-bold text-primary-foreground shadow-sm" aria-hidden>
-              M
+            <span className="flex size-7 items-center justify-center rounded-lg bg-gradient-to-br from-primary to-primary/80 text-[11px] font-bold text-primary-foreground shadow-sm" aria-hidden>
+              403
             </span>
             <span className="text-[15px] font-semibold tracking-tight">
-              MikCloud <span className="font-normal text-muted-foreground">· Guides</span>
+              403Shield <span className="font-normal text-muted-foreground">· Guides</span>
             </span>
           </Link>
 
@@ -219,7 +219,7 @@ export function DocsShell({
       <footer className="docs-footer mt-auto border-t border-border/60 bg-card/40">
         <div className="mx-auto flex w-full max-w-7xl flex-col items-start justify-between gap-2 px-4 py-5 text-xs text-muted-foreground sm:flex-row sm:items-center sm:px-6">
           <p>
-            MikCloud — guides d'exploitation · <Link href="/" className="underline-offset-2 hover:underline">mikcloud.ftci.fr</Link>
+            403Shield — guides d'exploitation · <Link href="/" className="underline-offset-2 hover:underline">403shield.ftci.fr</Link>
           </p>
           <p>Documentation en français · captures production 2026-10-12</p>
         </div>

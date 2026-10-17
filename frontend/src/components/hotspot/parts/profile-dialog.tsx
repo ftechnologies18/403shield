@@ -9,7 +9,7 @@
 // ÉTAPE — le « Suivant » ne s'ouvre que si les champs de l'étape courante
 // sont bons, l'erreur est donc toujours signalée sous les yeux de
 // l'utilisateur, jamais en dézoomant le champ d'une autre étape.
-// La CARTE FORFAIT en aperçu live (dégradé aurora, la signature MikCloud)
+// La CARTE FORFAIT en aperçu live (dégradé aurora, la signature 403Shield)
 // reste visible EN PERMANENCE à droite sur desktop : c'est le récapitulatif
 // vivant du forfait en construction, atout du design précédent conservé.
 // Sur mobile (< lg) elle se replie en bandeau compact en tête de la

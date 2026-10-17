@@ -4,7 +4,7 @@
 
 export const enReset: Record<string, string> = {
   "reset.title": "New password",
-  "reset.desc": "Choose the new password for your MikCloud account.",
+  "reset.desc": "Choose the new password for your 403Shield account.",
   "reset.newPassword": "New password",
   "reset.confirmPassword": "Confirm password",
   "reset.passwordHint": "10 characters minimum, not among the most common passwords.",
@@ -18,5 +18,5 @@ export const enReset: Record<string, string> = {
   "reset.invalidDesc": "This reset link is invalid, already used, or expired (valid for one hour). Request a new link from the sign-in screen.",
   "reset.requestNew": "Back to sign-in",
   "reset.loading": "Checking the link…",
-  "reset.brand": "Secure reset — MikCloud",
+  "reset.brand": "Secure reset — 403Shield",
 };

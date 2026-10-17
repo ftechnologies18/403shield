@@ -1,6 +1,6 @@
 "use client";
 
-// i18n MikCloud (F11 — CONTRACT-V2) : dictionnaire PLAT fr/en (~430 clés),
+// i18n 403Shield (F11 — CONTRACT-V2) : dictionnaire PLAT fr/en (~430 clés),
 // résolution maison légère (next-intl n'est pas utilisé). La langue vit dans
 // le store zustand (champ `lang`, persisté avec token/user dans localStorage
 // « mikcloud-auth ») ; le hook useI18n() expose t() (traduction simple),

@@ -30,7 +30,7 @@ func (a *API) handlePlatformSettingsGet(w http.ResponseWriter, r *http.Request) 
 	settings := ensureSettings(db, model.AccountMainID)
 	cfg := settings.Platform
 	if cfg == nil {
-		cfg = &model.PlatformConfig{Name: "MikCloud", RegisterOpen: true}
+		cfg = &model.PlatformConfig{Name: "403Shield", RegisterOpen: true}
 	}
 	// Une env REGISTER_KEY définie PREND LE DESSUS sur la config DB (filet de
 	// sécurité pour verrouiller les inscriptions sans accès à la console).
@@ -60,7 +60,7 @@ func (a *API) handlePlatformSettingsGet(w http.ResponseWriter, r *http.Request) 
 
 // handlePlatformSettingsPut — PUT /api/admin/platform/settings :
 // met à jour le nom affiché et/ou la politique d'inscription.
-// Corps : {"name": "MikCloud", "registerOpen": true, "registerKey": "…"}.
+// Corps : {"name": "403Shield", "registerOpen": true, "registerKey": "…"}.
 // registerKey = "" SUPPRIME la clé (inscriptions totalement fermées si
 // registerOpen = false, sinon ouvertes).
 func (a *API) handlePlatformSettingsPut(w http.ResponseWriter, r *http.Request) {
@@ -93,7 +93,7 @@ func (a *API) handlePlatformSettingsPut(w http.ResponseWriter, r *http.Request) 
 	settings := ensureSettings(db, model.AccountMainID)
 	cfg := settings.Platform
 	if cfg == nil {
-		cfg = &model.PlatformConfig{Name: "MikCloud", RegisterOpen: true}
+		cfg = &model.PlatformConfig{Name: "403Shield", RegisterOpen: true}
 	}
 	name := strings.TrimSpace(req.Name)
 	if name != "" {

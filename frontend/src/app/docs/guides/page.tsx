@@ -8,11 +8,11 @@ import { DocsShell } from "@/components/docs/docs-shell";
 import { HubView } from "@/components/docs/hub-view";
 
 export const metadata: Metadata = {
-  title: "Guides MikCloud — documentation d'exploitation",
+  title: "Guides 403Shield — documentation d'exploitation",
   description:
-    "30 guides illustrés pour exploiter MikCloud : compte, routeurs MikroTik (mode Agent), vouchers & ventes, sessions, revendeurs, rapports, protections — chaque fonction expliquée pas à pas avec captures d'écran.",
+    "30 guides illustrés pour exploiter 403Shield : compte, routeurs MikroTik (mode Agent), vouchers & ventes, sessions, revendeurs, rapports, protections — chaque fonction expliquée pas à pas avec captures d'écran.",
   keywords: [
-    "MikCloud",
+    "403Shield",
     "guide MikroTik",
     "hotspot",
     "vouchers",
@@ -21,7 +21,7 @@ export const metadata: Metadata = {
     "cybercafé",
   ],
   openGraph: {
-    title: "Guides MikCloud — documentation d'exploitation",
+    title: "Guides 403Shield — documentation d'exploitation",
     description:
       "Chaque fonction de la console expliquée pas à pas, avec captures d'écran réelles.",
     type: "website",

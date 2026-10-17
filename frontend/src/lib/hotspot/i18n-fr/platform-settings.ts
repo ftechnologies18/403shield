@@ -6,14 +6,14 @@ export const frPlatformSettings: Record<string, string> = {
 
   // — I (paramètres plateforme) —
   "platformSettings.title": "Paramètres plateforme",
-  "platformSettings.description": "Configuration globale du SaaS MikCloud — identité, inscriptions, sécurité et maintenance.",
+  "platformSettings.description": "Configuration globale du SaaS 403Shield — identité, inscriptions, sécurité et maintenance.",
   "platformSettings.tabGeneral": "Général",
   "platformSettings.tabSecurity": "Sécurité",
   "platformSettings.tabMaintenance": "Maintenance",
   "platformSettings.loadError": "Impossible de charger les paramètres plateforme.",
   "platformSettings.identity": "Identité",
   
-// N°301 — vitrine B2C MikCloud VPN (vente directe /vpn).
+// N°301 — vitrine B2C 403Shield VPN (vente directe /vpn).
 "platformSettings.vpnShop": "Vitrine VPN (vente directe)",
 "platformSettings.vpnShopDesc":
   "Le canal direct : la page publique /vpn vend des accès VPN aux clients hors zone hotspot (paiement en ligne, provisioning automatique). Opt-in strict — fermée par défaut pour ne jamais concurrencer vos revendeurs sans l'avoir décidé.",
@@ -36,7 +36,7 @@ export const frPlatformSettings: Record<string, string> = {
 
 "platformSettings.identityDesc": "Nom affiché du SaaS sur l'écran de connexion et le pied de page.",
   "platformSettings.platformName": "Nom de la plateforme",
-  "platformSettings.platformNameHint": "60 caractères maximum — laissé vide, « MikCloud » est utilisé.",
+  "platformSettings.platformNameHint": "60 caractères maximum — laissé vide, « 403Shield » est utilisé.",
   "platformSettings.identitySaved": "Identité plateforme mise à jour",
   "platformSettings.register": "Inscriptions",
   "platformSettings.registerDesc": "Contrôle qui peut créer un compte client depuis la page d'accueil.",

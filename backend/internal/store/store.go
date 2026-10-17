@@ -290,7 +290,7 @@ func migrateMultiTenant(db *model.DB) bool {
 				}
 			}
 			if name == "" {
-				name = "MikCloud"
+				name = "403Shield"
 			}
 			db.Accounts = append(db.Accounts, model.Account{
 				ID:        model.AccountMainID,
@@ -465,7 +465,7 @@ func migrateMultiTenant(db *model.DB) bool {
 				db.SettingsByAccount[model.AccountMainID] = db.Settings // réglages legacy migrés
 			} else {
 				db.SettingsByAccount[model.AccountMainID] = model.Settings{
-					Tenant: model.Tenant{Name: "MikCloud", Currency: "XOF", Timezone: "Africa/Abidjan"},
+					Tenant: model.Tenant{Name: "403Shield", Currency: "XOF", Timezone: "Africa/Abidjan"},
 					Plan:   model.Plan{Name: "PRO", MaxRouters: "Illimité", MaxUsers: "Illimité"},
 				}
 			}
@@ -601,7 +601,7 @@ func migrateUsageScopedPlans(db *model.DB) bool {
 			s.Subscription.PlanID = resolve(accID, s.Subscription.PlanID)
 			if p, ok := model.PlanByID(s.Subscription.PlanID); ok {
 				s.Plan = model.Plan{
-					Name:       "MikCloud " + p.Name,
+					Name:       "403Shield " + p.Name,
 					MaxRouters: "Illimité",
 					MaxUsers:   "Illimité",
 				}
@@ -753,7 +753,7 @@ func applyAdminOverride(db *model.DB) bool {
 	}
 	name := os.Getenv("ADMIN_NAME")
 	if name == "" {
-		name = "Administrateur MikCloud"
+		name = "Administrateur 403Shield"
 	}
 
 	// 1. Retire tout compte démo encore intact (username « admin » + mot de passe « admin123 »).

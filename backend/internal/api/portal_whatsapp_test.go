@@ -1,5 +1,5 @@
 // Package api — tests du numéro WhatsApp SUPPORT du portail captif (N°139) :
-// le gérant remplace le numéro du support MikCloud affiché dans le footer du
+// le gérant remplace le numéro du support 403Shield affiché dans le footer du
 // portail (login, logout, error) par SON numéro (format international,
 // chiffres seuls 8-15 + libellé d'affichage optionnel ≤ 30 car.).
 //
@@ -9,7 +9,7 @@
 //     en profondeur contre une ligne héritée d'un appel API direct) ;
 //   - PUT /api/settings : matrice des validations portalWhatsapp (8-15
 //     chiffres après nettoyage, label ≤ 30 car., number vide = retour au
-//     support MikCloud) ;
+//     support 403Shield) ;
 //   - servage /portal/{token}/{login,logout,error}.html : les marqueurs
 //     WHATSAPP_HREF/LABEL embarquent le numéro DU TENANT (chemin routeur,
 //     config figée au déploiement) ;
@@ -30,7 +30,7 @@ import (
 
 // TestPortalWhatsappInfo — matrice du décodeur défensif : un JSON invalide,
 // vide, un objet sans number exploitable ou un numéro hors [8, 15] chiffres
-// donnent nil (le portail garde le numéro du support MikCloud, jamais cassé) ;
+// donnent nil (le portail garde le numéro du support 403Shield, jamais cassé) ;
 // le nettoyage (espaces, +, -) et le trim du label sont appliqués ici même
 // si l'API les a déjà faits (défense en profondeur).
 func TestPortalWhatsappInfo(t *testing.T) {
@@ -153,7 +153,7 @@ func TestSettingsPortalWhatsappValidation(t *testing.T) {
 		t.Errorf("libellé > 30 car. doit être refusé (400), obtenu %d", status)
 	}
 
-	// Number vide → 200, numéro retiré (retour au support MikCloud ;
+	// Number vide → 200, numéro retiré (retour au support 403Shield ;
 	// omitempty : la clé disparaît du JSON).
 	if status, out = putWhatsapp(t, ts, token, map[string]any{"number": "", "label": ""}); status != http.StatusOK {
 		t.Fatalf("number vide doit passer (200), obtenu %d : %v", status, out)
@@ -225,7 +225,7 @@ func TestPortalServeWhatsapp(t *testing.T) {
 			t.Errorf("%s : marqueur WHATSAPP non substitué dans la page servie", page)
 		}
 		if strings.Contains(string(body), "https://wa.me/2250150491807") || strings.Contains(string(body), "01 5049 1807") {
-			t.Errorf("%s : le lien du support MikCloud ne doit plus être servi quand le tenant a le sien", page)
+			t.Errorf("%s : le lien du support 403Shield ne doit plus être servi quand le tenant a le sien", page)
 		}
 	}
 
@@ -252,7 +252,7 @@ func TestPortalServeWhatsapp(t *testing.T) {
 }
 
 // TestPortalServeWhatsappDefaults — sans numéro configuré, les pages servies
-// gardent le numéro du support MikCloud (repli historique — le support
+// gardent le numéro du support 403Shield (repli historique — le support
 // plateforme, comme le crédit FTCI du footer) et la config JSON omet
 // portalWhatsapp (omitempty).
 func TestPortalServeWhatsappDefaults(t *testing.T) {
@@ -278,7 +278,7 @@ func TestPortalServeWhatsappDefaults(t *testing.T) {
 			t.Fatalf("%s : statut %d", page, resp.StatusCode)
 		}
 		if !strings.Contains(string(body), `href="https://wa.me/2250150491807"`) {
-			t.Errorf("%s : sans numéro configuré, le repli support MikCloud doit être servi", page)
+			t.Errorf("%s : sans numéro configuré, le repli support 403Shield doit être servi", page)
 		}
 		if !strings.Contains(string(body), "01 5049 1807") {
 			t.Errorf("%s : le libellé du repli (01 5049 1807) doit être servi", page)

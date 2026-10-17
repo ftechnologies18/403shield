@@ -16,7 +16,7 @@ import (
 
 // handleWaveLink — deep link Wave Côte d'Ivoire par montant.
 // Wave CI n'a pas d'API publique : le marchand configure son lien
-// pay.wave.com dans Settings (Tenant.WaveLink) et MikCloud compose
+// pay.wave.com dans Settings (Tenant.WaveLink) et 403Shield compose
 // l'URL de paiement avec le montant demandé (ex. pour un lot de vouchers).
 func (a *API) handleWaveLink(w http.ResponseWriter, r *http.Request) {
 	amount, err := strconv.Atoi(strings.TrimSpace(r.URL.Query().Get("amount")))
@@ -190,7 +190,7 @@ func (a *API) handleSubscriptionGet(w http.ResponseWriter, r *http.Request) {
 // abonnements SaaS (variable d'environnement WAVE_PAY_LINK, configurée sur
 // Render). ATTENTION : le Tenant.WaveLink du client est son PROPRE lien
 // marchand (vente de vouchers) — il ne doit jamais servir à encaisser
-// l'abonnement MikCloud.
+// l'abonnement 403Shield.
 func wavePayLink() string {
 	return strings.TrimSpace(os.Getenv("WAVE_PAY_LINK"))
 }
@@ -439,7 +439,7 @@ func applySubscriptionLocked(db *model.DB, accID, planID string, months, reqSlot
 	maxRouters := "1"
 	planName := "Essai"
 	if planOK {
-		label = "MikCloud " + plan.Name
+		label = "403Shield " + plan.Name
 		planName = plan.Name
 		if plan.PerRouter {
 			maxRouters = "Par routeur"

@@ -4,14 +4,14 @@
 export const frPpp: Record<string, string> = {
   "ppp.title": "Abonnés PPPoE",
   "ppp.description":
-    "Gérez les abonnés du serveur PPPoE de vos routeurs : création, suspension, renouvellement et déconnexion — pilotés par l'agent MikCloud (aucun port public ouvert).",
+    "Gérez les abonnés du serveur PPPoE de vos routeurs : création, suspension, renouvellement et déconnexion — pilotés par l'agent 403Shield (aucun port public ouvert).",
 
   // — Sélection du routeur (toute la vue est scopée à UN routeur) —
   "ppp.routerLabel": "Routeur",
-  "ppp.routerHint": "Le PPPoE est piloté par l'agent MikCloud : les routeurs en mode réel ne sont pas éligibles.",
+  "ppp.routerHint": "Le PPPoE est piloté par l'agent 403Shield : les routeurs en mode réel ne sont pas éligibles.",
   "ppp.noRouter.title": "Aucun routeur en mode agent",
   "ppp.noRouter.desc":
-    "Les abonnés PPPoE vivent sur vos routeurs MikroTik. Ajoutez un routeur et installez l'agent MikCloud (mode agent) pour le piloter depuis cette console.",
+    "Les abonnés PPPoE vivent sur vos routeurs MikroTik. Ajoutez un routeur et installez l'agent 403Shield (mode agent) pour le piloter depuis cette console.",
   "ppp.noRouter.cta": "Aller aux routeurs",
 
   // — KPIs —
@@ -167,7 +167,7 @@ export const frPpp: Record<string, string> = {
   "ppp.discover.queued": "Lecture en file — rapport en cours…",
   "ppp.discover.updated": "Cache agent : {time}",
   "ppp.discover.note":
-    "MikCloud ne modifie pas les secrets découverts : ils ont été créés hors MikCloud (Winbox, Mikhmon…). Créez un abonné dans l'onglet Abonnés seulement s'il n'existe pas déjà côté routeur.",
+    "403Shield ne modifie pas les secrets découverts : ils ont été créés hors 403Shield (Winbox, Mikhmon…). Créez un abonné dans l'onglet Abonnés seulement s'il n'existe pas déjà côté routeur.",
   "ppp.discover.col.name": "Nom",
   "ppp.discover.col.profile": "Profil",
   "ppp.discover.col.disabled": "Suspendu",
@@ -204,7 +204,7 @@ export const frPpp: Record<string, string> = {
   "ppp.provisionDoneShort": "Serveur PPPoE prêt",
   "ppp.provisionTitle": "Provisionner le serveur PPPoE",
   "ppp.provisionAuto.dialogDesc":
-    "Installez le serveur PPPoE sur ce routeur en un clic — l'agent MikCloud détecte l'interface réseau et choisit un sous-réseau libre, vous n'avez rien à saisir.",
+    "Installez le serveur PPPoE sur ce routeur en un clic — l'agent 403Shield détecte l'interface réseau et choisit un sous-réseau libre, vous n'avez rien à saisir.",
   "ppp.provisionAuto.title": "Configuration automatique (recommandé)",
   "ppp.provisionAuto.desc":
     "L'agent présent sur le routeur détecte l'interface LAN, retient un sous-réseau libre (sans conflit avec vos réseaux existants) et installe pool + profil + serveur PPPoE — automatiquement et sans doublon (relancer ne duplique rien).",

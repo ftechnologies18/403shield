@@ -313,7 +313,7 @@ export function SessionDetailDialog({
 
         {/* Pied : marque + fraîcheur de l'agrégat */}
         <div className="flex items-center justify-between px-5 py-3">
-          <p className="text-xs text-muted-foreground">MikCloud</p>
+          <p className="text-xs text-muted-foreground">403Shield</p>
           {isFetching ? <Skeleton className="h-3.5 w-28" /> : <p className="text-[11px] text-muted-foreground/70">{t("profile.upToDate")}</p>}
         </div>
       </DialogContent>

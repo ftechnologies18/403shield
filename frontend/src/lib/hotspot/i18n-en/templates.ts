@@ -10,7 +10,7 @@ export const enTemplates: Record<string, string> = {
   "templates.new": "New template",
   "templates.preview": "Print preview",
   "templates.empty": "No templates",
-  "templates.emptyDesc": "Create your first layout — three MikCloud presets (A4, 58 mm, 80 mm) are ready to use.",
+  "templates.emptyDesc": "Create your first layout — three 403Shield presets (A4, 58 mm, 80 mm) are ready to use.",
   "templates.default": "Default",
   "templates.edit": "Edit",
   "templates.setDefault": "Set as default",

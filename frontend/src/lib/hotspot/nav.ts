@@ -202,7 +202,7 @@ export const NAV_HOMENET_SECTIONS: { labelKey: string; items: NavItem[] }[] = [
 
 /**
  * Navigation de la CONSOLE PLATEFORME — cockpit du propriétaire du SaaS
- * (super-admin MikCloud) : pilotage global, comptes clients, journal
+ * (super-admin 403Shield) : pilotage global, comptes clients, journal
  * transverse, équipe plateforme. Les clients ne la voient jamais.
  */
 export const NAV_PLATFORM_SECTIONS: { labelKey: string; items: NavItem[] }[] = [
@@ -218,7 +218,7 @@ export const NAV_PLATFORM_SECTIONS: { labelKey: string; items: NavItem[] }[] = [
       // aux visiteurs de la vitrine, les demandes transmises à un humain
       // arrivent ici (fil + réponse + clôture).
       { id: "platformChat", labelKey: "nav.platformChat", icon: MessagesSquare },
-      // N°152 — diffusion d'annonces aux clients MikCloud (bandeau +
+      // N°152 — diffusion d'annonces aux clients 403Shield (bandeau +
       // cloche + e-mail optionnel) : le megaphone du super-admin.
       { id: "platformAnnouncements", labelKey: "nav.platformAnnouncements", icon: Megaphone },
       { id: "accounts", labelKey: "nav.accounts", icon: Building2 },

@@ -14,7 +14,7 @@
 //     source) active/empile la période — filet de sécurité : resync des
 //     factures réelles au GET statut ;
 //   - POST /api/subscription/stripe/cancel : résiliation synchronisée chez
-//     GeniusPay — l'accès MikCloud reste actif jusqu'au terme payé ;
+//     GeniusPay — l'accès 403Shield reste actif jusqu'au terme payé ;
 //   - GET /api/subscription/stripe : état + resynchronisation (retour de
 //     paiement, webhook retardé…).
 //
@@ -51,7 +51,7 @@ func (a *API) handleSubscriptionStripePost(w http.ResponseWriter, r *http.Reques
 	}
 	if _, _, ok := geniusPayKeys(); !ok {
 		writeErrCode(w, http.StatusServiceUnavailable, "geniuspay_disabled",
-			"Paiement par carte non configuré — contactez l'équipe MikCloud", nil)
+			"Paiement par carte non configuré — contactez l'équipe 403Shield", nil)
 		return
 	}
 	var req struct {
@@ -152,9 +152,9 @@ func (a *API) handleSubscriptionStripePost(w http.ResponseWriter, r *http.Reques
 	if plan.Period == "an" {
 		periodLabel = "1 an"
 	}
-	planName := fmt.Sprintf("MikCloud %s (%s)", plan.Name, periodLabel)
+	planName := fmt.Sprintf("403Shield %s (%s)", plan.Name, periodLabel)
 	if plan.PerRouter {
-		planName = fmt.Sprintf("MikCloud %s (%d routeur(s))", plan.Name, slots)
+		planName = fmt.Sprintf("403Shield %s (%d routeur(s))", plan.Name, slots)
 	}
 
 	// Abonnement GeniusPay — mode stripe_checkout, metadata = traçabilité.
@@ -266,7 +266,7 @@ func (a *API) handleSubscriptionStripePost(w http.ResponseWriter, r *http.Reques
 	payPayload := geniusPayCreateReq{
 		Amount:        amount,
 		PaymentMethod: "card",
-		Description:   fmt.Sprintf("Abonnement MikCloud %s (%s) — réf %s", plan.Name, periodLabel, ref),
+		Description:   fmt.Sprintf("Abonnement 403Shield %s (%s) — réf %s", plan.Name, periodLabel, ref),
 		Customer:      &geniusPayCustomer{Name: name, Phone: phone, Email: email},
 		Metadata:      map[string]string{"ref": ref, "account_id": acc, "plan_id": planID, "source": "stripe-first"},
 	}
@@ -384,7 +384,7 @@ func (a *API) handleSubscriptionStripeGet(w http.ResponseWriter, r *http.Request
 
 // handleSubscriptionStripeCancel — résilie le prélèvement automatique chez
 // GeniusPay (fin de période par défaut : le client garde l'accès jusqu'au
-// terme payé ; immédiat sur demande explicite). La période MikCloud en cours
+// terme payé ; immédiat sur demande explicite). La période 403Shield en cours
 // n'est PAS raccourcie — elle expire naturellement.
 func (a *API) handleSubscriptionStripeCancel(w http.ResponseWriter, r *http.Request) {
 	if c := claimsFrom(r); c != nil && c.Acc == "" {

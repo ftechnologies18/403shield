@@ -25,7 +25,7 @@
 //     jamais dans /me — trace d'activité SANS la conf, conventions §8) ;
 //   - appels GeniusPay HORS verrou du store (miroir handlePublicVpnOrderCreate) ;
 //   - retour de paiement : vers la console d'origine (en-tête Origin https)
-//     si elle est connue, repli vitrine MikCloud /vpn comme une vente ;
+//     si elle est connue, repli vitrine 403Shield /vpn comme une vente ;
 //   - quotas IP (tunnelAction) + honeypot sur le renouvellement (formulaire).
 package api
 
@@ -156,7 +156,7 @@ func (a *API) handleTunnelReveal(w http.ResponseWriter, r *http.Request) {
 
 // tunnelConsoleReturnURL — base de retour de paiement pour la console : si la
 // requête arrive DEPUIS une origine https connue (la console elle-même), le
-// paiement GeniusPay y revient ; sinon repli vitrine MikCloud (/vpn), comme
+// paiement GeniusPay y revient ; sinon repli vitrine 403Shield (/vpn), comme
 // une vente. Le redirect GeniusPay ne concerne que l'ACHETEUR lui-même
 // (initiateur du paiement) — aucune surface pour autrui.
 func tunnelConsoleReturnURL(r *http.Request) string {
@@ -236,7 +236,7 @@ func (a *API) handleTunnelRenew(w http.ResponseWriter, r *http.Request) {
 	if target.Status != model.PublicVpnOrderProvisioned {
 		a.store.Unlock()
 		writeErrCode(w, http.StatusConflict, "target_not_active",
-			"Cet accès n'est plus actif — souscrivez un nouvel accès sur la boutique MikTunnel (tunnel.ftci.fr/shop)", nil)
+			"Cet accès n'est plus actif — souscrivez un nouvel accès sur la boutique 403Shield (tunnel.ftci.fr/shop)", nil)
 		return
 	}
 	// N°315 — garde de FAMILLE : on renouvelle un accès Pro avec une
@@ -252,7 +252,7 @@ func (a *API) handleTunnelRenew(w http.ResponseWriter, r *http.Request) {
 	if !(settings.Platform != nil && settings.Platform.PublicVpnShopEnabled()) {
 		a.store.Unlock()
 		writeErrCode(w, http.StatusForbidden, "shop_disabled",
-			"La vente directe MikCloud VPN n'est pas ouverte pour le moment", nil)
+			"La vente directe 403Shield VPN n'est pas ouverte pour le moment", nil)
 		return
 	}
 	if pending := model.PublicVpnOrderPendingForEmail(db, client.Email); pending != nil {
@@ -304,7 +304,7 @@ func (a *API) handleTunnelRenew(w http.ResponseWriter, r *http.Request) {
 		payload := geniusPayCreateReq{
 			Amount:        amount,
 			PaymentMethod: payMethod,
-			Description:   fmt.Sprintf("Renouvellement MikTunnel VPN %s (%s) — réf %s", plan.Label, plan.PeriodLabel, order.Ref),
+			Description:   fmt.Sprintf("Renouvellement 403Shield VPN %s (%s) — réf %s", plan.Label, plan.PeriodLabel, order.Ref),
 			Customer:      &geniusPayCustomer{Name: buyerNameOf(client.Email), Email: client.Email, Phone: phone},
 			Metadata:      map[string]string{"ref": order.Ref, "plan_id": plan.ID},
 		}

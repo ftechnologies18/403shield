@@ -38,7 +38,7 @@ func isPlatformAdminClaims(c *auth.Claims) bool {
 }
 
 // isPlatformAdmin — true si le porteur du token a le rôle super-admin
-// plateforme MikCloud (RolePlatformAdmin ; « admin » historique accepté pour
+// plateforme 403Shield (RolePlatformAdmin ; « admin » historique accepté pour
 // les tokens émis avant le renommage N°7).
 func isPlatformAdmin(r *http.Request) bool {
 	return isPlatformAdminClaims(claimsFrom(r))

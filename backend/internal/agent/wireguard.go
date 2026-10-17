@@ -245,7 +245,7 @@ func (b Builder) buildWgKeygen(cmd model.Command) string {
 	sb.WriteString("  }\n")
 	sb.WriteString("  :do { /interface/wireguard set " + WgIfaceName + " listen-port=" + strconv.Itoa(WgListenPort) + " } on-error={}\n")
 	sb.WriteString("  :set " + p + "pub [/interface/wireguard get " + WgIfaceName + " public-key]\n")
-	sb.WriteString("} on-error={ :set " + okVar + " false; :log warning \"MikCloud: WireGuard indisponible sur ce routeur (RouterOS 7.15+ requis)\" }\n")
+	sb.WriteString("} on-error={ :set " + okVar + " false; :log warning \"403Shield: WireGuard indisponible sur ce routeur (RouterOS 7.15+ requis)\" }\n")
 	// Rapport dynamique : la clé publique est lue côté routeur (vérité routeur).
 	ok := `/tool fetch url="` + strings.TrimRight(b.BaseURL, "/") + `/agent/result?token=` + urlEscape(b.Token) +
 		`" http-method=post http-data=("cmd=` + cmd.ID + `&status=ok&wgpub=". $` + p + `pub) output=none`

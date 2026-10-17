@@ -136,7 +136,7 @@ func (a *API) handleVitalsPost(w http.ResponseWriter, r *http.Request) {
 // Neon au boot, voir telemetry) — couvre au moins les 48 dernières heures.
 func (a *API) handleVitalsSummary(w http.ResponseWriter, r *http.Request) {
 	if !isPlatformAdmin(r) {
-		writeErr(w, http.StatusForbidden, "Accès réservé à la plateforme MikCloud")
+		writeErr(w, http.StatusForbidden, "Accès réservé à la plateforme 403Shield")
 		return
 	}
 	if a.vitals == nil {

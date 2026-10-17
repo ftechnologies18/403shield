@@ -37,7 +37,7 @@ export const frTeam: Record<string, string> = {
   "team.errUsername": "Identifiant : 3 caractères minimum",
   "team.errPassword": "Mot de passe : 10 caractères minimum",
   "team.deleteTitle": "Retirer ce membre ?",
-  "team.deleteDesc": "{name} n'aura plus accès à la console MikCloud.",
+  "team.deleteDesc": "{name} n'aura plus accès à la console 403Shield.",
   "team.empty": "Aucun membre",
   "team.emptyDesc": "Ajoutez vos gérants et vendeurs pour déléguer la vente.",
 };

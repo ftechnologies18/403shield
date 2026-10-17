@@ -1,6 +1,6 @@
 "use client";
 
-// Client API MikCloud.
+// Client API 403Shield.
 // - Production (Vercel · mikcloud.ftci.fr) : mode direct —
 //   NEXT_PUBLIC_API_BASE=https://xxx.onrender.com (build Vercel)
 //   + ALLOWED_ORIGIN côté Render (CORS).
@@ -378,7 +378,7 @@ export async function pauseDevice(
 }
 
 // ---------------------------------------------------------------------------
-// Console plateforme (super-admin MikCloud — multi-comptes)
+// Console plateforme (super-admin 403Shield — multi-comptes)
 // ---------------------------------------------------------------------------
 
 /** fetchPlatformOverview — KPIs globaux du SaaS (tous comptes confondus). */
@@ -1438,7 +1438,7 @@ export async function listPppActive(routerId: string): Promise<PppToolEnvelope<P
 }
 
 /** pppDiscover — N°294 : cache des secrets vus PAR LE ROUTEUR (pppoe-server
- * existant, y compris créés hors MikCloud) — lecture seule (D2). */
+ * existant, y compris créés hors 403Shield) — lecture seule (D2). */
 export async function pppDiscover(routerId: string): Promise<PppToolEnvelope<PppDiscoverRow>> {
   return api<PppToolEnvelope<PppDiscoverRow>>(`/api/routers/${encodeURIComponent(routerId)}/ppp/discover`);
 }

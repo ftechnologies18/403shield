@@ -12,7 +12,7 @@ export const enPrint: Record<string, string> = {
   "print.resellerNotice": "{n} ticket{p} assigned to a reseller ({names}) — printing on their behalf, action traced in the activity log. The sale is still credited to the reseller.",
   "print.template": "Template",
   "print.templateAria": "Voucher template for printing",
-  "print.standard": "Standard MikCloud ticket",
+  "print.standard": "Standard 403Shield ticket",
   "print.defaultSuffix": " (default)",
   "print.generating": "Generating preview…",
   "print.previewFailed": "Preview unavailable — the template could not be rendered.",

@@ -4,14 +4,14 @@
 export const enPpp: Record<string, string> = {
   "ppp.title": "PPPoE Subscribers",
   "ppp.description":
-    "Manage the subscribers of your routers' PPPoE servers: creation, suspension, renewal and disconnection — driven by the MikCloud agent (no public port opened).",
+    "Manage the subscribers of your routers' PPPoE servers: creation, suspension, renewal and disconnection — driven by the 403Shield agent (no public port opened).",
 
   // — Router selection (the whole view is scoped to ONE router) —
   "ppp.routerLabel": "Router",
-  "ppp.routerHint": "PPPoE is driven by the MikCloud agent: real-mode routers are not eligible.",
+  "ppp.routerHint": "PPPoE is driven by the 403Shield agent: real-mode routers are not eligible.",
   "ppp.noRouter.title": "No agent-mode router",
   "ppp.noRouter.desc":
-    "PPPoE subscribers live on your MikroTik routers. Add a router and install the MikCloud agent (agent mode) to drive it from this console.",
+    "PPPoE subscribers live on your MikroTik routers. Add a router and install the 403Shield agent (agent mode) to drive it from this console.",
   "ppp.noRouter.cta": "Go to routers",
 
   // — KPIs —
@@ -167,7 +167,7 @@ export const enPpp: Record<string, string> = {
   "ppp.discover.queued": "Read queued — report in progress…",
   "ppp.discover.updated": "Agent cache: {time}",
   "ppp.discover.note":
-    "MikCloud does not modify discovered secrets: they were created outside MikCloud (Winbox, Mikhmon…). Create a subscriber in the Subscribers tab only if it does not already exist on the router.",
+    "403Shield does not modify discovered secrets: they were created outside 403Shield (Winbox, Mikhmon…). Create a subscriber in the Subscribers tab only if it does not already exist on the router.",
   "ppp.discover.col.name": "Name",
   "ppp.discover.col.profile": "Profile",
   "ppp.discover.col.disabled": "Suspended",
@@ -204,7 +204,7 @@ export const enPpp: Record<string, string> = {
   "ppp.provisionDoneShort": "PPPoE server ready",
   "ppp.provisionTitle": "Provision the PPPoE server",
   "ppp.provisionAuto.dialogDesc":
-    "Install the PPPoE server on this router in one click — the MikCloud agent detects the network interface and picks a free subnet; you have nothing to type.",
+    "Install the PPPoE server on this router in one click — the 403Shield agent detects the network interface and picks a free subnet; you have nothing to type.",
   "ppp.provisionAuto.title": "Automatic configuration (recommended)",
   "ppp.provisionAuto.desc":
     "The agent installed on the router detects the LAN interface, picks a free subnet (no conflict with your existing networks) and installs pool + profile + PPPoE server — automatically and without duplicates (re-running duplicates nothing).",

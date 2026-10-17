@@ -20,7 +20,7 @@ import type { StripeCreateResponse } from "@/lib/hotspot/types";
  * se déconnecter mais ne peut pas naviguer dans la console sans payer.
  * Réutilise POST /api/subscription — VERROU FACTURATION : l'endpoint
  * enregistre la DEMANDE et renvoie le lien de paiement Wave de la
- * plateforme ; l'activation du compte est effectuée par MikCloud après
+ * plateforme ; l'activation du compte est effectuée par 403Shield après
  * encaissement (jamais côté client).
  */
 export function PaywallOverlay() {
@@ -59,8 +59,8 @@ export function PaywallOverlay() {
         window.location.href = res.waveLink;
       } else {
         toast.success(
-          t("paywall.requested", "Demande enregistrée — MikCloud activera votre accès dès réception du paiement."),
-          { description: t("paywall.contact", "Une question ? Contactez l'équipe MikCloud.") },
+          t("paywall.requested", "Demande enregistrée — 403Shield activera votre accès dès réception du paiement."),
+          { description: t("paywall.contact", "Une question ? Contactez l'équipe 403Shield.") },
         );
         await refetch();
       }
@@ -126,7 +126,7 @@ export function PaywallOverlay() {
             <CardDescription className="text-base">
               {t(
                 "paywall.subtitle",
-                "Votre accès est suspendu. Choisissez une formule et réglez le paiement — MikCloud réactivera votre compte dès réception. Vos données sont conservées.",
+                "Votre accès est suspendu. Choisissez une formule et réglez le paiement — 403Shield réactivera votre compte dès réception. Vos données sont conservées.",
               )}
             </CardDescription>
           </CardHeader>

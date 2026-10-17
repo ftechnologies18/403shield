@@ -1,4 +1,4 @@
-// Moniteur MikCloud — goroutine de surveillance multi-tenant.
+// Moniteur 403Shield — goroutine de surveillance multi-tenant.
 //
 // Toutes les 30 s, sous verrou du store :
 //   - routeurs agents dont le dernier check-in dépasse la fenêtre
@@ -582,7 +582,7 @@ func buildDailyReport(db *model.DB, acc string, now time.Time, cfg model.Notific
 	if s, ok := db.SettingsByAccount[acc]; ok && s.Tenant.Name != "" {
 		currency = currencyLabel(s.Tenant.Currency)
 	}
-	tenantName := "MikCloud"
+	tenantName := "403Shield"
 	if s, ok := db.SettingsByAccount[acc]; ok && s.Tenant.Name != "" {
 		tenantName = s.Tenant.Name
 	}
@@ -630,7 +630,7 @@ func buildDailyReport(db *model.DB, acc string, now time.Time, cfg model.Notific
 		}
 	}
 
-	title := "📊 Rapport MikCloud — " + dayStart.Format("02/01/2006")
+	title := "📊 Rapport 403Shield — " + dayStart.Format("02/01/2006")
 	body := tenantName + " — " + dayStart.Format("02/01/2006") + "\n" +
 		"────────────────────\n" +
 		"💰 Ventes du jour : " + strconvI(salesCount) + " ticket(s) — " + strconvI(salesAmount) + " " + currency + "\n" +
@@ -639,6 +639,6 @@ func buildDailyReport(db *model.DB, acc string, now time.Time, cfg model.Notific
 		"📡 Routeurs en ligne : " + strconvI(routersOnline) + "/" + strconvI(routersTotal) + "\n" +
 		"🎟️ Vouchers disponibles : " + strconvI(activeVouchers) + "\n" +
 		"────────────────────\n" +
-		"Rapport quotidien automatique MikCloud."
+		"Rapport quotidien automatique 403Shield."
 	return title, body
 }

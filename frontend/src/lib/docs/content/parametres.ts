@@ -24,7 +24,7 @@ export const PARAMETRES_GUIDES: Guide[] = [
       {
         with: "Les paramètres plateforme",
         body:
-          "Vos paramètres (ce guide) règlent VOTRE compte ; les paramètres plateforme (super-admin) règlent le service MikCloud lui-même — volet privé, hors périmètre public.",
+          "Vos paramètres (ce guide) règlent VOTRE compte ; les paramètres plateforme (super-admin) règlent le service 403Shield lui-même — volet privé, hors périmètre public.",
       },
     ],
     recoit: [
@@ -170,7 +170,7 @@ export const PARAMETRES_GUIDES: Guide[] = [
     sectionId: "parametres",
     vague: "V2",
     quoi:
-      "Deux étages : la CLOCHE (barre supérieure de la console) liste les événements récents (alertes, demandes, renouvellements, annonces) avec état lu/non-lu ; Paramètres → Notifications règle les RELAIS (e-mail, bot Telegram) et les types d'alertes à recevoir.\n\nLes alertes couvrent l'exploitation : routeur hors ligne, pics de charge, abonnement bientôt échu, demandes d'inscription/renouvellement, incidents sécurité. L'e-mail et le Telegram portent l'information hors de la console — vous n'avez plus à ouvrir MikCloud pour savoir.",
+      "Deux étages : la CLOCHE (barre supérieure de la console) liste les événements récents (alertes, demandes, renouvellements, annonces) avec état lu/non-lu ; Paramètres → Notifications règle les RELAIS (e-mail, bot Telegram) et les types d'alertes à recevoir.\n\nLes alertes couvrent l'exploitation : routeur hors ligne, pics de charge, abonnement bientôt échu, demandes d'inscription/renouvellement, incidents sécurité. L'e-mail et le Telegram portent l'information hors de la console — vous n'avez plus à ouvrir 403Shield pour savoir.",
     difference: [
       {
         with: "Le journal d'activité",
@@ -249,7 +249,7 @@ export const PARAMETRES_GUIDES: Guide[] = [
     id: "abonnement-facturation",
     title: "Abonnement & facturation",
     summary:
-      "Votre formule MikCloud : plan, usage (routeurs, crédits, modules), renouvellement, paiement Wave/GeniusPay/Stripe — et le mode lecture seule si ça expire.",
+      "Votre formule 403Shield : plan, usage (routeurs, crédits, modules), renouvellement, paiement Wave/GeniusPay/Stripe — et le mode lecture seule si ça expire.",
     roles: "Propriétaire",
     minutes: 4,
     updated: "2026-10-12",
@@ -261,7 +261,7 @@ export const PARAMETRES_GUIDES: Guide[] = [
       {
         with: "La facturation de VOS clients",
         body:
-          "Ici on paie MIKCloud (l'outil) ; vos clients paient VOUS (vouchers, comptes — rapport Comptabilité). Deux caisses, deux logiques.",
+          "Ici on paie 403Shield (l'outil) ; vos clients paient VOUS (vouchers, comptes — rapport Comptabilité). Deux caisses, deux logiques.",
       },
       {
         with: "Les demandes de renouvellement",
@@ -285,7 +285,7 @@ export const PARAMETRES_GUIDES: Guide[] = [
           1440,
           1327,
           "Paramètres Abonnement : formule en cours, usage inclus, échéance, paiement et historique de facturation",
-          "Abonnement — votre formule MikCloud.",
+          "Abonnement — votre formule 403Shield.",
         ),
       },
       {

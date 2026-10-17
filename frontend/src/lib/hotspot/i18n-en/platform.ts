@@ -4,7 +4,7 @@
 
 export const enPlatform: Record<string, string> = {
   "platform.title": "Platform console",
-  "platform.description": "MikCloud SaaS cockpit — accounts, usage and revenue across all tenants.",
+  "platform.description": "403Shield SaaS cockpit — accounts, usage and revenue across all tenants.",
   "platform.loadError": "Failed to load overview",
   "platform.loadErrorDesc": "Check your connection and try again.",
   "platform.kpi.accounts": "Active accounts",

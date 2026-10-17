@@ -298,10 +298,10 @@ func (a *API) handleJournalsCSV(w http.ResponseWriter, r *http.Request) {
 	sort.Slice(rows, func(i, j int) bool { return rows[i].Month < rows[j].Month })
 
 	w.Header().Set("Content-Type", "text/csv; charset=utf-8")
-	w.Header().Set("Content-Disposition", "attachment; filename=\"mikcloud-journaux-mensuels.csv\"")
+	w.Header().Set("Content-Disposition", "attachment; filename=\"403shield-journaux-mensuels.csv\"")
 	// BOM UTF-8 : Excel reconnaît l'encodage.
 	_, _ = w.Write([]byte{0xEF, 0xBB, 0xBF})
-	_, _ = w.Write([]byte(fmt.Sprintf("MikCloud ;Journaux mensuels ;%s\r\n\r\n", csvField(tenantName))))
+	_, _ = w.Write([]byte(fmt.Sprintf("403Shield ;Journaux mensuels ;%s\r\n\r\n", csvField(tenantName))))
 	_, _ = w.Write([]byte("Mois ;Ventes ;Chiffre d'affaires ;Panier moyen ;Connexions ;Volume (Go) ;" +
 		"Ventes directes ;CA direct ;Ventes réseau ;CA réseau ;Couverture ;Clôture ;Date de clôture\r\n"))
 	for _, j := range rows {

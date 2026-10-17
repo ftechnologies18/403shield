@@ -1,6 +1,6 @@
 "use client";
 
-// Carte du TICKET STANDARD MikCloud — rendu partagé par le dialog d'impression
+// Carte du TICKET STANDARD 403Shield — rendu partagé par le dialog d'impression
 // du gérant (uc-print-dialog, grille A4) et celui du revendeur
 // (sell-print-dialog, grille A4 + tickets thermiques). Un seul endroit pour
 // faire évoluer le design du ticket papier.
@@ -63,7 +63,7 @@ export function VoucherTicketCard({
       className={`flex w-full min-w-0 flex-col items-center gap-1 rounded-lg border-2 border-dashed border-black p-3 text-center break-inside-avoid ${className}`}
       style={style}
     >
-      <p className="w-full break-words text-sm font-bold leading-tight">{tenantName || "MikCloud"}</p>
+      <p className="w-full break-words text-sm font-bold leading-tight">{tenantName || "403Shield"}</p>
       <p className="text-[10px] uppercase tracking-widest text-emerald-700">
         {t("print.wifiHotspot")}
       </p>

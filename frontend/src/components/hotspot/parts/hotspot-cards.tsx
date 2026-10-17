@@ -916,7 +916,7 @@ function VoucherFields({ form, patch, dirty }: SectionProps) {
   const [qrPreview, setQrPreview] = useState("");
   useEffect(() => {
     let cancelled = false;
-    qrWithLogoDataUrl("MIKCLOUD\nDEMO-2026", form.logoUrl || undefined)
+    qrWithLogoDataUrl("403SHIELD\nDEMO-2026", form.logoUrl || undefined)
       .then((url) => {
         if (!cancelled) setQrPreview(url);
       })
@@ -1508,7 +1508,7 @@ export function TickerFields({ form, patch, dirty }: PortalFieldsProps) {
 }
 
 /** Support WhatsApp du portail (N°139) — le numéro que les invités
- * cliquent (footer login/logout/error), repli : support MikCloud.
+ * cliquent (footer login/logout/error), repli : support 403Shield.
  * N°186 — brique PARTAGÉE. */
 export function WhatsappFields({ form, patch, dirty, invalid }: PortalFieldsProps & { invalid: boolean }) {
   const { t } = useI18n();

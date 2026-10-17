@@ -410,7 +410,7 @@ func TestDeviceRenameAndPauseFlow(t *testing.T) {
 	// premier check-in d'une box homenet sert AUSSI la device_pause à
 	// ensemble VIDE du convergeur (PauseSig vierge ≠ signature vide : elle
 	// nettoie d'éventuelles règles mikcloud-pause résiduelles d'avant
-	// MikCloud — même contrat que safewifi off) ; le routeur honnête
+	// 403Shield — même contrat que safewifi off) ; le routeur honnête
 	// rapporte chacune.
 	body = agentCheckIn(t, ts, tok)
 	if ids := deviceCmdIDs(t, body, model.CmdDevicePause); len(ids) == 0 {

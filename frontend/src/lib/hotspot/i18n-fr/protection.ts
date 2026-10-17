@@ -17,7 +17,7 @@ export const frProtection: Record<string, string> = {
   "protection.openRouters": "Ajouter un routeur",
   "protection.selectRouter": "Routeur",
   "protection.ofModules": "{n}/4 protections actives",
-  "protection.agentHint": "Les protections nécessitent un routeur en mode agent — demandez la réinstallation du script MikCloud sur ce site.",
+  "protection.agentHint": "Les protections nécessitent un routeur en mode agent — demandez la réinstallation du script 403Shield sur ce site.",
   "protection.openRouter": "Voir la fiche du routeur",
   "protection.summary.title": "Protection du WiFi",
   "protection.summary.desc": "Sites dangereux, anti-piratage, couvre-feu et bloque-VPN se pilotent désormais depuis la vue Protection.",

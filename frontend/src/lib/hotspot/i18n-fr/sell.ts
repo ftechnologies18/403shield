@@ -71,7 +71,7 @@ export const frSell: Record<string, string> = {
   "sell.dayReportEmpty": "Aucune vente enregistrée aujourd'hui.",
   "sell.dayReportShare": "Partager le rapport",
   "sell.dayReportShared": "Rapport partagé ✓",
-  "sell.dayReportTextHeader": "📊 Rapport MikCloud — {date}",
+  "sell.dayReportTextHeader": "📊 Rapport 403Shield — {date}",
   "sell.dayReportDetail": "Détail des ventes :",
   "sell.returnBtn": "Rendre / Transférer",
   "sell.returnSelectHint": "Touchez les tickets à rendre au gérant ou à transférer à un autre revendeur, puis confirmez.",

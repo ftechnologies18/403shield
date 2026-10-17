@@ -203,7 +203,7 @@ func (a *API) handleSubscriptionPay(w http.ResponseWriter, r *http.Request) {
 	}
 	if _, _, ok := geniusPayKeys(); !ok {
 		writeErrCode(w, http.StatusServiceUnavailable, "geniuspay_disabled",
-			"Paiement en ligne non configuré — contactez l'équipe MikCloud", nil)
+			"Paiement en ligne non configuré — contactez l'équipe 403Shield", nil)
 		return
 	}
 
@@ -255,7 +255,7 @@ func (a *API) handleSubscriptionPay(w http.ResponseWriter, r *http.Request) {
 	payload := geniusPayCreateReq{
 		Amount:        amount,
 		PaymentMethod: "wave",
-		Description:   fmt.Sprintf("Abonnement MikCloud %s (%s) — réf %s", planName, periodLabel, ref),
+		Description:   fmt.Sprintf("Abonnement 403Shield %s (%s) — réf %s", planName, periodLabel, ref),
 		Customer:      &geniusPayCustomer{Name: ownerName, Phone: phone},
 		Metadata:      map[string]string{"ref": ref, "account_id": acc, "plan_id": planID},
 	}

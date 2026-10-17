@@ -494,7 +494,7 @@ func TestPagedGraceCoversCycleDuration(t *testing.T) {
 }
 
 // TestPagedAutoImportUnknownFromFullCycle — l'import automatique des inconnus
-// (créés hors MikCloud) s'applique sur le cycle COMPLET, avec profil/disabled
+// (créés hors 403Shield) s'applique sur le cycle COMPLET, avec profil/disabled
 // de leur fenêtre d'origine.
 func TestPagedAutoImportUnknownFromFullCycle(t *testing.T) {
 	old := time.Now().UTC().Add(-2 * time.Hour).Format(time.RFC3339)

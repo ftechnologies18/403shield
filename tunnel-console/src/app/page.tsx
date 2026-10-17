@@ -7,7 +7,7 @@
 // (tunnel.ftci.fr) devient « 403Shield Console » : on y achète (/shop), gère
 // (/me) et opère (/pro) les tunnels et VPN WireGuard. Maison-mère : FTech CI
 // (ftci.fr), endossement « powered by FTech CI » ; le site marketing unifié
-// vit sur mikcloud.ftci.fr (N°313-316 : la vitrine fut créée puis rebrandée
+// vit sur 403shield.ftci.fr (ex mikcloud.ftci.fr — N°313-316 : la vitrine fut
 // « MikTunnel by MikCloud », la boutique a déménagé ici en N°316).
 // Footer collant (min-h-screen + mt-auto).
 
@@ -57,7 +57,7 @@ export default function LandingPage() {
             <ExternalLink className="h-3 w-3" aria-hidden />
           </a>
           <a
-            href="https://mikcloud.ftci.fr"
+            href="https://403shield.ftci.fr"
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-1 transition hover:text-slate-300"
@@ -90,7 +90,7 @@ export default function LandingPage() {
               Accès Pro
             </Link>
             <a
-              href="https://mikcloud.ftci.fr"
+              href="https://403shield.ftci.fr"
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-1 transition hover:text-slate-100"
@@ -184,7 +184,7 @@ export default function LandingPage() {
               Boutique VPN
             </Link>
             <a
-              href="https://mikcloud.ftci.fr"
+              href="https://403shield.ftci.fr"
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-1 hover:text-slate-300"

@@ -4,7 +4,7 @@
 
 export const frPlatformTeam: Record<string, string> = {
   "platformTeam.title": "Équipe plateforme",
-  "platformTeam.description": "Super-administrateurs MikCloud — redondance de l'équipe qui pilote le SaaS.",
+  "platformTeam.description": "Super-administrateurs 403Shield — redondance de l'équipe qui pilote le SaaS.",
   "platformTeam.add": "Ajouter un admin",
   "platformTeam.addTitle": "Nouvel administrateur plateforme",
   "platformTeam.addDesc": "Il disposera des mêmes pouvoirs que vous sur toute la plateforme.",

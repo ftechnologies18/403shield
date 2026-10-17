@@ -38,20 +38,20 @@ export const frNotif: Record<string, string> = {
   "notif.tgHelp3": "3. Récupérez votre chat ID via @userinfobot.",
   // N°150 — canal Telegram plateforme (bot FTCI, lien magique).
   "notif.tgPlatformDesc": "Alertes instantanées sur votre téléphone — un clic pour connecter, aucun réglage.",
-  "notif.tgPlatformNote": "Bot officiel MikCloud — appuyez sur « Connecter Telegram », puis sur Démarrer dans Telegram. Aucun compte à créer.",
+  "notif.tgPlatformNote": "Bot officiel 403Shield — appuyez sur « Connecter Telegram », puis sur Démarrer dans Telegram. Aucun compte à créer.",
   "notif.tgConnect": "Connecter Telegram",
   "notif.tgPending": "Appuyez sur « Démarrer » dans Telegram — cette page détecte la connexion automatiquement.",
   "notif.tgOpenAgain": "Rouvrir Telegram",
   "notif.tgCancel": "Annuler",
   "notif.tgLinked": "Telegram connecté",
-  "notif.tgLinkedHint": "Vous recevrez les alertes MikCloud dans votre conversation avec le bot.",
+  "notif.tgLinkedHint": "Vous recevrez les alertes 403Shield dans votre conversation avec le bot.",
   "notif.tgPairExpired": "Code de connexion expiré — générez-en un nouveau.",
   "notif.tgNewCode": "Nouveau code",
   "notif.tgPairError": "Connexion impossible — réessayez dans un instant.",
   "notif.tgAdvanced": "Mon propre bot Telegram (avancé)",
   "notif.tgManual": "Configuration manuelle",
   // N°150 — relais e-mail plateforme.
-  "notif.emailRelayNote": "Envoi via la plateforme MikCloud — indiquez simplement votre adresse, aucun serveur à configurer.",
+  "notif.emailRelayNote": "Envoi via la plateforme 403Shield — indiquez simplement votre adresse, aucun serveur à configurer.",
   "notif.emailAdvanced": "Mon propre serveur e-mail (avancé)",
   // N°153 — console du compte principal (super-admin plateforme) : la vue
   // change de discours — VOS identifiants portent le relais de tous les clients.
@@ -113,7 +113,7 @@ export const frNotif: Record<string, string> = {
   "notif.failed": "Échec",
   "notif.unknownError": "Erreur inconnue",
   "notif.section.rules": "Règles d'alerte",
-  "notif.section.rulesDesc": "Déclencheurs surveillés par MikCloud et rapport quotidien.",
+  "notif.section.rulesDesc": "Déclencheurs surveillés par 403Shield et rapport quotidien.",
   "notif.section.channels": "Webhooks & canaux",
   "notif.section.channelsDesc": "Destinations des alertes : Telegram, WhatsApp Cloud API et e-mail.",
   "notif.section.log": "Historique des envois",

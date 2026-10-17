@@ -64,7 +64,7 @@ export const enSessions: Record<string, string> = {
   "sessions.detailSoldViaSellMode": "Sell Mode (reseller app)",
   "sessions.detailSoldViaAuto": "Client connection (auto sale)",
   "sessions.detailDirectSale": "Front desk (manager)",
-  "sessions.detailOffRegistry": "User outside the MikCloud registry (created directly on the router): consumption and quotas unavailable.",
+  "sessions.detailOffRegistry": "User outside the 403Shield registry (created directly on the router): consumption and quotas unavailable.",
   "sessions.detailExpiresAt": "Expires on",
   "sessions.detailLoadError": "Unable to load connection details.",
 };

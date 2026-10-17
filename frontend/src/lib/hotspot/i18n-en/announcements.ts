@@ -1,5 +1,5 @@
 // Fragment EN du domaine « announcements » — N°152 : annonces de la
-// plateforme MikCloud (diffusion super-admin, bandeau + cloche côté clients).
+// plateforme 403Shield (diffusion super-admin, bandeau + cloche côté clients).
 // Ne pas importer directement : passer par l'agrégateur.
 
 export const enAnnouncements: Record<string, string> = {
@@ -8,7 +8,7 @@ export const enAnnouncements: Record<string, string> = {
 
   // — vue console plateforme —
   "ann.title": "Client announcements",
-  "ann.subtitle": "Broadcast a message to every MikCloud account — maintenance, releases, incidents. The announcement shows as a banner in each recipient's console and stays in their bell. Broadcast now or schedule ahead.",
+  "ann.subtitle": "Broadcast a message to every 403Shield account — maintenance, releases, incidents. The announcement shows as a banner in each recipient's console and stays in their bell. Broadcast now or schedule ahead.",
   "ann.new": "New announcement",
   "ann.empty": "No announcement broadcast yet.",
   "ann.emptyHint": "Your first announcement will reach every active client account within seconds.",
@@ -47,7 +47,7 @@ export const enAnnouncements: Record<string, string> = {
   "ann.form.titleLabel": "Title",
   "ann.form.titlePlaceholder": "e.g. Planned maintenance Saturday night",
   "ann.form.bodyLabel": "Message (optional)",
-  "ann.form.bodyPlaceholder": "e.g. The MikCloud cloud will be unavailable from 10pm to 11pm. Routers keep delivering access.",
+  "ann.form.bodyPlaceholder": "e.g. The 403Shield cloud will be unavailable from 10pm to 11pm. Routers keep delivering access.",
   "ann.form.bodyHint": "2000 characters max.",
   "ann.form.levelLabel": "Level",
   "ann.form.levelHint": "Drives the client banner color: gray (information), green (new feature), teal (maintenance), amber (action recommended), red (incident — takes priority in the banner).",
@@ -80,7 +80,7 @@ export const enAnnouncements: Record<string, string> = {
 
   // — bandeau côté client —
   "ann.banner.dismiss": "Dismiss",
-  "ann.banner.platform": "MikCloud announcement",
+  "ann.banner.platform": "403Shield announcement",
   "ann.banner.read": "Read announcement",
   "ann.banner.close": "Close",
   "ann.banner.published": "Published {date}",

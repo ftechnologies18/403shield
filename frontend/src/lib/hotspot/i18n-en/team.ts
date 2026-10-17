@@ -37,7 +37,7 @@ export const enTeam: Record<string, string> = {
   "team.errUsername": "Username: 3 characters minimum",
   "team.errPassword": "Password: 10 characters minimum",
   "team.deleteTitle": "Remove this member?",
-  "team.deleteDesc": "{name} will no longer have access to the MikCloud console.",
+  "team.deleteDesc": "{name} will no longer have access to the 403Shield console.",
   "team.empty": "No members",
   "team.emptyDesc": "Add your managers and sellers to delegate sales.",
 };

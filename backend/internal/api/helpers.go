@@ -302,7 +302,7 @@ func ensureSettings(db *model.DB, acc string) model.Settings {
 		}
 		return s
 	}
-	name := "MikCloud"
+	name := "403Shield"
 	for i := range db.Accounts {
 		if db.Accounts[i].ID == acc {
 			name = db.Accounts[i].Name
@@ -567,9 +567,9 @@ func (a *API) dispatchPppReminder(db *model.DB, s *model.PppSecret, rr *model.Ro
 	if t, err := time.Parse(time.RFC3339, s.ExpiresAt); err == nil {
 		expiryHuman = t.Format("02/01/2006")
 	}
-	title := "MikCloud — Abonné PPPoE " + s.Name + " expire le " + expiryHuman
+	title := "403Shield — Abonné PPPoE " + s.Name + " expire le " + expiryHuman
 	body := "L'abonné PPPoE « " + s.Name + " » (routeur " + routerName + ") arrive à échéance le " + expiryHuman + ".\n" +
-		"Renouvelez-le dans la console MikCloud — Abonnés PPPoE — bouton Renouveler."
+		"Renouvelez-le dans la console 403Shield — Abonnés PPPoE — bouton Renouveler."
 	accID, secretName := s.AccountID, s.Name
 	emailTaskDispatch()(func() {
 		logs := deliverNotif(&cfgCopy, relayPtr, "ppp_reminder", title, body, "")

@@ -1,9 +1,9 @@
 // handlers_tunnel_pro.go — N°315 — ACCÈS PRO + LAN ÉTENDU (caméras/NAS) —
 // phase 3 du Programme Tunnel, design D-B1, livré comme offre « Pro » de la
-// console MikTunnel (décision D-T4).
+// console 403Shield (décision D-T4).
 //
-// PRODUIT : le gérant MikCloud dont l'e-mail de compte correspond à l'e-mail
-// de login MikTunnel achète un ACCÈS PRO — un peer « remote » (supervision
+// PRODUIT : le gérant 403Shield dont l'e-mail de compte correspond à l'e-mail
+// de login 403Shield achète un ACCÈS PRO — un peer « remote » (supervision
 // N°312 de SES routeurs : Winbox, API, SSH, web) posé sous SON COMPTE gérant
 // (isolation multi-tenant D-B2 AUTOMATIQUE : wgAllowedSourcesLocked élargit
 // l'allowed-address des routeurs du compte aux peers du compte, et RIEN
@@ -340,7 +340,7 @@ func (a *API) handleTunnelProDetect(w http.ResponseWriter, r *http.Request) {
 	}
 	if rr.Mode != "agent" {
 		a.store.Unlock()
-		writeErr(w, http.StatusBadRequest, "Le LAN étendu exige un routeur en mode agent (canal des commandes MikCloud)")
+		writeErr(w, http.StatusBadRequest, "Le LAN étendu exige un routeur en mode agent (canal des commandes 403Shield)")
 		return
 	}
 	// Déjà appliqué : la détection n'apporterait rien (le LAN vit déjà).
@@ -550,7 +550,7 @@ func (a *API) handleTunnelProLan(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if wgPeerName == "" {
-		writeErr(w, http.StatusConflict, "Routeur sans peer WireGuard serveur (provisionnez d'abord le tunnel du routeur dans la console MikCloud)")
+		writeErr(w, http.StatusConflict, "Routeur sans peer WireGuard serveur (provisionnez d'abord le tunnel du routeur dans la console 403Shield)")
 		return
 	}
 
@@ -691,7 +691,7 @@ func (a *API) tunnelProApplyLanAllRouters(accID, email string) {
 		if err := a.tunnelProApplyLanCore(j.routerID, accID, j.wgPeerName, j.lan, peerNames, peerIPs); err != nil {
 			a.store.Lock()
 			db := a.store.Data()
-			a.logActivity(db, accID, "vpn", "LAN étendu "+j.lan+" non applicable au provisioning Pro : "+boundedString(err.Error(), 160)+" — activation manuelle possible dans l'espace MikTunnel")
+			a.logActivity(db, accID, "vpn", "LAN étendu "+j.lan+" non applicable au provisioning Pro : "+boundedString(err.Error(), 160)+" — activation manuelle possible dans l'espace 403Shield")
 			a.store.Save()
 			a.store.Unlock()
 		}
@@ -739,7 +739,7 @@ func (a *API) handleTunnelProOrder(w http.ResponseWriter, r *http.Request) {
 	}
 	plan := model.ResolvePublicVpnPlan(strings.TrimSpace(req.PlanID))
 	if plan == nil || plan.Family != model.PublicVpnPlanFamilyPro {
-		writeErr(w, http.StatusBadRequest, "Formule Pro inconnue (l'Accès Pro se souscrit ici ; le VPN B2C reste sur la vitrine MikCloud)")
+		writeErr(w, http.StatusBadRequest, "Formule Pro inconnue (l'Accès Pro se souscrit ici ; le VPN B2C reste sur la vitrine 403Shield)")
 		return
 	}
 	payMethod := strings.ToLower(strings.TrimSpace(req.PayMethod))
@@ -767,7 +767,7 @@ func (a *API) handleTunnelProOrder(w http.ResponseWriter, r *http.Request) {
 	if !eligible {
 		a.store.Unlock()
 		writeErrCode(w, http.StatusForbidden, "pro_ineligible",
-			"L'Accès Pro relie VOS routeurs supervisés par MikCloud : connectez-vous avec l'e-mail de votre compte gérant MikCloud (un routeur en mode agent au moins)", nil)
+			"L'Accès Pro relie VOS routeurs supervisés par 403Shield : connectez-vous avec l'e-mail de votre compte gérant 403Shield (un routeur en mode agent au moins)", nil)
 		return
 	}
 	accName := acc.Name
@@ -775,7 +775,7 @@ func (a *API) handleTunnelProOrder(w http.ResponseWriter, r *http.Request) {
 	if !(settings.Platform != nil && settings.Platform.PublicVpnShopEnabled()) {
 		a.store.Unlock()
 		writeErrCode(w, http.StatusForbidden, "shop_disabled",
-			"La vente MikTunnel n'est pas ouverte pour le moment", nil)
+			"La vente 403Shield n'est pas ouverte pour le moment", nil)
 		return
 	}
 	if pending := model.PublicVpnOrderPendingForEmail(db, client.Email); pending != nil {
@@ -826,7 +826,7 @@ func (a *API) handleTunnelProOrder(w http.ResponseWriter, r *http.Request) {
 		payload := geniusPayCreateReq{
 			Amount:        amount,
 			PaymentMethod: payMethod,
-			Description:   fmt.Sprintf("Accès Pro MikTunnel %s (%s) — réf %s", plan.Label, plan.PeriodLabel, order.Ref),
+			Description:   fmt.Sprintf("Accès Pro 403Shield %s (%s) — réf %s", plan.Label, plan.PeriodLabel, order.Ref),
 			Customer:      &geniusPayCustomer{Name: buyerNameOf(client.Email), Email: client.Email, Phone: phone},
 			Metadata:      map[string]string{"ref": order.Ref, "plan_id": plan.ID},
 		}

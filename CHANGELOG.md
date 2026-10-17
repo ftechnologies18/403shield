@@ -8,6 +8,104 @@ depuis le T2 N°266 — Render suspendu N°303). N°317 : le projet change de no
 de marque — MikCloud et MikTunnel deviennent **403Shield** (marque unifiée,
 sous-marque FTech CI) ; l'historique ci-dessous conserve les noms d'époque.
 
+## 2026-10-17 — N°318 — **403SHIELD PHASES 2 & 3 : e-mails transactionnels backend + i18n profond SaaS + domaine canonique 403shield.ftci.fr (DNS → Vercel → 301) + renommage des projets Vercel + CORS paramétrable**
+
+### Déclencheur (propriétaire)
+Le propriétaire fournit un token Cloudflare **valide** (token de COMPTE,
+portée zone `ftci.fr` — `dns_records:edit` ; l'endpoint `/user/tokens/verify`
+répond « Invalid » pour tout token non-user, la preuve se fait sur `GET /zones`)
+et un token Vercel (team FTech CI) puis ordonne : exécuter la phase 2
+(e-mails transactionnels « MikTunnel (by MikCloud…) » + i18n profond SaaS
+(~300 occurrences) + renommage des projets Vercel) ET la phase 3 (créer
+`403shield.ftci.fr` → Vercel, puis poser le 301).
+
+### Phase 2 — backend Go (319 remplacements, 84 fichiers)
+- **E-mails transactionnels** (`transactional_emails.go`, `password_reset_email.go`,
+  `handlers_public_vpn.go`, `handlers_vpn.go`, `handlers_tunnel.go`,
+  `handlers_announcements.go`, `handlers_telegram_pair.go`, `vpnquota_sweep.go`,
+  factures `handlers_billing_client.go`) : toutes les surfaces « MikCloud » /
+  « MikTunnel (by MikCloud · …) » deviennent **403Shield (powered by FTech CI)**
+  — titres, corps texte+HTML, signatures, alt de logos, rapports quotidiens,
+  messages du bot Telegram. La consigne de fichier des e-mails VPN passe de
+  `mikcloud.conf`/`miktunnel.conf` à **`403shield.conf`** (aucune pièce jointe
+  réelle — nom purement instructionnel), alignée avec la FAQ boutique FR/EN.
+- **Chatbot** (`chatbot.go`) : réponses FR/EN, identité d'assistant, accueil,
+  handoff, clôture, inactivité — 17 remplacements.
+- **Valeurs par défaut & métadonnées** : `PlatformConfig{Name:"403Shield"}`
+  ( défaut GET/PUT), fallbacks `store.go` (tenant seed, libellés de plans
+  « 403Shield … », « Administrateur 403Shield »), émetteur Resend par défaut
+  `403Shield <onboarding@resend.dev>`, émetteur SMTP `From: 403Shield <…>`,
+  libellé de compte « 403Shield (vente directe B2C) », `issuer` TOTP
+  `403Shield` (les secrets déjà enrôlés restent valides — l'émetteur n'est
+  qu'une étiquette), descriptions GeniusPay « 403Shield VPN / Accès Pro /
+  Abonnement 403Shield », en-têtes d'exports CSV `403shield-*.csv`.
+- **Script d'installation routeur** (`agent.go`, `migrate.go`, `wireguard.go`) :
+  les `:log` RouterOS affichent « 403Shield: … » — le nom du scheduler, les
+  marqueurs `mikcloud-*` et les identifiants lowercase restent INTACTS
+  (renammer le scheduler casserait l'idempotence de l'agent chez les clients
+  installés).
+- **INTACT PAR CONSTRUCTION (honnêteté)** : imports Go `mikcloud/hotspot-api`,
+  env `MIKCLOUD_*`, scheduler RouterOS `mikcloud`, marqueurs `mikcloud-wg/qos/
+  quota/pool-nat/repair`, boundary MIME, sentinelles tests, URLs fonctionnelles
+  `api.mikcloud.ftci.fr`, commentaires historiques `N°xxx` (le script saute
+  toute ligne contenant « N° »), portail captif hotpage (aucune marque visible
+  — branding du tenant + crédit FTCI).
+- **Portes qualité** : `gofmt -l` vide (82 fichiers du commit) · `go vet` OK ·
+  `go build` OK · **`go test ./...` 11/11** (les assertions de tests ont été
+  rebrandées par la même passe — transactional_emails_test, password_reset_test,
+  totp_test, migrate_plans_test, telegram_pair_test…).
+
+### Phase 2 — i18n profond SaaS (frontend, ~320 remplacements, 112 fichiers)
+Dictionnaire applicatif FR/EN complet (settings, sub, tools, routers, ppp,
+platform-vpn, notif, announcements, paywall, homenet…), guides intégrés
+`lib/docs/content/*`, page légale `/legal/confidentialite` (« édité par
+FTech CI »), portail offert `/wifi/[slug]`, composants (wizard vouchers,
+impression, exports…), noms de fichiers d'export `403shield-*`, monogrammes
+docs. Clés localStorage/IndexedDB `mikcloud-*`, marqueurs RouterOS cités,
+`privacy@mikcloud.ftci.fr` (boîte réelle) et URLs API : intacts. Portes :
+lint 0 · tsc 0 · parité FR/EN vérifiée programmatiquement.
+
+### Phase 2 — tunnel-console (sync)
+Liens « 403Shield — site » (vitrine, /pro, footers boutique FR/EN) →
+**https://403shield.ftci.fr** ; FAQ `mikcloud.conf` → `403shield.conf`
+(alignée sur les e-mails backend) ; README mis à jour (CORS N°318, renommage
+du projet Vercel, domaine canonique).
+
+### Phase 2 — renommage des projets Vercel (geste API, sans commit)
+`mikcloud` → **`403shield`** et `miktunnel` → **`403shield-console`**
+(URLs `403shield.vercel.app` / `403shield-console.vercel.app` ; l'alias
+`403shield.vercel.app` reçoit un redirect 301 vers `403shield.ftci.fr` —
+l'ancien `mikcloud.vercel.app` est libéré par le renommage).
+
+### Phase 3 — domaine canonique (geste API + DNS, sans commit)
+1. **Cloudflare** : CNAME `403shield.ftci.fr` → `cname.vercel-dns.com`
+   (DNS only, miroir du schéma `tunnel.ftci.fr`) + TXT `_vercel.ftci.fr`
+   de vérification — posés par le tuteur avec le token de compte fourni.
+2. **Vercel** : domaine `403shield.ftci.fr` attaché au projet frontend,
+   vérifié (TXT propagé instantanément), HTTP 200 + certificat émis.
+3. **301** : `mikcloud.ftci.fr` devient un domaine REDIRECT (301) vers
+   `403shield.ftci.fr` chez Vercel — chemins et query préservés, la chaîne
+   GeniusPay `/vpn?order=MCV-…` suit : `mikcloud.ftci.fr/vpn?order=X` →
+   (301) → `403shield.ftci.fr/vpn?order=X` → (308 vercel.json) →
+   `tunnel.ftci.fr/shop?order=X`. `tunnel.ftci.fr` (console) inchangé — son
+   éventuel déménagement vers `console.403shield.ftci.fr` reste une décision
+   future explicite.
+
+### CORS — workflow paramétrable + dispatch
+`ops-cors-whitelist.yml` accepte désormais une input `origins` (plus de
+commit pour les futures origines) ; dispatch N°318 avec
+`403shield.ftci.fr, 403shield.vercel.app, 403shield-console.vercel.app` :
+backup env + restart conscient du transport + PREUVE CORS par origine
+(non-régression `tunnel.ftci.fr` + `mikcloud.ftci.fr`). Sans ce geste, la
+console servie depuis `403shield.ftci.fr` était CORS-bloquée (fail-closed
+P1 #16) — il a précédé le 301.
+
+### Données DB inchangées (aucun geste requis)
+Aucune migration : les libellés stockés (nom de plateforme, nom de tenant,
+noms de plans) conservent leur valeur d'époque dans les bases existantes —
+les défauts de code et les libellés read-time sont 403Shield ; le
+super-admin peut renommer le tenant/platform name dans la console si souhaité.
+
 ## 2026-10-17 — N°317 — **PIVOT DE MARQUE 403SHIELD : retour à l'Option A (marque unifiée), voie Cloudflare/OVH — site unifié multipage + console renommée, rien du N°316 n'est défait**
 
 ### Décision (propriétaire, à la suite de l'étude N°316 livrée)

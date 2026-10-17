@@ -5,7 +5,7 @@
 // vend tout seul à la première connexion du client, SoldAt tracé par le back).
 //
 // Trois formats :
-// - a4 : grille MikCloud adaptative (a4GridPlan) — découpe au ciseau ;
+// - a4 : grille 403Shield adaptative (a4GridPlan) — découpe au ciseau ;
 // - 58 : tickets thermiques 58 mm — un ticket par rouleau (saut de page) ;
 // - 80 : tickets thermiques 80 mm.
 //

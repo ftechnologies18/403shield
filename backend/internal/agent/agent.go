@@ -277,7 +277,7 @@ func InstallScript(baseURL, token, routerName string, wgDomains ...string) strin
 	urlEsc := rosEscape(strings.TrimRight(baseURL, "/"))
 	tokEsc := rosEscape(token)
 	return `# ============================================================
-# MikCloud — Installation agent  (routeur: ` + safeName + `)
+# 403Shield — Installation agent  (routeur: ` + safeName + `)
 # Coller CE fichier ENTIER dans Terminal (Winbox) — 1 seule fois.
 # Le script s'exécute comme UN SEUL bloc : ne pas le lancer ligne par ligne.
 # ============================================================
@@ -328,7 +328,7 @@ func InstallScript(baseURL, token, routerName string, wgDomains ...string) strin
     :put "   l'alimentation (cold reboot). Le routeur redemarre alors."
     :put "3) Apres redemarrage, recollez CE script complet."
     :put ""
-    :log error "MikCloud: device-mode restreint - /system/device-mode/update scheduler=yes fetch=yes hotspot=yes puis confirmation physique (bouton reset ou cold reboot)"
+    :log error "403Shield: device-mode restreint - /system/device-mode/update scheduler=yes fetch=yes hotspot=yes puis confirmation physique (bouton reset ou cold reboot)"
   } else={
 
     :local ident [/system identity get name]
@@ -339,7 +339,7 @@ func InstallScript(baseURL, token, routerName string, wgDomains ...string) strin
     :do {
       /tool fetch url="` + urlEsc + `/agent/register?token=` + tokEsc + `" http-method=post http-data=("identity=" . [:tostr $ident] . "&model=" . [:tostr $mod] . "&version=" . [:tostr $ver] . "&uptime=" . [:tostr $up]) output=none
     } on-error={
-      :log error "MikCloud: inscription impossible (reseau ou TLS ? RouterOS 7.19+ requis)"
+      :log error "403Shield: inscription impossible (reseau ou TLS ? RouterOS 7.19+ requis)"
     }
 
     :do {
@@ -354,7 +354,7 @@ func InstallScript(baseURL, token, routerName string, wgDomains ...string) strin
           /tool fetch url="` + urlEsc + `/agent/cmd?token=` + tokEsc + `" dst-path="` + ScriptFilename + `"
         } on-error={
           :set fetched "no"
-          :log warning "MikCloud agent: check-in echoue (reseau ou TLS ? RouterOS 7.19+ requis)"
+          :log warning "403Shield agent: check-in echoue (reseau ou TLS ? RouterOS 7.19+ requis)"
         }
         :if ($fetched = "yes") do={
           :delay 2s
@@ -370,12 +370,12 @@ func InstallScript(baseURL, token, routerName string, wgDomains ...string) strin
       :put "Si l'erreur ci-dessus est 'not allowed by device-mode', executez :"
       :put "  /system/device-mode/update scheduler=yes fetch=yes hotspot=yes"
       :put "puis confirmez physiquement (bouton reset ou coupure d'alimentation)."
-      :log error "MikCloud: creation scheduler echouee (device-mode ?)"
+      :log error "403Shield: creation scheduler echouee (device-mode ?)"
     }
 
     :if ($mikAdded = "yes") do={
       :put "MIKCLOUD : agent installe. Prochaine connexion au cloud dans 45 s max."
-      :log info "MikCloud: agent installe, check-in dans 45s"
+      :log info "403Shield: agent installe, check-in dans 45s"
     }
 
     :do {
@@ -385,7 +385,7 @@ func InstallScript(baseURL, token, routerName string, wgDomains ...string) strin
     :do {
       /system scheduler add name="` + WatcherName + `" interval=` + strconv.Itoa(WatcherIntervalSec) + `s start-time=startup on-event="` + rosEscape(watcherOnEvent(urlEsc, tokEsc)) + `"
       :put "MIKCLOUD : veilleur d'invites installe (check-in 20 s quand un invite est sur le portail)."
-      :log info "MikCloud: veilleur d'invites installe"
+      :log info "403Shield: veilleur d'invites installe"
     } on-error={
       :put "MIKCLOUD : veilleur d'invites non installe (le claim reste servi au pas du scheduler principal)."
     }
@@ -397,14 +397,14 @@ func InstallScript(baseURL, token, routerName string, wgDomains ...string) strin
     :do {
       /system scheduler add name="` + QuotaSchedName + `" interval=` + strconv.Itoa(QuotaSchedIntervalSec) + `s start-time=startup on-event="` + rosEscape(quotaTickScript) + `"
       :put "MIKCLOUD : cadenceur de quota installe (bridage des forfaits a quota, tick 20 s)."
-      :log info "MikCloud: cadenceur de quota installe"
+      :log info "403Shield: cadenceur de quota installe"
     } on-error={
       :put "MIKCLOUD : cadenceur de quota non installe (convergence via la commande quota_ensure au check-in)."
     }
 
 ` + walledGardenInstallBlock(wgDomains) + `  }
 } on-error={
-  :log error "MikCloud: erreur pendant l'installation de l'agent"
+  :log error "403Shield: erreur pendant l'installation de l'agent"
 }
 `
 }

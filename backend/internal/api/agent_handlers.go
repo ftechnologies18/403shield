@@ -1,4 +1,4 @@
-// Package api — endpoints de l'agent MikCloud (routeur -> cloud, HTTP-poll sortant).
+// Package api — endpoints de l'agent 403Shield (routeur -> cloud, HTTP-poll sortant).
 //
 // Contrat :
 //
@@ -312,13 +312,13 @@ func (a *API) handleAgentRegister(w http.ResponseWriter, r *http.Request) {
 		a.store.Unlock()
 		log.Printf("agent/register: REFUS conflit identité %q/%q — routeur « %s » déjà porté par « %s » (autre compte)", identL, modL, name, hName)
 		writeErrCode(w, http.StatusConflict, "router_identity_conflict",
-			"Identité de routeur déjà active sur un autre compte — contactez le support MikCloud si vous êtes le propriétaire légitime de cet appareil", nil)
+			"Identité de routeur déjà active sur un autre compte — contactez le support 403Shield si vous êtes le propriétaire légitime de cet appareil", nil)
 		return
 	}
 	// S6 — register sans conflit (re-installation, redémarrage…) : le flag
 	// éventuel d'un conflit précédent est levé.
 	router.IdentityConflict = false
-	a.logActivity(db, router.AccountID, "router", "Routeur «"+router.Name+"» connecté à MikCloud (agent inscrit)")
+	a.logActivity(db, router.AccountID, "router", "Routeur «"+router.Name+"» connecté à 403Shield (agent inscrit)")
 	a.store.Save()
 	name := router.Name
 	a.store.Unlock()

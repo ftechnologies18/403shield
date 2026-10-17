@@ -1,4 +1,4 @@
-// Package api — console plateforme (super-admin MikCloud) : comptes clients,
+// Package api — console plateforme (super-admin 403Shield) : comptes clients,
 // fiche détaillée, gestion d'abonnement, impersonation, suppression.
 //
 // P2 : attribuer / renouveler un plan, marquer payé, consulter la fiche
@@ -428,7 +428,7 @@ func (a *API) handleAdminAccountDelete(w http.ResponseWriter, r *http.Request) {
 	// (hors verrou, best-effort — un échec est journalisé côté serveur).
 	for _, gid := range gpToCancel {
 		go func(gid string) {
-			if _, err := geniusPaySubCancel(gid, true, "Compte MikCloud supprimé"); err != nil {
+			if _, err := geniusPaySubCancel(gid, true, "Compte 403Shield supprimé"); err != nil {
 				log.Printf("[geniuspay] résiliation de l'abonnement %s après suppression de compte : %v", gid, err)
 			}
 		}(gid)
@@ -524,7 +524,7 @@ func dropByString[T any](items []T, v string, field func(T) string) []T {
 
 // handleAdminAccounts — liste tous les comptes SaaS (triés par création
 // décroissante) avec le login de leur propriétaire et des statistiques d'usage.
-// Réservé au rôle « admin » (super-administrateur MikCloud).
+// Réservé au rôle « admin » (super-administrateur 403Shield).
 func (a *API) handleAdminAccounts(w http.ResponseWriter, r *http.Request) {
 	if !isPlatformAdmin(r) {
 		writeErr(w, http.StatusForbidden, "Réservé aux administrateurs de la plateforme")

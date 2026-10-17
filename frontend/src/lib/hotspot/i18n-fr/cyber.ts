@@ -63,7 +63,7 @@ export const frCyber: Record<string, string> = {
     "Ajoutez vos machines une à une (la MAC est derrière le PC) ou importez-les depuis le DHCP de la box.",
   "cyber.empty.routerTitle": "Aucun routeur agent",
   "cyber.empty.routerDesc":
-    "Installez l'agent MikCloud sur la box du cybercafé pour gérer les postes et la pause.",
+    "Installez l'agent 403Shield sur la box du cybercafé pour gérer les postes et la pause.",
   "cyber.noMatch": "Aucun poste ne correspond",
   "cyber.noMatchDesc": "Essayez un autre nom, une IP ou une MAC.",
 

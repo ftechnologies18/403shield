@@ -29,7 +29,7 @@ const (
 	AnnouncementAudienceHomeNet = "homenet" // comptes foyers
 )
 
-// Announcement — une annonce diffusée aux clients MikCloud.
+// Announcement — une annonce diffusée aux clients 403Shield.
 //
 // Vit dans db.Announcements (collection PLATEFORME, pas par compte : une
 // annonce est globale ; sa VISIBILITÉ par compte se calcule à la lecture —

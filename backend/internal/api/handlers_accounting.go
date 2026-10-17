@@ -57,7 +57,7 @@ func (a *API) handleAccountingExport(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=\"mikcloud-comptabilite-%s.csv\"", period))
 	// BOM UTF-8 : Excel reconnaît l'encodage.
 	_, _ = w.Write([]byte{0xEF, 0xBB, 0xBF})
-	_, _ = w.Write([]byte(fmt.Sprintf("MikCloud ; Comptabilite ;%s ;periode=%s\r\n", csvField(tenantName), period)))
+	_, _ = w.Write([]byte(fmt.Sprintf("403Shield ; Comptabilite ;%s ;periode=%s\r\n", csvField(tenantName), period)))
 	_, _ = w.Write([]byte("Periode ;Ventes ;Chiffre d'affaires (FCFA) ;Coût (FCFA) ;Marge (FCFA)\r\n"))
 	type seriesRow struct {
 		Label   string `json:"label"`

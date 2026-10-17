@@ -1,6 +1,6 @@
 // Package api — endpoints console pour le portail captif (N°35-d).
 //
-// Deux endpoints pour la vue « Portail » de la console MikCloud :
+// Deux endpoints pour la vue « Portail » de la console 403Shield :
 //
 //	POST /api/routers/{id}/redeploy-portal — force le re-déploiement du portail
 //	  captif sur le routeur. Vide router.HotspotFilesSig → ensureHotspotFilesLocked

@@ -1,4 +1,4 @@
-// MikCloud Hotspot API — service backend Go (port 4000 par défaut, stdlib uniquement).
+// 403Shield Hotspot API — service backend Go (port 4000 par défaut, stdlib uniquement).
 package main
 
 import (
@@ -163,7 +163,7 @@ func main() {
 		IdleTimeout:       120 * time.Second,
 		MaxHeaderBytes:    1 << 16, // 64 Kio d'en-têtes (largement au-dessus du nominal)
 	}
-	log.Printf("MikCloud Hotspot API en écoute sur le port %s (données : %s)", port, dataDir)
+	log.Printf("403Shield Hotspot API en écoute sur le port %s (données : %s)", port, dataDir)
 	if err := srv.ListenAndServe(); err != nil {
 		log.Fatalf("serveur : %v", err)
 	}

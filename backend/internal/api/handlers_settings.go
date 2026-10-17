@@ -84,7 +84,7 @@ type portalServiceReq struct {
 // portalWhatsappReq — le numéro WhatsApp SUPPORT du portail captif (N°139) :
 // number au format international (chiffres seuls, 8-15 — espaces/+/-/()
 // tolérés en entrée puis retirés) + label d'affichage optionnel (≤ 30 car.).
-// Objet vide (number vide) = numéro retiré → retour au support MikCloud.
+// Objet vide (number vide) = numéro retiré → retour au support 403Shield.
 type portalWhatsappReq struct {
 	Number string `json:"number"`
 	Label  string `json:"label"`
@@ -115,7 +115,7 @@ func (a *API) handleSettingsPut(w http.ResponseWriter, r *http.Request) {
 		// défaut effectif ON — cf. Tenant.JoinButtonEnabled).
 		JoinButton *bool `json:"joinButton"`
 		// Audit purge/résurgence — import automatique des utilisateurs
-		// créés hors MikCloud (nil = inchangé ; défaut effectif ON).
+		// créés hors 403Shield (nil = inchangé ; défaut effectif ON).
 		AutoImportRouterUsers *bool `json:"autoImportRouterUsers"`
 		// N°55 — mode hospitalité du portail captif (cf. model.Tenant) :
 		// style, message de bienvenue, promos produits et liens sociaux.
@@ -134,7 +134,7 @@ func (a *API) handleSettingsPut(w http.ResponseWriter, r *http.Request) {
 		// captif (nil = inchangé ; liste vide = messages par défaut).
 		PortalTicker *[]string `json:"portalTicker"`
 		// N°139 — numéro WhatsApp SUPPORT du portail captif (nil =
-		// inchangé ; number vide = retour au support MikCloud).
+		// inchangé ; number vide = retour au support 403Shield).
 		PortalWhatsapp *portalWhatsappReq `json:"portalWhatsapp"`
 		// N°65 — rétention du journal utilisateurs (30/60/90 j ; nil = inchangé,
 		// défaut effectif 90).
@@ -396,7 +396,7 @@ func (a *API) handleSettingsPut(w http.ResponseWriter, r *http.Request) {
 	}
 	// N°139 — le numéro WhatsApp support arrive déjà sérialisé/validé
 	// ci-dessus (nil = inchangé ; number vide = retour au support
-	// MikCloud — repli historique du template).
+	// 403Shield — repli historique du template).
 	if portalWhatsapp != nil {
 		settings.Tenant.PortalWhatsapp = whatsappJSON
 	}

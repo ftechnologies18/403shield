@@ -311,7 +311,7 @@ export default function PlatformSettingsView() {
           <div className="grid gap-4 lg:grid-cols-2">
             <IdentityCard data={data} onDone={invalidate} />
             <RegisterCard data={data} onDone={invalidate} />
-            {/* N°301 — vitrine B2C MikCloud VPN (vente directe /vpn) : le canal
+            {/* N°301 — vitrine B2C 403Shield VPN (vente directe /vpn) : le canal
                 est opt-in strict — l'exploitant décide de ne pas concurrencer
                 ses revendeurs sans l'avoir choisi. */}
             <PublicVpnShopCard data={data} onDone={invalidate} />
@@ -378,7 +378,7 @@ function IdentityCard({ data, onDone }: { data: PlatformSettingsResponse; onDone
             id="platform-name"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="MikCloud"
+            placeholder="403Shield"
             maxLength={60}
             disabled={mutation.isPending}
           />
@@ -498,7 +498,7 @@ function RegisterCard({ data, onDone }: { data: PlatformSettingsResponse; onDone
   );
 }
 
-/* ─── N°301 — Vitrine B2C MikCloud VPN (vente directe /vpn) ─── */
+/* ─── N°301 — Vitrine B2C 403Shield VPN (vente directe /vpn) ─── */
 function PublicVpnShopCard({ data, onDone }: { data: PlatformSettingsResponse; onDone: () => void }) {
   const { t } = useI18n();
   const [open, setOpen] = useState(data.platform.publicVpnShopEnabled === true);

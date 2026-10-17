@@ -1,4 +1,4 @@
-// Package model — types partagés MikCloud, alignés sur le contrat API (voir worklog.md).
+// Package model — types partagés 403Shield, alignés sur le contrat API (voir worklog.md).
 package model
 
 import (
@@ -63,7 +63,7 @@ type Router struct {
 	// UnknownOnRouter — compteur VOLATIL (non persisté, recalculé à chaque
 	// read_state) d'utilisateurs présents sur le routeur mais inconnus du
 	// cloud. Alimenté par applyReadState : utile quand l'import automatique
-	// est désactivé (les comptes hors MikCloud restent listés ici pour
+	// est désactivé (les comptes hors 403Shield restent listés ici pour
 	// adoption manuelle). omitempty → absent du JSON tant que 0.
 	UnknownOnRouter int    `json:"unknownOnRouter,omitempty"`
 	CreatedAt       string `json:"createdAt"`
@@ -299,7 +299,7 @@ type Router struct {
 	WanIface string `json:"wanIface,omitempty"`
 	// N°103 — capacité ligne DÉCLARÉE par le gérant (bits/s, 0 = non
 	// renseignée) : « Orange CI 110M/20M » pour CE site. Chaque client
-	// MikCloud a un FAI et un forfait différents — JAMAIS de valeur
+	// 403Shield a un FAI et un forfait différents — JAMAIS de valeur
 	// globale. Prime sur la mesure passive (étiquette vs enveloppe
 	// observée : c'est l'étiquette qui borne le burst) ; la mesure
 	// l'affine (une ligne qui ne rend jamais plus de 96M se découvre au
@@ -697,7 +697,7 @@ type Transaction struct {
 const (
 	RoleManager       = "manager"        // gérant : tout le compte SAUF équipe et réglages/billing
 	RoleOwner         = "owner"          // propriétaire du compte : tout, y compris équipe
-	RolePlatformAdmin = "platform_admin" // super-admin MikCloud (multi-comptes)
+	RolePlatformAdmin = "platform_admin" // super-admin 403Shield (multi-comptes)
 )
 
 // Usages de compte SaaS (N°98) — un compte EST hotspot OU homenet, il ne

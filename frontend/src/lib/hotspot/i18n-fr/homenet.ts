@@ -44,13 +44,13 @@ export const frHomeNet: Record<string, string> = {
 
   // N°102 — enseigne « mode agent requis » : des routeurs existent mais
   // aucun en mode agent → l'inventaire (et la pause dîner) ne peut pas vivre.
-  "home.agentHint": "Les appareils du foyer sont découverts par votre box MikroTik connectée à MikCloud en mode agent — l'inventaire et la pause dîner vivent de ses bails DHCP.",
+  "home.agentHint": "Les appareils du foyer sont découverts par votre box MikroTik connectée à 403Shield en mode agent — l'inventaire et la pause dîner vivent de ses bails DHCP.",
   "home.agentHintCta": "Voir mes routeurs",
 
   // Aucun routeur — l'invitation honnête (le reste de la console est vide
   // tant que la box n'est pas connectée : pas de faux zéro).
   "home.empty.title": "Votre maison attend son routeur",
-  "home.empty.desc": "Ajoutez votre box MikroTik : MikCloud surveillera votre réseau, vos appareils et votre protection familiale.",
+  "home.empty.desc": "Ajoutez votre box MikroTik : 403Shield surveillera votre réseau, vos appareils et votre protection familiale.",
   "home.empty.cta": "Ajouter mon routeur",
 
   // — devices (appareils de la maison — N°101 : baux DHCP) —
@@ -101,7 +101,7 @@ export const frHomeNet: Record<string, string> = {
   "devices.empty.title": "Aucun appareil pour l'instant",
   "devices.empty.desc": "Les appareils qui se connectent au WiFi de votre box apparaissent ici automatiquement.",
   "devices.empty.routerTitle": "L'inventaire attend votre box",
-  "devices.empty.routerDesc": "Les appareils sont découverts par votre routeur MikroTik connecté à MikCloud (mode agent).",
+  "devices.empty.routerDesc": "Les appareils sont découverts par votre routeur MikroTik connecté à 403Shield (mode agent).",
   "devices.noMatch": "Aucun appareil ne correspond",
   "devices.noMatchDesc": "Modifiez votre recherche pour retrouver un appareil.",
 };

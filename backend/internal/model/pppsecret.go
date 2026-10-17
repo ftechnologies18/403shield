@@ -59,7 +59,7 @@ const (
 const PppService = "pppoe"
 
 // PppMarker — marqueur de traçabilité du commentaire routeur : TOUT secret
-// créé par MikCloud porte comment="mikcloud-ppp <commentaire>" (pattern
+// créé par 403Shield porte comment="mikcloud-ppp <commentaire>" (pattern
 // mikcloud-wg N°285 / mikcloud-pause N°101 : seuls les objets marqués nous
 // appartiennent, le ménage et l'idempotence s'appuient dessus).
 const PppMarker = "mikcloud-ppp"

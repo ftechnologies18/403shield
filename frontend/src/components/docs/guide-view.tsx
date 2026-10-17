@@ -238,7 +238,7 @@ export function GuideView({ guide }: { guide: Guide }) {
           <Badge variant="secondary" className="font-mono text-[10px]">guide</Badge>
           <span className="font-mono">{guide.id}</span>
         </span>
-        <span>Documentation MikCloud · volet {guide.sectionId === "plateforme" ? "plateforme (privé)" : "exploitant (public)"}</span>
+        <span>Documentation 403Shield · volet {guide.sectionId === "plateforme" ? "plateforme (privé)" : "exploitant (public)"}</span>
       </div>
     </article>
   );

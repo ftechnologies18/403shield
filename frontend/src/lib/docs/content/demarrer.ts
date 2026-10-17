@@ -14,7 +14,7 @@ export const DEMARRER_GUIDES: Guide[] = [
     sectionId: "demarrer",
     vague: "V1",
     quoi:
-      "MikCloud se prend en main depuis un simple navigateur : une vitrine publique (mikcloud.ftci.fr), un écran de connexion, puis une console unique pour toute votre activité WiFi. Votre compte porte un identifiant (ex. « lerobuste »), un rôle (propriétaire = rang 3, gérant = rang 2) et un usage (hotspot ou foyer). Le même compte fonctionne sur ordinateur et sur téléphone — la console est installable comme application (PWA), sans passer par un store.\n\nChaque compte est cloisonné : un gérant nommé par un propriétaire ne voit que le compte de son employeur, jamais les autres établissements de la plateforme.",
+      "403Shield se prend en main depuis un simple navigateur : une vitrine publique (403shield.ftci.fr), un écran de connexion, puis une console unique pour toute votre activité WiFi. Votre compte porte un identifiant (ex. « lerobuste »), un rôle (propriétaire = rang 3, gérant = rang 2) et un usage (hotspot ou foyer). Le même compte fonctionne sur ordinateur et sur téléphone — la console est installable comme application (PWA), sans passer par un store.\n\nChaque compte est cloisonné : un gérant nommé par un propriétaire ne voit que le compte de son employeur, jamais les autres établissements de la plateforme.",
     difference: [
       {
         with: "Le compte revendeur (Mode Vente)",
@@ -36,18 +36,18 @@ export const DEMARRER_GUIDES: Guide[] = [
       "Un identifiant + mot de passe personnels (le mot de passe est haché côté serveur ; en cas d'oubli, un lien de réinitialisation part par e-mail, valable une fois).",
       "L'option 2FA (TOTP, application type Google Authenticator) dans Paramètres → Sécurité — recommandée dès que le compte gère de l'argent.",
       "Une console bilingue français / anglais (bascule dans le menu profil), thème jour / nuit, et une recherche universelle (⌘K / Ctrl+K).",
-      "Une PWA : « Installer » depuis Chrome mobile ajoute MikCloud à votre écran d'accueil, avec fonctionnement hors-ligne dégradé pour les vues déjà consultées.",
+      "Une PWA : « Installer » depuis Chrome mobile ajoute 403Shield à votre écran d'accueil, avec fonctionnement hors-ligne dégradé pour les vues déjà consultées.",
     ],
     etapes: [
       {
         title: "Créer le compte depuis la vitrine",
         body:
-          "Ouvrez mikcloud.ftci.fr puis « Créer mon compte ». Renseignez le nom de votre établissement (c'est lui qui s'affichera sur le portail captif par défaut), votre pays et votre devise (FCFA pour la Côte d'Ivoire). L'inscription est protégée contre les abus (limiteur anti-spam côté serveur).\n\nUn compte d'essai démarre immédiatement : vous pouvez brancher un routeur et vendre avant même de souscrire.",
+          "Ouvrez 403shield.ftci.fr puis « Créer mon compte ». Renseignez le nom de votre établissement (c'est lui qui s'affichera sur le portail captif par défaut), votre pays et votre devise (FCFA pour la Côte d'Ivoire). L'inscription est protégée contre les abus (limiteur anti-spam côté serveur).\n\nUn compte d'essai démarre immédiatement : vous pouvez brancher un routeur et vendre avant même de souscrire.",
         capture: cap(
           "demarrer/landing.png",
           1440,
           900,
-          "Vitrine publique MikCloud avec bouton « Se connecter » et « Créer mon compte »",
+          "Vitrine publique 403Shield avec bouton « Se connecter » et « Créer mon compte »",
           "La vitrine publique — point d'entrée du compte.",
         ),
       },
@@ -59,7 +59,7 @@ export const DEMARRER_GUIDES: Guide[] = [
           "demarrer/login.png",
           1440,
           900,
-          "Écran de connexion MikCloud : identifiant, mot de passe, mot de passe oublié, créer mon compte",
+          "Écran de connexion 403Shield : identifiant, mot de passe, mot de passe oublié, créer mon compte",
           "L'écran de connexion — onglets Gérant / Revendeur (PIN).",
         ),
       },
@@ -71,7 +71,7 @@ export const DEMARRER_GUIDES: Guide[] = [
           "demarrer/profile-menu.png",
           1440,
           900,
-          "Console MikCloud avec le menu profil ouvert en bas de la barre latérale : Profil, Paramètres, langue, déconnexion",
+          "Console 403Shield avec le menu profil ouvert en bas de la barre latérale : Profil, Paramètres, langue, déconnexion",
           "Le menu profil — actions de compte de la console.",
         ),
       },
@@ -91,12 +91,12 @@ export const DEMARRER_GUIDES: Guide[] = [
       {
         title: "Installez la console sur votre téléphone (PWA)",
         body:
-          "Depuis Chrome mobile sur mikcloud.ftci.fr, acceptez la bannière « Installer » (ou menu ⋮ → « Installer l'application »). MikCloud s'ouvre alors plein écran depuis l'écran d'accueil, avec les vues récemment consultées disponibles hors-ligne — précieux quand la 4G vacille.",
+          "Depuis Chrome mobile sur 403shield.ftci.fr, acceptez la bannière « Installer » (ou menu ⋮ → « Installer l'application »). 403Shield s'ouvre alors plein écran depuis l'écran d'accueil, avec les vues récemment consultées disponibles hors-ligne — précieux quand la 4G vacille.",
         capture: cap(
           "annexes/mobile-login.png",
           390,
           844,
-          "Écran de connexion MikCloud sur téléphone mobile",
+          "Écran de connexion 403Shield sur téléphone mobile",
           "La console sur mobile — même compte, même données.",
         ),
       },
@@ -123,7 +123,7 @@ export const DEMARRER_GUIDES: Guide[] = [
       {
         title: "2FA et changement de téléphone",
         body:
-          "Activez la 2FA seulement si vous gardez accès à votre e-mail : en cas de perte du téléphone TOTP, c'est la seule voie de secours. Les codes de secours permanents ne sont pas stockés côté MikCloud.",
+          "Activez la 2FA seulement si vous gardez accès à votre e-mail : en cas de perte du téléphone TOTP, c'est la seule voie de secours. Les codes de secours permanents ne sont pas stockés côté 403Shield.",
         severity: "warn",
       },
       {
@@ -154,14 +154,14 @@ export const DEMARRER_GUIDES: Guide[] = [
     id: "connecter-routeur-agent",
     title: "Connecter votre premier routeur MikroTik (mode Agent)",
     summary:
-      "Aucune adresse IP publique, aucun port à ouvrir : le routeur appelle MikCloud tout seul, toutes les 45 secondes. Derrière l'Internet Orange CI, en CGNAT ou en Starlink, l'installation tient en 30 secondes.",
+      "Aucune adresse IP publique, aucun port à ouvrir : le routeur appelle 403Shield tout seul, toutes les 45 secondes. Derrière l'Internet Orange CI, en CGNAT ou en Starlink, l'installation tient en 30 secondes.",
     roles: "Propriétaire · Gérant",
     minutes: 6,
     updated: "2026-10-12",
     sectionId: "demarrer",
     vague: "V1",
     quoi:
-      "Le « mode Agent » est la façon standard de raccorder un routeur MikroTik à MikCloud : un petit script installé sur le routeur établit la connexion VERS le cloud, uniquement en sortant (HTTPS sortant, TLS vérifié). Le cloud ne se connecte jamais à votre routeur.\n\nLe script survit aux redémarrages (scheduler RouterOS) : débranchez le routeur, il revient « En ligne » tout seul dès que le réseau revient. À chaque check-in (45 s en activité, 240 s en veille — le pas est décidé par le cloud), le routeur remonte son état et reçoit jusqu'à 10 commandes en attente (file FIFO priorisée : actions d'abord, lectures d'état ensuite).",
+      "Le « mode Agent » est la façon standard de raccorder un routeur MikroTik à 403Shield : un petit script installé sur le routeur établit la connexion VERS le cloud, uniquement en sortant (HTTPS sortant, TLS vérifié). Le cloud ne se connecte jamais à votre routeur.\n\nLe script survit aux redémarrages (scheduler RouterOS) : débranchez le routeur, il revient « En ligne » tout seul dès que le réseau revient. À chaque check-in (45 s en activité, 240 s en veille — le pas est décidé par le cloud), le routeur remonte son état et reçoit jusqu'à 10 commandes en attente (file FIFO priorisée : actions d'abord, lectures d'état ensuite).",
     difference: [
       {
         with: "Le mode Réel (LAN)",
@@ -194,12 +194,12 @@ export const DEMARRER_GUIDES: Guide[] = [
       {
         title: "Routeurs → Ajouter un routeur",
         body:
-          "Dans la console, ouvrez Infrastructure → Routeurs puis « Ajouter un routeur ». Choisissez « Agent MikCloud (recommandé) » : seul le nom est requis. Renseignez éventuellement l'URL de connexion hotspot (page de login MikroTik, ex. http://192.168.88.1/login) pour que les QR des vouchers ouvrent la page avec le code pré-rempli.",
+          "Dans la console, ouvrez Infrastructure → Routeurs puis « Ajouter un routeur ». Choisissez « Agent 403Shield (recommandé) » : seul le nom est requis. Renseignez éventuellement l'URL de connexion hotspot (page de login MikroTik, ex. http://192.168.88.1/login) pour que les QR des vouchers ouvrent la page avec le code pré-rempli.",
         capture: cap(
           "infrastructure/router-add.png",
           1440,
           900,
-          "Dialogue « Ajouter un routeur » : nom, mode Agent MikCloud recommandé, URL de connexion hotspot pour les QR codes",
+          "Dialogue « Ajouter un routeur » : nom, mode Agent 403Shield recommandé, URL de connexion hotspot pour les QR codes",
           "Le dialogue de création — mode Agent sélectionné.",
         ),
         tip: "L'URL de connexion peut rester vide : le QR contiendra alors le code en texte clair. Vous pourrez la renseigner plus tard via « Modifier ».",
@@ -219,7 +219,7 @@ export const DEMARRER_GUIDES: Guide[] = [
       {
         title: "Winbox → New Terminal → coller",
         body:
-          "Sur le routeur : ouvrez Winbox, menu New Terminal. Collez le script (clic droit → Paste) et appuyez sur Entrée. L'exécution est silencieuse : le scheduler d'agent est posé, le routeur effectue son premier check-in dans la seconde.\n\nCette étape se fait sur le routeur (Winbox), pas dans MikCloud — comptez 30 secondes en tout.",
+          "Sur le routeur : ouvrez Winbox, menu New Terminal. Collez le script (clic droit → Paste) et appuyez sur Entrée. L'exécution est silencieuse : le scheduler d'agent est posé, le routeur effectue son premier check-in dans la seconde.\n\nCette étape se fait sur le routeur (Winbox), pas dans 403Shield — comptez 30 secondes en tout.",
       },
       {
         title: "Vérifiez « En ligne » dans la console",
@@ -277,7 +277,7 @@ export const DEMARRER_GUIDES: Guide[] = [
         severity: "warn",
       },
       {
-        title: "« Hors ligne » ≠ panne MikCloud",
+        title: "« Hors ligne » ≠ panne 403Shield",
         body:
           "Routeur débranché, coupure Internet ou veille prolongée : il revient « En ligne » tout seul. Vérifiez l'horodatage « vu il y a X s » avant de conclure.",
         severity: "info",
@@ -323,7 +323,7 @@ export const DEMARRER_GUIDES: Guide[] = [
     sectionId: "demarrer",
     vague: "V1",
     quoi:
-      "Vendre une connexion MikCloud, c'est un circuit en 4 temps : un PROFIL (le tarif : durée, vitesse, prix), un LOT de VOUCHERS (les codes-temps imprimables), la CONNEXION du client (il saisit son code sur le portail captif), et la SESSION (sa consommation, visible et contrôlable depuis la console).\n\nL'argent peut être encaissé en espèces au comptoir, par le revendeur en Mode Vente, ou en ligne via la page publique — la comptabilité suit tout.",
+      "Vendre une connexion 403Shield, c'est un circuit en 4 temps : un PROFIL (le tarif : durée, vitesse, prix), un LOT de VOUCHERS (les codes-temps imprimables), la CONNEXION du client (il saisit son code sur le portail captif), et la SESSION (sa consommation, visible et contrôlable depuis la console).\n\nL'argent peut être encaissé en espèces au comptoir, par le revendeur en Mode Vente, ou en ligne via la page publique — la comptabilité suit tout.",
     difference: [
       {
         with: "Le WiFi jetable",

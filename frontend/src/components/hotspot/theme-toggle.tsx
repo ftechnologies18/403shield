@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { useI18n } from "@/lib/hotspot/i18n";
 
 /**
- * Bascule Nuit ☾ / Jour ☀ — identité duale MikCloud « Aurora Emerald ».
+ * Bascule Nuit ☾ / Jour ☀ — identité duale 403Shield « Aurora Emerald ».
  * Rotation douce entre les deux icônes en CSS pur (N°78 : keyframe
  * mik-icon-in — framer-motion hors du bundle initial ; le montage par
  * `key` rejoue l'animation à chaque bascule, la sortie est instantanée) —

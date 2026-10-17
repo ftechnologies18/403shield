@@ -27,9 +27,9 @@ export const ANALYSE_GUIDES: Guide[] = [
           "Le journal (vue Journal) trace les actions/événements bruts ; les rapports les AGRÈGENT en indicateurs. Le journal pour l'investigation, les rapports pour la décision.",
       },
       {
-        with: "La facturation MikCloud",
+        with: "La facturation 403Shield",
         body:
-          "Les rapports mesurent VOTRE chiffre (clients) ; l'abonnement/facturation MikCloud (Paramètres → Abonnement) mesure VOTRE coût d'outil. La marge confronte les deux.",
+          "Les rapports mesurent VOTRE chiffre (clients) ; l'abonnement/facturation 403Shield (Paramètres → Abonnement) mesure VOTRE coût d'outil. La marge confronte les deux.",
       },
     ],
     recoit: [
@@ -170,7 +170,7 @@ export const ANALYSE_GUIDES: Guide[] = [
       {
         with: "Les logs de routeur",
         body:
-          "Les logs RouterOS (System → Logging, vus dans Winbox) sont la mémoire MATERIELLE ; le journal MikCloud est la mémoire MÉTIER (compte, équipe, commerce). Complémentaires.",
+          "Les logs RouterOS (System → Logging, vus dans Winbox) sont la mémoire MATERIELLE ; le journal 403Shield est la mémoire MÉTIER (compte, équipe, commerce). Complémentaires.",
       },
     ],
     recoit: [

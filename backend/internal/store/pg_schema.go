@@ -599,7 +599,7 @@ func (p *PG) ensureSchema() error {
 		`ALTER TABLE wifi_sites ADD COLUMN IF NOT EXISTS wifi_ssid TEXT NOT NULL DEFAULT ''`,
 		`ALTER TABLE wifi_sites ADD COLUMN IF NOT EXISTS wifi_password TEXT NOT NULL DEFAULT ''`,
 		// Audit purge — réglage par compte : import automatique des
-		// utilisateurs créés hors MikCloud (défaut ON — compatibilité).
+		// utilisateurs créés hors 403Shield (défaut ON — compatibilité).
 		`ALTER TABLE settings ADD COLUMN IF NOT EXISTS auto_import_router_users BOOLEAN NOT NULL DEFAULT TRUE`,
 		// N°46 — bouton « S'inscrire » du portail captif, réglage par
 		// compte (défaut ON — compatibilité zéro-migration : les lignes

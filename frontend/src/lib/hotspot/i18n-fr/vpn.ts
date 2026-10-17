@@ -9,7 +9,7 @@ export const frVpn: Record<string, string> = {
   // — Activation du module (opt-in, même doctrine D6 que le Cybercafé) —
   "vpn.activate.title": "Module VPN désactivé",
   "vpn.activate.desc":
-    "Activez le module pour créer des accès VPN WireGuard pour vos clients. Chaque accès sort par votre serveur MikCloud (IP fixe), la vente peut être enregistrée à la caisse, et la révocation coupe le client à chaud — sans toucher aux autres accès.",
+    "Activez le module pour créer des accès VPN WireGuard pour vos clients. Chaque accès sort par votre serveur 403Shield (IP fixe), la vente peut être enregistrée à la caisse, et la révocation coupe le client à chaud — sans toucher aux autres accès.",
   "vpn.activate.cta": "Activer le module",
   "vpn.activate.toast": "Module VPN activé",
   "vpn.deactivate.toast": "Module VPN désactivé (les accès actifs restent en service)",
@@ -82,7 +82,7 @@ export const frVpn: Record<string, string> = {
   "vpn.addWarning":
     "Le trafic du client sort par VOTRE serveur : gardez un œil sur la consommation (sortie ~10 To/mois sur l'offre Always Free) et révoquez les accès dormants.",
   "vpn.addWarning.remote":
-    "La supervision n'ouvre AUCUNE porte vers Internet : le tunnel ne route que le réseau MikCloud (10.8.0.0/24, 10.8.2.0/24). Caméras et NAS : l'accès complet au LAN est désormais livré avec l'Accès Pro MikTunnel (tunnel.ftci.fr/pro).",
+    "La supervision n'ouvre AUCUNE porte vers Internet : le tunnel ne route que le réseau 403Shield (10.8.0.0/24, 10.8.2.0/24). Caméras et NAS : l'accès complet au LAN est désormais livré avec l'Accès Pro 403Shield (tunnel.ftci.fr/pro).",
   "vpn.addCta": "Générer et vendre",
   "vpn.addToast": "Accès VPN créé",
   "vpn.addToast.remote": "Accès distant créé — vos routeurs actifs l'acceptent sous ≤ 45 s",

@@ -6,7 +6,7 @@
 // (provider, police, script). Next.js remplace alors TOUT le document —
 // ce fichier doit donc embarquer ses propres <html>/<body> et ne peut NI
 // compter sur globals.css NI sur les composants UI (la pile est suspecte).
-// Styles inline volontairement minimaux, palette nuit MikCloud, mêmes
+// Styles inline volontairement minimaux, palette nuit 403Shield, mêmes
 // deux sorties que error.tsx (Réessayer / Accueil).
 
 import { useEffect } from "react";

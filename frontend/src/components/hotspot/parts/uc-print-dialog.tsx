@@ -5,7 +5,7 @@
 // normal et tout le reste est masqué ; .no-print cache la barre d'outils).
 //
 // Mode modèle (F2) : si des VoucherTemplates sont fournis, une barre d'outils
-// permet de choisir le modèle (« Ticket standard MikCloud » = rendu historique
+// permet de choisir le modèle (« Ticket standard 403Shield » = rendu historique
 // conservé tel quel) ; l'aperçu est rendu via renderBatch (QR + variables) et le
 // choix est mémorisé dans localStorage("mikcloud-tpl").
 //
@@ -40,7 +40,7 @@ import type { HotspotUser, Profile, VoucherTemplate } from "@/lib/hotspot/types"
 const TPL_STORAGE_KEY = "mikcloud-tpl";
 /** Clé localStorage du dernier lot imprimé (quick print, F12). */
 export const LAST_BATCH_STORAGE_KEY = "mikcloud-last-batch";
-/** Valeur spéciale du Select = rendu historique MikCloud (sans modèle). */
+/** Valeur spéciale du Select = ticket standard 403Shield (rendu historique sans modèle). */
 const TPL_STANDARD = "standard";
 
 interface UcPrintDialogProps {

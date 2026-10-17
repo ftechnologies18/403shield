@@ -7,7 +7,7 @@
 // - liste des modèles (GET /api/templates) : nom, format (A4 / 58 mm / 80 mm),
 //   défaut, taille HTML, actions (éditer, définir par défaut, dupliquer, supprimer) ;
 // - éditeur : nom, format, bodyHtml (font mono) + chips de variables insérées au
-//   curseur + aperçu live (voucher d'exemple, QR réel) + presets MikCloud ;
+//   curseur + aperçu live (voucher d'exemple, QR réel) + presets 403Shield ;
 // - aperçu d'impression sur vouchers d'exemple (UcPrintDialog en mode modèle).
 // Le PageHeader de l'ancienne vue devient une barre d'outils compacte : le hub
 // porte déjà le titre de section, les actions restent accessibles en tête.
@@ -464,7 +464,7 @@ export function TemplatesContent({
     queryFn: () => api<Profile[]>("/api/profiles"),
   });
 
-  const tenantName = settings?.tenant.name || "MikCloud";
+  const tenantName = settings?.tenant.name || "403Shield";
 
   const ctx = useMemo<TemplateRenderContext>(
     () => ({

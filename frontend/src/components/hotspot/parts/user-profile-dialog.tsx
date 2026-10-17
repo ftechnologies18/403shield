@@ -111,7 +111,7 @@ export function UserProfileDialog({ open, onOpenChange }: UserProfileDialogProps
 
         {/* Pied : marque + état de synchronisation */}
         <div className="flex items-center justify-between px-5 py-3">
-          <p className="text-xs text-muted-foreground">MikCloud</p>
+          <p className="text-xs text-muted-foreground">403Shield</p>
           {isFetching ? (
             <Skeleton className="h-3.5 w-28" />
           ) : (

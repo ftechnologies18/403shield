@@ -1,5 +1,5 @@
 // handlers_tunnel_pro_test.go — N°315 — tests de l'ACCÈS PRO + LAN étendu
-// (offre « Pro » de la console MikTunnel, design D-B1).
+// (offre « Pro » de la console 403Shield, design D-B1).
 //
 // Couverture :
 //   - GET /api/tunnel/pro : éligibilité (compte gérant + routeur agent),
@@ -230,7 +230,7 @@ func TestTunnelProOrder(t *testing.T) {
 	rec := httptest.NewRecorder()
 	a.handleTunnelProOrder(rec, tunnelProReq(http.MethodPost, "/api/tunnel/pro/order", claims,
 		`{"planId":"vpn-b2c-month","payMethod":"manual"}`))
-	if rec.Code != http.StatusBadRequest || !strings.Contains(rec.Body.String(), "vitrine MikCloud") {
+	if rec.Code != http.StatusBadRequest || !strings.Contains(rec.Body.String(), "vitrine 403Shield") {
 		t.Fatalf("formule b2c : HTTP %d — %s", rec.Code, rec.Body.String())
 	}
 
@@ -838,7 +838,7 @@ func TestPublicVpnVitrineRefusesProPlan(t *testing.T) {
 		`{"email":"client@example.com","planId":"vpn-pro-month","payMethod":"manual"}`)
 	rec := httptest.NewRecorder()
 	a.handlePublicVpnOrderCreate(rec, req)
-	if rec.Code != http.StatusBadRequest || !strings.Contains(rec.Body.String(), "réservée à la console MikTunnel") {
+	if rec.Code != http.StatusBadRequest || !strings.Contains(rec.Body.String(), "réservée à la console 403Shield") {
 		t.Fatalf("vitrine + formule pro : HTTP %d — %s", rec.Code, rec.Body.String())
 	}
 	st.Lock()

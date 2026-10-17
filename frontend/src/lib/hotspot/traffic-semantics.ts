@@ -1,4 +1,4 @@
-// Sémantique trafic MikCloud — UNE seule source de vérité.
+// Sémantique trafic 403Shield — UNE seule source de vérité.
 //
 // ⚠️ Piège RouterOS (piègement confirmé par la doc officielle
 // https://help.mikrotik.com/docs/spaces/ROS/pages/56459266/HotSpot+-+Captive+portal) :

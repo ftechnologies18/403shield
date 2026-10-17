@@ -657,7 +657,7 @@ export default function SellShell() {
     const text = lines.join("\n");
     try {
       if (navigator.share) {
-        await navigator.share({ title: "MikCloud", text });
+        await navigator.share({ title: "403Shield", text });
       } else {
         await navigator.clipboard.writeText(text);
         toast.success(t("sell.dayReportShared"));
@@ -684,7 +684,7 @@ export default function SellShell() {
         });
     try {
       if (navigator.share) {
-        await navigator.share({ title: "MikCloud", text });
+        await navigator.share({ title: "403Shield", text });
       } else {
         await navigator.clipboard.writeText(text);
         toast.success(t("sell.copied"));

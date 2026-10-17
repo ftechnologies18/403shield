@@ -1,7 +1,7 @@
 "use client";
 
 // Console plateforme — ANNONCES AUX CLIENTS (N°152, super-admin uniquement).
-// Le megaphone du SaaS : diffuser une annonce à tous les comptes MikCloud
+// Le megaphone du SaaS : diffuser une annonce à tous les comptes 403Shield
 // (maintenance, nouveauté, incident) — bandeau dans la console de chaque
 // destinataire + entrée dans sa cloche + e-mail optionnel aux propriétaires.
 // N°165 — DIFFUSION PROGRAMMÉE : « Programmer une date » retarde l'apparition

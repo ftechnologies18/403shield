@@ -17,7 +17,7 @@ export const enProtection: Record<string, string> = {
   "protection.openRouters": "Add a router",
   "protection.selectRouter": "Router",
   "protection.ofModules": "{n}/4 protections active",
-  "protection.agentHint": "Protections require an agent-mode router — ask for the MikCloud script to be reinstalled on this site.",
+  "protection.agentHint": "Protections require an agent-mode router — ask for the 403Shield script to be reinstalled on this site.",
   "protection.openRouter": "Open router details",
   "protection.summary.title": "WiFi protection",
   "protection.summary.desc": "Dangerous sites, anti-hacking, curfew and VPN blocker are now managed from the Protection view.",

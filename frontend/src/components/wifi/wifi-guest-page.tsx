@@ -493,7 +493,7 @@ export function WifiGuestPage({ slug }: { slug: string }) {
       )}
 
       <p className="mt-6 text-center text-[11px] text-white/50">
-        Propulsé par MikCloud — WiFi jetable pour restaurants, cafés, salons et maquis.
+        Propulsé par 403Shield — WiFi jetable pour restaurants, cafés, salons et maquis.
       </p>
     </WifiFrame>
   );

@@ -773,7 +773,7 @@ function NotificationsForm({ initial }: { initial: NotifSettings }) {
                     <Label htmlFor="resend-from">{t("notif.resendFrom")}</Label>
                     <Input
                       id="resend-from"
-                      placeholder="MikCloud <alertes@mondomaine.ci>"
+                      placeholder="403Shield <alertes@mondomaine.ci>"
                       value={form.resendFrom}
                       onChange={(e) => setForm((f) => ({ ...f, resendFrom: e.target.value }))}
                     />

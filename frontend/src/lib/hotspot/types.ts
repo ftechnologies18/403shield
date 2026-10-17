@@ -1,4 +1,4 @@
-// Types partagés MikCloud — alignés sur le contrat API Go (voir worklog.md)
+// Types partagés 403Shield — alignés sur le contrat API Go (voir worklog.md)
 
 import type { TeamRole } from "./roles";
 
@@ -374,7 +374,7 @@ export interface BillingRequestsResponse {
   pending: number;
 }
 
-/** Membre de l'équipe plateforme (super-admins MikCloud). */
+/** Membre de l'équipe plateforme (super-admins 403Shield). */
 export interface PlatformTeamMember {
   id: string;
   name: string;
@@ -733,7 +733,7 @@ export interface GenerateVouchersRequest {
   resellerId?: string;
   /** « userpass » (défaut) ou « same » : mot de passe = nom d'utilisateur. */
   userMode?: VoucherUserMode;
-  /** Preset de caractères : "" (MikCloud sûr) | abc | ABC | aBc | 5ab | 5AB | 5aB | num. */
+  /** Preset de caractères : "" (403Shield sûr) | abc | ABC | aBc | 5ab | 5AB | 5aB | num. */
   charset?: string;
   /** Commentaire libre inscrit sur le routeur avec le n° de lot (64 car. max). */
   comment?: string;
@@ -1052,8 +1052,8 @@ export interface PppActiveRow {
 }
 
 /** N°294 — ligne de découverte (GET /api/routers/{id}/ppp/discover) : un
- * secret du routeur vu par LUI-MÊME (créé hors MikCloud — Winbox/Mikhmon).
- * Lecture seule : MikCloud ne modifie pas les secrets découverts. */
+ * secret du routeur vu par LUI-MÊME (créé hors 403Shield — Winbox/Mikhmon).
+ * Lecture seule : 403Shield ne modifie pas les secrets découverts. */
 export interface PppDiscoverRow {
   name: string;
   profile: string;
@@ -1621,7 +1621,7 @@ export interface NotifSettings {
   smtpPassSet: boolean;
   /** Clé API Resend déjà configurée côté serveur (la valeur ne part jamais). */
   resendApiKeySet: boolean;
-  /** Expéditeur Resend — vide → MikCloud <onboarding@resend.dev>. */
+  /** Expéditeur Resend — vide → 403Shield <onboarding@resend.dev>. */
   resendFrom: string;
   emailTo: string;
   // Règles d'alerte
@@ -1699,7 +1699,7 @@ export interface AppSettings {
     /** N°139 : numéro WhatsApp SUPPORT du portail captif — JSON string
      * {"number","label"} : number au format international sans + ni espaces
      * (8-15 chiffres, ex. 2250708091012), label d'affichage optionnel ≤ 30 car.
-     * (défaut = le number brut). Vide = le numéro du support MikCloud
+     * (défaut = le number brut). Vide = le numéro du support 403Shield
      * (repli historique — le support plateforme). */
     portalWhatsapp?: string;
     /** N°56 : clé publique du portail (analytics pré-auth) — 16 hex, générée
@@ -1747,7 +1747,7 @@ export interface AppSettings {
   autoImportRouterUsers?: boolean;
 }
 
-/** Formule d'abonnement MikCloud (catalogue GET /api/plans — segmenté par
+/** Formule d'abonnement 403Shield (catalogue GET /api/plans — segmenté par
  * mode depuis le N°122 : le serveur ne renvoie au compte que les formules
  * de SON usage). */
 export interface SaasPlan {
@@ -1854,7 +1854,7 @@ export interface StripeSubView {
   /** Prochaine échéance (AAAA-MM-JJ) renseignée par GeniusPay. */
   nextBilling?: string;
   lastRenewalAt?: string;
-  /** Abonnement MikCloud du compte (période active). */
+  /** Abonnement 403Shield du compte (période active). */
   subscription?: Pick<Subscription, "planId" | "status" | "periodStart" | "periodEnd">;
 }
 
@@ -2272,7 +2272,7 @@ export interface PlatformSettingsResponse {
     registerOpen: boolean;
     /** true si une clé d'invitation est définie (jamais renvoyée en clair). */
     registerKeySet: boolean;
-    /** N°301 — la vitrine B2C MikCloud VPN (/vpn) est-elle ouverte ? */
+    /** N°301 — la vitrine B2C 403Shield VPN (/vpn) est-elle ouverte ? */
     publicVpnShopEnabled?: boolean;
     /** N°311 — quota mensuel de trafic par peer VPN vendu (Go, rx+tx ; 0 = illimité, défaut 50). */
     wgVpnMonthlyQuotaGb?: number;
@@ -2287,7 +2287,7 @@ export interface PlatformSettingsUpdatePayload {
   registerOpen?: boolean;
   /** Nouvelle clé d'invitation — "" supprime la clé. */
   registerKey?: string;
-  /** N°301 — ouverture/fermeture de la vitrine B2C MikCloud VPN (/vpn). */
+  /** N°301 — ouverture/fermeture de la vitrine B2C 403Shield VPN (/vpn). */
   publicVpnShop?: boolean;
   /** N°311 — quota mensuel VPN (Go ; 0 = illimité, 0–10000). */
   wgVpnMonthlyQuotaGb?: number;

@@ -278,7 +278,7 @@ func (a *API) handleVouchersGenerate(w http.ResponseWriter, r *http.Request) {
 		CodeLength  int    `json:"codeLength"`
 		ResellerID  string `json:"resellerId"`
 		UserMode    string `json:"userMode"`    // N°25 — IGNORÉ (verrou) : toujours "same", voir plus bas
-		Charset     string `json:"charset"`     // preset model.Charset* ("" = MikCloud sûr)
+		Charset     string `json:"charset"`     // preset model.Charset* ("" = 403Shield sûr)
 		Comment     string `json:"comment"`     // commentaire libre inscrit sur le routeur
 		DataQuotaMb *int   `json:"dataQuotaMb"` // nil = hériter du profil · 0 = illimité · >0 = Mo
 		// Parité Mikhmon : Time Limit par lot (limit-uptime, minutes ; 0 =
@@ -1097,7 +1097,7 @@ func (a *API) handleBatchesList(w http.ResponseWriter, r *http.Request) {
 func (a *API) handleBatchesExport(w http.ResponseWriter, r *http.Request) {
 	rows, _ := a.computeBatches(accountScope(r), batchFilterFrom(r))
 	w.Header().Set("Content-Type", "text/csv; charset=utf-8")
-	w.Header().Set("Content-Disposition", "attachment; filename=\"mikcloud-lots.csv\"")
+	w.Header().Set("Content-Disposition", "attachment; filename=\"403shield-lots.csv\"")
 	_, _ = w.Write([]byte{0xEF, 0xBB, 0xBF})
 	_, _ = w.Write([]byte("Lot ;Date ;Statut ;Profil ;Quota Mo ;Site ;Canal ;Revendeur ;Tickets ;En stock ;Vendables ;Utilises ;Expires ;Desactives ;Expirent < 7j ;Valeur stock ;Cout total ;Ecoules 7j ;Dormance j ;Marge en attente ;Possession\r\n"))
 	statusLabels := map[string]string{"stock": "En stock", "consumed": "Epuise", "expired": "Expire", "purged": "Purge"}

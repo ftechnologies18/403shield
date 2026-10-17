@@ -4,7 +4,7 @@
 
 export const frReset: Record<string, string> = {
   "reset.title": "Nouveau mot de passe",
-  "reset.desc": "Choisissez le nouveau mot de passe de votre compte MikCloud.",
+  "reset.desc": "Choisissez le nouveau mot de passe de votre compte 403Shield.",
   "reset.newPassword": "Nouveau mot de passe",
   "reset.confirmPassword": "Confirmer le mot de passe",
   "reset.passwordHint": "10 caractères minimum, absent des mots de passe les plus courants.",
@@ -18,5 +18,5 @@ export const frReset: Record<string, string> = {
   "reset.invalidDesc": "Ce lien de réinitialisation est invalide, a déjà été utilisé ou a expiré (validité d'une heure). Demandez un nouveau lien depuis l'écran de connexion.",
   "reset.requestNew": "Retour à la connexion",
   "reset.loading": "Vérification du lien…",
-  "reset.brand": "Réinitialisation sécurisée — MikCloud",
+  "reset.brand": "Réinitialisation sécurisée — 403Shield",
 };

@@ -18,7 +18,7 @@ export const PLATFORM_SECTION = {
   id: "plateforme",
   title: "Console plateforme (super-admin)",
   description:
-    "Pilotage du service MikCloud : comptes SaaS, flotte de routeurs, offre VPN grossiste, support, facturation et réglages. Réservé aux administrateurs de la plateforme.",
+    "Pilotage du service 403Shield : comptes SaaS, flotte de routeurs, offre VPN grossiste, support, facturation et réglages. Réservé aux administrateurs de la plateforme.",
 };
 
 export const PLATFORM_GUIDES_META: PlatformGuideMeta[] = [

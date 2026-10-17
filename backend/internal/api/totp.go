@@ -125,8 +125,8 @@ func verifyTOTP(secretB32, code string) bool {
 // otpauthURL — URI de pairage standard (saisie manuelle ou QR dans
 // l'authenticator).
 func otpauthURL(secret, username string) string {
-	label := url.PathEscape("MikCloud") + ":" + url.PathEscape(username)
-	return fmt.Sprintf("otpauth://totp/%s?secret=%s&issuer=MikCloud&algorithm=SHA1&digits=6&period=30", label, secret)
+	label := url.PathEscape("403Shield") + ":" + url.PathEscape(username)
+	return fmt.Sprintf("otpauth://totp/%s?secret=%s&issuer=403Shield&algorithm=SHA1&digits=6&period=30", label, secret)
 }
 
 // ---------------------------------------------------------------------------

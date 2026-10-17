@@ -4,34 +4,43 @@ name: ops-cors-whitelist
 # du backend (/etc/mikcloud/mikcloud.env → ALLOWED_ORIGIN, VM source de
 # vérité post-T2 — gel N°244 : aucun redéploiement ne réécrira l'env).
 #
+# N°318 — le workflow devient PARAMÉTRABLE : les origines à ajouter sont
+# passées en input (liste séparée par des virgules) au lieu d'être codées en
+# dur — le rebrand 403Shield a fait émerger 403shield.ftci.fr (site unifié,
+# 301 depuis mikcloud.ftci.fr) et les URLs *.vercel.app renommées ; les
+# prochaines origines n'exigeront plus de commit.
+#
 # CONTEXTE : corsMiddleware (main.go, sécurité P1 #16) est FAIL-CLOSED en
 # production — sans l'origine dans ALLOWED_ORIGIN, AUCUN en-tête
 # Access-Control-Allow-Origin n'est émis et le navigateur bloque la lecture
-# (« Failed to fetch »). La whitelist ne contenait QUE mikcloud.ftci.fr :
-# la console MikTunnel (N°313-315) et la boutique /shop (N°316) n'ont donc
-# JAMAIS pu appeler l'API cross-origin depuis tunnel.ftci.fr — révélé par
-# la vérification navigateur de N°316 (le README tunnel-console parlait de
-# « CORS ouverte » à tort : le commentaire routes.go:674 décrit le MIDDLEWARE
-# wifi public, pas l'API générale).
+# (« Failed to fetch »).
 #
 # Ce que fait ce workflow (workflow_dispatch UNIQUEMENT, idempotent) :
 #   1. lit la ligne ALLOWED_ORIGIN actuelle (URLs PUBLIQUES, écho sans
 #      risque — jamais de DSN ni de clé dans les logs) ;
-#   2. ajoute https://tunnel.ftci.fr et https://miktunnel.vercel.app si
-#      absents (backup horodaté de l'env AVANT modification) ;
+#   2. ajoute chaque origine de l'input si absente (backup horodaté de
+#      l'env AVANT modification) — les entrées obsolètes (ex
+#      miktunnel.vercel.app après renommage du projet Vercel) restent en
+#      place : elles sont inoffensives et les retirer n'apporte rien ;
 #   3. RESTART backend conscient du transport (docker : rm+run de l'image
 #      current pour relire --env-file ; systemd : restart — miroir
 #      deploy-oracle.yml, binaire INTACT) + healthcheck patient (Load ~1 min) ;
 #   4. PREUVE CORS (le juge de paix — run ROUGE sinon) : depuis le runner,
-#      GET /api/public/vpn/offers avec Origin: tunnel.ftci.fr puis
-#      miktunnel.vercel.app DOIT répondre l'en-tête access-control-allow-origin
-#      correspondant ; non-régression : mikcloud.ftci.fr doit rester émis.
+#      GET /api/public/vpn/offers avec Origin: <chaque origine demandée>
+#      DOIT répondre l'en-tête access-control-allow-origin correspondant ;
+#      non-régression : tunnel.ftci.fr et mikcloud.ftci.fr doivent rester
+#      émis.
 #
 # Secrets requis (déjà posés — cf. deploy-oracle.yml) : ORACLE_HOST,
 # ORACLE_USER, ORACLE_SSH_KEY.
 
 on:
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      origins:
+        description: "Origines à ajouter à ALLOWED_ORIGIN (séparées par des virgules, avec https://)"
+        required: false
+        default: "https://403shield.ftci.fr,https://403shield.vercel.app,https://403shield-console.vercel.app"
 
 concurrency:
   group: ops-cors-whitelist
@@ -51,17 +60,18 @@ jobs:
         run: |
           echo "::notice::VM Oracle non raccordée (secret ORACLE_HOST absent) — geste ignoré."
 
-      - name: Ajout des origines MikTunnel + restart backend + preuve différée
+      - name: Ajout des origines demandées + restart backend + healthcheck
         if: env.ORACLE_HOST != ''
         env:
           DEPLOY_USER: ${{ secrets.ORACLE_USER }}
           SSH_KEY: ${{ secrets.ORACLE_SSH_KEY }}
+          ORIGINS: ${{ inputs.origins }}
         run: |
           set -euo pipefail
           install -m 600 /dev/null /tmp/oracle_key
           printf '%s\n' "$SSH_KEY" > /tmp/oracle_key
           SSH_OPTS="-i /tmp/oracle_key -o StrictHostKeyChecking=accept-new -o ConnectTimeout=20"
-          ssh $SSH_OPTS "$DEPLOY_USER@$ORACLE_HOST" bash -s <<'REMOTE'
+          ssh $SSH_OPTS "$DEPLOY_USER@$ORACLE_HOST" "ORIGINS='$ORIGINS' bash -s" <<'REMOTE'
           set -euo pipefail
           ENV_FILE=/etc/mikcloud/mikcloud.env
           echo "── whitelist CORS actuelle ──"
@@ -71,10 +81,11 @@ jobs:
           STAMP=$(date -u +%Y%m%dT%H%M%SZ)
           sudo cp -p "$ENV_FILE" "/etc/mikcloud/mikcloud.env.bak-cors-$STAMP"
           echo "backup: mikcloud.env.bak-cors-$STAMP"
-          # Ajout idempotent des deux origines de la sous-marque.
+          # Ajout idempotent des origines demandées (input N°318).
           NEED_WRITE=0
           NEW_VAL=$(printf '%s' "${CURRENT#ALLOWED_ORIGIN=}")
-          for ORIGIN in https://tunnel.ftci.fr https://miktunnel.vercel.app; do
+          for ORIGIN in $(printf '%s' "$ORIGINS" | tr ',' ' ' | xargs); do
+            [ -n "$ORIGIN" ] || continue
             case ",$NEW_VAL," in
               *",$ORIGIN,"*|"$ORIGIN,"*|*",$ORIGIN"|"$ORIGIN") echo "déjà présent: $ORIGIN";;
               *) NEW_VAL="${NEW_VAL:+$NEW_VAL,}$ORIGIN"; NEED_WRITE=1; echo "à ajouter: $ORIGIN";;
@@ -136,11 +147,15 @@ jobs:
 
       - name: Preuve CORS (le juge de paix — run ROUGE sinon)
         if: env.ORACLE_HOST != ''
+        env:
+          ORIGINS: ${{ inputs.origins }}
         run: |
           set -euo pipefail
           # Laisse le Load initial des tables finir si le healthcheck est passé juste après.
           sleep 5
-          for ORIGIN in https://tunnel.ftci.fr https://miktunnel.vercel.app https://mikcloud.ftci.fr; do
+          # Chaque origine demandée + non-régression des deux origines historiques.
+          PROOF="$(printf '%s' "$ORIGINS" | tr ',' ' ' | xargs) https://tunnel.ftci.fr https://mikcloud.ftci.fr"
+          for ORIGIN in $PROOF; do
             echo "── Origin: $ORIGIN ──"
             HEADER=$(curl -s -D - -o /dev/null --retry 5 --retry-delay 5 \
               -H "Origin: $ORIGIN" https://api.mikcloud.ftci.fr/api/public/vpn/offers \
@@ -149,4 +164,4 @@ jobs:
             test "$HEADER" = "access-control-allow-origin: $ORIGIN" \
               || { echo "ÉCHEC : $ORIGIN non autorisé par la whitelist"; exit 1; }
           done
-          echo "PREUVE CORS OK — tunnel.ftci.fr, miktunnel.vercel.app et mikcloud.ftci.fr (non-régression) émettent l'en-tête."
+          echo "PREUVE CORS OK — origines demandées + tunnel.ftci.fr et mikcloud.ftci.fr (non-régression) émettent l'en-tête."

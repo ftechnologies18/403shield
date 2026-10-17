@@ -49,7 +49,7 @@ func purgeTombSet(db *model.DB, accID string, now time.Time) map[string]bool {
 
 // importAutoEnabled — valeur EFFECTIVE du réglage d'import automatique d'un
 // compte (Settings.AutoImportRouterUsers, nil = ON : comportement historique
-// de découverte des comptes créés hors MikCloud). À appeler sous verrou.
+// de découverte des comptes créés hors 403Shield). À appeler sous verrou.
 func importAutoEnabled(db *model.DB, accID string) bool {
 	if s, ok := db.SettingsByAccount[accID]; ok {
 		return s.ImportAutoEnabled()
@@ -58,7 +58,7 @@ func importAutoEnabled(db *model.DB, accID string) bool {
 }
 
 // liftPurgeTombstone — lève le tombstone d'un (compte, username) : appelé à la
-// CRÉATION VOLONTAIRE d'un utilisateur dans MikCloud. L'opérateur réclame le
+// CRÉATION VOLONTAIRE d'un utilisateur dans 403Shield. L'opérateur réclame le
 // nom : la purge ne doit plus le bloquer, ni côté cloud (recréation) ni côté
 // routeur (la commande user_add doit pouvoir aboutir et être reflétée).
 // À appeler sous verrou.

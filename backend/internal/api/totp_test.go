@@ -81,7 +81,7 @@ func TestTwoFactorFlowE2E(t *testing.T) {
 	if len(secret) != 32 { // 20 octets → base32 sans padding = 32 caractères
 		t.Fatalf("secret inattendu : %q (%d car.)", secret, len(secret))
 	}
-	if !strings.HasPrefix(otpauth, "otpauth://totp/MikCloud:") || !strings.Contains(otpauth, "secret="+secret) {
+	if !strings.HasPrefix(otpauth, "otpauth://totp/403Shield:") || !strings.Contains(otpauth, "secret="+secret) {
 		t.Fatalf("URL otpauth inattendue : %s", otpauth)
 	}
 

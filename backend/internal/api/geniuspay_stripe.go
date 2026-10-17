@@ -200,7 +200,7 @@ func stripeSubNeedsSync(status string) bool {
 	return false
 }
 
-// stripeCycleMonths — période MikCloud couverte par un paiement du cycle
+// stripeCycleMonths — période 403Shield couverte par un paiement du cycle
 // donné. Seuls monthly et yearly sont proposés par l'initiation ; les autres
 // valeurs GeniusPay sont mappées prudemment (1 mois par paiement).
 func stripeCycleMonths(cycle string) int {
@@ -223,7 +223,7 @@ func stripeCycleLabel(cycle string) string {
 }
 
 // stripeSyncMeta — met à jour le statut et/ou la prochaine échéance de la
-// fiche locale (mise à jour informative : la période MikCloud active n'est
+// fiche locale (mise à jour informative : la période 403Shield active n'est
 // PAS modifiée ici). Sous verrou, no-op si rien ne change.
 func (a *API) stripeSyncMeta(id, status, nextBilling string) {
 	status = strings.ToLower(strings.TrimSpace(status))
@@ -275,7 +275,7 @@ func (a *API) stripeSubLookup(id string) (model.GeniusPaySub, bool) {
 	return model.GeniusPaySub{}, false
 }
 
-// applyStripeRenewalByUUID — active/empile la période MikCloud correspondant
+// applyStripeRenewalByUUID — active/empile la période 403Shield correspondant
 // à une facture PAYÉE de l'abonnement carte identifié par son identifiant
 // GeniusPay. Idempotent (paid_at ≤ last_invoice_at → no-op) ; le montant reçu
 // est confronté au montant souscrit (incohérence → refus tracé). Renvoie true
@@ -380,7 +380,7 @@ func (a *API) syncStripeInvoices(id string) int {
 //     NON signé → aucune confiance au payload : re-vérification à la source
 //     (factures réelles GeniusPay) avant application.
 //   - autres (payment_failed, past_due, cancelled, expired, paused, created) :
-//     mise à jour informative de la fiche locale (accès MikCloud inchangé —
+//     mise à jour informative de la fiche locale (accès 403Shield inchangé —
 //     la période active court jusqu'à son terme).
 func (a *API) handleStripeWebhookEvent(w http.ResponseWriter, data *geniusPayWebhookData, signed bool, kind string) {
 	id := ""

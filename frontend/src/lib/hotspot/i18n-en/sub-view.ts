@@ -3,7 +3,7 @@
 // Ne pas importer directement : passer par l'agrégateur (fusion + logique de résolution).
 
 export const enSubView: Record<string, string> = {
-  "subView.description": "Your plan, due dates and invoices — manage your MikCloud subscription in one place.",
+  "subView.description": "Your plan, due dates and invoices — manage your 403Shield subscription in one place.",
   "subView.statusExpired": "Expired",
   "subView.expiresOn": "Due on {date} — in {days} day(s)",
   "subView.expiredHint": "Your subscription has expired — renew below to reactivate all features.",

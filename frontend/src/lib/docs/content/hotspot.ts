@@ -157,7 +157,7 @@ export const HOTSPOT_GUIDES: Guide[] = [
     sectionId: "hotspot",
     vague: "V1",
     quoi:
-      "Hotspot → Profils définit les forfaits vendables : chaque profil porte un nom (1-HEURE, 24-HEURES, 7-JOURES…), un prix en FCFA, une durée, une limite de vitesse (rate-limit) et des options avancées (partage du code, quota volume). Les lots de vouchers se fabriquent TOUJOURS à partir d'un profil.\n\nLe profil est aussi la transcription du « user profile » RouterOS : l'agent MikCloud crée et maintient les profils correspondants sur le routeur — vous ne touchez jamais Winbox pour ça.",
+      "Hotspot → Profils définit les forfaits vendables : chaque profil porte un nom (1-HEURE, 24-HEURES, 7-JOURES…), un prix en FCFA, une durée, une limite de vitesse (rate-limit) et des options avancées (partage du code, quota volume). Les lots de vouchers se fabriquent TOUJOURS à partir d'un profil.\n\nLe profil est aussi la transcription du « user profile » RouterOS : l'agent 403Shield crée et maintient les profils correspondants sur le routeur — vous ne touchez jamais Winbox pour ça.",
     difference: [
       {
         with: "Un lot de vouchers",
@@ -167,7 +167,7 @@ export const HOTSPOT_GUIDES: Guide[] = [
       {
         with: "Les formules d'abonnement SaaS",
         body:
-          "Les profils concernent vos CLIENTS WiFi ; les formules (Paramètres → Abonnement) concernent VOTRE abonnement MikCloud. Deux mondes tarifaires.",
+          "Les profils concernent vos CLIENTS WiFi ; les formules (Paramètres → Abonnement) concernent VOTRE abonnement 403Shield. Deux mondes tarifaires.",
       },
       {
         with: "Le profil PPPoE",
@@ -272,7 +272,7 @@ export const HOTSPOT_GUIDES: Guide[] = [
     sectionId: "hotspot",
     vague: "V2",
     quoi:
-      "Le module Cybercafé (Hotspot → Cybercafé) transforme MikCloud en caisse de cybercafé : chaque poste (machine câblée du local) est déclaré, les sessions se vendent par code-temps (même moteur de profils/vouchers), et la caisse suit encaissements et temps vendus par poste.\n\nC'est un module payant activable (bouton d'activation sur la vue quand il est éteint — voir la capture) : l'activation se fait depuis la console et prend effet immédiatement.",
+      "Le module Cybercafé (Hotspot → Cybercafé) transforme 403Shield en caisse de cybercafé : chaque poste (machine câblée du local) est déclaré, les sessions se vendent par code-temps (même moteur de profils/vouchers), et la caisse suit encaissements et temps vendus par poste.\n\nC'est un module payant activable (bouton d'activation sur la vue quand il est éteint — voir la capture) : l'activation se fait depuis la console et prend effet immédiatement.",
     difference: [
       {
         with: "Le hotspot WiFi",
@@ -459,7 +459,7 @@ export const HOTSPOT_GUIDES: Guide[] = [
     faq: [
       {
         q: "Faut-il un serveur dédié ?",
-        a: "Non : le VPN tourne sur l'infrastructure MikCloud (wg-mini). Votre console administre les peers ; aucune machine à votre charge.",
+        a: "Non : le VPN tourne sur l'infrastructure 403Shield (wg-mini). Votre console administre les peers ; aucune machine à votre charge.",
       },
       {
         q: "Un client perd son QR ?",
@@ -473,7 +473,7 @@ export const HOTSPOT_GUIDES: Guide[] = [
     id: "pppoe",
     title: "Abonnés PPPoE (console WISP)",
     summary:
-      "Le segment FAI/WISP de MikCloud : abonnés fixes avec identifiants permanents, sessions, découverte des secrets — pour vendre de la connectivité au mois.",
+      "Le segment FAI/WISP de 403Shield : abonnés fixes avec identifiants permanents, sessions, découverte des secrets — pour vendre de la connectivité au mois.",
     roles: "Propriétaire · Gérant",
     minutes: 5,
     updated: "2026-10-12",

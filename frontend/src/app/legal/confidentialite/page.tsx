@@ -37,9 +37,9 @@ import { FtciCredit } from "@/components/ftci-credit";
 // évolution du registre doit être répercutée ici dans le même commit.
 
 export const metadata: Metadata = {
-  title: "Politique de confidentialité — MikCloud",
+  title: "Politique de confidentialité — 403Shield",
   description:
-    "Traitement des données personnelles MikCloud (loi ivoirienne n° 2013-450, ARTCI/CDP) : finalités, durées de conservation, sous-traitants, mesures de sécurité et droits des personnes.",
+    "Traitement des données personnelles 403Shield (loi ivoirienne n° 2013-450, ARTCI/CDP) : finalités, durées de conservation, sous-traitants, mesures de sécurité et droits des personnes.",
   keywords: ["confidentialité", "données personnelles", "2013-450", "ARTCI", "CDP", "RGPD"],
 };
 
@@ -70,7 +70,7 @@ export default function LegalConfidentialityPage() {
           <Link
             href="/"
             className="flex items-center gap-2.5 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            aria-label="MikCloud — retour à l'accueil"
+            aria-label="403Shield — retour à l'accueil"
           >
             <Image
               src="/logo.png"
@@ -79,7 +79,7 @@ export default function LegalConfidentialityPage() {
               height={36}
               className="rounded-lg shadow-md shadow-primary/20"
             />
-            <span className="text-base font-bold">MikCloud</span>
+            <span className="text-base font-bold">403Shield</span>
           </Link>
           <Link
             href="/"
@@ -111,8 +111,8 @@ export default function LegalConfidentialityPage() {
           <Card className="mt-6 border-primary/20 bg-primary/5">
             <CardContent className="space-y-3 p-5 text-sm leading-relaxed">
               <p>
-                <strong className="font-semibold">MikCloud</strong> est un service de gestion de
-                hotspots MikroTik exploité par{" "}
+                <strong className="font-semibold">403Shield</strong> est un service de gestion de
+                hotspots MikroTik édité par{" "}
                 <strong className="font-semibold">
                   FTCI — Freelance Technologies Côte d&rsquo;Ivoire
                 </strong>{" "}
@@ -267,7 +267,7 @@ export default function LegalConfidentialityPage() {
                   <TableCell className="font-medium">Wave, GeniusPay</TableCell>
                   <TableCell>Passerelles de paiement</TableCell>
                   <TableCell>—</TableCell>
-                  <TableCell>Aucune donnée carte ne transite par MikCloud</TableCell>
+                  <TableCell>Aucune donnée carte ne transite par 403Shield</TableCell>
                 </TableRow>
               </TableBody>
             </Table>
@@ -347,7 +347,7 @@ export default function LegalConfidentialityPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-40">Droit</TableHead>
-                  <TableHead>Mise en œuvre par MikCloud</TableHead>
+                  <TableHead>Mise en œuvre par 403Shield</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody className="text-sm">

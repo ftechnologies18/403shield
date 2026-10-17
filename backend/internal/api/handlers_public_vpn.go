@@ -70,7 +70,7 @@ func (a *API) handlePublicVpnOffers(w http.ResponseWriter, r *http.Request) {
 	for i := range model.PublicVpnPlans {
 		p := model.PublicVpnPlans[i]
 		// N°315 — la vitrine /vpn ne montre QUE la famille b2c : les
-		// formules Pro vivent dans la console MikTunnel (canal et
+		// formules Pro vivent dans la console 403Shield (canal et
 		// famille verrouillés aux deux bords — doctrine N°301).
 		if p.Family != model.PublicVpnPlanFamilyB2C {
 			continue
@@ -131,11 +131,11 @@ func (a *API) handlePublicVpnOrderCreate(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	// N°315 — garde de FAMILLE : les formules Pro (Accès MikTunnel) ne se
-	// vendent QUE depuis la console MikTunnel (elle exige l'appariement au
+	// vendent QUE depuis la console 403Shield (elle exige l'appariement au
 	// compte gérant) — la vitrine reste fulltunnel b2c exclusivement.
 	if plan.Family != model.PublicVpnPlanFamilyB2C {
 		writeErrCode(w, http.StatusBadRequest, "plan_not_for_vitrine",
-			"Cette formule est réservée à la console MikTunnel (Accès Pro — tunnel.ftci.fr)", nil)
+			"Cette formule est réservée à la console 403Shield (Accès Pro — tunnel.ftci.fr)", nil)
 		return
 	}
 	payMethod := strings.ToLower(strings.TrimSpace(req.PayMethod))
@@ -155,7 +155,7 @@ func (a *API) handlePublicVpnOrderCreate(w http.ResponseWriter, r *http.Request)
 	if !(settings.Platform != nil && settings.Platform.PublicVpnShopEnabled()) {
 		a.store.Unlock()
 		writeErrCode(w, http.StatusForbidden, "shop_disabled",
-			"La vente directe MikCloud VPN n'est pas ouverte pour le moment", nil)
+			"La vente directe 403Shield VPN n'est pas ouverte pour le moment", nil)
 		return
 	}
 	if pending := model.PublicVpnOrderPendingForEmail(db, email); pending != nil {
@@ -207,7 +207,7 @@ func (a *API) handlePublicVpnOrderCreate(w http.ResponseWriter, r *http.Request)
 		payload := geniusPayCreateReq{
 			Amount:        amount,
 			PaymentMethod: payMethod,
-			Description:   fmt.Sprintf("MikTunnel VPN %s (%s) — réf %s", plan.Label, plan.PeriodLabel, order.Ref),
+			Description:   fmt.Sprintf("403Shield VPN %s (%s) — réf %s", plan.Label, plan.PeriodLabel, order.Ref),
 			Customer:      &geniusPayCustomer{Name: buyerNameOf(email), Email: email, Phone: phone},
 			Metadata:      map[string]string{"ref": order.Ref, "plan_id": plan.ID},
 		}
@@ -802,28 +802,28 @@ func removeVpnPeerByID(peers []model.VpnPeer, id string) []model.VpnPeer {
 // publicVpnEmailBodies — texte + HTML de la conf livrée (produit = la conf ;
 // instructions minimales, discipline vpnDeliveryBody N°291).
 func publicVpnEmailBodies(order model.PublicVpnOrder, peer model.VpnPeer, conf string) (title, textBody, htmlBody string) {
-	title = "MikTunnel — Votre VPN WireGuard est prêt (" + order.Ref + ")"
+	title = "403Shield — Votre VPN WireGuard est prêt (" + order.Ref + ")"
 	var sb strings.Builder
-	sb.WriteString("MikTunnel — Votre accès VPN WireGuard (by MikCloud)\n\n")
+	sb.WriteString("403Shield — Votre accès VPN WireGuard\n\n")
 	sb.WriteString("Commande : " + order.Ref + "\n")
 	if plan := model.ResolvePublicVpnPlan(order.PlanID); plan != nil {
 		sb.WriteString("Formule : " + plan.Label + " (" + plan.PeriodLabel + ")\n")
 	}
 	sb.WriteString("Valide jusqu'au : " + order.ExpiresAt + "\n\n")
 	sb.WriteString("1. Installez l'application WireGuard (App Store / Google Play / wireguard.com/install).\n")
-	sb.WriteString("2. Dans WireGuard : « + » → « Créer depuis un QR code » est impossible ici : choisissez « Créer à partir d'un tunnel vide »… ou plus simple — collez la configuration ci-dessous via « + » → « Importer depuis un fichier » après l'avoir enregistrée en mikcloud.conf.\n")
-	sb.WriteString("3. Activez le tunnel : votre trafic sort alors par MikTunnel (IP fixe France).\n\n")
-	sb.WriteString("Gardez cette référence (" + order.Ref + ") : elle permet de récupérer votre configuration sur la boutique MikTunnel — " + tunnelPublicBaseURL() + "/shop (section « Récupérer ma configuration »).\n\n")
+	sb.WriteString("2. Dans WireGuard : « + » → « Créer depuis un QR code » est impossible ici : choisissez « Créer à partir d'un tunnel vide »… ou plus simple — collez la configuration ci-dessous via « + » → « Importer depuis un fichier » après l'avoir enregistrée en 403shield.conf.\n")
+	sb.WriteString("3. Activez le tunnel : votre trafic sort alors par 403Shield (IP fixe France).\n\n")
+	sb.WriteString("Gardez cette référence (" + order.Ref + ") : elle permet de récupérer votre configuration sur la boutique 403Shield — " + tunnelPublicBaseURL() + "/shop (section « Récupérer ma configuration »).\n\n")
 	sb.WriteString(conf)
 	textBody = sb.String()
 
-	htmlBody = "<p>Votre accès VPN WireGuard <b>MikTunnel</b> (by MikCloud) est prêt.</p>" +
+	htmlBody = "<p>Votre accès VPN WireGuard <b>403Shield</b> est prêt.</p>" +
 		"<p><b>Commande</b> : " + html.EscapeString(order.Ref) + " — <b>valide jusqu'au</b> " + html.EscapeString(order.ExpiresAt) + "</p>" +
 		"<p>1. Installez l'application <b>WireGuard</b> (App Store / Google Play / <a href=\"https://www.wireguard.com/install/\">wireguard.com/install</a>).<br>" +
-		"2. Enregistrez la configuration ci-dessous dans un fichier <b>mikcloud.conf</b>, puis dans WireGuard : « + » → « Importer depuis un fichier ».<br>" +
-		"3. Activez le tunnel : votre trafic sort par MikTunnel (IP fixe France).</p>" +
+		"2. Enregistrez la configuration ci-dessous dans un fichier <b>403shield.conf</b>, puis dans WireGuard : « + » → « Importer depuis un fichier ».<br>" +
+		"3. Activez le tunnel : votre trafic sort par 403Shield (IP fixe France).</p>" +
 		"<pre style=\"white-space:pre-wrap;background:#f5f5f5;padding:12px;border-radius:8px\">" + html.EscapeString(conf) + "</pre>" +
-		"<p style=\"color:#888;font-size:12px\">Gardez votre référence " + html.EscapeString(order.Ref) + " : elle permet de récupérer cette configuration sur la <a href=\"" + tunnelPublicBaseURL() + "/shop\">boutique MikTunnel</a> (rubrique « Récupérer ma configuration »). Gardez cette configuration secrète : elle donne un accès complet.</p>"
+		"<p style=\"color:#888;font-size:12px\">Gardez votre référence " + html.EscapeString(order.Ref) + " : elle permet de récupérer cette configuration sur la <a href=\"" + tunnelPublicBaseURL() + "/shop\">boutique 403Shield</a> (rubrique « Récupérer ma configuration »). Gardez cette configuration secrète : elle donne un accès complet.</p>"
 	return title, textBody, htmlBody
 }
 
@@ -833,18 +833,18 @@ func publicVpnEmailBodies(order model.PublicVpnOrder, peer model.VpnPeer, conf s
 
 // publicVpnProEmailBodies — texte + HTML de la conf Pro livrée : le produit
 // est la conf (supervision des routeurs + LAN étendu si déjà appliqué —
-// sinon la consigne honnête d'activation dans l'espace MikTunnel), jamais un
+// sinon la consigne honnête d'activation dans l'espace 403Shield), jamais un
 // fulltunnel déguisé. Instructions calquées sur vpnDeliveryBody remote
 // (import WireGuard, périmètre de routage dit HONNÊTE).
 func publicVpnProEmailBodies(order model.PublicVpnOrder, peer model.VpnPeer, conf string) (title, textBody, htmlBody string) {
-	title = "MikTunnel — Votre Accès Pro est prêt (" + order.Ref + ")"
+	title = "403Shield — Votre Accès Pro est prêt (" + order.Ref + ")"
 	lanExtended := strings.Contains(conf, "AllowedIPs = 10.8.0.0/24, 10.8.2.0/24, ")
 	perimeter := "vos routeurs MikroTik (segment tunnel 10.8.0.0/24 + votre accès 10.8.2.0/24)"
 	if lanExtended {
 		perimeter = "vos routeurs MikroTik ET votre réseau local derrière eux (caméras, NAS — cf. AllowedIPs de la configuration)"
 	}
 	var sb strings.Builder
-	sb.WriteString("MikTunnel — Votre Accès Pro (powered by FTech CI)\n\n")
+	sb.WriteString("403Shield — Votre Accès Pro (powered by FTech CI)\n\n")
 	sb.WriteString("Commande : " + order.Ref + "\n")
 	if plan := model.ResolvePublicVpnPlan(order.PlanID); plan != nil {
 		sb.WriteString("Formule : " + plan.Label + " (" + plan.PeriodLabel + ")\n")
@@ -853,30 +853,30 @@ func publicVpnProEmailBodies(order model.PublicVpnOrder, peer model.VpnPeer, con
 	sb.WriteString("Adresse tunnel de cet appareil : " + peer.IPv4 + "\n\n")
 	sb.WriteString("Cet accès PRO supervise " + perimeter + ".\n")
 	if !lanExtended {
-		sb.WriteString("Le LAN étendu (caméras/NAS) s'active en un clic dans votre espace MikTunnel :\n")
+		sb.WriteString("Le LAN étendu (caméras/NAS) s'active en un clic dans votre espace 403Shield :\n")
 		sb.WriteString("tunnel.ftci.fr → connexion par code → page « Accès Pro » → « Étendre au LAN ».\n\n")
 	}
 	sb.WriteString("1. Installez l'application WireGuard (App Store / Google Play / wireguard.com/install).\n")
-	sb.WriteString("2. Enregistrez la configuration ci-dessous dans un fichier miktunnel.conf, puis dans WireGuard : « + » → « Importer depuis un fichier ».\n")
+	sb.WriteString("2. Enregistrez la configuration ci-dessous dans un fichier 403shield.conf, puis dans WireGuard : « + » → « Importer depuis un fichier ».\n")
 	sb.WriteString("3. Activez le tunnel : vos routeurs deviennent joignables (Winbox : http://" + peer.IPv4 + " reste votre propre adresse — vos routeurs répondent sur 10.8.0.x).\n\n")
 	sb.WriteString("Le tunnel ne route RIEN d'autre — ni votre navigation Internet, ni votre DNS : supervision et LAN de VOS équipements, rien de plus.\n\n")
-	sb.WriteString("Gardez cette référence (" + order.Ref + ") et votre espace MikTunnel (tunnel.ftci.fr) : configuration récupérable à tout moment, renouvellement en un clic.\n\n")
+	sb.WriteString("Gardez cette référence (" + order.Ref + ") et votre espace 403Shield (tunnel.ftci.fr) : configuration récupérable à tout moment, renouvellement en un clic.\n\n")
 	sb.WriteString(conf)
 	textBody = sb.String()
 
 	htmlBody = "<div style=\"font-family:system-ui,Segoe UI,Arial,sans-serif;max-width:480px;margin:0 auto;padding:24px\">" +
-		"<h2 style=\"color:#0f766e;margin:0 0 16px\">MikTunnel — Accès Pro prêt</h2>" +
+		"<h2 style=\"color:#0f766e;margin:0 0 16px\">403Shield — Accès Pro prêt</h2>" +
 		"<p style=\"color:#334155;font-size:15px\">Commande <code>" + html.EscapeString(order.Ref) + "</code> — <b>valide jusqu'au</b> " + html.EscapeString(order.ExpiresAt) + "</p>" +
 		"<p style=\"color:#0f172a;font-size:15px\">Cet accès supervise <b>" + html.EscapeString(perimeter) + "</b>.</p>"
 	if !lanExtended {
-		htmlBody += "<p style=\"color:#334155;font-size:14px\">Le LAN étendu (caméras/NAS) s'active en un clic dans votre <a href=\"https://tunnel.ftci.fr/pro\">espace MikTunnel</a> (page « Accès Pro » → « Étendre au LAN »).</p>"
+		htmlBody += "<p style=\"color:#334155;font-size:14px\">Le LAN étendu (caméras/NAS) s'active en un clic dans votre <a href=\"https://tunnel.ftci.fr/pro\">espace 403Shield</a> (page « Accès Pro » → « Étendre au LAN »).</p>"
 	}
 	htmlBody += "<p style=\"color:#334155;font-size:14px\">1. Installez <b>WireGuard</b> (App Store / Google Play / <a href=\"https://www.wireguard.com/install/\">wireguard.com</a>).<br>" +
-		"2. Enregistrez la configuration ci-dessous en <b>miktunnel.conf</b>, puis « + » → « Importer depuis un fichier ».<br>" +
+		"2. Enregistrez la configuration ci-dessous en <b>403shield.conf</b>, puis « + » → « Importer depuis un fichier ».<br>" +
 		"3. Activez le tunnel.</p>" +
 		"<pre style=\"white-space:pre-wrap;background:#f5f5f5;padding:12px;border-radius:8px\">" + html.EscapeString(conf) + "</pre>" +
 		"<p style=\"color:#64748b;font-size:13px\">Le tunnel ne route rien d'autre — ni votre navigation, ni votre DNS : supervision et LAN de vos équipements, rien de plus.</p>" +
-		"<p style=\"color:#94a3b8;font-size:12px\">— MikTunnel (powered by FTech CI)</p></div>"
+		"<p style=\"color:#94a3b8;font-size:12px\">— 403Shield (powered by FTech CI)</p></div>"
 	return title, textBody, htmlBody
 }
 
@@ -972,19 +972,19 @@ func publicVpnRenewEmailBodies(renewal, target model.PublicVpnOrder) (title, tex
 		planLabel = plan.Label
 	}
 	until := renewal.ExpiresAt
-	title = "Votre abonnement MikTunnel VPN est renouvelé"
+	title = "Votre abonnement 403Shield VPN est renouvelé"
 	textBody = "Bonjour,\n\n" +
 		"Votre renouvellement (" + planLabel + ") est confirmé — référence " + renewal.Ref + ".\n" +
 		"Votre accès " + target.Ref + " est désormais couvert jusqu'au " + until + ".\n\n" +
 		"Votre configuration WireGuard ne change pas : elle reste celle livrée à votre adresse,\n" +
-		"et reste récupérable dans votre espace MikTunnel (" + tunnelPublicBaseURL() + ") à tout moment.\n\n" +
-		"— MikTunnel (by MikCloud · powered by FTech CI)"
+		"et reste récupérable dans votre espace 403Shield (" + tunnelPublicBaseURL() + ") à tout moment.\n\n" +
+		"— 403Shield (powered by FTech CI)"
 	htmlBody = "<div style=\"font-family:system-ui,Segoe UI,Arial,sans-serif;max-width:480px;margin:0 auto;padding:24px\">" +
 		"<h2 style=\"color:#0f766e;margin:0 0 16px\">Renouvellement confirmé</h2>" +
 		"<p style=\"color:#334155;font-size:15px\">Votre renouvellement (" + planLabel + ") est confirmé — référence <code>" + renewal.Ref + "</code>.</p>" +
 		"<p style=\"color:#0f172a;font-size:15px\">Votre accès <code>" + target.Ref + "</code> est couvert jusqu'au <strong>" + until + "</strong>.</p>" +
-		"<p style=\"color:#64748b;font-size:13px\">Votre configuration WireGuard ne change pas ; elle reste récupérable dans votre espace MikTunnel.</p>" +
-		"<p style=\"color:#94a3b8;font-size:12px\">— MikTunnel (by MikCloud · powered by FTech CI)</p></div>"
+		"<p style=\"color:#64748b;font-size:13px\">Votre configuration WireGuard ne change pas ; elle reste récupérable dans votre espace 403Shield.</p>" +
+		"<p style=\"color:#94a3b8;font-size:12px\">— 403Shield (powered by FTech CI)</p></div>"
 	return title, textBody, htmlBody
 }
 
@@ -1092,7 +1092,7 @@ func buyerNameOf(email string) string {
 	}
 	local = strings.NewReplacer(".", " ", "_", " ", "-", " ").Replace(local)
 	if local == "" {
-		return "Client MikCloud"
+		return "Client 403Shield"
 	}
 	return strings.ToUpper(local[:1]) + local[1:]
 }

@@ -14,17 +14,17 @@ export const ANNEXES_GUIDES: Guide[] = [
     sectionId: "annexes",
     vague: "V2",
     quoi:
-      "Le Mode Vente est l'interface de vente autonome du revendeur : sur SON téléphone (ou une tablette du kiosque), il ouvre mikcloud.ftci.fr/sell, choisit l'onglet Revendeur et entre son PIN. Il voit alors SON stock (les lots transférés), vend un ticket (le client reçoit code + QR), et suit son reste.\n\nAucune formation nécessaire : l'écran est pensé grand, tactile, et ne propose QUE la vente. Le mode PIN verrouille tout le reste — aucune donnée de gestion ne fuite sur son appareil.",
+      "Le Mode Vente est l'interface de vente autonome du revendeur : sur SON téléphone (ou une tablette du kiosque), il ouvre 403shield.ftci.fr/sell, choisit l'onglet Revendeur et entre son PIN. Il voit alors SON stock (les lots transférés), vend un ticket (le client reçoit code + QR), et suit son reste.\n\nAucune formation nécessaire : l'écran est pensé grand, tactile, et ne propose QUE la vente. Le mode PIN verrouille tout le reste — aucune donnée de gestion ne fuite sur son appareil.",
     difference: [
       {
         with: "La console",
         body:
-          "La console gère (grille, lots, rapports) ; le Mode Vente vend. Le revendeur n'existe que ici — c'est son unique surface MikCloud.",
+          "La console gère (grille, lots, rapports) ; le Mode Vente vend. Le revendeur n'existe que ici — c'est son unique surface 403Shield.",
       },
       {
         with: "La vitrine /vpn",
         body:
-          "La boutique MikTunnel (tunnel.ftci.fr/shop) vend du VPN au client final (paiement en ligne, autonome) ; /sell vend des tickets WiFi par humain interposé. Deux boutiques publiques, deux marchandises.",
+          "La boutique 403Shield (tunnel.ftci.fr/shop) vend du VPN au client final (paiement en ligne, autonome) ; /sell vend des tickets WiFi par humain interposé. Deux boutiques publiques, deux marchandises.",
       },
     ],
     recoit: [
@@ -36,7 +36,7 @@ export const ANNEXES_GUIDES: Guide[] = [
       {
         title: "Le revendeur ouvre /sell",
         body:
-          "Sur le téléphone : mikcloud.ftci.fr/sell — l'écran de connexion propose l'onglet Revendeur (PIN). C'est le seul « login » qu'il connaîtra jamais.",
+          "Sur le téléphone : 403shield.ftci.fr/sell — l'écran de connexion propose l'onglet Revendeur (PIN). C'est le seul « login » qu'il connaîtra jamais.",
         capture: cap(
           "annexes/mode-vente-login.png",
           1440,
@@ -114,7 +114,7 @@ export const ANNEXES_GUIDES: Guide[] = [
     sectionId: "annexes",
     vague: "V3",
     quoi:
-      "Le portail captif est LA page que vos clients voient (générée par MikCloud, portant votre marque — guide Portail & marque) : le client capte le WiFi, la page s'ouvre (ou il scanne le QR du ticket), il saisit son code, il navigue. La session se déroule ensuite seule : statut consultable, déconnexion à la demande, expiration à l'échéance du forfait.\n\nLe login utilise CHAP (le code ne transite jamais en clair vers le routeur) — un standard du secteur que les clients ressentent simplement comme « ça marche ».\n\nNOTE DE CAPTURE : l'illustration exacte du portail (page de login rendue par le routeur) se prend sur place, depuis un appareil connecté au hotspot — la capture dédiée sera ajoutée lors d'une session terrain. En attendant, la vue ci-contre (l'éditeur de portail de la console) montre la personnalisation qui l'habille.",
+      "Le portail captif est LA page que vos clients voient (générée par 403Shield, portant votre marque — guide Portail & marque) : le client capte le WiFi, la page s'ouvre (ou il scanne le QR du ticket), il saisit son code, il navigue. La session se déroule ensuite seule : statut consultable, déconnexion à la demande, expiration à l'échéance du forfait.\n\nLe login utilise CHAP (le code ne transite jamais en clair vers le routeur) — un standard du secteur que les clients ressentent simplement comme « ça marche ».\n\nNOTE DE CAPTURE : l'illustration exacte du portail (page de login rendue par le routeur) se prend sur place, depuis un appareil connecté au hotspot — la capture dédiée sera ajoutée lors d'une session terrain. En attendant, la vue ci-contre (l'éditeur de portail de la console) montre la personnalisation qui l'habille.",
     difference: [
       {
         with: "La page /wifi/<site>",
@@ -171,8 +171,8 @@ export const ANNEXES_GUIDES: Guide[] = [
     ],
     faq: [
       {
-        q: "Le client voit-il MikCloud ?",
-        a: "Il voit VOTRE marque (le portail est personnalisé) — MikCloud reste l'infrastructure invisible. C'est votre WiFi, pas le nôtre.",
+        q: "Le client voit-il 403Shield ?",
+        a: "Il voit VOTRE marque (le portail est personnalisé) — 403Shield reste l'infrastructure invisible. C'est votre WiFi, pas le nôtre.",
       },
     ],
     related: ["portail-captif", "premiere-vente", "wifi-jetable-client"],
@@ -189,7 +189,7 @@ export const ANNEXES_GUIDES: Guide[] = [
     sectionId: "annexes",
     vague: "V3",
     quoi:
-      "La boutique publique qui vend vos accès VPN B2C vit désormais chez la sous-marque MikTunnel — tunnel.ftci.fr/shop (N°316) : le visiteur compare les formules (durée, quota), paie en ligne (Wave, GeniusPay, Stripe selon réglages), et reçoit ses clés WireGuard immédiatement — provision automatique, zéro intervention de votre côté. L'ancienne page mikcloud.ftci.fr/vpn répond 301 vers cette boutique.\n\nElle n'existe que si l'offre est activée (réglage plateforme PublicVpnShop — voir le volet privé) : la boutique est SEO-indexée (contrairement aux pages /wifi) et vend 24/7.\n\nNOTE DE CAPTURE : l'illustration montre l'ancienne vitrine MikCloud (mikcloud.ftci.fr/vpn) — le parcours vit aujourd'hui sur tunnel.ftci.fr/shop (MikTunnel).",
+      "La boutique publique qui vend vos accès VPN B2C vit désormais sur la console 403Shield — tunnel.ftci.fr/shop (N°316) : le visiteur compare les formules (durée, quota), paie en ligne (Wave, GeniusPay, Stripe selon réglages), et reçoit ses clés WireGuard immédiatement — provision automatique, zéro intervention de votre côté. Les liens de commande historiques (/vpn?order=…) sont redirigés en 301 vers cette boutique.\n\nElle n'existe que si l'offre est activée (réglage plateforme PublicVpnShop — voir le volet privé) : la boutique est SEO-indexée (contrairement aux pages /wifi) et vend 24/7.\n\nNOTE DE CAPTURE : l'illustration montre l'ancienne vitrine MikCloud (mikcloud.ftci.fr/vpn, avant le rebrand N°317) — le parcours vit aujourd'hui sur tunnel.ftci.fr/shop (403Shield).",
     difference: [
       {
         with: "Le module VPN (console)",
@@ -211,7 +211,7 @@ export const ANNEXES_GUIDES: Guide[] = [
       {
         title: "Le visiteur découvre la vitrine",
         body:
-          "La boutique MikTunnel (tunnel.ftci.fr/shop) présente l'offre (comparatif des formules, prix, promesses) — page publique, indexée SEO (elle vend pendant que vous dormez).",
+          "La boutique 403Shield (tunnel.ftci.fr/shop) présente l'offre (comparatif des formules, prix, promesses) — page publique, indexée SEO (elle vend pendant que vous dormez).",
         capture: cap(
           "annexes/vpn-shop.png",
           1440,

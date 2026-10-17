@@ -263,8 +263,8 @@ func (a *API) handleTelegramWebhook(w http.ResponseWriter, r *http.Request) {
 		// réponse d'aide best-effort, puis 200 — rien n'est écrit.
 		go func() {
 			_ = a.telegramReply(chatID,
-				"Bonjour 👋 Je suis le bot des alertes MikCloud.\n"+
-					"Pour recevoir vos alertes ici, ouvrez la console MikCloud → Notifications → « Connecter Telegram » puis appuyez sur Démarrer avec le code fourni.")
+				"Bonjour 👋 Je suis le bot des alertes 403Shield.\n"+
+					"Pour recevoir vos alertes ici, ouvrez la console 403Shield → Notifications → « Connecter Telegram » puis appuyez sur Démarrer avec le code fourni.")
 		}()
 		writeJSON(w, http.StatusOK, map[string]any{"ok": true})
 		return
@@ -282,7 +282,7 @@ func (a *API) handleTelegramWebhook(w http.ResponseWriter, r *http.Request) {
 
 	go func() {
 		_ = a.telegramReply(chatID,
-			"✅ Connecté ! Vous recevrez ici les alertes MikCloud de votre compte :\n"+
+			"✅ Connecté ! Vous recevrez ici les alertes 403Shield de votre compte :\n"+
 				"routeur hors ligne, retour en ligne, stock de vouchers bas, rapport quotidien.\n"+
 				"(Gérez les alertes depuis la console : Notifications)")
 	}()

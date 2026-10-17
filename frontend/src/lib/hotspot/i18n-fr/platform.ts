@@ -4,7 +4,7 @@
 
 export const frPlatform: Record<string, string> = {
   "platform.title": "Console plateforme",
-  "platform.description": "Pilotage du SaaS MikCloud — comptes, usage et revenus, tous comptes confondus.",
+  "platform.description": "Pilotage du SaaS 403Shield — comptes, usage et revenus, tous comptes confondus.",
   "platform.loadError": "Impossible de charger la vue d'ensemble",
   "platform.loadErrorDesc": "Vérifiez votre connexion puis réessayez.",
   "platform.kpi.accounts": "Comptes actifs",

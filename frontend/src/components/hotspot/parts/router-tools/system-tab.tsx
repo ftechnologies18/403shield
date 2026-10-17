@@ -374,7 +374,7 @@ export function SystemTab({ router }: { router: RouterDevice }) {
   return (
     <div className="space-y-4">
       <SystemInfoCard router={router} />
-      {/* N°115 — mise à jour RouterOS depuis MikCloud : vérification (le
+      {/* N°115 — mise à jour RouterOS depuis 403Shield : vérification (le
           routeur interroge les serveurs MikroTik) + installation avec
           confirmation — la carte vit juste sous la version installée. */}
       <RouterOSUpdateCard router={router} />

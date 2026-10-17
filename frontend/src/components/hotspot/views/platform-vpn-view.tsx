@@ -458,8 +458,8 @@ export default function PlatformVpnView() {
                 )}
                 {b2c?.shopEnabled ? t("platformVpn.shop.toggleOff") : t("platformVpn.shop.toggle")}
               </Button>
-              {/* N°316 — la boutique B2C vit chez la sous-marque MikTunnel
-                  (l'ancienne /vpn répond 301 vers tunnel.ftci.fr/shop). */}
+              {/* N°316 — la boutique B2C vit sur la console 403Shield
+                  (tunnel.ftci.fr/shop ; /vpn?order=… répond 301 vers elle). */}
               <a
                 href="https://tunnel.ftci.fr/shop"
                 target="_blank"

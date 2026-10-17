@@ -8,13 +8,13 @@ export const enPaywall: Record<string, string> = {
 
   // — Paywall (P5) — full wall if account suspended (PeriodEnd + 30 days) —
   "paywall.title": "Account suspended",
-  "paywall.subtitle": "Your access is suspended. Pick a plan and pay — MikCloud will reactivate your account upon receipt. Your data is preserved.",
+  "paywall.subtitle": "Your access is suspended. Pick a plan and pay — 403Shield will reactivate your account upon receipt. Your data is preserved.",
   "paywall.warningTitle": "Access suspended",
   "paywall.warningDesc": "Your routers keep running for your clients, but you can no longer access the console. Your data (routers, vouchers, sessions, reports) is safely preserved.",
   "paywall.subscribe": "Subscribe & pay",
   "paywall.processing": "Processing…",
-  "paywall.requested": "Request sent — MikCloud will activate your access upon payment receipt.",
-  "paywall.contact": "A question? Contact the MikCloud team.",
+  "paywall.requested": "Request sent — 403Shield will activate your access upon payment receipt.",
+  "paywall.contact": "A question? Contact the 403Shield team.",
   "paywall.failed": "Subscription failed",
   "paywall.logout": "Sign out",
   "paywall.unlimited": "Unlimited routers",

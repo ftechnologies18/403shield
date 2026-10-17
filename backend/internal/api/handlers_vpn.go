@@ -172,7 +172,7 @@ func (a *API) handleVpnPeerCreate(w http.ResponseWriter, r *http.Request) {
 	if model.VpnPeerSlotsUsed(db) >= model.VpnWg0PoolSize {
 		a.store.Unlock()
 		writeErrCode(w, http.StatusConflict, "wg_pool_exhausted",
-			"Pool wg0 de la VM épuisé (253 adresses) — révoquez des peers ou contactez MikCloud", nil)
+			"Pool wg0 de la VM épuisé (253 adresses) — révoquez des peers ou contactez 403Shield", nil)
 		return
 	}
 	name := model.NewVpnPeerName()
@@ -404,7 +404,7 @@ func (a *API) handleVpnPeerConf(w http.ResponseWriter, r *http.Request) {
 // journaux, eux, ne portent que le résumé (vpnDeliveryLogBody).
 func vpnDeliveryBody(peer model.VpnPeer, conf string) string {
 	var sb strings.Builder
-	sb.WriteString("MikCloud — Votre accès VPN WireGuard\n")
+	sb.WriteString("403Shield — Votre accès VPN WireGuard\n")
 	sb.WriteString("Accès : " + peer.Name)
 	if model.VpnPeerLabel(peer) != peer.Name {
 		sb.WriteString(" (« " + model.VpnPeerLabel(peer) + " »)")
@@ -412,9 +412,9 @@ func vpnDeliveryBody(peer model.VpnPeer, conf string) string {
 	sb.WriteString("\n\n")
 	sb.WriteString("1. Installez l'application WireGuard (App Store / Google Play / wireguard.com/install).\n")
 	sb.WriteString("2. Dans WireGuard : « + » → « Importer depuis un fichier ou un QR code ».\n")
-	sb.WriteString("3. Collez la configuration ci-dessous (ou scannez le QR affiché dans la console MikCloud).\n\n")
+	sb.WriteString("3. Collez la configuration ci-dessous (ou scannez le QR affiché dans la console 403Shield).\n\n")
 	if peer.Kind == model.VpnKindRemote {
-		sb.WriteString("Cet accès donne la SUPERVISION de vos routeurs MikCloud à travers le tunnel\n")
+		sb.WriteString("Cet accès donne la SUPERVISION de vos routeurs 403Shield à travers le tunnel\n")
 		sb.WriteString("chiffré : Winbox, l'API RouterOS, SSH ou l'interface web de chaque routeur\n")
 		sb.WriteString("restent joignables à leur adresse tunnel 10.8.0.x, où que vous soyez\n")
 		sb.WriteString("(CGNAT traversé, keepalive 25 s). Le tunnel ne route RIEN d'autre — ni\n")
@@ -470,7 +470,7 @@ func (a *API) handleVpnPeerEmail(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusBadRequest, "Canal e-mail non configuré — renseignez-le dans Notifications (ou activez le relais plateforme)")
 		return
 	}
-	title := "MikCloud — Votre accès VPN WireGuard (" + peer.Name + ")"
+	title := "403Shield — Votre accès VPN WireGuard (" + peer.Name + ")"
 	body := vpnDeliveryBody(peer, conf)
 	htmlBody := "<p>Votre accès VPN WireGuard est prêt. Importez la configuration ci-dessous dans l'application WireGuard (menu « + » → importer).</p><pre style=\"white-space:pre-wrap;background:#f5f5f5;padding:12px;border-radius:8px\">" + html.EscapeString(conf) + "</pre><p style=\"color:#888;font-size:12px\">Gardez cette configuration secrète : elle donne un accès complet.</p>"
 	cfgCopy := cfg
@@ -515,7 +515,7 @@ func (a *API) handleVpnPeerTelegram(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusBadRequest, "Canal Telegram non configuré — appareillez le bot dans Notifications")
 		return
 	}
-	title := "MikCloud — Votre accès VPN WireGuard (" + peer.Name + ")"
+	title := "403Shield — Votre accès VPN WireGuard (" + peer.Name + ")"
 	if err := telegramSendFn(cfg.TelegramBotToken, cfg.TelegramChatID, title+"\n\n"+vpnDeliveryBody(peer, conf)); err != nil {
 		a.store.Lock()
 		db := a.store.Data()
@@ -721,7 +721,7 @@ func (a *API) handleVpnSettings(w http.ResponseWriter, r *http.Request) {
 		if s, ok := db.SettingsByAccount[acc]; ok && s.Tenant.WgVpnModuleLocked() {
 			a.store.Unlock()
 			writeErrCode(w, http.StatusForbidden, "wg_vpn_locked",
-				"Module VPN retiré par la plateforme MikCloud — contactez le support pour l'octroi", nil)
+				"Module VPN retiré par la plateforme 403Shield — contactez le support pour l'octroi", nil)
 			return
 		}
 	}

@@ -1,7 +1,7 @@
 "use client";
 
 // N°294 — vue « Abonnés PPPoE » (console WISP, chantier ⑥ lot UI de N°289) :
-// registre des secrets d'un pppoe-server EXISTANT, piloté par l'AGENT MikCloud
+// registre des secrets d'un pppoe-server EXISTANT, piloté par l'AGENT 403Shield
 // (D1 — commandes ppp_*, zéro cred stockée pour le socle, zéro port public,
 // CGNAT-proof) + RENFORT temps réel opt-in via le tunnel WireGuard (phase B —
 // l'agent reste le socle : un tunnel mort dégrade le temps réel, jamais le
@@ -11,12 +11,12 @@
 //     routeur) : sélecteur de parc + EmptyState quand aucun routeur agent ;
 //   - Onglets : Abonnés (registre cloud, machine à états pending/active/
 //     error), Sessions actives (cache agent ≤ 120 s + lecture DIRECTE via
-//     tunnel), Découverte (lecture seule des secrets créés hors MikCloud) ;
+//     tunnel), Découverte (lecture seule des secrets créés hors 403Shield) ;
 //   - Renouvellement F4 (gabarit users-view), édition deltas-only (le set
 //     partiel est le contrat du ppp_secret_set), suspension/reprise,
 //     kick agent (202) ou temps réel (kick-live), suppression confirmée ;
 //   - Provisionnement assisté (D2) : script .rsc IDEMPOTENT généré côté
-//     backend — MikCloud ne touche JAMAIS au routeur, le WISP colle le
+//     backend — 403Shield ne touche JAMAIS au routeur, le WISP colle le
 //     script lui-même.
 //
 // Honnêteté produit (discipline des vues gabarits) : 202 = « lecture en

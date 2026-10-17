@@ -73,8 +73,8 @@ type NotificationSettings struct {
 	// Resend (la clé est un secret par compte, idem mot de passe SMTP).
 	EmailProvider string `json:"emailProvider,omitempty"`
 	ResendAPIKey  string `json:"resendApiKey,omitempty"`
-	// ResendFrom — expéditeur Resend, ex. « MikCloud <alertes@ftci.fr> » ;
-	// vide → « MikCloud <onboarding@resend.dev> » (domaine d'essai Resend :
+	// ResendFrom — expéditeur Resend, ex. « 403Shield <alertes@ftci.fr> » ;
+	// vide → « 403Shield <onboarding@resend.dev> » (domaine d'essai Resend :
 	// ne délivre qu'à l'adresse du propriétaire du compte Resend).
 	ResendFrom   string `json:"resendFrom,omitempty"`
 	EmailEnabled bool   `json:"emailEnabled"`

@@ -6,14 +6,14 @@ export const enPlatformSettings: Record<string, string> = {
 
   // — I (platform settings) —
   "platformSettings.title": "Platform settings",
-  "platformSettings.description": "Global MikCloud SaaS configuration — identity, sign-ups, security and maintenance.",
+  "platformSettings.description": "Global 403Shield SaaS configuration — identity, sign-ups, security and maintenance.",
   "platformSettings.tabGeneral": "General",
   "platformSettings.tabSecurity": "Security",
   "platformSettings.tabMaintenance": "Maintenance",
   "platformSettings.loadError": "Unable to load platform settings.",
   "platformSettings.identity": "Identity",
   
-// N°301 — public MikCloud VPN shop (direct sales /vpn).
+// N°301 — public 403Shield VPN shop (direct sales /vpn).
 "platformSettings.vpnShop": "VPN shop (direct sales)",
 "platformSettings.vpnShopDesc":
   "The direct channel: the public /vpn page sells VPN access to customers outside hotspot areas (online payment, automatic provisioning). Strict opt-in — closed by default so you never compete with your resellers unintentionally.",
@@ -36,7 +36,7 @@ export const enPlatformSettings: Record<string, string> = {
 
 "platformSettings.identityDesc": "SaaS display name on the login screen and footer.",
   "platformSettings.platformName": "Platform name",
-  "platformSettings.platformNameHint": "60 characters max — empty falls back to “MikCloud”.",
+  "platformSettings.platformNameHint": "60 characters max — empty falls back to “403Shield”.",
   "platformSettings.identitySaved": "Platform identity updated",
   "platformSettings.register": "Sign-ups",
   "platformSettings.registerDesc": "Controls who can create a client account from the landing page.",

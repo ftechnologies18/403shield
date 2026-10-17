@@ -847,7 +847,7 @@ function AccountingTab() {
             variant="outline"
             className="h-9"
             onClick={() =>
-              apiDownload(`/api/accounting/export`, `mikcloud-comptabilite-${period}.csv`, {
+              apiDownload(`/api/accounting/export`, `403shield-comptabilite-${period}.csv`, {
                 period,
                 routerId: routerFilter,
               })
@@ -1294,7 +1294,7 @@ function ActivityTab() {
               )}
             </ChartCard>
 
-            {/* Top 5 revendeurs par CA — moteur de distribution mikCloud */}
+            {/* Top 5 revendeurs par CA — moteur de distribution 403Shield */}
             <ChartCard
               icon={Store}
               title={t("reports.topResellers.title")}
@@ -1745,7 +1745,7 @@ function ArchivesTab() {
   }, [live]);
 
   const csvExport = () =>
-    apiDownload("/api/reports/journals.csv", "mikcloud-journaux-mensuels.csv")
+    apiDownload("/api/reports/journals.csv", "403shield-journaux-mensuels.csv")
       .then(() => toast.success(t("common.exportDownloaded")))
       .catch((err: Error) => toast.error(err.message));
 

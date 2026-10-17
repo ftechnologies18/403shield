@@ -1,5 +1,5 @@
 // Fragment FR du domaine « announcements » — N°152 : annonces de la
-// plateforme MikCloud (diffusion super-admin, bandeau + cloche côté clients).
+// plateforme 403Shield (diffusion super-admin, bandeau + cloche côté clients).
 // Ne pas importer directement : passer par l'agrégateur.
 
 export const frAnnouncements: Record<string, string> = {
@@ -8,7 +8,7 @@ export const frAnnouncements: Record<string, string> = {
 
   // — vue console plateforme —
   "ann.title": "Annonces aux clients",
-  "ann.subtitle": "Diffusez un message à tous les comptes MikCloud — maintenance, nouveautés, incidents. L'annonce s'affiche en bandeau dans la console de chaque client destinataire et reste dans sa cloche. Diffusion immédiate ou programmée à l'avance.",
+  "ann.subtitle": "Diffusez un message à tous les comptes 403Shield — maintenance, nouveautés, incidents. L'annonce s'affiche en bandeau dans la console de chaque client destinataire et reste dans sa cloche. Diffusion immédiate ou programmée à l'avance.",
   "ann.new": "Nouvelle annonce",
   "ann.empty": "Aucune annonce diffusée pour le moment.",
   "ann.emptyHint": "La première annonce atteindra tous les comptes clients actifs en quelques secondes.",
@@ -47,7 +47,7 @@ export const frAnnouncements: Record<string, string> = {
   "ann.form.titleLabel": "Titre",
   "ann.form.titlePlaceholder": "Ex. Maintenance planifiée samedi soir",
   "ann.form.bodyLabel": "Message (optionnel)",
-  "ann.form.bodyPlaceholder": "Ex. Le cloud MikCloud sera indisponible de 22h à 23h. Les routeurs continuent de délivrer l'accès.",
+  "ann.form.bodyPlaceholder": "Ex. Le cloud 403Shield sera indisponible de 22h à 23h. Les routeurs continuent de délivrer l'accès.",
   "ann.form.bodyHint": "2000 caractères max.",
   "ann.form.levelLabel": "Niveau",
   "ann.form.levelHint": "Couleur du bandeau client : gris (information), vert (nouveauté), sarcelle (maintenance), ambre (action recommandée), rouge (incident — l'annonce prioritaire du bandeau).",
@@ -80,7 +80,7 @@ export const frAnnouncements: Record<string, string> = {
 
   // — bandeau côté client —
   "ann.banner.dismiss": "Masquer",
-  "ann.banner.platform": "Annonce MikCloud",
+  "ann.banner.platform": "Annonce 403Shield",
   "ann.banner.read": "Lire l'annonce",
   "ann.banner.close": "Fermer",
   "ann.banner.published": "Publiée le {date}",

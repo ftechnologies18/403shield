@@ -7,7 +7,7 @@
 // VERROU FACTURATION : la souscription n'active RIEN côté client — choisir
 // une formule enregistre une demande, renvoie le montant et le lien de
 // paiement Wave de la PLATEFORME (WAVE_PAY_LINK) ; l'activation de la
-// période est effectuée par l'équipe MikCloud après encaissement.
+// période est effectuée par l'équipe 403Shield après encaissement.
 // Bilingue FR/EN (F11) : les libellés du catalogue côté serveur (nom, tagline,
 // badge, période) sont traduits par id de formule, avec repli sur la valeur
 // serveur pour toute formule inconnue.
@@ -133,7 +133,7 @@ export function SubscriptionCard() {
   // (mode Wave) puis redirection du client vers la page de paiement ; la
   // confirmation arrive par webhook et active l'abonnement. Repli : lien Wave
   // manuel de la plateforme, sinon la demande reste enregistrée pour règlement
-  // auprès de MikCloud.
+  // auprès de 403Shield.
   async function openWavePayment(res: SubscribeResponse) {
     try {
       const pay = await api<PayInitiateResponse>("/api/subscription/pay", { method: "POST" });

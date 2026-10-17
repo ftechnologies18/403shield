@@ -214,7 +214,7 @@ type Command struct {
 // réel garde ses /ip hotspot user après une purge, sans marqueur ils
 // réapparaîtraient dans le cloud à la première synchro (résurgence constatée
 // en production). Le tombstone EXPIRE (TTL — cf. PurgeTombstoneTTL) ou se
-// LÈVE quand l'opérateur recrée volontairement le même username dans MikCloud :
+// LÈVE quand l'opérateur recrée volontairement le même username dans 403Shield :
 // la découverte Winbox fonctionne à nouveau sans rien perdre.
 
 // PurgeTombstone — marqueur anti-résurgence (audit purge) : posé par la purge
@@ -223,7 +223,7 @@ type Command struct {
 // réel garde ses /ip hotspot user après une purge, sans marqueur ils
 // réapparaîtraient dans le cloud à la première synchro (résurgence constatée
 // en production). Le tombstone EXPIRE (TTL — cf. PurgeTombstoneTTL) ou se
-// LÈVE quand l'opérateur recrée volontairement le même username dans MikCloud :
+// LÈVE quand l'opérateur recrée volontairement le même username dans 403Shield :
 // la découverte Winbox fonctionne à nouveau sans rien perdre.
 type PurgeTombstone struct {
 	ID        string `json:"id"`

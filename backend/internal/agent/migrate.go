@@ -47,7 +47,7 @@ const AgentBridgeName = "mikcloud-agent-b"
 // battement de cœur du canal de commande.
 func agentMainOnEvent(urlEsc, tokEsc string) string {
 	return ":local mkf \"yes\"; " +
-		":do { /tool fetch url=\"" + urlEsc + "/agent/cmd?token=" + tokEsc + "\" dst-path=\"" + ScriptFilename + "\" } on-error={ :set mkf \"no\"; :log warning \"MikCloud agent: check-in echoue (reseau ou TLS ? RouterOS 7.19+ requis)\" }; " +
+		":do { /tool fetch url=\"" + urlEsc + "/agent/cmd?token=" + tokEsc + "\" dst-path=\"" + ScriptFilename + "\" } on-error={ :set mkf \"no\"; :log warning \"403Shield agent: check-in echoue (reseau ou TLS ? RouterOS 7.19+ requis)\" }; " +
 		":if ($mkf = \"yes\") do={ :delay 2s; /import file-name=\"" + ScriptFilename + "\" }"
 }
 
@@ -89,7 +89,7 @@ func (b Builder) buildAgentMigrate(cmd model.Command) string {
 	// [1/4] PRE-FLIGHT — la nouvelle URL répond-elle (DNS + TLS + token) ?
 	// /agent/register sans corps = heartbeat pur (touchAgent, rien d'écrit).
 	sb.WriteString(":local " + p + "pre \"yes\"\n")
-	sb.WriteString(":do { /tool fetch url=\"" + urlEsc + "/agent/register?token=" + tokEsc + "\" http-method=post output=none } on-error={ :set " + p + "pre \"no\"; :log warning \"MikCloud: migration URL avortee (pre-flight echoue)\" }\n")
+	sb.WriteString(":do { /tool fetch url=\"" + urlEsc + "/agent/register?token=" + tokEsc + "\" http-method=post output=none } on-error={ :set " + p + "pre \"no\"; :log warning \"403Shield: migration URL avortee (pre-flight echoue)\" }\n")
 
 	sb.WriteString(":if ($" + p + "pre = \"yes\") do={\n")
 
@@ -124,7 +124,7 @@ func (b Builder) buildAgentMigrate(cmd model.Command) string {
 	// nouvelle URL (le hôte dans l'on-event) : seulement alors le pont est
 	// retiré ; sinon il reste en place et l'échec est rapporté.
 	sb.WriteString("    " + hasHost(p+"c", SchedulerName))
-	sb.WriteString("    :if ($" + p + "c) do={ :set " + okVar + " true; :do { /system scheduler remove [find name=\"" + AgentBridgeName + "\"] } on-error={} } else={ :log warning \"MikCloud: migration URL partielle (pont " + AgentBridgeName + " actif)\" }\n")
+	sb.WriteString("    :if ($" + p + "c) do={ :set " + okVar + " true; :do { /system scheduler remove [find name=\"" + AgentBridgeName + "\"] } on-error={} } else={ :log warning \"403Shield: migration URL partielle (pont " + AgentBridgeName + " actif)\" }\n")
 
 	sb.WriteString("  }\n")
 	sb.WriteString("}\n")

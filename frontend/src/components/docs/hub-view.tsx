@@ -41,7 +41,7 @@ export function HubView({ sections }: { sections: { id: string; title: string; d
       <header className="hub-hero">
         <p className="text-sm font-medium text-primary">Documentation d'exploitation</p>
         <h1 className="mt-2 text-balance text-3xl font-bold tracking-tight sm:text-4xl">
-          Guides MikCloud
+          Guides 403Shield
         </h1>
         <p className="mt-3 max-w-2xl text-pretty text-[15px] leading-7 text-muted-foreground">
           Chaque fonction de la console expliquée pas à pas, avec captures d'écran réelles :

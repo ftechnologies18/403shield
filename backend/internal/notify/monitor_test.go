@@ -154,7 +154,7 @@ func TestDailyReportSkipsPlatformAccount(t *testing.T) {
 	st.Lock()
 	db := st.Data()
 	db.Accounts = []model.Account{
-		{ID: model.AccountMainID, Name: "Plateforme MikCloud", Status: "active"},
+		{ID: model.AccountMainID, Name: "Plateforme 403Shield", Status: "active"},
 		{ID: "acc-cli", Name: "Cyber Client", Status: "active"},
 	}
 	for _, acc := range []string{model.AccountMainID, "acc-cli"} {

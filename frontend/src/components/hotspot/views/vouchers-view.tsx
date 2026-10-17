@@ -79,7 +79,7 @@ export default function VouchersView() {
   const { t, tf, lang } = useI18n();
   const currency = useCurrency();
   const { data: settings } = useSettings();
-  const tenantName = settings?.tenant.name || "MikCloud";
+  const tenantName = settings?.tenant.name || "403Shield";
   const queryClient = useQueryClient();
 
   // Onglet actif : liste des vouchers ou traçabilité des lots
@@ -687,7 +687,7 @@ export default function VouchersView() {
   async function exportBatches() {
     setExportingBatches(true);
     try {
-      await apiDownload("/api/vouchers/batches/export", "mikcloud-lots.csv", {
+      await apiDownload("/api/vouchers/batches/export", "403shield-lots.csv", {
         search: batchSearch || undefined,
         routerId: batchRouterParam,
         status: batchStatusParam,

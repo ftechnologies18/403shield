@@ -4,10 +4,10 @@
 //
 // Mikhmon alimente « Address Pool », « Parent Queue » (formulaire User
 // Profile) et « Server » (formulaire Generate) directement depuis le routeur
-// (/ip pool print, /queue simple print, /ip hotspot print). MikCloud fait de
+// (/ip pool print, /queue simple print, /ip hotspot print). 403Shield fait de
 // même via la commande agent read_resources + GET /api/routers/{id}/resources :
 // - sans routerId : tous les routeurs NON réels (mode agent/simulé) fusionnés
-//   (les profils MikCloud sont multi-routeurs → listes dédupliquées) ;
+//   (les profils 403Shield sont multi-routeurs → listes dédupliquées) ;
 // - avec routerId : ce routeur uniquement (sélecteur « Charger depuis un
 //   routeur » du dialog profil, sélecteur Server du générateur de vouchers).
 // Les routeurs en mode réel sont exclus (pas d'API entrante, matrice §0 du

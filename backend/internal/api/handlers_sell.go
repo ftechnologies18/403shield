@@ -783,7 +783,7 @@ func (a *API) handleSellDayReportCSV(w http.ResponseWriter, r *http.Request) {
 		fmt.Sprintf("attachment; filename=\"journal-caisse-%s-%s.csv\"", j.report.Date, c.Sub))
 	// BOM UTF-8 : Excel reconnaît l'encodage.
 	_, _ = w.Write([]byte{0xEF, 0xBB, 0xBF})
-	_, _ = w.Write([]byte("Journal de caisse ; MikCloud\r\n"))
+	_, _ = w.Write([]byte("Journal de caisse ; 403Shield\r\n"))
 	_, _ = w.Write([]byte(fmt.Sprintf("Date ;%s\r\n", j.report.Date)))
 	_, _ = w.Write([]byte(fmt.Sprintf("Revendeur ;%s (%s)\r\n", csvField(resellerName), csvField(c.Sub))))
 	_, _ = w.Write([]byte(fmt.Sprintf("Mode ;%s\r\n", mode)))

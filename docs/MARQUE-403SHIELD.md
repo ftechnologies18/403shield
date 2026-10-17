@@ -1,7 +1,8 @@
 # MARQUE 403SHIELD — Enregistrement de décision & plan de migration
 
 > **N°317 — pivot de marque acté par le propriétaire** (à la suite de l'étude N°316).
-> Statut : **Phase 1 livrée** (ce commit). Phases 2-3 planifiées plus bas.
+> Statut : **Phases 1, 2 et 3 LIVRÉES** (N°317 puis N°318 — le tuteur a posé
+> lui-même le DNS et le 301 avec le token de compte Cloudflare fourni).
 
 ## 1. La décision
 
@@ -22,7 +23,8 @@ A/B/C) et sa livraison (Option C : maison MikCloud, sous-marque MikTunnel endoss
 ```
 FTech CI (ftci.fr) — la maison-mère, « powered by FTech CI »
 └── 403Shield — la marque unifiée (ex MikCloud + ex MikTunnel)
-    ├── Site unifié : mikcloud.ftci.fr (403shield.ftci.fr demain — action DNS)
+    ├── Site unifié : 403shield.ftci.fr (CANONIQUE N°318 — ex mikcloud.ftci.fr,
+    │   301 permanent ; CNAME → cname.vercel-dns.com, DNS only)
     │     /            vitrine de la suite (Hotspot · VPN · Tunnels)
     │     /hotspot    page produit 403Shield Hotspot
     │     /vpn        page produit 403Shield VPN (CTA → boutique console)
@@ -45,7 +47,7 @@ Le geste N°316 — déménagement de la vente B2C sur `tunnel.ftci.fr/shop`, 30
 | `mikcloud.ftci.fr` — marque MikCloud     | site unifié **403Shield** + pages produit     |
 | `tunnel.ftci.fr` — « MikTunnel by MikCloud » | **403Shield Console** (badge « Console ») |
 | 301 `/vpn` → `tunnel.ftci.fr/shop`       | 301 **conditionnelle** `?order=` préservée ; `/vpn` propre = page produit |
-| e-mails « MikTunnel (by MikCloud · …) »  | ⚠ phase 2 — encore à rebrander (backend)      |
+| e-mails « MikTunnel (by MikCloud · …) »  | ✅ N°318 — 403Shield (powered by FTech CI) |
 
 ## 4. Phase 1 — livrée dans ce commit
 
@@ -71,28 +73,41 @@ URLs fonctionnelles (`api.mikcloud.ftci.fr`, `mikcloud.ftci.fr` tant que le DNS
 n'a pas bougé), clés localStorage, `mikcloud.conf` (nom de fichier réellement
 instruit par les e-mails backend), références `MCV-`, commentaires historiques.
 
-## 5. Phase 2 — prochaine session (tuteur)
+## 5. Phase 2 — LIVRÉE (N°318)
 
-1. **E-mails transactionnels backend** (`transactional_emails.go` et voisins) :
-   « MikTunnel (by MikCloud · powered by FTech CI) » → « 403Shield — powered by
-   FTech CI ». Redéploiement VM Oracle conscient du transport (miroir
-   `deploy-oracle.yml`), sans toucher au binaire tant que possible.
-2. **Dictionnaire i18n profond** de la console SaaS (settings, sub, tools,
-   routers, paywall, guides docs — ~300 occurrences) + pages `/wifi` et
-   `/legal/confidentialite` (corps contractuel : revoir la mention responsable).
-3. **Renommage des projets Vercel** : `mikcloud` → `403shield`,
-   `miktunnel` → `403shield-console` (et leurs URLs `*.vercel.app` de repli).
+1. **E-mails transactionnels backend** ✅ : 319 remplacements (84 fichiers) —
+   titres/corps/signatures « 403Shield (powered by FTech CI) », chatbot FR/EN,
+   TOTP issuer, PlatformConfig défaut, émetteurs Resend/SMTP, descriptions
+   GeniusPay, exports CSV `403shield-*`, `:log` RouterOS du script d'installation,
+   consigne fichier `403shield.conf` (alignée FAQ boutique). Portes :
+   gofmt/vet/build verts, `go test` 11/11.
+2. **Dictionnaire i18n profond** ✅ : ~320 remplacements (112 fichiers) —
+   FR/EN miroir, guides, page légale (« édité par FTech CI »), portail offert,
+   exports, monogrammes. lint 0 · tsc 0.
+3. **Renommage des projets Vercel** ✅ : `mikcloud` → `403shield`,
+   `miktunnel` → `403shield-console` (alias `403shield.vercel.app` → 301
+   `403shield.ftci.fr`).
 
-## 6. Phase 3 — action propriétaire (DNS)
+## 6. Phase 3 — EXÉCUTÉE par le tuteur (N°318)
 
-Le token Cloudflare fourni au tutorat est invalide : le DNS de `ftci.fr` reste à
-la main du propriétaire. Gestes demandés pour fermer le pivot :
+Le token Cloudflare fourni s'est révélé être un **token de COMPTE** (portée
+zone `ftci.fr`, `dns_records:edit`) : l'endpoint `/user/tokens/verify` répond
+« Invalid » pour tout token non-user — la preuve de validité se fait sur
+`GET /zones` (réussi). Gestes posés :
 
-1. Créer `403shield.ftci.fr` (CNAME → Vercel, projet frontend).
-2. Ensuite seulement : 301 `mikcloud.ftci.fr` → `403shield.ftci.fr`
-   (et plus tard `tunnel.ftci.fr` → `console.403shield.ftci.fr`).
-3. D'ici là, la marque est déjà 403Shield partout — seule l'adresse est
-   transitoire (situation normale de rebrand : cf. queue.ac.uk → ac.uk).
+1. ✅ `403shield.ftci.fr` CNAME → `cname.vercel-dns.com` (DNS only, miroir du
+   schéma `tunnel.ftci.fr`) + TXT `_vercel.ftci.fr` de vérification ;
+2. ✅ domaine attaché au projet Vercel frontend, VÉRIFIÉ, HTTP 200 +
+   certificat émis ; whitelist CORS étendue AVANT le 301 (workflow
+   `ops-cors-whitelist.yml` devenu paramétrable — input `origins`) ;
+3. ✅ **301 `mikcloud.ftci.fr` → `403shield.ftci.fr`** posé chez Vercel
+   (redirect domain, chemins + query préservés — la chaîne GeniusPay
+   `/vpn?order=…` suit jusqu'à `tunnel.ftci.fr/shop?order=…`).
+
+Reste à la main du propriétaire (décision future explicite, aucune urgence) :
+`api.mikcloud.ftci.fr` (hôte API — renommer = geste VM + env + CORS),
+`tunnel.ftci.fr` → `console.403shield.ftci.fr` le jour voulu, nom du dépôt
+GitHub, libellés stockés en base (renommables depuis la console).
 
 ## 7. Actifs de marque
 

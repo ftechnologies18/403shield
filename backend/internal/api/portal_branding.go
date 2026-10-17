@@ -271,7 +271,7 @@ func portalEncodeTicker(list []string) (string, error) {
 
 // portalEncodeWhatsapp — numéro WhatsApp SUPPORT (N°139) : 8-15 chiffres en
 // format international (espaces/+/-/() tolérés puis retirés), label ≤ 30.
-// Number vide = numéro retiré → repli support MikCloud.
+// Number vide = numéro retiré → repli support 403Shield.
 func portalEncodeWhatsapp(req portalWhatsappReq) (string, error) {
 	num := hotpage.WhatsappNumber(req.Number)
 	if req.Number != "" && num == "" {

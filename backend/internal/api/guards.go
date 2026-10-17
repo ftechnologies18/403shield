@@ -66,7 +66,7 @@ func (a *API) guardAccountWrite(w http.ResponseWriter, r *http.Request) bool {
 		return true
 	}
 	writeErrCode(w, http.StatusPaymentRequired, "subscription_expired",
-		"Abonnement expiré — renouvelez auprès de MikCloud pour reprendre les modifications",
+		"Abonnement expiré — renouvelez auprès de 403Shield pour reprendre les modifications",
 		map[string]any{"periodEnd": view.PeriodEnd})
 	return false
 }

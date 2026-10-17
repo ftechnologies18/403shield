@@ -126,7 +126,7 @@ func mediaPublicBase() string {
 
 // mediaRewriteURL — réécrit une URL média servie par le proxy (n'importe
 // quelle origine + /api/media/media/{compte}/{année}/{hex}.{ext}) vers la
-// base publique R2. Les URL externes (https://… hors MikCloud), vides ou
+// base publique R2. Les URL externes (https://… hors 403Shield), vides ou
 // au format inattendu restent intactes — défense en profondeur : le
 // suffixe doit matcher mediaKeyRe (clé délivrée par l'upload, hex 128 bits)
 // avant toute réécriture.

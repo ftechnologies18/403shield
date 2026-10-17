@@ -44,7 +44,7 @@ func TestDBCloneDeepIsolation(t *testing.T) {
 					JoinButton:       &join,
 					LogRetentionDays: &retention,
 				},
-				Platform:              &model.PlatformConfig{Name: "MikCloud", RegisterOpen: true},
+				Platform:              &model.PlatformConfig{Name: "403Shield", RegisterOpen: true},
 				AutoImportRouterUsers: &autoImport,
 			},
 		},
@@ -105,7 +105,7 @@ func TestDBCloneDeepIsolation(t *testing.T) {
 	if *st.Tenant.LogRetentionDays != 90 {
 		t.Error("Settings.LogRetentionDays : le pointeur du snapshot est partagé")
 	}
-	if st.Platform.Name != "MikCloud" {
+	if st.Platform.Name != "403Shield" {
 		t.Errorf("Settings.Platform : le pointeur du snapshot est partagé (%q)", st.Platform.Name)
 	}
 	if *st.AutoImportRouterUsers {

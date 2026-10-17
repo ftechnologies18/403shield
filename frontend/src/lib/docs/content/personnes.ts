@@ -293,7 +293,7 @@ export const PERSONNES_GUIDES: Guide[] = [
       {
         title: "Il vend en Mode Vente",
         body:
-          "Sur SON téléphone : mikcloud.ftci.fr/sell → onglet Revendeur → PIN. Il voit son stock par forfait, vend (le ticket s'affiche avec QR, partageable/imprimable), et suit son reste. Aucune formation nécessaire — 3 touches.",
+          "Sur SON téléphone : 403shield.ftci.fr/sell → onglet Revendeur → PIN. Il voit son stock par forfait, vend (le ticket s'affiche avec QR, partageable/imprimable), et suit son reste. Aucune formation nécessaire — 3 touches.",
         capture: cap(
           "annexes/mode-vente-login.png",
           1440,
@@ -354,7 +354,7 @@ export const PERSONNES_GUIDES: Guide[] = [
       {
         title: "Vendeur multi-établissements ?",
         body:
-          "Un revendeur vit dans VOTRE compte. Pour vendre pour plusieurs exploitants, il faut un revendeur par compte (PIN distincts) — le cloisonnement est la règle MikCloud.",
+          "Un revendeur vit dans VOTRE compte. Pour vendre pour plusieurs exploitants, il faut un revendeur par compte (PIN distincts) — le cloisonnement est la règle 403Shield.",
         severity: "info",
       },
     ],

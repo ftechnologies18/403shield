@@ -68,7 +68,7 @@ type Tenant struct {
 	// {"number","label"} — number au format international sans + ni
 	// espaces (8-15 chiffres, ex. 2250708091012), label optionnel
 	// affiché à l'écran (≤ 30 car. ; défaut = le number brut). Vide =
-	// le numéro du support MikCloud (repli historique : le support
+	// le numéro du support 403Shield (repli historique : le support
 	// plateforme, comme le crédit FTCI du footer — PAS la carte de
 	// visite du site pilote).
 	PortalWhatsapp string `json:"portalWhatsapp,omitempty"`
@@ -177,9 +177,9 @@ type Subscription struct {
 	LastPaidAt  string `json:"lastPaidAt,omitempty"`
 }
 
-// SaasPlan — formule d'abonnement MikCloud (catalogue public de la console).
+// SaasPlan — formule d'abonnement 403Shield (catalogue public de la console).
 
-// SaasPlan — formule d'abonnement MikCloud (catalogue public de la console).
+// SaasPlan — formule d'abonnement 403Shield (catalogue public de la console).
 type SaasPlan struct {
 	ID        string `json:"id"`
 	Name      string `json:"name"`
@@ -196,7 +196,7 @@ type SaasPlan struct {
 	Badge   string `json:"badge,omitempty"`
 }
 
-// SaasPlans — catalogue des formules MikCloud (marché FCFA concurrentiel),
+// SaasPlans — catalogue des formules 403Shield (marché FCFA concurrentiel),
 // segmenté par usage depuis le N°122 :
 //   - HOTSPOT (réseaux publics payants — cybercafé, maquis, boutique) :
 //     Mensuel 2 500 F/mois/routeur (acquisition, sans engagement) ; Annuel
@@ -217,7 +217,7 @@ type SaasPlan struct {
 // pour les abonnements antérieurs au N°122 — la migration store les réécrit
 // vers les identifiants segmentés au démarrage.
 
-// SaasPlans — catalogue des formules MikCloud (marché FCFA concurrentiel).
+// SaasPlans — catalogue des formules 403Shield (marché FCFA concurrentiel).
 var SaasPlans = []SaasPlan{
 	{
 		ID: "hotspot-mensuel", Name: "Hotspot Mensuel", PriceFcfa: 2500, Period: "mois",
@@ -337,7 +337,7 @@ type Settings struct {
 	// utilisateurs hotspot présents sur un routeur AGENT mais inconnus du
 	// cloud sont importés automatiquement à chaque read_state (découverte
 	// des comptes créés dans Winbox). Quand désactivé (false), le read_state
-	// ne crée RIEN : les comptes hors MikCloud sont comptés dans
+	// ne crée RIEN : les comptes hors 403Shield sont comptés dans
 	// Router.UnknownOnRouter pour adoption manuelle (outil d'import).
 	// Pointeur : nil = défaut ON sans écrire le champ dans le JSON persisté
 	// (compatibilité zéro-migration pour les comptes existants).
@@ -386,17 +386,17 @@ func (t Tenant) WgVpnModuleLocked() bool {
 	return t.WgVpnLocked != nil && *t.WgVpnLocked
 }
 
-// PlatformConfig — configuration globale de la plateforme MikCloud (vivante
+// PlatformConfig — configuration globale de la plateforme 403Shield (vivante
 // sur les settings du compte principal). Gérée depuis la console plateforme
 // (vue Paramètres plateforme), persistée en PostgreSQL — plus besoin de
 // redéployer Render pour ouvrir/fermer les inscriptions.
 
-// PlatformConfig — configuration globale de la plateforme MikCloud (vivante
+// PlatformConfig — configuration globale de la plateforme 403Shield (vivante
 // sur les settings du compte principal). Gérée depuis la console plateforme
 // (vue Paramètres plateforme), persistée en PostgreSQL — plus besoin de
 // redéployer Render pour ouvrir/fermer les inscriptions.
 type PlatformConfig struct {
-	// Nom affiché du SaaS (login, footer) — défaut "MikCloud".
+	// Nom affiché du SaaS (login, footer) — défaut "403Shield".
 	Name string `json:"name"`
 	// RegisterOpen : auto-inscription publique autorisée sans clé.
 	// Priorité de handleRegister : env REGISTER_KEY (si définie) > cette clé.

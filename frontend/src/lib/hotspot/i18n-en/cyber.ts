@@ -63,7 +63,7 @@ export const enCyber: Record<string, string> = {
     "Add your machines one by one (the MAC is printed on the PC) or import them from the box DHCP.",
   "cyber.empty.routerTitle": "No agent router",
   "cyber.empty.routerDesc":
-    "Install the MikCloud agent on the cybercafé box to manage workstations and pauses.",
+    "Install the 403Shield agent on the cybercafé box to manage workstations and pauses.",
   "cyber.noMatch": "No workstation matches",
   "cyber.noMatchDesc": "Try another name, IP or MAC.",
 

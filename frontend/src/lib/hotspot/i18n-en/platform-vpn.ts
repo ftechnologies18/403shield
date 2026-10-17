@@ -42,7 +42,7 @@ export const enPlatformVpn: Record<string, string> = {
   "platformVpn.accounts.grant": "Grant",
   "platformVpn.accounts.withdraw": "Withdraw & lock",
   "platformVpn.accounts.empty": "No account uses the VPN module",
-  "platformVpn.accounts.main": "MikCloud (direct B2C sales)",
+  "platformVpn.accounts.main": "403Shield (direct B2C sales)",
   "platformVpn.accounts.grantToast": "VPN module granted — the manager can sell",
   "platformVpn.accounts.withdrawToast":
     "VPN module withdrawn and locked — active accesses stay in service",
@@ -80,7 +80,7 @@ export const enPlatformVpn: Record<string, string> = {
   // — B2C orders table —
   "platformVpn.orders.title": "Direct sales orders (public shop)",
   "platformVpn.orders.desc":
-    "The B2C channel: the MikTunnel shop (tunnel.ftci.fr/shop) sells to customers outside hotspot areas, provisioning is automatic on payment. \"Confirm payment\" serves the manual channel (offline); \"Cancel\" revokes a provisioned order's access.",
+    "The B2C channel: the 403Shield shop (tunnel.ftci.fr/shop) sells to customers outside hotspot areas, provisioning is automatic on payment. \"Confirm payment\" serves the manual channel (offline); \"Cancel\" revokes a provisioned order's access.",
   "platformVpn.orders.search": "Search (ref, email)…",
   "platformVpn.orders.ref": "Ref",
   "platformVpn.orders.email": "Customer",
@@ -113,16 +113,16 @@ export const enPlatformVpn: Record<string, string> = {
   "platformVpn.orders.pay.manual": "Manual",
 
   // — B2C shop block —
-  "platformVpn.shop.title": "Public MikTunnel shop (direct sales)",
+  "platformVpn.shop.title": "Public 403Shield shop (direct sales)",
   "platformVpn.shop.desc":
-    "Direct sales live on the public MikTunnel shop — tunnel.ftci.fr/shop, MikCloud's VPN sub-brand (outside managers' areas — never competing with your resellers; the former /vpn page 301-redirects there). Closed: the catalogue refuses orders; open: online payment (Wave/card), automatic provisioning and self-service recovery by email.",
+    "Direct sales live on the public 403Shield shop — tunnel.ftci.fr/shop, on the console domain (outside managers' areas — never competing with your resellers; the former /vpn page 301-redirects there). Closed: the catalogue refuses orders; open: online payment (Wave/card), automatic provisioning and self-service recovery by email.",
   "platformVpn.shop.open": "Shop open",
   "platformVpn.shop.closed": "Shop closed",
   "platformVpn.shop.toggle": "Open direct sales",
   "platformVpn.shop.toggleOff": "Close direct sales",
-  "platformVpn.shop.openToast": "B2C shop open — MikTunnel is selling",
+  "platformVpn.shop.openToast": "B2C shop open — 403Shield is selling",
   "platformVpn.shop.closedToast": "B2C shop closed (in-service orders stay active)",
-  "platformVpn.shop.link": "View the MikTunnel shop",
+  "platformVpn.shop.link": "View the 403Shield shop",
   "platformVpn.shop.onlinePayment": "Online payment active",
   "platformVpn.shop.manualOnly": "Online payment not configured — manual channel",
   "platformVpn.shop.pendingHint": "{n} pending order(s)",

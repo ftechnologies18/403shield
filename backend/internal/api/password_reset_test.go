@@ -93,7 +93,7 @@ func seedResend(t *testing.T, st *store.Store, accID string) {
 		AccountID:     accID,
 		EmailProvider: "resend",
 		ResendAPIKey:  "re_test_key",
-		ResendFrom:    "MikCloud <alertes@ftci.fr>",
+		ResendFrom:    "403Shield <alertes@ftci.fr>",
 	}
 	st.Save()
 	st.Unlock()
@@ -486,11 +486,11 @@ func TestBuildResetEmailText(t *testing.T) {
 	txt := buildResetEmailText(d)
 	for _, attendu := range []string{
 		"Bonjour Awa,",
-		"compte MikCloud « Maquis Baobab » (identifiant : awa68)",
+		"compte 403Shield « Maquis Baobab » (identifiant : awa68)",
 		"valable 60 minutes et utilisable une seule fois",
 		d.Link,
 		"votre mot de passe actuel reste inchangé",
-		"— MikCloud",
+		"— 403Shield",
 	} {
 		if !strings.Contains(txt, attendu) {
 			t.Fatalf("attendu dans le texte de repli : %q", attendu)

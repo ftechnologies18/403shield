@@ -447,7 +447,7 @@ func portalTickerList(s string) []string {
 // portalWhatsappInfo — décode le numéro WhatsApp SUPPORT (N°139, lien du
 // footer login/logout/error) depuis la string JSON persistée : un JSON
 // invalide, un champ vide ou un numéro mal formé donnent nil — le portail
-// garde le numéro du support MikCloud (repli historique, jamais cassé). Le
+// garde le numéro du support 403Shield (repli historique, jamais cassé). Le
 // format est revalidé au décodage via hotpage.WhatsappNumber (défense en
 // profondeur).
 func portalWhatsappInfo(s string) *hotpage.PortalWhatsapp {

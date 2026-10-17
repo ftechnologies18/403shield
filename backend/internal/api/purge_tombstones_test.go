@@ -165,7 +165,7 @@ func TestTombstoneExpiryRestoresImport(t *testing.T) {
 }
 
 // TestAutoImportOffCountsUnknown — réglage autoImportRouterUsers=false :
-// les comptes hors MikCloud ne sont PLUS importés automatiquement, ils sont
+// les comptes hors 403Shield ne sont PLUS importés automatiquement, ils sont
 // comptés dans Router.UnknownOnRouter (adoption manuelle via l'outil d'import).
 func TestAutoImportOffCountsUnknown(t *testing.T) {
 	st, _, _ := newPurgeTestServer(t)

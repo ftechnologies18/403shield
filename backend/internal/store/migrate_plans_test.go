@@ -42,10 +42,10 @@ func TestMigrateUsageScopedPlans(t *testing.T) {
 		}
 	}
 	// Libellé compat rafraîchi (formule segmentée, plafond cohérent).
-	if p := db.SettingsByAccount["acc-home"].Plan; p.Name != "MikCloud HomeNet Annuel" || p.MaxRouters != "Illimité" {
+	if p := db.SettingsByAccount["acc-home"].Plan; p.Name != "403Shield HomeNet Annuel" || p.MaxRouters != "Illimité" {
 		t.Fatalf("libellé compat acc-home = %+v", db.SettingsByAccount["acc-home"].Plan)
 	}
-	if p := db.SettingsByAccount["acc-hot"].Plan; p.Name != "MikCloud Hotspot Mensuel" || p.MaxRouters != "Par routeur" {
+	if p := db.SettingsByAccount["acc-hot"].Plan; p.Name != "403Shield Hotspot Mensuel" || p.MaxRouters != "Par routeur" {
 		t.Fatalf("libellé compat acc-hot = %+v", db.SettingsByAccount["acc-hot"].Plan)
 	}
 	// Demandes de facturation : résolues au mode du compte.

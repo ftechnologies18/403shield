@@ -7,7 +7,7 @@ import { WifiGuestPage } from "@/components/wifi/wifi-guest-page";
 // code gratuit avec copie → bascule vers le hotspot. noindex : ce sont des
 // pages utilitaires par établissement, pas du contenu à indexer.
 export const metadata: Metadata = {
-  title: "WiFi Offert — MikCloud",
+  title: "WiFi Offert — 403Shield",
   robots: { index: false, follow: false },
 };
 

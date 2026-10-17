@@ -299,7 +299,7 @@ func (a *API) handleNotifTest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	title := "MikCloud — Test de notification"
+	title := "403Shield — Test de notification"
 	body := notifTestBody(acc, channel) // N°154 — le discours suit le porteur
 	logs := deliverNotif(&cfg, platformEmail, notify.KindTest, title, body, channel)
 
