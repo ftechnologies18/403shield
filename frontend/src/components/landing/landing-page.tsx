@@ -282,9 +282,11 @@ export default function LandingPage({ onSignIn, onSignUp }: LandingPageProps) {
   /* Section active dans le rail (IntersectionObserver) — N°321 : la section
      « tunnels » s'intercale entre hotspot et parc. */
   const [active, setActive] = useState("top");
-  /* N°122 — mode de tarifs affiché : Hotspot (défaut), HomeNet ou Tunnels
-     (N°321 — segment boutique, CTA liens externes). */
-  const [priceMode, setPriceMode] = useState<"hotspot" | "homenet" | "tunnels">("hotspot");
+  /* N°122 — comptoir de tarifs affiché. N°322 — 2 segments : l'abonnement
+     console « hotspot » (défaut — le mode foyer HomeNet vit sur ses cartes,
+     plus de grille parallèle) et la boutique « tunnels » (N°321 — CTA liens
+     externes). */
+  const [priceMode, setPriceMode] = useState<"hotspot" | "tunnels">("hotspot");
   useEffect(() => {
     const sections = ["top", "pouvoirs", "protection", "hotspot", "tunnels", "parc", "tarifs"];
     const io = new IntersectionObserver(
@@ -785,11 +787,12 @@ export default function LandingPage({ onSignIn, onSignUp }: LandingPageProps) {
               <h2>{copy.pricing.title}</h2>
               <p>{copy.pricing.subtitle}</p>
             </Reveal>
-            {/* N°122 — segmentation Hotspot / HomeNet : le sélecteur clay
-                pilote les 3 formules du mode choisi (prix, essai, arguments).
+            {/* N°122 — le sélecteur clay pilote les formules affichées.
+                N°322 — 2 segments : l'abonnement console (Hotspot · HomeNet,
+                le tarif foyer vit sur les cartes) et la boutique tunnels.
                 N°124 — thumb sarcelle glissant (layoutId framer-motion,
                 coupé sous prefers-reduced-motion) + chips clientèle cible
-                affichées uniquement pour le mode Hotspot. */}
+                affichées uniquement sur l'abonnement console. */}
             <Reveal delay={0.05}>
               <div
                 className="mkl-mode-toggle"

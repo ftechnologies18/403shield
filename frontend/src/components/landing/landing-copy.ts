@@ -37,6 +37,15 @@
 // (1 500 / 15 000 / 3 500 / 35 000 FCFA) recopient les constantes produit
 // réelles du backend (publicvpnorder.go — familles b2c & pro) ; le prix
 // final par moyen de paiement reste calculé sur la boutique.
+//
+// N°322 — HomeNet cesse d'être un service indépendant de la vitrine : le
+// segment tarifs « homenet » (grille de 3 cartes parallèles) disparaît au
+// profit du tarif foyer LIÉ à l'offre Hotspot — les cartes de la grille
+// console portent le mode HomeNet en option à prix réduit (1 250 F/mois
+// /routeur · 12 000 F/an · essai 30 j : constantes catalogue tenant.go
+// N°122). Le sélecteur passe de 3 à 2 segments : l'abonnement console
+// (Hotspot · HomeNet) et la boutique tunnels — « un abonnement, un
+// tunnel », dans la lignée du « un tunnel, deux usages » de N°321.
 
 export type Lang = "fr" | "en";
 
@@ -180,12 +189,17 @@ export interface LandingCopy {
     eyebrow: string;
     title: string;
     subtitle: string;
-    /** N°122 — aria-label du sélecteur de mode (Hotspot / HomeNet). */
+    /** N°122 — aria-label du sélecteur de comptoir (console / boutique).
+        N°322 — 2 segments : l'abonnement console (Hotspot · HomeNet) et la
+        boutique tunnels. */
     modesLabel: string;
     /** N°122 — tarifs segmentés par mode : chaque mode a ses 3 formules.
-        N°321 — 3e segment « tunnels » (boutique dédiée, CTA liens externes). */
+        N°321 — 3e segment « tunnels » (boutique dédiée, CTA liens externes).
+        N°322 — le segment « homenet » est RETIRÉ : le mode foyer n'est plus
+        un service indépendant, son tarif réduit vit sur les cartes de la
+        grille Hotspot (même abonnement, deux modes). */
     segments: {
-      id: "hotspot" | "homenet" | "tunnels";
+      id: "hotspot" | "tunnels";
       label: string;
       hint: string;
       /** N°124 — clientèle cible (chips clay) — uniquement le mode Hotspot. */
@@ -297,7 +311,7 @@ const fr: LandingCopy = {
     "Anti-piratage WiFi",
     "Accès distant Pro — routeurs, caméras, NAS",
     "Couvre-feu internet",
-    "HomeNet · Sécurité internet résidentiel",
+    "Mode HomeNet · le foyer sur le même abonnement",
     "Bloque-VPN",
     "QoS & forfait FAI",
     "Mode Vente revendeurs",
@@ -498,16 +512,16 @@ const fr: LandingCopy = {
   ],
   pricing: {
     eyebrow: "Tarifs",
-    title: "Trois univers, un nuage.",
+    title: "Un abonnement, un tunnel.",
     subtitle:
-      "Exploitez un réseau public, protégez votre foyer ou branchez vos tunnels : 403Shield s'adapte. L'essai console est offert ; les abonnements tunnels se commandent sur la boutique dédiée.",
-    modesLabel: "Choisir votre mode",
+      "Exploitez un réseau public ou protégez votre foyer : c'est le MÊME abonnement console — le mode HomeNet applique le tarif foyer sur la même formule. Les tunnels WireGuard se commandent sur la boutique dédiée, et l'essai reste offert.",
+    modesLabel: "Console ou boutique ?",
     segments: [
       {
         id: "hotspot",
-        label: "Hotspot",
-        hint: "Hôtels, cybercafés, maquis, boutiques, campus… : vouchers, portail captif et vente d'accès avec vos revendeurs.",
-        audience: ["Hôtels", "Cybercafés", "Maquis", "Boutiques", "Campus", "Restaurants"],
+        label: "Hotspot · HomeNet",
+        hint: "Hôtels, cybercafés, maquis, boutiques, campus… : vouchers, portail captif et vente d'accès avec vos revendeurs. Un foyer ? C'est le même abonnement en mode HomeNet, au tarif réduit sur la même formule.",
+        audience: ["Hôtels", "Cybercafés", "Maquis", "Boutiques", "Campus", "Restaurants", "Foyers"],
         plans: [
       {
         name: "Découverte",
@@ -520,6 +534,7 @@ const fr: LandingCopy = {
           "1 routeur · toutes les fonctions",
           "4 protections incluses",
           "Mode Vente & revendeurs",
+          "Mode foyer (HomeNet) : essai 30 jours",
           "Sans carte bancaire",
         ],
       },
@@ -534,6 +549,7 @@ const fr: LandingCopy = {
         features: [
           "Routeurs illimités",
           "4 protections sur tout le parc",
+          "Mode foyer (HomeNet) : 12 000 F/an",
           "Mises à jour RouterOS de flotte",
           "Notifications Telegram & WhatsApp",
           "Support prioritaire",
@@ -548,6 +564,7 @@ const fr: LandingCopy = {
         highlight: false,
         features: [
           "Par routeur actif",
+          "Mode foyer (HomeNet) : 1 250 F/mois/routeur",
           "Sans engagement",
           "Résiliable à tout moment",
           "Toutes les fonctions incluses",
@@ -555,64 +572,15 @@ const fr: LandingCopy = {
       },
         ],
       },
-      {
-        id: "homenet",
-        label: "HomeNet",
-        hint: "Sécurité internet résidentiel : pare-feu cloud, filtrage DNS, couvre-feu familial et contrôle des appareils de votre foyer.",
-        plans: [
-          {
-            name: "Essai HomeNet",
-            price: "0",
-            period: "FCFA · 30 jours",
-            tagline: "Pour protéger votre famille sans risque",
-            cta: "Commencer gratuitement",
-            highlight: false,
-            features: [
-              "1 routeur · toutes les fonctions",
-              "4 protections incluses",
-              "Contrôle des appareils & pause dîner",
-              "Sans carte bancaire",
-            ],
-          },
-          {
-            name: "HomeNet Annuel",
-            price: "12 000",
-            period: "FCFA / an",
-            tagline: "Votre foyer protégé toute l'année",
-            cta: "Passer à l'annuel",
-            highlight: true,
-            badge: "Le plus choisi",
-            features: [
-              "Routeurs illimités — toute la famille",
-              "4 protections sur tout le parc",
-              "Mises à jour RouterOS automatiques",
-              "Notifications Telegram & WhatsApp",
-              "Support prioritaire",
-            ],
-          },
-          {
-            name: "HomeNet Mensuel",
-            price: "1 250",
-            period: "FCFA / mois / routeur",
-            tagline: "Protégez votre foyer sans engagement",
-            cta: "Choisir le mensuel",
-            highlight: false,
-            features: [
-              "Par routeur actif",
-              "Sans engagement",
-              "Résiliable à tout moment",
-              "Toutes les fonctions incluses",
-            ],
-          },
-        ],
-      },
-      /* N°321 — 3e segment : les Tunnels WireGuard. Prix catalogue = constantes
-         produit réelles du backend (publicvpnorder.go : b2c 1500/15000,
-         pro 3500/35000 FCFA). Les CTA pointent sur la boutique/console — le
-         tunnel s'achète là-bas, pas via la modale d'inscription SaaS. */
+      /* N°321 — segment boutique : les Tunnels WireGuard. Prix catalogue =
+         constantes produit réelles du backend (publicvpnorder.go : b2c
+         1500/15000, pro 3500/35000 FCFA). Les CTA pointent sur la
+         boutique/console — le tunnel s'achète là-bas, pas via la modale
+         d'inscription SaaS. N°322 — 2e segment du sélecteur, l'abonnement
+         console (Hotspot · HomeNet) étant le premier. */
       {
         id: "tunnels",
-        label: "Tunnels",
+        label: "Tunnels · boutique",
         hint: "Un seul tunnel WireGuard, deux usages : VPN personnel à IP fixe France et Accès Pro pour vos routeurs, caméras et NAS. Achat sur la boutique dédiée, payable Wave ou carte.",
         plans: [
           {
@@ -665,7 +633,7 @@ const fr: LandingCopy = {
       },
     ],
     currencyNote:
-      "Frais de paiement répercutés sur le prix de liste : carte +6 %, Wave −3 % (remise mobile money). Essai offert : 60 jours en mode Hotspot, 30 jours en mode HomeNet. Tunnels WireGuard (VPN & Accès Pro) : prix catalogue boutique, remise mobile money incluse.",
+      "Frais de paiement répercutés sur le prix de liste : carte +6 %, Wave −3 % (remise mobile money). Un abonnement console, deux modes : essai 60 jours en Hotspot · 30 jours en HomeNet — le foyer paie le tarif réduit sur la même formule. Tunnels WireGuard (VPN & Accès Pro) : prix catalogue boutique, remise mobile money incluse.",
   },
   chat: {
     fabLabel: "Discuter avec l'assistant",
@@ -958,7 +926,7 @@ const en: LandingCopy = {
     "WiFi anti-hacking",
     "Pro remote access — routers, cameras, NAS",
     "Internet curfew",
-    "HomeNet · Residential internet security",
+    "HomeNet mode · your household, same subscription",
     "VPN blocker",
     "QoS & ISP plan",
     "Reseller Sell Mode",
@@ -1159,16 +1127,16 @@ const en: LandingCopy = {
   ],
   pricing: {
     eyebrow: "Pricing",
-    title: "Three worlds, one cloud.",
+    title: "One subscription, one tunnel.",
     subtitle:
-      "Run a public network, shield your home or plug in your tunnels: 403Shield adapts. The console trial is free; tunnel subscriptions are ordered on the dedicated shop.",
-    modesLabel: "Choose your mode",
+      "Run a public network or shield your home: it's the SAME console subscription — HomeNet mode applies the household rate to the same plan. WireGuard tunnels are ordered on the dedicated shop, and the trial stays free.",
+    modesLabel: "Console or shop?",
     segments: [
       {
         id: "hotspot",
-        label: "Hotspot",
-        hint: "Hotels, cybercafés, bars, shops, campuses…: vouchers, captive portal and access sales through your resellers.",
-        audience: ["Hotels", "Cybercafés", "Bars", "Shops", "Campuses", "Restaurants"],
+        label: "Hotspot · HomeNet",
+        hint: "Hotels, cybercafés, bars, shops, campuses…: vouchers, captive portal and access sales through your resellers. A household? It's the same subscription in HomeNet mode, at the reduced rate on the same plan.",
+        audience: ["Hotels", "Cybercafés", "Bars", "Shops", "Campuses", "Restaurants", "Households"],
         plans: [
       {
         name: "Discovery",
@@ -1181,6 +1149,7 @@ const en: LandingCopy = {
           "1 router · every feature",
           "4 protections included",
           "Sell Mode & resellers",
+          "HomeNet mode (household): 30-day trial",
           "No credit card",
         ],
       },
@@ -1195,6 +1164,7 @@ const en: LandingCopy = {
         features: [
           "Unlimited routers",
           "4 protections across the fleet",
+          "HomeNet mode (household): 12,000 F/year",
           "Fleet RouterOS updates",
           "Telegram & WhatsApp alerts",
           "Priority support",
@@ -1209,6 +1179,7 @@ const en: LandingCopy = {
         highlight: false,
         features: [
           "Per active router",
+          "HomeNet mode (household): 1,250 F/month/router",
           "No commitment",
           "Cancel anytime",
           "Every feature included",
@@ -1216,64 +1187,15 @@ const en: LandingCopy = {
       },
         ],
       },
-      {
-        id: "homenet",
-        label: "HomeNet",
-        hint: "Residential internet security: cloud firewall, DNS filtering, family curfew and device control for your household.",
-        plans: [
-          {
-            name: "HomeNet Trial",
-            price: "0",
-            period: "FCFA · 30 days",
-            tagline: "To protect your family risk-free",
-            cta: "Start for free",
-            highlight: false,
-            features: [
-              "1 router · every feature",
-              "4 protections included",
-              "Device control & dinner pause",
-              "No credit card",
-            ],
-          },
-          {
-            name: "HomeNet Yearly",
-            price: "12,000",
-            period: "FCFA / year",
-            tagline: "Your home shielded all year",
-            cta: "Go yearly",
-            highlight: true,
-            badge: "Most popular",
-            features: [
-              "Unlimited routers — the whole family",
-              "4 protections across the fleet",
-              "Automatic RouterOS updates",
-              "Telegram & WhatsApp alerts",
-              "Priority support",
-            ],
-          },
-          {
-            name: "HomeNet Monthly",
-            price: "1,250",
-            period: "FCFA / month / router",
-            tagline: "Protect your home, no commitment",
-            cta: "Choose monthly",
-            highlight: false,
-            features: [
-              "Per active router",
-              "No commitment",
-              "Cancel anytime",
-              "Every feature included",
-            ],
-          },
-        ],
-      },
-      /* N°321 — 3rd segment: WireGuard tunnels. Catalogue prices = real
+      /* N°321 — shop segment: WireGuard tunnels. Catalogue prices = real
          backend product constants (publicvpnorder.go: b2c 1500/15000,
          pro 3500/35000 FCFA). CTAs point to the shop/console — the tunnel
-         is bought there, not through the SaaS signup modal. */
+         is bought there, not through the SaaS signup modal. N°322 — 2nd
+         selector segment, the console subscription (Hotspot · HomeNet)
+         being the first. */
       {
         id: "tunnels",
-        label: "Tunnels",
+        label: "Tunnels · shop",
         hint: "One WireGuard tunnel, two uses: a personal VPN with a fixed French IP and Pro Access for your routers, cameras and NAS. Ordered on the dedicated shop, payable with Wave or card.",
         plans: [
           {
@@ -1326,7 +1248,7 @@ const en: LandingCopy = {
       },
     ],
     currencyNote:
-      "Payment fees passed through the list price: card +6%, Wave −3% (mobile money discount). Free trial: 60 days in Hotspot mode, 30 days in HomeNet mode. WireGuard tunnels (VPN & Pro Access): shop catalogue prices, mobile money discount included.",
+      "Payment fees passed through the list price: card +6%, Wave −3% (mobile money discount). One console subscription, two modes: 60-day trial in Hotspot · 30-day in HomeNet — the household pays the reduced rate on the same plan. WireGuard tunnels (VPN & Pro Access): shop catalogue prices, mobile money discount included.",
   },
   chat: {
     fabLabel: "Chat with the assistant",

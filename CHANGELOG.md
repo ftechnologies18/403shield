@@ -10,6 +10,72 @@ sous-marque FTech CI) ; l'historique ci-dessous conserve les noms d'époque.
 N°319 : le DÉPÔT GitHub lui-même devient `ftechnologies18/403shield`
 (anciennes URL redirigées en 301 par GitHub — web, git et API).
 
+## 2026-10-17 — N°322 — **HOMENET CESSION D'ÊTRE UN SERVICE INDÉPENDANT SUR LA VITRINE : le segment tarifs « HomeNet » (grille de 3 cartes parallèles) disparaît — le mode foyer devient une option LIÉE à l'offre Hotspot (tarif réduit sur les mêmes cartes) et le sélecteur passe de 3 à 2 segments « un abonnement, un tunnel »**
+
+### Déclencheur (propriétaire)
+« Supprimer HomeNet comme service indépendant avec ses tarifs, il est déjà
+lié à l'offre Hotspot. Quel est ton avis ? » — troisième grief de
+fragmentation après ceux de N°321 (VPN/tunnel) : la vitrine survendait le
+mode résidentiel en « univers » parallèle avec sa propre grille tarifaire,
+alors que le backend (`tenant.go` N°122) le définit comme un SEGMENT
+D'USAGE du même abonnement 403Shield — même compte, même console, mêmes
+4 protections, même pipeline de facturation (`ResolvePlan` résout
+l'usage à la souscription).
+
+### Avis rendu (et décision)
+D'accord sur le fond — HomeNet n'est pas un service indépendant, le
+catalogue backend l'écrit lui-même (« Usage: homenet », un SEGMENT du
+catalogue SaaS, pas un produit). NUANCE conservée : ses tarifs sont RÉELS
+(homenet-mensuel 1 250 F/mois/routeur · homenet-annuel 12 000 F/an — le
+prix historique, la maison paie deux fois moins cher que le lieu public ;
+essai 30 j vs 60 j) et le chatbot les cite ; les effacer totalement
+cacherait l'argument « foyer à moitié prix » et créerait un écart
+vitrine/catalogue. DÉCISION = même recette que N°321 : supprimer le
+SERVICE indépendant, GARDER l'offre liée — le tarif foyer vit désormais
+SUR les cartes de la grille console.
+
+### Ce qui change (2 fichiers, ~110 lignes)
+1. **Segment « homenet » RETIRÉ** du sélecteur tarifs (FR + EN) : sa
+   grille de 3 cartes (Essai HomeNet / HomeNet Annuel / HomeNet Mensuel)
+   disparaît ; le type passe de `"hotspot" | "homenet" | "tunnels"` à
+   `"hotspot" | "tunnels"` (landing-copy.ts + landing-page.tsx).
+2. **Tarif foyer LIÉ aux cartes Hotspot** (prix catalogue tenant.go
+   N°122 recopiés tels quels) : Découverte porte « Mode foyer (HomeNet) :
+   essai 30 jours », Hotspot Annuel « Mode foyer (HomeNet) : 12 000 F/an »,
+   Hotspot Mensuel « Mode foyer (HomeNet) : 1 250 F/mois/routeur » — la
+   grille unique montre les DEUX modes du même abonnement côte à côte.
+3. **Récit « Un abonnement, un tunnel »** : titre tarifs « Trois univers,
+   un nuage » → « Un abonnement, un tunnel. » (EN « One subscription, one
+   tunnel. »), sous-titre fusionné (réseau public OU foyer = le MÊME
+   abonnement, le mode HomeNet applique le tarif foyer sur la même
+   formule), sélecteur « Console ou boutique ? » à 2 segments
+   (« Hotspot · HomeNet » / « Tunnels · boutique »), hint enrichi
+   (« Un foyer ? C'est le même abonnement en mode HomeNet »), chips
+   clientèle + « Foyers », marquee « Mode HomeNet · le foyer sur le même
+   abonnement », note devises « Un abonnement console, deux modes ».
+4. **Prix catalogue inchangés** : grille console 0 / 25 000 / 2 500 F ;
+   grille tunnels 1 500 / 15 000 / 3 500 F (href boutique/console) —
+   seule la PRÉSENTATION HomeNet change, aucun prix n'est inventé ni
+   modifié.
+
+### Intacts par construction
+Catalogue backend et facturation (homenet-mensuel/annuel toujours vendus
+au même tarif via la console — la vitrine ne fait qu'AFFICHER), modale
+d'inscription et son sélecteur d'usage (parcours réel N°101 — le foyer
+choisit son mode à la création du compte), chatbot et suggestions (le bot
+répond déjà « Deux modes, deux grilles » avec les mêmes prix), pages
+produit /hotspot /vpn /tunnels, hero/stats/powers de N°321, clés
+localStorage, garde session/PWA, GeniusPay, e2e homenet.spec.ts (cible la
+modale d'inscription, pas la vitrine).
+
+### Portes
+`bun run lint` 0 erreur · `bunx tsc --noEmit` 0 erreur · parité FR/EN
+programmatique 411 chemins = 411 chemins (442 en N°321 − 31 chemins de la
+grille HomeNet retirée), 25 assertions métier OK (2 segments, zéro
+segment/carte homenet résiduel, tarif foyer sur les 3 cartes console,
+prix 0/25 000/2 500 et 1 500/15 000/3 500 inchangés, 3 href tunnels,
+titres/marquee/note devises unifiés FR+EN).
+
 ## 2026-10-17 — N°321 — **LA VITRINE RATTRAPE L'ÉVOLUTION 403SHIELD : la page d'accueil n'est plus figée sur l'ère hotspot — les Tunnels WireGuard deviennent le 4e pilier (super-pouvoir + section dédiée + segment tarifs) et le VPN comme l'Accès Pro sont présentés comme UNE SEULE offre « un tunnel, deux usages »**
 
 ### Déclencheur (propriétaire)
