@@ -1146,6 +1146,16 @@
      chips « clientèle cible » juste au-dessus. */
   margin-top: 54px;
 }
+/* N°323 — caisse /checkout : les DEUX formules B2C du catalogue vivant
+   (API publique) tiennent en 2 colonnes centrées — une 3e colonne
+   marketing y serait vide. Le passage à 1 colonne suit la règle
+   .mkl-pricing du media 860px ci-dessous (mêmes faces, même rythme). */
+.mkl-pricing-duo {
+  grid-template-columns: repeat(2, 1fr);
+  max-width: 880px;
+  margin-left: auto;
+  margin-right: auto;
+}
 .mkl-price-card {
   border-radius: 2.2rem;
   padding: 38px 32px;
@@ -1930,8 +1940,12 @@
     height: 400px;
   }
   .mkl-powers,
-  .mkl-pricing {
+  .mkl-pricing,
+  .mkl-pricing-duo {
     grid-template-columns: 1fr;
+  }
+  .mkl-pricing-duo {
+    max-width: 100%;
   }
   .mkl-topbar .mkl-link-quiet {
     display: none;

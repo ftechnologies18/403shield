@@ -574,10 +574,12 @@ const fr: LandingCopy = {
       },
       /* N°321 — segment boutique : les Tunnels WireGuard. Prix catalogue =
          constantes produit réelles du backend (publicvpnorder.go : b2c
-         1500/15000, pro 3500/35000 FCFA). Les CTA pointent sur la
-         boutique/console — le tunnel s'achète là-bas, pas via la modale
-         d'inscription SaaS. N°322 — 2e segment du sélecteur, l'abonnement
-         console (Hotspot · HomeNet) étant le premier. */
+         1500/15000, pro 3500/35000 FCFA). N°323 — la caisse vit sur LE SITE
+         (/checkout, modèle OVH) : les CTA VPN pointent en INTERNE avec la
+         formule présélectionnée (?plan= ouvre la caisse), l'Accès Pro reste
+         sur la console (/pro) — jamais via la modale SaaS. N°322 — 2e
+         segment du sélecteur, l'abonnement console (Hotspot · HomeNet)
+         étant le premier. */
       {
         id: "tunnels",
         label: "Tunnels · boutique",
@@ -590,7 +592,7 @@ const fr: LandingCopy = {
             tagline: "Sans engagement, mois par mois",
             cta: "Acheter sur la boutique",
             highlight: false,
-            href: "https://console.403shield.ftci.fr/shop",
+            href: "/checkout?plan=vpn-b2c-month",
             features: [
               "IP fixe France dédiée",
               "WireGuard — activation en 30 s",
@@ -605,7 +607,7 @@ const fr: LandingCopy = {
             tagline: "12 mois au prix de 10",
             badge: "2 mois offerts",
             highlight: true,
-            href: "https://console.403shield.ftci.fr/shop",
+            href: "/checkout?plan=vpn-b2c-year",
             cta: "Acheter sur la boutique",
             features: [
               "IP fixe France dédiée",
@@ -702,11 +704,14 @@ const fr: LandingCopy = {
         // N°317 — écosystème : maison-mère FTech CI, console et boutique VPN.
         // N°321 — URLs canoniques console.403shield.ftci.fr (tunnel.ftci.fr
         // répond 301 depuis N°320 — on évite le saut supplémentaire).
+        // N°323 — la console est une PURE application (racine → /login,
+        // pattern dash.cloudflare.com) ; la boutique vit sur le site
+        // (/checkout, lien interne — modèle OVH « commander sur www »).
         title: "Écosystème",
         links: [
           { label: "FTech CI", href: "https://ftci.fr", external: true },
           { label: "Console 403Shield", href: "https://console.403shield.ftci.fr", external: true },
-          { label: "Boutique VPN", href: "https://console.403shield.ftci.fr/shop", external: true },
+          { label: "Boutique VPN", href: "/checkout" },
         ],
       },
     ],
@@ -780,7 +785,7 @@ const fr: LandingCopy = {
         subtitle:
           "Votre trafic, chiffré de bout en bout par WireGuard, sort par notre serveur de Marseille avec une adresse IP dédiée. Activation en 30 secondes — sans toucher à un fichier de configuration. Et pour joindre vos routeurs, caméras ou NAS : l'Accès Pro étend ce même tunnel.",
         ctaPrimary: "Acheter mon VPN",
-        ctaPrimaryHref: "https://console.403shield.ftci.fr/shop",
+        ctaPrimaryHref: "/checkout",
         ctaSecondary: "Découvrir les tunnels",
         ctaSecondaryHref: "/tunnels",
       },
@@ -816,7 +821,7 @@ const fr: LandingCopy = {
         title: "Votre configuration part par e-mail en 30 secondes.",
         body: "Choisissez votre formule sur la boutique, payez en Wave ou par carte : la configuration WireGuard complète arrive par e-mail, prête à importer.",
         primary: "Acheter mon VPN",
-        primaryHref: "https://console.403shield.ftci.fr/shop",
+        primaryHref: "/checkout",
         secondary: "J'ai déjà un VPN — mon espace",
         secondaryHref: "https://console.403shield.ftci.fr",
       },
@@ -836,7 +841,7 @@ const fr: LandingCopy = {
         subtitle:
           "VPN personnel à IP fixe France, Accès Pro pour vos routeurs, LAN étendu pour caméras et NAS : le même tunnel WireGuard chiffré de bout en bout, hébergé à Marseille — une console, une boutique, un abonnement. Achat, gestion et renouvellement au même endroit.",
         ctaPrimary: "Acheter mon VPN",
-        ctaPrimaryHref: "https://console.403shield.ftci.fr/shop",
+        ctaPrimaryHref: "/checkout",
         // Lien croisé interne : la page VPN (usage personnel) reste à un clic
         // du hub famille — la console, elle, vit dans le CTA final ci-dessous.
         ctaSecondary: "Découvrir le VPN",
@@ -872,7 +877,7 @@ const fr: LandingCopy = {
         primary: "Ouvrir la console",
         primaryHref: "https://console.403shield.ftci.fr",
         secondary: "Voir la boutique VPN",
-        secondaryHref: "https://console.403shield.ftci.fr/shop",
+        secondaryHref: "/checkout",
       },
     },
   },
@@ -1205,7 +1210,7 @@ const en: LandingCopy = {
             tagline: "No commitment, month by month",
             cta: "Buy on the shop",
             highlight: false,
-            href: "https://console.403shield.ftci.fr/shop",
+            href: "/checkout?plan=vpn-b2c-month",
             features: [
               "Dedicated fixed French IP",
               "WireGuard — 30 s activation",
@@ -1220,7 +1225,7 @@ const en: LandingCopy = {
             tagline: "12 months for the price of 10",
             badge: "2 months free",
             highlight: true,
-            href: "https://console.403shield.ftci.fr/shop",
+            href: "/checkout?plan=vpn-b2c-year",
             cta: "Buy on the shop",
             features: [
               "Dedicated fixed French IP",
@@ -1317,11 +1322,14 @@ const en: LandingCopy = {
         // N°317 — ecosystem: FTech CI parent company, console and VPN shop.
         // N°321 — canonical URLs console.403shield.ftci.fr (tunnel.ftci.fr
         // answers 301 since N°320 — we skip the extra hop).
+        // N°323 — the console is a PURE application (root → /login,
+        // dash.cloudflare.com pattern); the shop lives on the site
+        // (/checkout, internal link — OVH "order on www" model).
         title: "Ecosystem",
         links: [
           { label: "FTech CI", href: "https://ftci.fr", external: true },
           { label: "403Shield Console", href: "https://console.403shield.ftci.fr", external: true },
-          { label: "VPN shop", href: "https://console.403shield.ftci.fr/shop", external: true },
+          { label: "VPN shop", href: "/checkout" },
         ],
       },
     ],
@@ -1395,7 +1403,7 @@ const en: LandingCopy = {
         subtitle:
           "Your traffic, end-to-end encrypted by WireGuard, exits through our Marseille server with a dedicated IP address. 30-second activation — without touching a single config file. And to reach your routers, cameras or NAS: Pro Access extends that very same tunnel.",
         ctaPrimary: "Buy my VPN",
-        ctaPrimaryHref: "https://console.403shield.ftci.fr/shop",
+        ctaPrimaryHref: "/checkout",
         ctaSecondary: "Explore tunnels",
         ctaSecondaryHref: "/tunnels",
       },
@@ -1431,7 +1439,7 @@ const en: LandingCopy = {
         title: "Your configuration is emailed within 30 seconds.",
         body: "Pick your plan on the shop, pay with Wave or card: the full WireGuard configuration arrives by email, ready to import.",
         primary: "Buy my VPN",
-        primaryHref: "https://console.403shield.ftci.fr/shop",
+        primaryHref: "/checkout",
         secondary: "I already have a VPN — my account",
         secondaryHref: "https://console.403shield.ftci.fr",
       },
@@ -1451,7 +1459,7 @@ const en: LandingCopy = {
         subtitle:
           "A personal VPN with a fixed French IP, Pro Access for your routers, an extended LAN for cameras and NAS: the same end-to-end encrypted WireGuard tunnel, hosted in Marseille — one console, one shop, one subscription. Purchase, management and renewal in one place.",
         ctaPrimary: "Buy my VPN",
-        ctaPrimaryHref: "https://console.403shield.ftci.fr/shop",
+        ctaPrimaryHref: "/checkout",
         // Internal cross-link: the VPN page (personal use) stays one click
         // from the family hub — the console lives in the final CTA below.
         ctaSecondary: "Explore the VPN",
@@ -1487,7 +1495,7 @@ const en: LandingCopy = {
         primary: "Open the console",
         primaryHref: "https://console.403shield.ftci.fr",
         secondary: "Browse the VPN shop",
-        secondaryHref: "https://console.403shield.ftci.fr/shop",
+        secondaryHref: "/checkout",
       },
     },
   },

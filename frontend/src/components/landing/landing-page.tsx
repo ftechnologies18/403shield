@@ -77,9 +77,11 @@ const CHIP_ICONS = [ShieldCheck, Ticket, Zap];
 
 /* N°321 — URLs canoniques de l'écosystème tunnels (console N°320 : le
     domaine console.403shield.ftci.fr est vivant et vérifié ; tunnel.ftci.fr
-    répond 301 — on pointe direct, sans le saut supplémentaire). */
+    répond 301 — on pointe direct, sans le saut supplémentaire).
+    N°323 — la boutique déménage sur LE SITE (/checkout, lien interne) :
+    la console devient une PURE application (racine → /login, pattern
+    dash.cloudflare.com) et la caisse vit sur le site marketing. */
 const TUNNELS_CONSOLE_URL = "https://console.403shield.ftci.fr";
-const TUNNELS_SHOP_URL = "https://console.403shield.ftci.fr/shop";
 
 /* ─── Reveal on scroll — module partagé ./reveal.tsx (N°317) ─── */
 
@@ -676,7 +678,10 @@ export default function LandingPage({ onSignIn, onSignUp }: LandingPageProps) {
                   ))}
                 </div>
                 {/* Vrais liens (contrairement au parc décoratif) : la console
-                    et la boutique sont les chemins de conversion du tunnel. */}
+                    et la caisse sont les chemins de conversion du tunnel.
+                    N°323 — la caisse vit sur LE SITE (lien interne, même
+                    onglet) ; la console reste externe (nouvel onglet — sa
+                    racine redirige vers /login). */}
                 <div className="mkl-fleet-actions">
                   <a
                     className="mkl-btn mkl-btn-teal"
@@ -686,14 +691,9 @@ export default function LandingPage({ onSignIn, onSignUp }: LandingPageProps) {
                   >
                     {copy.tunnels.panel.console}
                   </a>
-                  <a
-                    className="mkl-btn mkl-btn-cream"
-                    href={TUNNELS_SHOP_URL}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
+                  <Link className="mkl-btn mkl-btn-cream" href="/checkout">
                     {copy.tunnels.panel.shop}
-                  </a>
+                  </Link>
                 </div>
               </div>
             </Reveal>
@@ -847,20 +847,33 @@ export default function LandingPage({ onSignIn, onSignUp }: LandingPageProps) {
                         <li key={f}>{f}</li>
                       ))}
                     </ul>
-                    {/* N°321 — plans à href externe (segment Tunnels) : le CTA
-                        devient un lien vers la boutique/console au lieu
-                        d'ouvrir la modale d'inscription SaaS. */}
+                    {/* N°321 — plans à href (segment Tunnels) : le CTA devient
+                        un lien au lieu d'ouvrir la modale d'inscription SaaS.
+                        N°323 — hrefs INTERNES (/checkout?plan=…) : même
+                        onglet, la caisse vit sur le site et présélectionne la
+                        formule ; seuls les hrefs http restent externes (Accès
+                        Pro → console /pro, nouvel onglet). */}
                     {plan.href ? (
-                      <a
-                        className={`mkl-btn ${plan.highlight ? "mkl-btn-cream" : "mkl-btn-teal"}`}
-                        style={{ justifyContent: "center" }}
-                        href={plan.href}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        {plan.cta}
-                        <span className="sr-only"> — nouvel onglet</span>
-                      </a>
+                      plan.href.startsWith("http") ? (
+                        <a
+                          className={`mkl-btn ${plan.highlight ? "mkl-btn-cream" : "mkl-btn-teal"}`}
+                          style={{ justifyContent: "center" }}
+                          href={plan.href}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          {plan.cta}
+                          <span className="sr-only"> — nouvel onglet</span>
+                        </a>
+                      ) : (
+                        <Link
+                          className={`mkl-btn ${plan.highlight ? "mkl-btn-cream" : "mkl-btn-teal"}`}
+                          style={{ justifyContent: "center" }}
+                          href={plan.href}
+                        >
+                          {plan.cta}
+                        </Link>
+                      )
                     ) : (
                       <button
                         className={`mkl-btn ${plan.highlight ? "mkl-btn-cream" : "mkl-btn-teal"}`}

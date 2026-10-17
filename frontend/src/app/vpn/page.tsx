@@ -5,8 +5,9 @@
 // session/PWA : page publique, visitable même connecté.
 //
 // Note : en production, vercel.json redirige /vpn?order=… (liens de
-// retour GeniusPay historiques) vers la boutique — la page propre reste
-// servie pour tout le reste.
+// retour GeniusPay historiques) vers la caisse /checkout du site (N°323 —
+// la boutique a quitté la console) ; la page propre reste servie pour
+// tout le reste.
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";

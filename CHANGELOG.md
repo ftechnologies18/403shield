@@ -10,6 +10,86 @@ sous-marque FTech CI) ; l'historique ci-dessous conserve les noms d'époque.
 N°319 : le DÉPÔT GitHub lui-même devient `ftechnologies18/403shield`
 (anciennes URL redirigées en 301 par GitHub — web, git et API).
 
+## 2026-10-18 — N°323 — **FIN DE LA CACOPHONIE DES LANDING PAGES : la console devient une PURE application (racine → 308 → /login, pattern dash.cloudflare.com) et la boutique RETOURNE au site marketing (/checkout, modèle OVH « commander sur www, gérer dans le manager »)**
+
+### Déclencheur (propriétaire)
+« console.403shield.ftci.fr et console.403shield.ftci.fr/shop se présentent
+comme des landing pages distinctes, créant une cacophonie inexplicable.
+Normalement le clic doit rediriger vers console.403shield.ftci.fr/login.
+Supprimer les autres pages. Je souhaite une analyse d'expert full-stack et
+un plan d'amélioration digne des sites comme Cloudflare et OVH. »
+
+### Diagnostic (l'analyse demandée)
+TROIS landing pages racontaient le même produit : la vitrine
+403shield.ftci.fr (refondue N°321-322 — légitime), la racine de la console
+(« Vos tunnels, simplement » — doublon hérité de N°313/N°317) et la
+boutique /shop de la console (hero + stats + features + FAQ — doublon hérité
+du déménagement N°316). Chacune avec son hero, sa nav, son footer : trois
+récits concurrents = la « cacophonie ». Référence Cloudflare/OVH :
+dash.cloudflare.com et ovh.com/manager redirigent DIRECTEMENT vers le
+login — JAMAIS de marketing sur le domaine applicatif, et la commande vit
+sur le site commercial. La topologie 403Shield (site / console / api) était
+déjà cloudflarienne ; la SÉPARATION DES RÔLES ne l'était pas.
+
+### Le plan livré (phase 1, frontend seul — zéro changement backend)
+1. **Console racine `/` → 308 → `/login`** — la landing racine est
+   SUPPRIMÉE (page.tsx réécrite en `permanentRedirect`). Le clic « Console »
+   atterrit sur la connexion, comme dash.cloudflare.com.
+2. **Console `/shop` → 308 → `403shield.ftci.fr/checkout`** (query `?order=`
+   préservée) — la boutique de la console disparaît : composants
+   `tunnel-console/src/components/shop/` supprimés, page remplacée par la
+   redirection. Les retours GeniusPay en vol (success_url
+   `{TUNNEL_PUBLIC_URL}/shop?order=`) et les liens/e-mails historiques
+   atterrissent sur la caisse du site, référence intacte.
+3. **NOUVELLE caisse `/checkout` sur le site** (frontend) : composant
+   `checkout-page.tsx` porté de l'ancien shop (parcours N°316 inchangé :
+   catalogue live GET /api/public/vpn/offers, dialog d'achat Wave/carte +
+   honeypot, suivi ?order= poll 5 s, récupération self-service, FAQ) mais
+   réhabillé dans le gabarit clay de la vitrine (topbar nav + hero compact
+   + mkl-panels + grille `.mkl-pricing-duo` 2 colonnes + footer partagé) et
+   bâties sur shadcn (Dialog/Input/Label/Button). SEO : title/description
+   hérités de l'ancienne /shop, robots index,follow — le 308 transfère
+   l'équité. Entonnoir direct : `?plan=vpn-b2c-month|year` présélectionne
+   la formule ET ouvre la caisse (les cartes tarifs du site pointent ici).
+4. **/login gagne la redirection session** — token en localStorage →
+   `/me` (le client connecté atterrit dans SON espace ; token expiré :
+   /me purge et ramène — un rebond, pas de boucle).
+5. **Vitrine : tous les liens console/shop deviennent internes** — cartes
+   tarifs tunnels (FR+EN) → `/checkout?plan=…` (même onglet, la carte
+   interne ne porte plus target _blank), CTA /vpn + /tunnels (8) →
+   `/checkout`, footer « Boutique VPN » → lien interne, panneau #tunnels →
+   caisse interne + console externe ; les liens « Console »/« Mon espace »
+   restent sur la RACINE console (qui 308 vers /login). /me et /pro
+   (console) : liens boutique → vitrine /checkout externe.
+6. **vercel.json GeniusPay** : `/vpn?order=` → `/checkout` (interne) au
+   lieu de la boutique console — la chaîne de retour historique atterrit
+   sur la caisse du site.
+
+### Phase 2 (recette backend, documentée — décision propriétaire)
+Le backend construit toujours success_url = `{TUNNEL_PUBLIC_URL}/shop?order=`
+(handlers_public_vpn.go:216) et les e-mails citent « la boutique {base}/shop » :
+tout FONCTIONNE via le 308 (un rebond), mais la canonicalisation irait au
+bout : SuccessURL/ErrorURL → URL directe de la caisse du site + e-mails →
+/checkout. TUNNEL_PUBLIC_URL reste nécessaire pour les retours /me
+(renouvellements authentifiés — l'app). À staged après validation phase 1
+(prudence : chemin de paiement).
+
+### Intacts
+Parcours d'achat N°316 (comptes-free, honeypots, anti-énumération),
+catalogue backend et facturation (la vitrine ne fait qu'afficher), API
+publique /api/public/vpn/* (aucun changement backend), /me /verify /pro
+(gardes et contrats), GeniusPay (chaîne complète 308 préservée), vitrine
+N°321-322 (hero/powers/tunnels/HomeNet lié), clés localStorage
+(miktunnel_shop_lang conservée côté caisse via le store vitrine — la
+langue suit le site), prix catalogue 1 500/15 000/3 500/35 000.
+
+### Portes
+lint 0 · tsc 0 (les DEUX apps) · parité FR/EN programmatique 410+87 chemins
+identiques + 26 assertions métier (zéro résidu console/shop, hrefs internes
+/checkout?plan=, 8 CTA, vercel.json, 308 console, honeypots ×2, prix)
+— script /home/z/scratch323/parity323.ts · smoke local : /checkout 200
+(desktop + mobile 390, scrollWidth 390 exact, 0 erreur console).
+
 ## 2026-10-17 — N°322 — **HOMENET CESSION D'ÊTRE UN SERVICE INDÉPENDANT SUR LA VITRINE : le segment tarifs « HomeNet » (grille de 3 cartes parallèles) disparaît — le mode foyer devient une option LIÉE à l'offre Hotspot (tarif réduit sur les mêmes cartes) et le sélecteur passe de 3 à 2 segments « un abonnement, un tunnel »**
 
 ### Déclencheur (propriétaire)
