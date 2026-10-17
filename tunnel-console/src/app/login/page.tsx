@@ -41,8 +41,9 @@ export default function LoginPage() {
           <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-500/15 text-emerald-400">
             <KeyRound className="h-4.5 w-4.5" aria-hidden />
           </span>
-          <div className="leading-tight">
+          <div className="flex flex-wrap items-center gap-2 leading-tight">
             <p className="font-semibold tracking-tight text-slate-100">MikTunnel</p>
+            <span className="rounded-full border border-emerald-500/40 px-1.5 py-0.5 text-[9px] font-medium text-emerald-300">by MikCloud</span>
             <p className="text-[11px] text-slate-500">powered by FTech CI</p>
           </div>
         </div>

@@ -102,6 +102,17 @@ func appPublicBaseURL() string {
 	return defaultFrontendURL
 }
 
+// tunnelPublicBaseURL — N°316 — origine canonique de la sous-marque MikTunnel
+// (le foyer de la vente directe B2C /shop et de l'espace client /me) :
+// TUNNEL_PUBLIC_URL d'abord, défaut sinon. Cascade d'endossement déjà
+// racontée par le DNS : ftci.fr → mikcloud.ftci.fr → tunnel.ftci.fr.
+func tunnelPublicBaseURL() string {
+	if v := strings.TrimRight(strings.TrimSpace(os.Getenv("TUNNEL_PUBLIC_URL")), "/"); v != "" {
+		return v
+	}
+	return "https://tunnel.ftci.fr"
+}
+
 // ---------------------------------------------------------------------------
 // Données des courriels
 // ---------------------------------------------------------------------------

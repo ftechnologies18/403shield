@@ -23,20 +23,26 @@ export function clearToken() {
 
 export class ApiError extends Error {
   status: number;
-  constructor(status: number, message: string) {
+  /** N°316 — code machine du backend (ex. "order_pending_exists") quand
+   * la réponse en transporte un (writeErrCode) — sinon vide. */
+  code?: string;
+  constructor(status: number, message: string, code?: string) {
     super(message);
     this.status = status;
+    this.code = code;
   }
 }
 
-async function readError(res: Response): Promise<string> {
+async function readError(res: Response): Promise<ApiError> {
   try {
     const data = await res.json();
-    if (typeof data?.error === "string" && data.error) return data.error;
+    const msg = typeof data?.error === "string" && data.error ? data.error : `Erreur ${res.status}`;
+    const code = typeof data?.code === "string" && data.code ? data.code : undefined;
+    return new ApiError(res.status, msg, code);
   } catch {
     /* corps non JSON : message générique ci-dessous */
   }
-  return `Erreur ${res.status}`;
+  return new ApiError(res.status, `Erreur ${res.status}`);
 }
 
 /** apiFetch — POST JSON public (auth par code) ou GET authentifié (Bearer). */
@@ -52,7 +58,7 @@ export async function apiFetch<T>(
     body: opts.body !== undefined ? JSON.stringify(opts.body) : undefined,
     cache: "no-store",
   });
-  if (!res.ok) throw new ApiError(res.status, await readError(res));
+  if (!res.ok) throw await readError(res);
   return (await res.json()) as T;
 }
 
@@ -265,3 +271,87 @@ export async function tunnelProOrder(
     body,
   });
 }
+
+// ---------------------------------------------------------------------------
+// N°316 — VENTE DIRECTE B2C déménagée dans CE foyer (ex mikcloud.ftci.fr/vpn,
+// 301 permanent) : contrat /api/public/vpn/* (handlers_public_vpn.go — SANS
+// auth, CORS ouvert). Doctrine N°301 préservée : UN seul canal B2C — il
+// déménage, il ne se dédouble pas.
+// ---------------------------------------------------------------------------
+
+export interface PublicVpnOfferPlan {
+  id: string;
+  label: string;
+  periodLabel: string;
+  months: number;
+  baseFcfa: number;
+  waveFcfa?: number;
+  cardFcfa?: number;
+}
+
+export interface PublicVpnOffers {
+  enabled: boolean;
+  onlinePayment?: boolean;
+  plans: PublicVpnOfferPlan[];
+}
+
+export interface PublicVpnOrderCreated {
+  ref: string;
+  status: string;
+  amountFcfa: number;
+  payMethod: string;
+  paymentUrl: string;
+  online: boolean;
+}
+
+export interface PublicVpnOrderStatus {
+  ref: string;
+  status: string;
+  months: number;
+  planLabel?: string;
+  periodLabel?: string;
+  expiresAt?: string;
+  email?: string;
+  ipv4?: string;
+}
+
+/** N°316 — catalogue public de la vitrine (formules + montants par moyen). */
+export async function fetchPublicVpnOffers(): Promise<PublicVpnOffers> {
+  return apiFetch<PublicVpnOffers>("/api/public/vpn/offers");
+}
+
+/** N°316 — crée la commande pending et (paiement configuré) renvoie l'URL
+ * GeniusPay ; sinon canal manuel (référence MCV- à régler). Honeypot website. */
+export async function createPublicVpnOrder(body: {
+  email: string;
+  phone?: string;
+  planId: string;
+  payMethod: string;
+  website?: string;
+}): Promise<PublicVpnOrderCreated> {
+  return apiFetch<PublicVpnOrderCreated>("/api/public/vpn/order", {
+    method: "POST",
+    body,
+  });
+}
+
+/** N°316 — statut public minimal par référence (poll de retour de paiement ;
+ * le GET finalise côté serveur si le webhook a déjà convergé). */
+export async function fetchPublicVpnOrderStatus(ref: string): Promise<PublicVpnOrderStatus> {
+  return apiFetch<PublicVpnOrderStatus>(
+    `/api/public/vpn/order/${encodeURIComponent(ref)}`,
+  );
+}
+
+/** N°316 — re-livraison SELF-SERVICE de la conf par e-mail (appariement
+ * strict e-mail + référence — réponse générique, anti-énumération). */
+export async function recoverPublicVpnConf(
+  email: string,
+  ref: string,
+): Promise<{ ok: boolean; message: string }> {
+  return apiFetch<{ ok: boolean; message: string }>("/api/public/vpn/recover", {
+    method: "POST",
+    body: { email, ref },
+  });
+}
+

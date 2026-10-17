@@ -313,8 +313,9 @@ export default function ProPage() {
             <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-500/15 text-emerald-400">
               <KeyRound className="h-4 w-4" aria-hidden />
             </span>
-            <div className="leading-tight">
+            <div className="flex flex-wrap items-center gap-2 leading-tight">
               <p className="text-sm font-semibold tracking-tight text-slate-100">MikTunnel · Accès Pro</p>
+              <span className="rounded-full border border-emerald-500/40 px-1.5 py-0.5 text-[9px] font-medium text-emerald-300">by MikCloud</span>
               <p className="text-[11px] text-slate-500">powered by FTech CI</p>
             </div>
           </div>
@@ -414,10 +415,10 @@ export default function ProPage() {
                   </p>
                   <p className="mt-2 text-amber-200/60">
                     Vous cherchez un VPN pour votre téléphone ?{" "}
-                    <a href="https://mikcloud.ftci.fr/vpn" className="underline underline-offset-2">
-                      MikCloud VPN
+                    <a href="/shop" className="underline underline-offset-2">
+                      La boutique MikTunnel
                     </a>{" "}
-                    reste la vitrine dédiée.
+                    est faite pour ça.
                   </p>
                 </section>
               ) : (
@@ -656,10 +657,10 @@ export default function ProPage() {
 
       <footer className="mt-auto border-t border-slate-800/60">
         <div className="mx-auto flex max-w-4xl flex-col items-start justify-between gap-2 px-4 py-6 text-xs text-slate-500 sm:flex-row sm:items-center sm:px-6">
-          <p>MikTunnel — powered by FTech CI · Accès Pro : tunnels WireGuard hébergés à Marseille</p>
+          <p>MikTunnel — by MikCloud · powered by FTech CI · Accès Pro : tunnels WireGuard hébergés à Marseille</p>
           <div className="flex gap-4">
-            <a href="https://mikcloud.ftci.fr/vpn" className="hover:text-slate-300">
-              MikCloud VPN
+            <a href="/shop" className="hover:text-slate-300">
+              Boutique VPN
             </a>
             <a href="https://mikcloud.ftci.fr" className="hover:text-slate-300">
               MikCloud

@@ -236,7 +236,7 @@ func (a *API) handleTunnelRenew(w http.ResponseWriter, r *http.Request) {
 	if target.Status != model.PublicVpnOrderProvisioned {
 		a.store.Unlock()
 		writeErrCode(w, http.StatusConflict, "target_not_active",
-			"Cet accès n'est plus actif — souscrivez un nouvel accès sur la vitrine MikCloud VPN (mikcloud.ftci.fr/vpn)", nil)
+			"Cet accès n'est plus actif — souscrivez un nouvel accès sur la boutique MikTunnel (tunnel.ftci.fr/shop)", nil)
 		return
 	}
 	// N°315 — garde de FAMILLE : on renouvelle un accès Pro avec une
@@ -304,15 +304,15 @@ func (a *API) handleTunnelRenew(w http.ResponseWriter, r *http.Request) {
 		payload := geniusPayCreateReq{
 			Amount:        amount,
 			PaymentMethod: payMethod,
-			Description:   fmt.Sprintf("Renouvellement MikCloud VPN %s (%s) — réf %s", plan.Label, plan.PeriodLabel, order.Ref),
+			Description:   fmt.Sprintf("Renouvellement MikTunnel VPN %s (%s) — réf %s", plan.Label, plan.PeriodLabel, order.Ref),
 			Customer:      &geniusPayCustomer{Name: buyerNameOf(client.Email), Email: client.Email, Phone: phone},
 			Metadata:      map[string]string{"ref": order.Ref, "plan_id": plan.ID},
 		}
 		returnBase := tunnelConsoleReturnURL(r)
 		if returnBase == "" {
-			if appURL := strings.TrimRight(strings.TrimSpace(appPublicBaseURL()), "/"); appURL != "" {
-				returnBase = appURL + "/vpn"
-			}
+			// N°316 — repli : l'espace MikTunnel (le renouvellement part de /me ;
+			// l'ancien repli vitrine /vpn déménage avec la boutique).
+			returnBase = tunnelPublicBaseURL() + "/me"
 		}
 		if returnBase != "" {
 			payload.SuccessURL = returnBase + "?order=" + url.QueryEscape(order.Ref)

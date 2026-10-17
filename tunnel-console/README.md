@@ -9,11 +9,19 @@
 
 ## Ce que c'est
 
-La sous-marque **MikTunnel** (powered by FTech CI) : vitrine + espace client
-du service de tunnels WireGuard. Phase 3 livrée (N°315) :
+La sous-marque **MikTunnel — by MikCloud** (powered by FTech CI) : LE foyer
+du service de tunnels WireGuard (arbitrage N°316 — option C : la maison
+MikCloud, la sous-marque endossée ; la cascade ftci.fr → mikcloud.ftci.fr →
+tunnel.ftci.fr est racontée par le DNS). Phase 3 livrée (N°315), rebrand
+complet + boutique (N°316) :
 
-- **Vitrine** (`/`) — promesses honnêtes, lien vers la vente MikCloud VPN
-  déjà ouverte (`mikcloud.ftci.fr/vpn`) ;
+- **Vitrine** (`/`) — promesses honnêtes, barre écosystème (FTech CI ·
+  MikCloud · ici), CTA vers la boutique `/shop` ;
+- **Boutique d'achat B2C** (`/shop`, N°316) — le canal de vente directe
+  DEMÉNAGÉ de `mikcloud.ftci.fr/vpn` (301 permanent posé côté Vercel du
+  frontend MikCloud) : catalogue, achat Wave/carte, suivi `?order=MCV-…`,
+  récupération self-service. Doctrine N°301 préservée : UN seul canal B2C —
+  il a déménagé, il ne s'est pas dédoublé ;
 - **Connexion sans mot de passe** (`/login` → `/verify`) — code à 6 chiffres
   par e-mail (10 min, un seul usage) contre le module backend
   `POST /api/tunnel/auth/request-code` + `POST /api/tunnel/auth/verify`
@@ -45,6 +53,11 @@ Variables d'environnement :
 | `NEXT_PUBLIC_API_BASE` | `https://api.mikcloud.ftci.fr` | Base de l'API (CORS ouverte côté backend — `corsMiddleware`, `routes.go`) |
 | `TUNNEL_DEV_API_PROXY` | — | `=1` en dev local : proxy `/api/*` → `http://localhost:4000` (backend local) |
 
+Côté BACKEND (N°316) : `TUNNEL_PUBLIC_URL` (défaut `https://tunnel.ftci.fr`)
+porte l'origine canonique de la sous-marque — retours de paiement GeniusPay
+de la boutique (`/shop?order=…`), replis renouvellement/Pro (`/me`) et liens
+des e-mails MCV- rebrandés « MikTunnel (by MikCloud · powered by FTech CI) ». `APP_PUBLIC_URL` reste l'origine du SaaS MikCloud (reçus, resets).
+
 ## Déploiement (Vercel) — FAIT le 13/10/2026 (N°314, session de pilotage)
 
 1. **Projet Vercel `miktunnel`** CRÉÉ : Import Git Repository →
@@ -60,13 +73,13 @@ Variables d'environnement :
    (DNS only) + TXT `_vercel` de vérification ; certificat émis, HTTP 200
    servi (vitrine + `/pro` + `/me`).
 
-## Périmètre et limites (phase 3)
+## Périmètre et limites (phase 3, boutique N°316)
 
-- Vente NEUVE B2C (fulltunnel) : REFUSÉE depuis cette console (la vitrine
-  `/vpn` de MikCloud reste LE canal B2C — doctrine N°301 « jamais en
-  concurrence avec ses revendeurs ») ; la console ne vend que le
-  RENOUVELLEMENT B2C et l'ACCÈS PRO (famille « pro », canal séparé,
-  verrouillé des deux bords) ;
+- Vente NEUVE B2C (fulltunnel) : elle vit DÉSORMAIS ICI (`/shop`, N°316 —
+  déménagement du canal unique, doctrine N°301 « jamais en concurrence avec
+  ses revendeurs » préservée : l'ancienne vitrine `/vpn` de MikCloud répond
+  301) ; familles de formules VERROUILLÉES (la boutique ne montre/jamais ne
+  vend que la famille b2c, le canal Pro reste séparé) ;
 - L'Accès Pro exige un COMPTE GÉRANT MikCloud apparié par e-mail (au moins
   un routeur en mode agent) — la page `/pro` le DIT au lieu de vendre un
   accès qui ne servirait à rien ;

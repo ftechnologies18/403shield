@@ -24,7 +24,7 @@ export const ANNEXES_GUIDES: Guide[] = [
       {
         with: "La vitrine /vpn",
         body:
-          "/vpn vend du VPN au client final (paiement en ligne, autonome) ; /sell vend des tickets WiFi par humain interposé. Deux boutiques publiques, deux marchandises.",
+          "La boutique MikTunnel (tunnel.ftci.fr/shop) vend du VPN au client final (paiement en ligne, autonome) ; /sell vend des tickets WiFi par humain interposé. Deux boutiques publiques, deux marchandises.",
       },
     ],
     recoit: [
@@ -189,7 +189,7 @@ export const ANNEXES_GUIDES: Guide[] = [
     sectionId: "annexes",
     vague: "V3",
     quoi:
-      "La vitrine /vpn est la boutique publique qui vend vos accès VPN B2C : le visiteur compare les formules (durée, quota), paie en ligne (Wave, GeniusPay, Stripe selon réglages), et reçoit ses clés WireGuard (QR + config) immédiatement — provision automatique, zéro intervention de votre côté.\n\nElle n'existe que si l'offre est activée (réglage plateforme PublicVpnShop — voir le volet privé) : la vitrine est SEO-indexée (contrairement aux pages /wifi) et vend 24/7.\n\nNOTE DE CAPTURE : l'illustration montre la vitrine publique de MikCloud (mikcloud.ftci.fr/vpn).",
+      "La boutique publique qui vend vos accès VPN B2C vit désormais chez la sous-marque MikTunnel — tunnel.ftci.fr/shop (N°316) : le visiteur compare les formules (durée, quota), paie en ligne (Wave, GeniusPay, Stripe selon réglages), et reçoit ses clés WireGuard immédiatement — provision automatique, zéro intervention de votre côté. L'ancienne page mikcloud.ftci.fr/vpn répond 301 vers cette boutique.\n\nElle n'existe que si l'offre est activée (réglage plateforme PublicVpnShop — voir le volet privé) : la boutique est SEO-indexée (contrairement aux pages /wifi) et vend 24/7.\n\nNOTE DE CAPTURE : l'illustration montre l'ancienne vitrine MikCloud (mikcloud.ftci.fr/vpn) — le parcours vit aujourd'hui sur tunnel.ftci.fr/shop (MikTunnel).",
     difference: [
       {
         with: "Le module VPN (console)",
@@ -211,7 +211,7 @@ export const ANNEXES_GUIDES: Guide[] = [
       {
         title: "Le visiteur découvre la vitrine",
         body:
-          "/vpn présente l'offre (comparatif des formules, prix, promesses) — page publique, indexée SEO (elle vend pendant que vous dormez).",
+          "La boutique MikTunnel (tunnel.ftci.fr/shop) présente l'offre (comparatif des formules, prix, promesses) — page publique, indexée SEO (elle vend pendant que vous dormez).",
         capture: cap(
           "annexes/vpn-shop.png",
           1440,

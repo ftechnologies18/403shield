@@ -207,14 +207,14 @@ func (a *API) handlePublicVpnOrderCreate(w http.ResponseWriter, r *http.Request)
 		payload := geniusPayCreateReq{
 			Amount:        amount,
 			PaymentMethod: payMethod,
-			Description:   fmt.Sprintf("MikCloud VPN %s (%s) — réf %s", plan.Label, plan.PeriodLabel, order.Ref),
+			Description:   fmt.Sprintf("MikTunnel VPN %s (%s) — réf %s", plan.Label, plan.PeriodLabel, order.Ref),
 			Customer:      &geniusPayCustomer{Name: buyerNameOf(email), Email: email, Phone: phone},
 			Metadata:      map[string]string{"ref": order.Ref, "plan_id": plan.ID},
 		}
-		if appURL := strings.TrimRight(strings.TrimSpace(appPublicBaseURL()), "/"); appURL != "" {
-			payload.SuccessURL = appURL + "/vpn?order=" + url.QueryEscape(order.Ref)
-			payload.ErrorURL = appURL + "/vpn?order=" + url.QueryEscape(order.Ref)
-		}
+		// N°316 — le retour de paiement revient à la BOUTIQUE MikTunnel
+		// (le foyer B2C déménagé ; l'ancienne /vpn répond 301).
+		payload.SuccessURL = tunnelPublicBaseURL() + "/shop?order=" + url.QueryEscape(order.Ref)
+		payload.ErrorURL = tunnelPublicBaseURL() + "/shop?order=" + url.QueryEscape(order.Ref)
 		env, gerr := geniusPayCall(http.MethodPost, "/payments", payload)
 		if gerr == nil && env != nil {
 			var pay geniusPayPayment
@@ -802,9 +802,9 @@ func removeVpnPeerByID(peers []model.VpnPeer, id string) []model.VpnPeer {
 // publicVpnEmailBodies — texte + HTML de la conf livrée (produit = la conf ;
 // instructions minimales, discipline vpnDeliveryBody N°291).
 func publicVpnEmailBodies(order model.PublicVpnOrder, peer model.VpnPeer, conf string) (title, textBody, htmlBody string) {
-	title = "MikCloud — Votre VPN WireGuard est prêt (" + order.Ref + ")"
+	title = "MikTunnel — Votre VPN WireGuard est prêt (" + order.Ref + ")"
 	var sb strings.Builder
-	sb.WriteString("MikCloud — Votre accès VPN WireGuard\n\n")
+	sb.WriteString("MikTunnel — Votre accès VPN WireGuard (by MikCloud)\n\n")
 	sb.WriteString("Commande : " + order.Ref + "\n")
 	if plan := model.ResolvePublicVpnPlan(order.PlanID); plan != nil {
 		sb.WriteString("Formule : " + plan.Label + " (" + plan.PeriodLabel + ")\n")
@@ -812,18 +812,18 @@ func publicVpnEmailBodies(order model.PublicVpnOrder, peer model.VpnPeer, conf s
 	sb.WriteString("Valide jusqu'au : " + order.ExpiresAt + "\n\n")
 	sb.WriteString("1. Installez l'application WireGuard (App Store / Google Play / wireguard.com/install).\n")
 	sb.WriteString("2. Dans WireGuard : « + » → « Créer depuis un QR code » est impossible ici : choisissez « Créer à partir d'un tunnel vide »… ou plus simple — collez la configuration ci-dessous via « + » → « Importer depuis un fichier » après l'avoir enregistrée en mikcloud.conf.\n")
-	sb.WriteString("3. Activez le tunnel : votre trafic sort alors par MikCloud (IP fixe France).\n\n")
-	sb.WriteString("Gardez cette référence (" + order.Ref + ") : elle permet de récupérer votre configuration sur la page MikCloud VPN (section « Récupérer ma configuration »).\n\n")
+	sb.WriteString("3. Activez le tunnel : votre trafic sort alors par MikTunnel (IP fixe France).\n\n")
+	sb.WriteString("Gardez cette référence (" + order.Ref + ") : elle permet de récupérer votre configuration sur la boutique MikTunnel — " + tunnelPublicBaseURL() + "/shop (section « Récupérer ma configuration »).\n\n")
 	sb.WriteString(conf)
 	textBody = sb.String()
 
-	htmlBody = "<p>Votre accès VPN WireGuard MikCloud est prêt.</p>" +
+	htmlBody = "<p>Votre accès VPN WireGuard <b>MikTunnel</b> (by MikCloud) est prêt.</p>" +
 		"<p><b>Commande</b> : " + html.EscapeString(order.Ref) + " — <b>valide jusqu'au</b> " + html.EscapeString(order.ExpiresAt) + "</p>" +
 		"<p>1. Installez l'application <b>WireGuard</b> (App Store / Google Play / <a href=\"https://www.wireguard.com/install/\">wireguard.com/install</a>).<br>" +
 		"2. Enregistrez la configuration ci-dessous dans un fichier <b>mikcloud.conf</b>, puis dans WireGuard : « + » → « Importer depuis un fichier ».<br>" +
-		"3. Activez le tunnel : votre trafic sort par MikCloud (IP fixe France).</p>" +
+		"3. Activez le tunnel : votre trafic sort par MikTunnel (IP fixe France).</p>" +
 		"<pre style=\"white-space:pre-wrap;background:#f5f5f5;padding:12px;border-radius:8px\">" + html.EscapeString(conf) + "</pre>" +
-		"<p style=\"color:#888;font-size:12px\">Gardez votre référence " + html.EscapeString(order.Ref) + " : elle permet de récupérer cette configuration sur la page MikCloud VPN (rubrique « Récupérer ma configuration »). Gardez cette configuration secrète : elle donne un accès complet.</p>"
+		"<p style=\"color:#888;font-size:12px\">Gardez votre référence " + html.EscapeString(order.Ref) + " : elle permet de récupérer cette configuration sur la <a href=\"" + tunnelPublicBaseURL() + "/shop\">boutique MikTunnel</a> (rubrique « Récupérer ma configuration »). Gardez cette configuration secrète : elle donne un accès complet.</p>"
 	return title, textBody, htmlBody
 }
 
@@ -972,19 +972,19 @@ func publicVpnRenewEmailBodies(renewal, target model.PublicVpnOrder) (title, tex
 		planLabel = plan.Label
 	}
 	until := renewal.ExpiresAt
-	title = "Votre abonnement MikCloud VPN est renouvelé"
+	title = "Votre abonnement MikTunnel VPN est renouvelé"
 	textBody = "Bonjour,\n\n" +
 		"Votre renouvellement (" + planLabel + ") est confirmé — référence " + renewal.Ref + ".\n" +
 		"Votre accès " + target.Ref + " est désormais couvert jusqu'au " + until + ".\n\n" +
 		"Votre configuration WireGuard ne change pas : elle reste celle livrée à votre adresse,\n" +
-		"et reste récupérable dans votre espace MikTunnel à tout moment.\n\n" +
-		"— MikCloud VPN (powered by FTech CI)"
+		"et reste récupérable dans votre espace MikTunnel (" + tunnelPublicBaseURL() + ") à tout moment.\n\n" +
+		"— MikTunnel (by MikCloud · powered by FTech CI)"
 	htmlBody = "<div style=\"font-family:system-ui,Segoe UI,Arial,sans-serif;max-width:480px;margin:0 auto;padding:24px\">" +
 		"<h2 style=\"color:#0f766e;margin:0 0 16px\">Renouvellement confirmé</h2>" +
 		"<p style=\"color:#334155;font-size:15px\">Votre renouvellement (" + planLabel + ") est confirmé — référence <code>" + renewal.Ref + "</code>.</p>" +
 		"<p style=\"color:#0f172a;font-size:15px\">Votre accès <code>" + target.Ref + "</code> est couvert jusqu'au <strong>" + until + "</strong>.</p>" +
 		"<p style=\"color:#64748b;font-size:13px\">Votre configuration WireGuard ne change pas ; elle reste récupérable dans votre espace MikTunnel.</p>" +
-		"<p style=\"color:#94a3b8;font-size:12px\">— MikCloud VPN (powered by FTech CI)</p></div>"
+		"<p style=\"color:#94a3b8;font-size:12px\">— MikTunnel (by MikCloud · powered by FTech CI)</p></div>"
 	return title, textBody, htmlBody
 }
 

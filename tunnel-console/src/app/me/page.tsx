@@ -236,8 +236,9 @@ export default function MePage() {
             <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-500/15 text-emerald-400">
               <KeyRound className="h-4 w-4" aria-hidden />
             </span>
-            <div className="leading-tight">
+            <div className="flex flex-wrap items-center gap-2 leading-tight">
               <p className="text-sm font-semibold tracking-tight text-slate-100">MikTunnel</p>
+              <span className="rounded-full border border-emerald-500/40 px-1.5 py-0.5 text-[9px] font-medium text-emerald-300">by MikCloud</span>
               <p className="text-[11px] text-slate-500">powered by FTech CI</p>
             </div>
           </div>
@@ -324,10 +325,10 @@ export default function MePage() {
                     <p className="text-sm text-slate-400">
                       Aucune commande pour cet e-mail. Les achats faits sur la{" "}
                       <a
-                        href="https://mikcloud.ftci.fr/vpn"
+                        href="/shop"
                         className="font-medium text-emerald-400 hover:text-emerald-300"
                       >
-                        vitrine MikCloud VPN
+                        boutique MikTunnel
                       </a>{" "}
                       avec cette adresse apparaîtront ici.
                     </p>
@@ -441,7 +442,7 @@ export default function MePage() {
                             <p className="mt-2 text-xs text-slate-500">
                               L&apos;appareil a été révoqué au terme. Pour repartir,{" "}
                               <a
-                                href="https://mikcloud.ftci.fr/vpn"
+                                href="/shop"
                                 className="font-medium text-emerald-400 hover:text-emerald-300"
                               >
                                 souscrivez un nouvel accès
@@ -589,7 +590,7 @@ export default function MePage() {
                         onChange={() => setRenewPlan(p.id)}
                         className="accent-emerald-500"
                       />
-                      {renewFor?.family === "pro" ? "MikTunnel Pro — " : "MikCloud VPN — "}
+                      {renewFor?.family === "pro" ? "MikTunnel Pro — " : "MikTunnel VPN — "}
                       {p.label}
                     </span>
                     <span className="font-medium tabular-nums">{formatFcfa(p.amount)}</span>
@@ -686,7 +687,7 @@ export default function MePage() {
 
       <footer className="mt-auto border-t border-slate-800/60">
         <div className="mx-auto max-w-4xl px-4 py-5 text-xs text-slate-500 sm:px-6">
-          MikTunnel — powered by FTech CI · Tunnels WireGuard hébergés à Marseille
+          MikTunnel — by MikCloud · powered by FTech CI · Tunnels WireGuard hébergés à Marseille
         </div>
       </footer>
     </div>

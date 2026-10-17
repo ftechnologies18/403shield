@@ -80,7 +80,7 @@ export const enPlatformVpn: Record<string, string> = {
   // — B2C orders table —
   "platformVpn.orders.title": "Direct sales orders (public shop)",
   "platformVpn.orders.desc":
-    "The B2C channel: the /vpn shop sells to customers outside hotspot areas, provisioning is automatic on payment. \"Confirm payment\" serves the manual channel (offline); \"Cancel\" revokes a provisioned order's access.",
+    "The B2C channel: the MikTunnel shop (tunnel.ftci.fr/shop) sells to customers outside hotspot areas, provisioning is automatic on payment. \"Confirm payment\" serves the manual channel (offline); \"Cancel\" revokes a provisioned order's access.",
   "platformVpn.orders.search": "Search (ref, email)…",
   "platformVpn.orders.ref": "Ref",
   "platformVpn.orders.email": "Customer",
@@ -113,16 +113,16 @@ export const enPlatformVpn: Record<string, string> = {
   "platformVpn.orders.pay.manual": "Manual",
 
   // — B2C shop block —
-  "platformVpn.shop.title": "Public MikCloud VPN shop",
+  "platformVpn.shop.title": "Public MikTunnel shop (direct sales)",
   "platformVpn.shop.desc":
-    "Direct sales live on the public /vpn page (outside managers' areas — never competing with your resellers). Closed: the catalogue refuses orders; open: online payment (Wave/card), automatic provisioning and self-service recovery by email.",
+    "Direct sales live on the public MikTunnel shop — tunnel.ftci.fr/shop, MikCloud's VPN sub-brand (outside managers' areas — never competing with your resellers; the former /vpn page 301-redirects there). Closed: the catalogue refuses orders; open: online payment (Wave/card), automatic provisioning and self-service recovery by email.",
   "platformVpn.shop.open": "Shop open",
   "platformVpn.shop.closed": "Shop closed",
   "platformVpn.shop.toggle": "Open direct sales",
   "platformVpn.shop.toggleOff": "Close direct sales",
-  "platformVpn.shop.openToast": "B2C shop open — /vpn is selling",
+  "platformVpn.shop.openToast": "B2C shop open — MikTunnel is selling",
   "platformVpn.shop.closedToast": "B2C shop closed (in-service orders stay active)",
-  "platformVpn.shop.link": "View the /vpn shop",
+  "platformVpn.shop.link": "View the MikTunnel shop",
   "platformVpn.shop.onlinePayment": "Online payment active",
   "platformVpn.shop.manualOnly": "Online payment not configured — manual channel",
   "platformVpn.shop.pendingHint": "{n} pending order(s)",

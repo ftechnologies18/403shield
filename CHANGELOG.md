@@ -6,6 +6,88 @@ aux dates de livraison — le déploiement est continu : chaque push `main` pass
 la CI puis se déploie automatiquement (frontend Vercel, backend Oracle E5
 depuis le T2 N°266 — Render suspendu N°303).
 
+## 2026-10-18 — N°316 — **ARCHITECTURE DE MARQUE (arbitrage option C) : la maison MikCloud, la sous-marque MikTunnel endossée — le canal B2C déménage sur tunnel.ftci.fr (/shop), 301 permanent sur /vpn**
+
+### Problème
+Trois vitrines vivantes pour deux produits réels : mikcloud.ftci.fr (SaaS
+Hotspot + HomeNet, B2B), mikcloud.ftci.fr/vpn (« MikCloud VPN », B2C) et
+tunnel.ftci.fr (console MikTunnel + Accès Pro). Le parcours VPN B2C traversait
+DEUX marques : achat dans l'univers MikCloud (page /vpn, e-mails MCV-),
+gestion et renouvellement dans l'univers MikTunnel (autre nom, autre design) —
+à chaque saut d'univers, la confiance se redissout. La fenêtre était idéale :
+tunnel.ftci.fr vient d'être vérifié (N°315), zéro habitude client, zéro équité
+SEO à préserver.
+
+### Arbitrage (étude N°316, cinq questions au propriétaire)
+Trois scénarios comparés (A marque unifiée multipage · B deux marques pures ·
+C maison + sous-marque endossée), matrice de dix critères : **C 43/50 ·
+A 42/50 · B 32/50**. Réponses du propriétaire : les deux audiences portent la
+croissance en parallèle ; pub sociale/bouche-à-oreille puis payante après
+premiers revenus ; pipeline produit confirmé (amélioration continue + futur
+firewall cloud FAI « famille + Pro ») ; il suit le verdict. Donnée structurelle
+décisive : **tous les produits sont des sous-marques de ftci.fr** — la cascade
+FTech CI → MikCloud → MikTunnel est déjà racontée par le DNS
+(mikcloud.ftci.fr, tunnel.ftci.fr). Doctrine N°301 préservée : UN seul canal
+B2C — il déménage, il ne se dédouble jamais (revendeurs hors concurrence).
+
+### Livré — tunnel-console (projet Vercel miktunnel, tunnel.ftci.fr)
+- **Boutique /shop** : portage complet de la vitrine d'achat depuis
+  frontend/src/components/vpn-shop/ (N°301) — catalogue
+  GET /api/public/vpn/offers, achat dialog (e-mail + téléphone Wave + moyen),
+  POST /api/public/vpn/order → redirection GeniusPay ou canal manuel (réf
+  MCV-), suivi ?order=MCV-… (poll 5 s, arrêt sur statut résolu),
+  self-service POST /api/public/vpn/recover (réponse générique
+  anti-énumération). Charte émeraude nuit de la sous-marque (zéro clay),
+  hooks locaux (pas de react-query), dialog + radios MAISON (zéro dépendance
+  radix), langue FR/EN locale persistée — et le honeypot « website » est
+  désormais RÉELLEMENT transmis (rempli = robot, le backend part en silence).
+- **Endossement cascade partout** : barre écosystème (ftci.fr · MikCloud —
+  plateforme · « Tunnels & VPN — vous êtes ici »), badge « by MikCloud » dans
+  les en-têtes des 5 pages + home, footers croisés (MikTunnel — by MikCloud ·
+  powered by FTech CI), CTA « Acheter un VPN » → /shop interne (plus aucun
+  lien sortant vers mikcloud.ftci.fr/vpn).
+- **SEO ouvert** : le layout root passe indexable (vitrine = foyer VPN à
+  référencer) ; les routes PRIVÉES login/verify/me/pro posent leur robots
+  noindex via mini-layouts serveurs ; /shop et la home portent metadata +
+  OpenGraph propres.
+
+### Livré — frontend MikCloud (projet Vercel mikcloud, mikcloud.ftci.fr)
+- **301 permanent** (vercel.json) : /vpn → https://tunnel.ftci.fr/shop — la
+  query ?order=MCV-… est préservée (retours de paiement et liens indexés
+  suivent). La route /vpn et les composants vpn-shop/ sont RETIRÉS
+  (déménagés) — le canal ne vit plus ici.
+- **Nav famille** : lien « VPN & Tunnels ↗ » dans le header de la vitrine +
+  colonne footer « Famille » (FR/EN) pointant tunnel.ftci.fr — le cross-link
+  nourrit l'équité SEO de la sous-marque dès le premier jour.
+- **Console SaaS honnête** : le lien « Voir la vitrine » du module VPN
+  plateforme pointe tunnel.ftci.fr/shop ; i18n FR/EN et doc publique
+  (annexes) mis à jour — la boutique s'appelle MikTunnel.
+
+### Livré — backend (Go)
+- **tunnelPublicBaseURL()** (transactional_emails.go) : origine canonique de
+  la sous-marque — env TUNNEL_PUBLIC_URL, défaut https://tunnel.ftci.fr
+  (miroir de appPublicBaseURL, APP_PUBLIC_URL reste l'origine SaaS MikCloud).
+- **Retours de paiement B2C** : SuccessURL/ErrorURL de la vitrine =
+  tunnel.ftci.fr/shop?order=… (l'acheteur revient à la BOUTIQUE qui l'a vu
+  naître) ; Description GeniusPay « MikTunnel VPN … » (page de paiement
+  cohérente avec la marque d'achat) ; replis renouvellement + Accès Pro =
+  tunnel.ftci.fr/me (l'espace, pas l'ancienne vitrine /vpn).
+- **E-mails MCV- rebrandés** : livraison et renouvellement signés
+  « MikTunnel (by MikCloud · powered by FTech CI) », lien de récupération
+  cliquable vers tunnel.ftci.fr/shop, message cible morte → boutique
+  MikTunnel. Zéro divergence avec les instructions existantes (le fichier
+  mikcloud.conf reste mikcloud.conf — cohérence avec les livraisons passées).
+
+### Vérifié
+gofmt (aucun fichier de ce commit listé) · go vet OK · go build OK ·
+go test 11/11 (59 s, internal/api recompilé) · tunnel-console : eslint 0,
+tsc 0, next build 7 routes (/shop dynamique) · frontend : eslint 0, tsgo 0 ·
+vercel.json redirects conforme (301, query préservée par défaut Vercel) ·
+sondes post-déploiement : /shop 200 + 301 /vpn + home rebrandée (voir
+journal de session). Le diagnostic gofmt « method must have no type
+parameters » sur handlers_ppp.go:733 PRÉEXISTE à ce commit (N°294, arbre
+propre vérifié au stash) — hors périmètre, signalé.
+
 ## 2026-10-17 — N°315 — **PROGRAMME TUNNEL, PHASE 3 : ACCÈS PRO + LAN ÉTENDU (caméras/NAS) — design D-B1 livré comme offre « Pro » de la console MikTunnel (D-T4), wg-peer.sh/wg-mini v5**
 
 ### Problème

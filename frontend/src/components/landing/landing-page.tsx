@@ -417,6 +417,15 @@ export default function LandingPage({ onSignIn, onSignUp }: LandingPageProps) {
               {copy.header.brand}
             </a>
             <div className="flex items-center gap-2">
+              {/* N°316 — lien famille : la sous-marque MikTunnel (tunnel.ftci.fr). */}
+              <a
+                href="https://tunnel.ftci.fr"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mkl-link-quiet"
+              >
+                {copy.header.vpn} ↗
+              </a>
               <button className="mkl-lang" onClick={toggleLang} aria-label="Switch language">
                 {copy.header.langLabel}
               </button>
@@ -822,6 +831,11 @@ export default function LandingPage({ onSignIn, onSignUp }: LandingPageProps) {
                       <Link key={link.label} href={link.href}>
                         {link.label}
                       </Link>
+                    ) : link.href.startsWith("https://") ? (
+                      // N°316 — lien famille externe (sous-marque MikTunnel).
+                      <a key={link.label} href={link.href} target="_blank" rel="noopener noreferrer">
+                        {link.label} ↗
+                      </a>
                     ) : (
                       <a key={link.label} href={link.href} onClick={goTo(link.href.slice(1))}>
                         {link.label}

@@ -39,6 +39,8 @@ export interface LandingCopy {
     signUp: string;
     langLabel: string;
     homeLink: string;
+    /** N°316 — lien famille vers la sous-marque MikTunnel (externe). */
+    vpn: string;
   };
   hero: {
     badge: string;
@@ -161,7 +163,7 @@ export interface LandingCopy {
   };
   footer: {
     tagline: string;
-    columns: { title: string; links: { label: string; href: string }[] }[];
+    columns: { title: string; links: { label: string; href: string; external?: boolean }[] }[];
     /** N°70 — libellé du lien vers /legal/confidentialite. */
     legal: string;
   };
@@ -182,6 +184,7 @@ const fr: LandingCopy = {
     signUp: "Essai gratuit",
     langLabel: "EN",
     homeLink: "Retour à l'accueil",
+    vpn: "VPN & Tunnels",
   },
   hero: {
     badge: "Gestion Hotspot · Pare-feu HomeNet · Cloud MikroTik",
@@ -527,6 +530,13 @@ const fr: LandingCopy = {
         title: "Légal",
         links: [{ label: "Politique de confidentialité", href: "/legal/confidentialite" }],
       },
+      {
+        // N°316 — famille : la maison MikCloud renvoie vers sa sous-marque.
+        title: "Famille",
+        links: [
+          { label: "MikTunnel — VPN & accès distants", href: "https://tunnel.ftci.fr", external: true },
+        ],
+      },
     ],
     legal: "Politique de confidentialité",
   },
@@ -547,6 +557,7 @@ const en: LandingCopy = {
     signUp: "Free trial",
     langLabel: "FR",
     homeLink: "Back to home",
+    vpn: "VPN & Tunnels",
   },
   hero: {
     badge: "Hotspot management · HomeNet residential firewall · MikroTik cloud",
@@ -890,6 +901,13 @@ const en: LandingCopy = {
       {
         title: "Legal",
         links: [{ label: "Privacy policy", href: "/legal/confidentialite" }],
+      },
+      {
+        // N°316 — family: the MikCloud house links to its sub-brand.
+        title: "Family",
+        links: [
+          { label: "MikTunnel — VPN & remote access", href: "https://tunnel.ftci.fr", external: true },
+        ],
       },
     ],
     legal: "Privacy policy",

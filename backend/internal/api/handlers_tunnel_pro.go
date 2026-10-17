@@ -832,9 +832,9 @@ func (a *API) handleTunnelProOrder(w http.ResponseWriter, r *http.Request) {
 		}
 		returnBase := tunnelConsoleReturnURL(r)
 		if returnBase == "" {
-			if appURL := strings.TrimRight(strings.TrimSpace(appPublicBaseURL()), "/"); appURL != "" {
-				returnBase = appURL + "/vpn"
-			}
+			// N°316 — repli : l'espace MikTunnel (l'Accès Pro vit dans CETTE
+			// console ; l'ancien repli vitrine /vpn déménage avec la boutique).
+			returnBase = tunnelPublicBaseURL() + "/me"
 		}
 		if returnBase != "" {
 			payload.SuccessURL = returnBase + "?order=" + url.QueryEscape(order.Ref)

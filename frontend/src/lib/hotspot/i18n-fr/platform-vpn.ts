@@ -80,7 +80,7 @@ export const frPlatformVpn: Record<string, string> = {
   // — Table commandes B2C —
   "platformVpn.orders.title": "Commandes de la vente directe (vitrine publique)",
   "platformVpn.orders.desc":
-    "Le canal B2C : la vitrine /vpn vend aux clients hors zone hotspot, le provisioning est automatique au paiement. « Confirmer l'encaissement » sert le canal manuel (hors ligne) ; « Annuler » révoque l'accès d'une commande provisionnée.",
+    "Le canal B2C : la boutique MikTunnel (tunnel.ftci.fr/shop) vend aux clients hors zone hotspot, le provisioning est automatique au paiement. « Confirmer l'encaissement » sert le canal manuel (hors ligne) ; « Annuler » révoque l'accès d'une commande provisionnée.",
   "platformVpn.orders.search": "Rechercher (réf, e-mail)…",
   "platformVpn.orders.ref": "Réf",
   "platformVpn.orders.email": "Client",
@@ -113,16 +113,16 @@ export const frPlatformVpn: Record<string, string> = {
   "platformVpn.orders.pay.manual": "Manuel",
 
   // — B2C bloc vitrine —
-  "platformVpn.shop.title": "Vitrine publique MikCloud VPN",
+  "platformVpn.shop.title": "Boutique publique MikTunnel (vente directe)",
   "platformVpn.shop.desc":
-    "La vente directe vit sur la page publique /vpn (hors zone des gérants — jamais en concurrence avec vos revendeurs). Fermée : le catalogue refuse toute commande ; ouverte : paiement en ligne (Wave/carte), provisioning automatique et récupération self-service par e-mail.",
+    "La vente directe vit sur la boutique publique MikTunnel — tunnel.ftci.fr/shop, sous-marque VPN de MikCloud (hors zone des gérants — jamais en concurrence avec vos revendeurs ; l'ancienne page /vpn redirige en 301). Fermée : le catalogue refuse toute commande ; ouverte : paiement en ligne (Wave/carte), provisioning automatique et récupération self-service par e-mail.",
   "platformVpn.shop.open": "Vitrine ouverte",
   "platformVpn.shop.closed": "Vitrine fermée",
   "platformVpn.shop.toggle": "Ouvrir la vente directe",
   "platformVpn.shop.toggleOff": "Fermer la vente directe",
-  "platformVpn.shop.openToast": "Vitrine B2C ouverte — /vpn vend",
+  "platformVpn.shop.openToast": "Boutique B2C ouverte — MikTunnel vend",
   "platformVpn.shop.closedToast": "Vitrine B2C fermée (les commandes en service restent actives)",
-  "platformVpn.shop.link": "Voir la vitrine /vpn",
+  "platformVpn.shop.link": "Voir la boutique MikTunnel",
   "platformVpn.shop.onlinePayment": "Paiement en ligne actif",
   "platformVpn.shop.manualOnly": "Paiement en ligne non configuré — canal manuel",
   "platformVpn.shop.pendingHint": "{n} commande(s) en attente",
