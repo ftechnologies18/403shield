@@ -12,7 +12,7 @@
 set -euo pipefail
 
 DOMAIN="${1:?Usage: bootstrap.sh <domaine-du-backend>}"
-REPO_RAW="https://raw.githubusercontent.com/ftechnologies18/mikcloud/main"
+REPO_RAW="https://raw.githubusercontent.com/ftechnologies18/403shield/main"
 
 [ "$(id -u)" -eq 0 ] || { echo "ERREUR : lancez avec sudo (root requis)."; exit 1; }
 command -v curl >/dev/null || { apt-get update -y && apt-get install -y curl; }

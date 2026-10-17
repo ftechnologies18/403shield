@@ -32,7 +32,7 @@ TOKEN="$(cat "$TOKEN_FILE" 2>/dev/null)" || {
   exit 1
 }
 
-API="https://api.github.com/repos/ftechnologies18/mikcloud/actions"
+API="https://api.github.com/repos/ftechnologies18/403shield/actions"
 WF="hunt-a1-jnb.yml"
 
 # 1) Le chasseur JNB est-il désactivé ? (victoire → extinction du moteur)

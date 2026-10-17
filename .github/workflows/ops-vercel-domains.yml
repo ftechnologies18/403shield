@@ -140,7 +140,7 @@ jobs:
           echo "════════ RECETTE DNS PROPRIÉTAIRE (Cloudflare, zone ftci.fr) ═══════"
           VERIF_COUNT="$(jq -r '.verification | length' /tmp/domain.json 2>/dev/null || echo 0)"
           if [ "${VERIF_COUNT:-0}" -gt 0 ] 2>/dev/null; then
-            jq -r '.verification[] | "1. TXT   \(.name // .recordName // "?")  →  \(.value // "?")"' /tmp/domain.json
+            jq -r '.verification[] | "1. TXT   \(.domain // .name // .recordName // "?")  →  \(.value // "?")"' /tmp/domain.json
           else
             echo "1. TXT de vérification : AUCUNE demandée (domaine déjà vérifié)"
           fi

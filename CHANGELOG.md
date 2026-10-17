@@ -7,6 +7,94 @@ la CI puis se déploie automatiquement (frontend Vercel, backend Oracle E5
 depuis le T2 N°266 — Render suspendu N°303). N°317 : le projet change de nom
 de marque — MikCloud et MikTunnel deviennent **403Shield** (marque unifiée,
 sous-marque FTech CI) ; l'historique ci-dessous conserve les noms d'époque.
+N°319 : le DÉPÔT GitHub lui-même devient `ftechnologies18/403shield`
+(anciennes URL redirigées en 301 par GitHub — web, git et API).
+
+## 2026-10-17 — N°319 — **LES GESTES AUTOMATISABLES DU « RESTE PROPRIÉTAIRE » : vitrine B2C OUVERTE + libellés DB 403Shield + dépôt GitHub renommé + console.403shield.ftci.fr attaché (gestes Vercel+CORS) + api.403shield.ftci.fr armé sur Caddy — trois workflows ops pilotés depuis le coffre GitHub**
+
+### Déclencheur (propriétaire)
+« Je te transmets tous les tokens, exécute les actions qui peuvent être
+automatisées » — la liste des restes N°318 : console.403shield.ftci.fr
+(recette en 4 gestes), api.mikcloud.ftci.fr (geste VM + env), nom du dépôt
+GitHub, libellés DB renommables en 10 s, rappel N°316 (ouverture
+PublicVpnShop + smoke test terrain). Les tokens Cloudflare DNS et Vercel de
+la session N°318 ne vivaient que dans le canal conversation (perdus) — mais
+le **coffre GitHub** (inventaire N°269) contient `VERCEL_TOKEN`,
+`ORACLE_HOST/USER/SSH_KEY`, `DATABASE_URL` : les gestes passent donc par des
+**workflows dispatchés**, secrets jamais affichés.
+
+### Trois workflows ops (commit 1/2 — ae70f40)
+- **`ops-vercel-domains.yml`** — boîte à outils domaines Vercel depuis le
+  secret `VERCEL_TOKEN` : `attach` (idempotent, IMPRIME LA RECETTE DNS
+  EXACTE), `status`, `redirect` (301 avec garde `confirm=EXECUTER` ET
+  cible-vivante-exigée — leçon N°318 : jamais de 301 vers un domaine pas
+  encore en ligne, sinon la vitrine devient injoignable).
+- **`ops-rebrand-db.yml`** — le « renommable en 10 s depuis la console »,
+  automatisé PAR L'API DE L'APP : `inventory` (lecture seule) puis
+  `executer` (SQL chirurgical REPLACE avec backup intégral dans
+  `ops_rebrand_backup` → `POST /api/admin/reload` — usage documenté du
+  handler, car `syncSettings` écraserait un SQL sans reload → `PUT
+  /api/admin/platform/settings {name, publicVpnShop}` — LE geste console).
+  Session admin depuis `ADMIN_PASSWORD` de l'env VM (jamais affichée).
+- **`ops-vm-rebrand.yml`** — gestes VM par SSH : `caddy_alias` (arme un nom
+  d'usage sur le bloc site du Caddyfile — l'émission ACME réussit SEULE dès
+  que le DNS atterrit ; backup + `caddy validate` + reload + non-régression
+  prouvée) et `hunt_repo_url` (rebasage de l'URL dépôt dans l'outillage VM
+  après renommage — curl sans `-L` ne suit pas les 301 de l'API GitHub).
+
+### Gestes exécutés (preuves dans les runs GitHub Actions)
+1. **Vitrine B2C PublicVpnShop OUVERTE** (rappel N°316 honoré) : `PUT
+   platform settings {publicVpnShop: true}` — preuve externe sur l'URL
+   publique : `{"enabled":true,"onlinePayment":true,"plans":[403Shield VPN
+   Mensuel 1500 F (Wave 1675/carte 1725), 403Shield VPN Annuel 15000 F
+   (Wave 15600/carte 16075)]}` — état SURVIVANT au restart backend du geste
+   CORS (persistance PG). Doctrine D6 respectée : l'ouverture restait le
+   geste délibéré de l'exploitant — ordonnée ici par le propriétaire.
+2. **Libellés DB renommés MikCloud → 403Shield** (inventaire préalable,
+   lecture seule) : `settings.tenant_name` acc-main « MikCloud » →
+   « 403Shield », `settings.plan_name` acc-6e2e34a620c9 « MikCloud Hotspot
+   Mensuel » → « 403Shield Hotspot Mensuel », nom de plateforme (API) →
+   « 403Shield ». Les 4 comptes clients (APAH SERVICE, Benie WIFIZONE,
+   ProMax WIFI, CYBER-ESPACE SC) étaient déjà propres. Backup intégral des
+   lignes dans `ops_rebrand_backup` (rollback = UPDATE depuis `old` JSONB).
+3. **Dépôt GitHub renommé** `ftechnologies18/mikcloud` →
+   **`ftechnologies18/403shield`** (PATCH API) : GitHub redirige les
+   anciennes URL web (301), git (fetch/push) et API — le remote sandbox est
+   repointé, l'intégration Vercel suit le repo par ID (aucun impact),
+   l'outillage vivant (bootstrap.sh, cloud-init, script de chasse v3,
+   RUNBOOK-SECRETS) est rebasé sur la nouvelle URL ; le script de chasse
+   VM était absent de la machine Marseille (geste sans objet, vérifié).
+4. **console.403shield.ftci.fr — gestes 2 et 3 de la recette en 4 gestes** :
+   domaine ATTACHÉ au projet Vercel `403shield-console`
+   (prj_04fZYc43VYd0Uy1OLATk8RpVFJuy, team FTech CI) — Vercel délivre la
+   recette DNS exacte : TXT `_vercel.ftci.fr` =
+   `vc-domain-verify=console.403shield.ftci.fr,559ecca8236acf29de36` (à
+   AJOUTER à côté du TXT existant de 403shield.ftci.fr — plusieurs TXT de
+   même nom sont licites) + CNAME `console` → `cname.vercel-dns.com` (DNS
+   only, nuage gris). Whitelist CORS ÉTENDUE AVANT toute 301 (leçon N°318) :
+   `https://console.403shield.ftci.fr` émet désormais l'en-tête (preuve
+   workflow + curl direct), 11 origines au total, non-régression
+   tunnel.ftci.fr/mikcloud.ftci.fr prouvée.
+5. **api.403shield.ftci.fr ARMÉ sur Caddy** (la moitié VM du « geste VM +
+   env ») : bloc site `api.mikcloud.ftci.fr, api.403shield.ftci.fr` (backup
+   Caddyfile.bak-n319, validate OK, reload actif) — l'ACME tente déjà
+   l'émission (journal caddy) et réussira SEULE dès l'enregistrement A →
+   84.235.228.160. La bascule env `NEXT_PUBLIC_API_BASE` reste documentée
+   APRÈS le DNS uniquement.
+
+### Reste à la main du propriétaire (documenté, valeurs exactes fournies)
+- **Cloudflare (le token DNS n'est plus disponible côté sandbox)** :
+  2 records pour console.403shield.ftci.fr (TXT + CNAME ci-dessus) — puis
+  la 301 tunnel.ftci.fr → console.403shield.ftci.fr par
+  `ops-vercel-domains.yml` action=redirect (confirm=EXECUTER, la garde
+  exige que la cible réponde 200) ; 1 record A pour api.403shield.ftci.fr
+  (certificat ACME automatique, preuve `curl -sI https://api.403shield.ftci.fr/`).
+- **Smoke test terrain** (achat 1 F → retour boutique → conf → tunnel →
+  espace → renouvellement) — la vitrine est OUVERTE, le test terrain reste
+  l'étalon physique (rappel N°316 : 15 min sur place).
+- Bascule `NEXT_PUBLIC_API_BASE` (Vercel) vers api.403shield.ftci.fr —
+  seulement après le DNS + certificat vivant.
+
 
 ## 2026-10-17 — N°318 — **403SHIELD PHASES 2 & 3 : e-mails transactionnels backend + i18n profond SaaS + domaine canonique 403shield.ftci.fr (DNS → Vercel → 301) + renommage des projets Vercel + CORS paramétrable**
 

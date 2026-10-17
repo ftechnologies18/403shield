@@ -61,7 +61,7 @@ Variables d'environnement :
 
 | Variable | Défaut | Rôle |
 |---|---|---|
-| `NEXT_PUBLIC_API_BASE` | `https://api.mikcloud.ftci.fr` | Base de l'API — CORS WHITELIST côté backend (`corsMiddleware`, `main.go` — fail-closed P1 #16) : `tunnel.ftci.fr`, `miktunnel.vercel.app` (N°316) puis `403shield.ftci.fr`, `403shield.vercel.app`, `403shield-console.vercel.app` (N°318) figurent dans `ALLOWED_ORIGIN` de la VM (geste `ops-cors-whitelist.yml` — PARAMÉTRABLE depuis N°318 : les origines se passent en input du dispatch, non-régression prouvée par le workflow) |
+| `NEXT_PUBLIC_API_BASE` | `https://api.mikcloud.ftci.fr` | Base de l'API — CORS WHITELIST côté backend (`corsMiddleware`, `main.go` — fail-closed P1 #16) : `tunnel.ftci.fr`, `miktunnel.vercel.app` (N°316) puis `403shield.ftci.fr`, `403shield.vercel.app`, `403shield-console.vercel.app` (N°318) puis `console.403shield.ftci.fr` (N°319, AVANT toute 301) figurent dans `ALLOWED_ORIGIN` de la VM (geste `ops-cors-whitelist.yml` — PARAMÉTRABLE depuis N°318 : les origines se passent en input du dispatch, non-régression prouvée par le workflow) |
 | `TUNNEL_DEV_API_PROXY` | — | `=1` en dev local : proxy `/api/*` → `http://localhost:4000` (backend local) |
 
 Côté BACKEND (N°316) : `TUNNEL_PUBLIC_URL` (défaut `https://tunnel.ftci.fr`)
@@ -76,7 +76,7 @@ resets).
 ## Déploiement (Vercel) — FAIT le 13/10/2026 (N°314, session de pilotage)
 
 1. **Projet Vercel `miktunnel`** CRÉÉ : Import Git Repository →
-   `ftechnologies18/mikcloud` → **Root Directory : `tunnel-console/`**
+   `ftechnologies18/403shield` → **Root Directory : `tunnel-console/`**
    (Framework Next.js, aucun build override). Le projet existant « mikcloud »
    (root `frontend/`) n'est pas touché. Les déploiements suivent les pushes
    `main` automatiquement (webhook Vercel).
@@ -102,3 +102,15 @@ resets).
   DIT au lieu de vendre un accès qui ne servirait à rien ;
 - Les tokens « tunnel » vivent 24 h et ne sortent JAMAIS de `/api/tunnel/*`
   (whitelist middleware, miroir du rôle reseller).
+
+## N°319 — vitrine OUVERTE + domaine console.403shield.ftci.fr (recette)
+
+- La vitrine B2C est **OUVERTE en production** depuis le 17/10/2026 (geste
+  console automatisé `ops-rebrand-db.yml`) : `GET /api/public/vpn/offers` →
+  `{"enabled":true,"onlinePayment":true,"plans":[403Shield VPN Mensuel,
+  403Shield VPN Annuel]}` — doctrine D6 : l'ouverture fut le geste délibéré
+  de l'exploitant, ordonné par le propriétaire.
+- `console.403shield.ftci.fr` est ATTACHÉ à ce projet Vercel
+  (403shield-console) et l'origine est déjà whitelistée côté API. Recette
+  Cloudflare restante (2 records) + 301 finale par workflow : cf.
+  `docs/MARQUE-403SHIELD.md` §6-bis (valeurs exactes).

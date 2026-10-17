@@ -109,6 +109,56 @@ Reste à la main du propriétaire (décision future explicite, aucune urgence) :
 `tunnel.ftci.fr` → `console.403shield.ftci.fr` le jour voulu, nom du dépôt
 GitHub, libellés stockés en base (renommables depuis la console).
 
+## 6-bis. N°319 — LES GESTES AUTOMATISABLES, EXÉCUTÉS DEPUIS LE COFFRE GITHUB
+
+Les tokens Cloudflare DNS et Vercel de la session N°318 ne vivent que dans
+le canal conversation — mais le coffre GitHub (N°269) porte `VERCEL_TOKEN`
+et les secrets SSH/DB de la VM : trois workflows ops ont été créés
+(`ops-vercel-domains.yml`, `ops-rebrand-db.yml`, `ops-vm-rebrand.yml`) et
+dispatchés avec preuves. Gestes posés :
+
+1. ✅ **Vitrine B2C OUVERTE** (rappel N°316) : `publicVpnShop: true` par le
+   geste console automatisé (`PUT /api/admin/platform/settings`) —
+   `{"enabled":true,"onlinePayment":true}` servi sur l'URL publique,
+   catalogue 403Shield (Mensuel 1500 F / Annuel 15000 F + frais Wave/carte).
+2. ✅ **Libellés DB** : tenant acc-main et plan « Hotspot Mensuel » du
+   compte Benie renommés MikCloud → 403Shield (SQL chirurgical + backup
+   `ops_rebrand_backup` + `/api/admin/reload` + geste console API) ; nom de
+   plateforme → 403Shield.
+3. ✅ **Dépôt GitHub renommé** : `ftechnologies18/mikcloud` →
+   **`ftechnologies18/403shield`** (redirections 301 GitHub — web/git/API ;
+   Vercel suit le repo par ID).
+4. ✅ **console.403shield.ftci.fr — gestes Vercel + CORS de la recette** :
+   domaine attaché au projet `403shield-console` (workflow
+   `ops-vercel-domains`, token du coffre) + origine
+   `https://console.403shield.ftci.fr` whitelistée AVANT toute 301
+   (`ops-cors-whitelist` paramétrable — 11 origines, preuve par origine).
+5. ✅ **api.403shield.ftci.fr ARMÉ sur Caddy** : bloc site
+   `api.mikcloud.ftci.fr, api.403shield.ftci.fr` (backup + validate +
+   reload) — l'ACME émettra SEUL dès le DNS.
+
+### Recettes propriétaire restantes (valeurs exactes, Cloudflare zone ftci.fr)
+
+**console.403shield.ftci.fr (2 records, puis 1 dispatch)** :
+1. TXT `_vercel.ftci.fr` =
+   `vc-domain-verify=console.403shield.ftci.fr,559ecca8236acf29de36`
+   (AJOUTER — le TXT existant de 403shield.ftci.fr reste en place : plusieurs
+   valeurs de même nom sont licites) ;
+2. CNAME `console` → `cname.vercel-dns.com`, DNS only (nuage gris) ;
+3. la vérification Vercel se fait seule (minutes) — puis
+   `ops-vercel-domains.yml` action=redirect, domain=tunnel.ftci.fr,
+   redirect_to=https://console.403shield.ftci.fr, confirm=EXECUTER (la garde
+   exige que la cible réponde 200 — jamais de 301 avant).
+
+**api.403shield.ftci.fr (1 record)** :
+1. A `api.403shield.ftci.fr` → `84.235.228.160`, DNS only (nuage gris) ;
+2. le certificat ACME se fait seul (journal caddy), preuve
+   `curl -sI https://api.403shield.ftci.fr/` → 200 ;
+3. SEULEMENT ALORS : bascule `NEXT_PUBLIC_API_BASE` (Vercel) — jamais avant.
+
+**Smoke test terrain** (l'étalon physique, 15 min sur place) : achat 1 F →
+retour boutique → conf livrée → tunnel → espace client → renouvellement.
+
 ## 7. Actifs de marque
 
 `docs/brand/` : `403shield-clay.png` (1024², bouclier clay menthe + étoile dorée

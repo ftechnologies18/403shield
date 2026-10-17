@@ -38,7 +38,7 @@ Règles transverses :
   fenêtré 05:00–24:00 UTC ; `on` 24/7 ; `off` pour laisser Neon s'endormir).
 - **Vercel** (frontend) : Settings → Environment Variables
   (`NEXT_PUBLIC_API_BASE`).
-- **GitHub** (repo `ftechnologies18/mikcloud`) : Settings → Secrets and
+- **GitHub** (repo `ftechnologies18/403shield`) : Settings → Secrets and
   variables → Actions — inventaire N°269 (24 secrets) : `DATABASE_URL`,
   `SUPABASE_DATABASE_URL`, `SUPABASE_DIRECT_URL`,
   `NEON_STANDBY_DATABASE_URL`, `NEON_API_KEY`, `BACKUP_KEY`,

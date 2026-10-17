@@ -142,7 +142,7 @@ jobs:
           SELECT id, tenant_name, platform_name, plan_name, platform_public_vpn_shop FROM settings ORDER BY id;
           \echo === accounts ===
           SELECT id, name, status, usage FROM accounts ORDER BY id;
-          \echo === occurrences de marque d'époque (colonnes libellés) ===
+          \echo === occurrences de marque d-époque (colonnes libellés) ===
           SELECT 'settings.tenant_name' AS colonne, id AS row_id, tenant_name AS valeur FROM settings WHERE tenant_name ~* 'mikcloud|miktunnel'
           UNION ALL
           SELECT 'settings.plan_name', id, plan_name FROM settings WHERE plan_name ~* 'mikcloud|miktunnel'
