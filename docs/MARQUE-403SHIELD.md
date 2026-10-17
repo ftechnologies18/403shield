@@ -194,6 +194,43 @@ services différents alors qu'ils sont liés ». Corrigé à la racine
 
 Portes : lint 0 · tsc 0 · parité FR/EN 442=442 chemins + 15 assertions.
 
+## 6-quater. N°322 — HomeNet cesse d'être un service indépendant (commit f573179)
+
+Troisième grief de fragmentation après N°321 : « Supprimer HomeNet comme
+service indépendant avec ses tarifs, il est déjà lié à l'offre Hotspot. »
+Le backend (`tenant.go` N°122) le confirme — HomeNet est un SEGMENT
+D'USAGE du même abonnement (même compte, même console, mêmes 4 protections,
+même facturation), pas un produit. Avis rendu avec une nuance conservée :
+les tarifs foyer sont réels (1 250 F/mois/routeur · 12 000 F/an · essai
+30 j — la maison paie deux fois moins cher) ; les effacer cacherait
+l'argument « moitié prix ». Livré (2 fichiers, +126/−135, vérifié au
+navigateur en production) :
+
+- **Segment « homenet » RETIRÉ** du sélecteur tarifs (FR+EN) : la grille
+  de 3 cartes parallèles disparaît ; le sélecteur passe de 3 à 2 segments
+  (« Hotspot · HomeNet » / « Tunnels · boutique », aria-label « Console ou
+  boutique ? »), le type `priceMode` devient `"hotspot" | "tunnels"`.
+- **Tarif foyer LIÉ à l'offre Hotspot** : les cartes de la grille console
+  portent le mode en option (Découverte « Mode foyer (HomeNet) : essai
+  30 jours », Annuel « 12 000 F/an », Mensuel « 1 250 F/mois/routeur » —
+  constantes catalogue recopiées telles quelles), chips clientèle
+  + « Foyers », hint « Un foyer ? C'est le même abonnement en mode
+  HomeNet ».
+- **Récit « Un abonnement, un tunnel »** : titre tarifs « Trois univers,
+  un nuage » → « Un abonnement, un tunnel. », sous-titre fusionné (réseau
+  public OU foyer = le MÊME abonnement), marquee « Mode HomeNet · le foyer
+  sur le même abonnement », note devises « Un abonnement console, deux
+  modes » — dans la lignée du « un tunnel, deux usages ».
+- **Intacts** : catalogue backend et facturation (la vitrine n'affiche
+  pas, ne vend pas), modale d'inscription et sélecteur d'usage (parcours
+  réel N°101), chatbot (répond déjà « Deux modes, deux grilles »), pages
+  produit, prix 0/25 000/2 500 et 1 500/15 000/3 500 inchangés.
+
+Portes : lint 0 · tsc 0 · parité FR/EN 411=411 chemins (442 − 31 retirés)
++ 25 assertions métier. Déploiement Vercel vérifié au navigateur
+(sélecteur 2 segments cliqué des deux côtés, cartes foyer FR+EN, mobile
+390 px sans débordement, 0 erreur console, chaîne GeniusPay 308→200).
+
 ## 7. Actifs de marque
 
 `docs/brand/` : `403shield-clay.png` (1024², bouclier clay menthe + étoile dorée
