@@ -1,30 +1,31 @@
 package api
 
-// Tests N°98 — Phase 1 Hotspot/HomeNet (plomberie invisible) :
-//   - contrat d'inscription publique : N°98 refusait « homenet » (la
-//     coquille n'existait pas) — N°101 (Phase 3) l'OUVRE, les DEUX usages
-//     sont acceptés (absent = défaut hotspot, valeur inconnue = refusée) ;
-//   - la session transporte l'usage : login, register, /api/auth/me ;
-//   - la garde requireUsage : les endpoints PRODUIT hotspot répondent 404
-//     aux comptes homenet (créés par la console plateforme), les endpoints
-//     PARTAGÉS (dashboard, routeurs, sessions, réglages) restent ouverts —
-//     même token, zéro re-login ;
-//   - exemption plateforme : la session support (impersonation d'un compte
-//     homenet par l'admin) passe partout ;
-//   - bascule admin PUT /api/admin/accounts/{id}/usage : effet immédiat
-//     (même token), idempotence, refus du compte principal, des valeurs
-//     inconnues et des non-admin ;
+// Tests N°98 → N°324 — MONO-MODE Hotspot (retraite du mode HomeNet) :
+//   - contrat d'inscription publique : le champ usage est IGNORÉ (tout
+//     compte naît hotspot, essai unique 60 jours — un vieux frontend qui
+//     envoie encore « homenet » est silencieusement normalisé, jamais de
+//     400 pendant la fenêtre de déploiement) ;
+//   - la session transporte l'usage (toujours « hotspot ») : login,
+//     register, /api/auth/me ;
+//   - la garde requireUsage reste en place (défense en profondeur) mais
+//     normalizeAccountUsage rabat TOUT compte vers hotspot : un état
+//     léger « homenet » injecté en base (pré-migration, jamais converti)
+//     lit hotspot — ses appels produit passent, plus de 404 wrong_usage ;
+//   - exemption plateforme : la session support (impersonation d'un
+//     compte léger homenet par l'admin) passe partout ;
+//   - N°324 : la bascule admin PUT /api/admin/accounts/{id}/usage est
+//     SUPPRIMÉE avec le mode — le mux répond 404 route inconnue ;
 //   - normalisation : un compte sans usage (ère pré-colonne) est lu comme
 //     hotspot, au store (Reload → migrateMultiTenant) comme à la garde
 //     (repli défensif sans rechargement).
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"sync/atomic"
 	"testing"
+	"time"
 
 	"mikcloud/hotspot-api/internal/auth"
 	"mikcloud/hotspot-api/internal/model"
@@ -40,6 +41,8 @@ func uniquePhone() string {
 
 // registerUsageBody — corps d'inscription publique avec usage EXPLICITE
 // (le helper registerAccount teste déjà le contrat « champ absent »).
+// N°324 : le champ est ignoré par le serveur — le helper sert précisément
+// à vérifier cette neutralité (vieux frontend « homenet », valeur libre).
 func registerUsageBody(username, usage string) map[string]string {
 	body := map[string]string{
 		"name":     "Gérant " + username,
@@ -56,16 +59,16 @@ func registerUsageBody(username, usage string) map[string]string {
 	return body
 }
 
-// TestRegisterUsageBothOpen — N°101 (Phase 3) inverse le contrat N°98 :
-// l'inscription publique accepte les DEUX usages. Champ absent → défaut
-// hotspot (les clients existants ne changent pas d'un octet) ; homenet →
-// 201 avec usage transporté par la session (la coquille N°100 et les
-// features maison existent) ; valeur inconnue → 400.
-func TestRegisterUsageBothOpen(t *testing.T) {
+// TestRegisterUsageMonoMode — N°324 : l'inscription publique est mono-mode.
+// Champ absent → compte hotspot (les clients existants ne changent pas d'un
+// octet) ; champ « homenet » envoyé par un vieux frontend → 201 compte
+// HOTSPOT (le champ est ignoré, la réponse transporte usage=hotspot et
+// l'essai unique de 60 jours) ; valeur inconnue → 201 hotspot AUSSI (plus
+// aucune validation : seul l'admin refuse les valeurs inconnues).
+func TestRegisterUsageMonoMode(t *testing.T) {
 	ts := newTestServer(t)
 
-	// Champ absent → 201, compte hotspot (les clients existants ne
-	// changent pas d'un octet).
+	// Champ absent → 201, compte hotspot.
 	status, out := doJSON(t, ts, "POST", "/api/auth/register", "", registerUsageBody("usage-absent", ""))
 	if status != http.StatusCreated {
 		t.Fatalf("inscription sans usage : statut %d, corps %v", status, out)
@@ -75,32 +78,51 @@ func TestRegisterUsageBothOpen(t *testing.T) {
 		t.Fatalf("usage par défaut = %v, attendu %q", user["usage"], model.AccountUsageHotspot)
 	}
 
-	// « hotspot » explicite → 201.
-	if status, _ := doJSON(t, ts, "POST", "/api/auth/register", "", registerUsageBody("usage-hs", model.AccountUsageHotspot)); status != http.StatusCreated {
-		t.Fatalf("inscription hotspot explicite : statut %d, attendu 201", status)
-	}
-
-	// N°101 — « homenet » → 201 : l'inscription publique du foyer est
-	// OUVERTE (Phase 3 : dashboard maison + appareils + protection
-	// re-skinée existent, l'atterrissage client suit l'usage).
+	// N°324 — « homenet » (vieux frontend) → 201 compte HOTSPOT : le champ
+	// est silencieusement normalisé, l'inscription ne casse jamais.
 	status, out = doJSON(t, ts, "POST", "/api/auth/register", "", registerUsageBody("usage-hn", model.AccountUsageHomeNet))
 	if status != http.StatusCreated {
-		t.Fatalf("inscription homenet : statut %d, attendu 201 (ouverte depuis la Phase 3)", status)
+		t.Fatalf("inscription homenet : statut %d, attendu 201 (champ ignoré — N°324)", status)
 	}
 	user, _ = out["user"].(map[string]any)
-	if user["usage"] != model.AccountUsageHomeNet {
-		t.Fatalf("usage homenet = %v, attendu %q", user["usage"], model.AccountUsageHomeNet)
+	if user["usage"] != model.AccountUsageHotspot {
+		t.Fatalf("usage renvoyé = %v, attendu %q (mono-mode)", user["usage"], model.AccountUsageHotspot)
+	}
+	tok, _ := out["token"].(string)
+
+	// Essai UNIQUE de 60 jours (l'essai segmenté 30 j foyer est retiré
+	// avec le mode — même envoyé « homenet », même durée).
+	status, sub := doJSON(t, ts, "GET", "/api/subscription", tok, nil)
+	if status != http.StatusOK {
+		t.Fatalf("GET /api/subscription : statut %d", status)
+	}
+	s, _ := sub["subscription"].(map[string]any)
+	start, _ := s["periodStart"].(string)
+	end, _ := s["periodEnd"].(string)
+	t0, e0 := time.Parse(time.RFC3339, start)
+	t1, e1 := time.Parse(time.RFC3339, end)
+	if e0 != nil || e1 != nil {
+		t.Fatalf("période d'essai illisible : %q → %q (%v / %v)", start, end, e0, e1)
+	}
+	if days := t1.Sub(t0).Hours() / 24; days < 59 || days > 61 {
+		t.Fatalf("essai = %.1f jours, attendu 60 (essai unique mono-mode)", days)
 	}
 
-	// Valeur inconnue → 400.
-	if status, _ := doJSON(t, ts, "POST", "/api/auth/register", "", registerUsageBody("usage-x", "cybercafe")); status != http.StatusBadRequest {
-		t.Fatalf("usage inconnu : statut %d, attendu 400", status)
+	// Valeur inconnue (« cybercafe ») → 201 hotspot : le champ n'est plus
+	// validé côté public (cf. TestAdminCreateUsageValidation pour le
+	// refus côté console plateforme).
+	status, out = doJSON(t, ts, "POST", "/api/auth/register", "", registerUsageBody("usage-x", "cybercafe"))
+	if status != http.StatusCreated {
+		t.Fatalf("usage inconnu : statut %d, attendu 201 (champ ignoré — N°324)", status)
+	}
+	if user, _ = out["user"].(map[string]any); user["usage"] != model.AccountUsageHotspot {
+		t.Fatalf("usage inconnu : usage renvoyé = %v, attendu %q", user["usage"], model.AccountUsageHotspot)
 	}
 }
 
 // TestLoginMeCarryUsage — l'usage voyage dans la session : register, login
-// ET /api/auth/me renvoient la même clé « usage » (la coquille Phase 2
-// lira l'une ou l'autre).
+// ET /api/auth/me renvoient la même clé « usage » (la coquille lira
+// toujours « hotspot » — N°324 mono-mode).
 func TestLoginMeCarryUsage(t *testing.T) {
 	ts := newTestServer(t)
 
@@ -153,7 +175,9 @@ func adminLogin(t *testing.T, ts *httptest.Server) string {
 
 // createAdminAccount — POST /api/admin/accounts avec un usage donné ;
 // retourne (accountID, token du owner créé). Vérifie AUSSI que le login du
-// owner transporte l'usage demandé.
+// owner transporte l'usage demandé. N°324 : seul « hotspot » (ou vide) est
+// accepté — les tests qui créent des comptes légers « homenet » les posent
+// DIRECTEMENT au store (cf. TestUsageGuardNormalizesLegacyHomeNet).
 func createAdminAccount(t *testing.T, ts *httptest.Server, adminToken, username, usage string) (string, string) {
 	t.Helper()
 	body := map[string]string{
@@ -196,11 +220,13 @@ func createAdminAccount(t *testing.T, ts *httptest.Server, adminToken, username,
 }
 
 // TestAdminCreateUsageValidation — la création plateforme valide l'usage :
-// valeur inconnue → 400 ; champ absent → hotspot (défaut historique).
+// N°324 — valeur inconnue ET « homenet » → 400 (mode foyer retiré) ; champ
+// absent → hotspot (défaut historique).
 func TestAdminCreateUsageValidation(t *testing.T) {
 	ts := newTestServer(t)
 	adminToken := adminLogin(t, ts)
 
+	// Valeur inconnue → 400.
 	body := map[string]string{
 		"name":     "Compte bizarre",
 		"username": "compte-bizarre",
@@ -210,8 +236,22 @@ func TestAdminCreateUsageValidation(t *testing.T) {
 		"country":  "CI",
 		"usage":    "cybercafe",
 	}
-	if status, _ := doJSON(t, ts, "POST", "/api/admin/accounts", adminToken, body); status != http.StatusBadRequest {
-		t.Fatalf("création admin usage inconnu : statut %d, attendu 400", status)
+	if status, out := doJSON(t, ts, "POST", "/api/admin/accounts", adminToken, body); status != http.StatusBadRequest {
+		t.Fatalf("création admin usage inconnu : statut %d, attendu 400, corps %v", status, out)
+	}
+
+	// N°324 — « homenet » → 400 : le mode foyer est retiré du système.
+	body = map[string]string{
+		"name":     "Compte foyer",
+		"username": "compte-foyer",
+		"password": "mot-de-passe-8+",
+		"email":    "foyer@example.ci",
+		"phone":    uniquePhone(),
+		"country":  "CI",
+		"usage":    model.AccountUsageHomeNet,
+	}
+	if status, out := doJSON(t, ts, "POST", "/api/admin/accounts", adminToken, body); status != http.StatusBadRequest {
+		t.Fatalf("création admin usage homenet : statut %d, attendu 400 (mode retiré — N°324), corps %v", status, out)
 	}
 
 	// Champ absent → défaut hotspot.
@@ -222,15 +262,28 @@ func TestAdminCreateUsageValidation(t *testing.T) {
 	_ = accID
 }
 
-// TestUsageGuardBlocksHotspotProductForHomeNet — LE cœur de la Phase 1 : un
-// compte homenet reçoit 404 sur les endpoints produit hotspot et GARDE les
-// endpoints partagés — avec le MÊME token, sans re-login.
-func TestUsageGuardBlocksHotspotProductForHomeNet(t *testing.T) {
-	ts := newTestServer(t)
-	adminToken := adminLogin(t, ts)
-	_, hnToken := createAdminAccount(t, ts, adminToken, "gerant-maison", model.AccountUsageHomeNet)
+// TestUsageGuardNormalizesLegacyHomeNet — N°324 : un compte « homenet » posé
+// DIRECTEMENT en base (état léger de test) est LU hotspot par
+// normalizeAccountUsage — ses appels produit hotspot passent 200 (plus de
+// 404 wrong_usage), les familles partagées restent ouvertes — même token,
+// zéro re-login.
+func TestUsageGuardNormalizesLegacyHomeNet(t *testing.T) {
+	st, ts := newTestServerWithStore(t)
 
-	blocked := []struct {
+	// 1) Compte homenet léger injecté APRÈS le boot (jamais passé par
+	// migrateHomeNetRetirement).
+	st.Lock()
+	st.Data().Accounts = append(st.Data().Accounts, model.Account{
+		ID: "acc-maison", Name: "Maison Légacy", Status: "active",
+		CreatedAt: model.NowISO(), Usage: model.AccountUsageHomeNet,
+	})
+	st.Unlock()
+	seedUser(t, st, "usr-maison", "acc-maison", "gerant-maison", model.RoleOwner)
+	token := auth.Sign(testJWTSecret, auth.NewClaims("usr-maison", "gerant-maison", model.RoleOwner, "acc-maison", 0))
+
+	// Endpoints PRODUIT hotspot : 200 — la garde relit l'usage à CHAQUE
+	// requête et normalizeAccountUsage rabat « homenet » sur « hotspot ».
+	produit := []struct {
 		label string
 		path  string
 	}{
@@ -245,13 +298,14 @@ func TestUsageGuardBlocksHotspotProductForHomeNet(t *testing.T) {
 		{"inscriptions publiques", "/api/registrations"},
 		{"journaux utilisateurs", "/api/user-logs"},
 	}
-	for _, tc := range blocked {
-		if status, _ := doJSON(t, ts, "GET", tc.path, hnToken, nil); status != http.StatusNotFound {
-			t.Fatalf("%s : statut %d, attendu 404 pour un compte homenet", tc.label, status)
+	for _, tc := range produit {
+		if status, _ := doJSON(t, ts, "GET", tc.path, token, nil); status != http.StatusOK {
+			t.Fatalf("%s : statut %d, attendu 200 (compte léger lu hotspot — N°324)", tc.label, status)
 		}
 	}
 
-	open := []struct {
+	// Familles partagées : ouvertes comme avant (même token).
+	ouvert := []struct {
 		label string
 		path  string
 	}{
@@ -261,29 +315,33 @@ func TestUsageGuardBlocksHotspotProductForHomeNet(t *testing.T) {
 		{"réglages (partagé)", "/api/settings"},
 		{"me (partagé)", "/api/auth/me"},
 	}
-	for _, tc := range open {
-		if status, _ := doJSON(t, ts, "GET", tc.path, hnToken, nil); status != http.StatusOK {
+	for _, tc := range ouvert {
+		if status, _ := doJSON(t, ts, "GET", tc.path, token, nil); status != http.StatusOK {
 			t.Fatalf("%s : statut %d, attendu 200 (familles partagées)", tc.label, status)
 		}
-	}
-
-	// Contrôle symétrique : un compte HOTSPOT garde ses endpoints produit.
-	_, hsToken := createAdminAccount(t, ts, adminToken, "gerant-cyber", model.AccountUsageHotspot)
-	if status, _ := doJSON(t, ts, "GET", "/api/vouchers", hsToken, nil); status != http.StatusOK {
-		t.Fatalf("compte hotspot : GET /api/vouchers statut %d, attendu 200", status)
 	}
 }
 
 // TestUsageGuardExemptsPlatformAdmin — la session support (impersonation)
-// passe la garde : l'opérateur du SaaS debug un compte homenet SANS être
-// coupé de la console produit (même choix que guardAccountWrite : le garde
-// sépare les CLIENTS, pas l'opérateur).
+// passe la garde : l'opérateur du SaaS debug un compte homenet LÉGACY (posé
+// directement en base) sans être coupé de la console produit (même choix
+// que guardAccountWrite : le garde sépare les CLIENTS, pas l'opérateur).
 func TestUsageGuardExemptsPlatformAdmin(t *testing.T) {
-	ts := newTestServer(t)
+	st, ts := newTestServerWithStore(t)
 	adminToken := adminLogin(t, ts)
-	hnAccID, _ := createAdminAccount(t, ts, adminToken, "maison-support", model.AccountUsageHomeNet)
 
-	status, out := doJSON(t, ts, "POST", "/api/admin/accounts/"+hnAccID+"/impersonate", adminToken, nil)
+	// Compte homenet léger injecté après le boot (N°324 : plus aucune
+	// voie de création ne produit « homenet » — cf. la migration de
+	// retraite côté store).
+	st.Lock()
+	st.Data().Accounts = append(st.Data().Accounts, model.Account{
+		ID: "acc-maison-support", Name: "Maison Support", Status: "active",
+		CreatedAt: model.NowISO(), Usage: model.AccountUsageHomeNet,
+	})
+	st.Save()
+	st.Unlock()
+
+	status, out := doJSON(t, ts, "POST", "/api/admin/accounts/acc-maison-support/impersonate", adminToken, nil)
 	if status != http.StatusOK {
 		t.Fatalf("impersonation : statut %d, corps %v", status, out)
 	}
@@ -292,97 +350,25 @@ func TestUsageGuardExemptsPlatformAdmin(t *testing.T) {
 		t.Fatal("impersonation : token manquant")
 	}
 	if status, _ := doJSON(t, ts, "GET", "/api/vouchers", supportToken, nil); status != http.StatusOK {
-		t.Fatalf("session support sur compte homenet : GET /api/vouchers statut %d, attendu 200 (exemption plateforme)", status)
+		t.Fatalf("session support sur compte homenet léger : GET /api/vouchers statut %d, attendu 200 (exemption plateforme)", status)
 	}
 }
 
-// doJSONList — variante de doJSON pour les réponses TABLEAU JSON (la liste
-// des comptes renvoie []accountRow, pas un objet).
-func doJSONList(t *testing.T, ts *httptest.Server, method, path, token string) (int, []map[string]any) {
-	t.Helper()
-	req, err := http.NewRequest(method, ts.URL+path, nil)
-	if err != nil {
-		t.Fatalf("requête impossible : %v", err)
-	}
-	req.Header.Set("Accept-Encoding", "identity")
-	if token != "" {
-		req.Header.Set("Authorization", "Bearer "+token)
-	}
-	resp, err := ts.Client().Do(req)
-	if err != nil {
-		t.Fatalf("%s %s : %v", method, path, err)
-	}
-	defer resp.Body.Close()
-	var rows []map[string]any
-	if err := json.NewDecoder(resp.Body).Decode(&rows); err != nil {
-		t.Fatalf("réponse non décodable en tableau : %v", err)
-	}
-	return resp.StatusCode, rows
-}
-
-// TestAdminAccountUsageFlip — PUT /api/admin/accounts/{id}/usage : bascule
-// valide (effet immédiat, MÊME token), idempotence, valeurs inconnues,
-// compte inconnu, compte principal protégé, non-admin refusé.
-func TestAdminAccountUsageFlip(t *testing.T) {
+// TestAdminAccountUsageRouteRemoved — N°324 : la bascule d'usage
+// (PUT /api/admin/accounts/{id}/usage, N°98) est SUPPRIMÉE avec le mode
+// foyer. Le mux Go 1.22 répond 404 route inconnue — SANS corps JSON
+// spécifique (ni wrong_usage ni validation : la route n'existe plus du
+// tout) — pour l'admin plateforme comme pour un client.
+func TestAdminAccountUsageRouteRemoved(t *testing.T) {
 	ts := newTestServer(t)
 	adminToken := adminLogin(t, ts)
-	accID, hnToken := createAdminAccount(t, ts, adminToken, "maison-bascule", model.AccountUsageHomeNet)
+	_, ownerToken := createAdminAccount(t, ts, adminToken, "compte-sans-bascule", "")
 
-	// Valeur inconnue → 400.
-	if status, _ := doJSON(t, ts, "PUT", "/api/admin/accounts/"+accID+"/usage", adminToken, map[string]string{"usage": "cybercafe"}); status != http.StatusBadRequest {
-		t.Fatalf("usage inconnu : statut %d, attendu 400", status)
-	}
-	// Compte inconnu → 404.
 	if status, _ := doJSON(t, ts, "PUT", "/api/admin/accounts/acc-fantome/usage", adminToken, map[string]string{"usage": model.AccountUsageHotspot}); status != http.StatusNotFound {
-		t.Fatalf("compte inconnu : statut %d, attendu 404", status)
+		t.Fatalf("PUT usage (admin) : statut %d, attendu 404 (route supprimée — N°324)", status)
 	}
-	// Compte principal → 400 (données de l'ère mono-tenant = hotspot).
-	if status, _ := doJSON(t, ts, "PUT", "/api/admin/accounts/"+model.AccountMainID+"/usage", adminToken, map[string]string{"usage": model.AccountUsageHomeNet}); status != http.StatusBadRequest {
-		t.Fatalf("compte principal : statut %d, attendu 400", status)
-	}
-	// Non-admin (owner du compte) → 403.
-	if status, _ := doJSON(t, ts, "PUT", "/api/admin/accounts/"+accID+"/usage", hnToken, map[string]string{"usage": model.AccountUsageHotspot}); status != http.StatusForbidden {
-		t.Fatalf("bascule par un client : statut %d, attendu 403", status)
-	}
-
-	// Bascule homenet → hotspot : effet IMMÉDIAT pour le token DÉJÀ émis
-	// (la garde relit l'usage à chaque requête, pas au login).
-	if status, out := doJSON(t, ts, "PUT", "/api/admin/accounts/"+accID+"/usage", adminToken, map[string]string{"usage": model.AccountUsageHotspot}); status != http.StatusOK {
-		t.Fatalf("bascule vers hotspot : statut %d, corps %v", status, out)
-	}
-	if status, _ := doJSON(t, ts, "GET", "/api/vouchers", hnToken, nil); status != http.StatusOK {
-		t.Fatalf("après bascule hotspot (même token) : GET /api/vouchers statut %d, attendu 200", status)
-	}
-
-	// Idempotence : re-PUT la même valeur → 200.
-	if status, _ := doJSON(t, ts, "PUT", "/api/admin/accounts/"+accID+"/usage", adminToken, map[string]string{"usage": model.AccountUsageHotspot}); status != http.StatusOK {
-		t.Fatalf("PUT idempotent : statut %d, attendu 200", status)
-	}
-
-	// Retour vers homenet → re-blocage immédiat.
-	if status, _ := doJSON(t, ts, "PUT", "/api/admin/accounts/"+accID+"/usage", adminToken, map[string]string{"usage": model.AccountUsageHomeNet}); status != http.StatusOK {
-		t.Fatalf("bascule vers homenet : statut %d, attendu 200", status)
-	}
-	if status, _ := doJSON(t, ts, "GET", "/api/vouchers", hnToken, nil); status != http.StatusNotFound {
-		t.Fatalf("après retour homenet (même token) : GET /api/vouchers statut %d, attendu 404", status)
-	}
-
-	// La liste console plateforme porte la colonne usage.
-	status, rows := doJSONList(t, ts, "GET", "/api/admin/accounts", adminToken)
-	if status != http.StatusOK {
-		t.Fatalf("liste des comptes : statut %d", status)
-	}
-	found := false
-	for _, row := range rows {
-		if row["id"] == accID {
-			found = true
-			if row["usage"] != model.AccountUsageHomeNet {
-				t.Fatalf("liste des comptes : usage = %v, attendu %q", row["usage"], model.AccountUsageHomeNet)
-			}
-		}
-	}
-	if !found {
-		t.Fatalf("liste des comptes : ligne du compte %s introuvable", accID)
+	if status, _ := doJSON(t, ts, "PUT", "/api/admin/accounts/acc-fantome/usage", ownerToken, map[string]string{"usage": model.AccountUsageHotspot}); status != http.StatusNotFound {
+		t.Fatalf("PUT usage (client) : statut %d, attendu 404 (route supprimée — N°324)", status)
 	}
 }
 
@@ -435,24 +421,28 @@ func TestAccountUsageNormalization(t *testing.T) {
 }
 
 // TestUsageGuardHelpers — unitaires purs des helpers : normalizeAccountUsage
-// et accountUsageLocked (compte inconnu → hotspot défensif).
+// rabat TOUT vers hotspot (N°324 — mono-mode, y compris le léger « homenet »
+// résiduel) ; accountUsageLocked (compte inconnu → hotspot défensif).
 func TestUsageGuardHelpers(t *testing.T) {
-	if normalizeAccountUsage("") != model.AccountUsageHotspot {
-		t.Fatal("usage vide → hotspot attendu")
-	}
-	if normalizeAccountUsage("nimporte-quoi") != model.AccountUsageHotspot {
-		t.Fatal("usage inconnu → hotspot attendu")
-	}
-	if normalizeAccountUsage(model.AccountUsageHomeNet) != model.AccountUsageHomeNet {
-		t.Fatal("usage homenet → homenet attendu")
+	for _, u := range []string{"", "nimporte-quoi", model.AccountUsageHotspot, model.AccountUsageHomeNet} {
+		if normalizeAccountUsage(u) != model.AccountUsageHotspot {
+			t.Fatalf("normalizeAccountUsage(%q) = %q, attendu %q (rabat tout — mono-mode N°324)",
+				u, normalizeAccountUsage(u), model.AccountUsageHotspot)
+		}
 	}
 	db := &model.DB{
-		Accounts: []model.Account{{ID: "acc-a", Usage: model.AccountUsageHomeNet}},
+		Accounts: []model.Account{
+			{ID: "acc-a", Usage: model.AccountUsageHomeNet}, // léger pré-migration
+			{ID: "acc-b", Usage: ""},                        // ère pré-colonne
+		},
 	}
-	if got := accountUsageLocked(db, "acc-a"); got != model.AccountUsageHomeNet {
-		t.Fatalf("accountUsageLocked(acc-a) = %q, attendu homenet", got)
+	if got := accountUsageLocked(db, "acc-a"); got != model.AccountUsageHotspot {
+		t.Fatalf("accountUsageLocked(acc-a) = %q, attendu %q (compte homenet léger lu hotspot)", got, model.AccountUsageHotspot)
+	}
+	if got := accountUsageLocked(db, "acc-b"); got != model.AccountUsageHotspot {
+		t.Fatalf("accountUsageLocked(acc-b) = %q, attendu %q (usage vide)", got, model.AccountUsageHotspot)
 	}
 	if got := accountUsageLocked(db, "acc-inconnu"); got != model.AccountUsageHotspot {
-		t.Fatalf("accountUsageLocked(inconnu) = %q, attendu hotspot (défensif)", got)
+		t.Fatalf("accountUsageLocked(inconnu) = %q, attendu %q (défensif)", got, model.AccountUsageHotspot)
 	}
 }

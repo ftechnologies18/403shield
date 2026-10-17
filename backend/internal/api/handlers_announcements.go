@@ -59,7 +59,7 @@ func (a *API) handleAnnouncementsList(w http.ResponseWriter, r *http.Request) {
 	}
 	rows := []row{}
 	now := model.NowISO()
-	activeByUsage := map[string]int{"all": 0, "hotspot": 0, "homenet": 0}
+	activeByUsage := map[string]int{"all": 0, "hotspot": 0} // N°324 — mono-mode (homenet converti en « all » au boot)
 	for _, acc := range db.Accounts {
 		if acc.ID == model.AccountMainID || acc.Status != "active" {
 			continue
@@ -71,7 +71,7 @@ func (a *API) handleAnnouncementsList(w http.ResponseWriter, r *http.Request) {
 	for _, ann := range db.Announcements {
 		rows = append(rows, row{
 			Announcement:  ann,
-			Active:        ann.Active("hotspot", now) || ann.Active("homenet", now),
+			Active:        ann.Active("hotspot", now), // N°324 — mono-mode (les annonces héritées « homenet » sont normalisées « all » au boot)
 			AccountsCount: activeByUsage[ann.Audience],
 			State:         ann.State(now), // N°165 — état calculé, badge de la liste
 		})
@@ -132,9 +132,9 @@ func (a *API) handleAnnouncementCreate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	switch req.Audience {
-	case model.AnnouncementAudienceAll, model.AnnouncementAudienceHotspot, model.AnnouncementAudienceHomeNet:
+	case model.AnnouncementAudienceAll, model.AnnouncementAudienceHotspot: // N°324 — homenet retiré
 	default:
-		writeErr(w, http.StatusBadRequest, "Audience invalide (all, hotspot ou homenet)")
+		writeErr(w, http.StatusBadRequest, "Audience invalide (all ou hotspot)")
 		return
 	}
 	expires := ""
@@ -274,8 +274,6 @@ func announceScopeLabel(audience string) string {
 	switch audience {
 	case model.AnnouncementAudienceHotspot:
 		return "comptes Hotspot"
-	case model.AnnouncementAudienceHomeNet:
-		return "comptes HomeNet"
 	default:
 		return "tous les comptes"
 	}

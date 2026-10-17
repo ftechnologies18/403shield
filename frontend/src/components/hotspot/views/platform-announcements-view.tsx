@@ -453,7 +453,6 @@ export default function PlatformAnnouncementsView() {
                   <SelectContent>
                     <SelectItem value="all">{t("ann.audience.all")}</SelectItem>
                     <SelectItem value="hotspot">{t("ann.audience.hotspot")}</SelectItem>
-                    <SelectItem value="homenet">{t("ann.audience.homenet")}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

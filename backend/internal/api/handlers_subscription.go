@@ -106,26 +106,17 @@ func planAmount(p model.SaasPlan, routerCount int) int {
 	return p.PriceFcfa
 }
 
-// trialPeriodEnd — N°122 : fin de l'essai selon le mode du compte. Hotspot
-// (produit historique) : 60 jours — N°123 : réduit de 90 (trois mois
-// laissaient le réseau tourner sans payer ; deux mois suffisent à installer
-// un hotspot et à valider le produit). HomeNet (foyer résidentiel) :
-// 30 jours — cycle de décision d'un particulier, la maison n'a pas besoin
-// d'un mois de plus pour savoir si son WiFi est protégé.
-func trialPeriodEnd(now time.Time, usage string) time.Time {
-	if usage == model.AccountUsageHomeNet {
-		return now.AddDate(0, 0, 30)
-	}
+// trialPeriodEnd — N°324 : fin de l'essai — 60 jours (mono-mode Hotspot ;
+// l'essai segmenté 30 j foyer est retiré avec le mode. Historique : N°122
+// segmentation, N°123 réduction 90 → 60 jours).
+func trialPeriodEnd(now time.Time) time.Time {
 	return now.AddDate(0, 0, 60)
 }
 
 // trialDefaultMonths — durée d'essai PAR DÉFAUT (en mois de plateforme)
 // quand la plateforme attribue/prolonge un essai sans préciser de durée.
-// N°123 : Hotspot 2 mois (~60 jours, aligné sur trialPeriodEnd), Maison 1.
-func trialDefaultMonths(usage string) int {
-	if usage == model.AccountUsageHomeNet {
-		return 1
-	}
+// N°324 : 2 mois (mono-mode), aligné sur trialPeriodEnd.
+func trialDefaultMonths() int {
 	return 2
 }
 
@@ -158,8 +149,9 @@ func (a *API) handleSubscriptionGet(w http.ResponseWriter, r *http.Request) {
 	a.store.Lock()
 	db := a.store.Data()
 	settings := ensureSettings(db, acc)
-	// N°122 — tarifs segmentés : le compte ne voit QUE les formules de son
-	// mode (Hotspot vs HomeNet) — le catalogue renvoyé est filtré serveur.
+	// N°122 → N°324 — tarifs : le catalogue est MONO-MODE (grille Hotspot
+	// unique ; les identifiants homenet-* historiques restent résolus par
+	// ResolvePlan pour les renouvellements GeniusPay en vol).
 	accUsage := accountUsageLocked(db, acc)
 	view := subscriptionView{
 		Subscription: settings.Subscription,
@@ -227,12 +219,15 @@ func (a *API) handleSubscriptionPost(w http.ResponseWriter, r *http.Request) {
 	a.store.Unlock()
 	plan, ok := model.ResolvePlan(strings.TrimSpace(req.PlanID), accUsage)
 	if !ok {
-		writeErr(w, http.StatusBadRequest, "Formule inconnue (hotspot-mensuel | hotspot-annuel | homenet-mensuel | homenet-annuel)")
+		writeErr(w, http.StatusBadRequest, "Formule inconnue (hotspot-mensuel | hotspot-annuel)")
 		return
 	}
+	// N°324 — mono-mode : la garde wrong_mode devient défensive morte (tout
+	// plan résolu et tout compte sont hotspot) — conservée par prudence sur
+	// le chemin de paiement, message neutre.
 	if plan.Usage != accUsage {
 		writeErrCode(w, http.StatusBadRequest, "wrong_mode",
-			fmt.Sprintf("La formule %s est réservée aux comptes %s — choisissez une formule de votre mode", plan.Name, map[bool]string{true: "HomeNet", false: "Hotspot"}[plan.Usage == model.AccountUsageHomeNet]), nil)
+			fmt.Sprintf("La formule %s n'est pas disponible pour ce compte", plan.Name), nil)
 		return
 	}
 

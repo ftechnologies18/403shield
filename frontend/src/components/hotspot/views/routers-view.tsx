@@ -88,7 +88,7 @@ import { StatusBadge } from "@/components/hotspot/status-badge";
 import { api, repairRouterWalledGarden } from "@/lib/hotspot/api";
 import { localeOf, useI18n } from "@/lib/hotspot/i18n";
 import { formatDuration, timeAgo } from "@/lib/hotspot/format";
-import { canView, usageOf } from "@/lib/hotspot/roles";
+import { canView } from "@/lib/hotspot/roles";
 import { useHotspotStore } from "@/lib/hotspot/store";
 import { viewToPath, detailFromPath } from "@/lib/hotspot/view-path";
 import type { RouterDevice, RouterMode, RouterRotateTokenResponse, RouterStats, RouterTestResult } from "@/lib/hotspot/types";
@@ -290,14 +290,12 @@ export default function RoutersView() {
 
   const nf = (value: number): string => new Intl.NumberFormat(localeOf(lang)).format(value);
 
-  // N°190 — raccourci « Personnaliser le portail » (fiche) : l'onglet
-  // Portail du hub Hotspot est réservé au produit HOTSPOT (console homenet :
-  // liste fermée canView, rang 2 gérant+) — le raccourci ne se montre que si
-  // la vue cible est réellement OUVERTE au rôle ET à l'usage de session
+  // N°190 — raccourci « Personnaliser le portail » (fiche) : le raccourci
+  // ne se montre que si la vue cible est réellement OUVERTE au rôle
   // (miroir exact de la barrière de navigation, jamais un lien mort).
+  // N°324 — mono-mode : plus de garde d'usage.
   const role = useHotspotStore((s) => s.user?.role);
-  const usage = usageOf(useHotspotStore((s) => s.user?.usage));
-  const canPortal = canView(role, "portal", usage);
+  const canPortal = canView(role, "portal");
 
   const { data: routers, isLoading } = useQuery({
     queryKey: ["/api/routers"],
@@ -661,10 +659,10 @@ export default function RoutersView() {
                             /app/<vue>/router:<id> — la vue cible s'ouvre
                             DIRECTEMENT scopée sur ce routeur). Garde canView
                             (miroir N°190) : jamais un lien mort. */}
-                        {(canView(role, "sessions", usage) || canView(role, "vouchers", usage)) && (
+                        {(canView(role, "sessions") || canView(role, "vouchers")) && (
                           <DropdownMenuSeparator />
                         )}
-                        {canView(role, "sessions", usage) && (
+                        {canView(role, "sessions") && (
                           <DropdownMenuItem
                             className="min-h-10"
                             onClick={() =>
@@ -675,7 +673,7 @@ export default function RoutersView() {
                             {t("routers.viewSessions")}
                           </DropdownMenuItem>
                         )}
-                        {canView(role, "vouchers", usage) && (
+                        {canView(role, "vouchers") && (
                           <DropdownMenuItem
                             className="min-h-10"
                             onClick={() =>

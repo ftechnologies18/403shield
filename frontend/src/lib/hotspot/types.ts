@@ -16,13 +16,13 @@ export type SaleChannel = "direct" | "reseller";
 export type AccountStatus = "active" | "disabled";
 
 /**
- * Usage d'un compte SaaS (N°98 — produit bi-mode). Un compte EST hotspot OU
- * homenet : il ne bascule pas (le cas « je gère un cyber ET ma maison » =
- * deux comptes). Phase 1 = plomberie : la colonne existe, la session la
- * transporte, les endpoints produit hotspot refusent homenet (404) — la
- * coquille de navigation dédiée arrive en Phase 2.
+ * Usage d'un compte SaaS. N°324 — la plateforme est MONO-MODE : « hotspot »
+ * est la seule valeur produite (le mode foyer HomeNet est supprimé du
+ * système). Le type reste exporté pour les sessions/JWT legacy qui
+ * transporteraient encore « homenet » — `usageOf` (roles.ts) les normalise
+ * à chaud vers « hotspot », aucun compte ne voit la console foyer.
  */
-export type AccountUsage = "hotspot" | "homenet";
+export type AccountUsage = "hotspot";
 
 export interface AuthUser {
   id: string;
@@ -32,8 +32,10 @@ export interface AuthUser {
   /** Compte SaaS auquel l'utilisateur est rattaché (multi-tenant). */
   accountId?: string;
   accountName?: string;
-  /** N°98 — usage du compte (hotspot | homenet). Absent ou vide = hotspot
-   * (comportement historique : l'admin plateforme n'a pas de compte client). */
+  /** Usage du compte — N°324 : toujours « hotspot » (mono-mode). Absent ou
+   * vide = hotspot (comportement historique : l'admin plateforme n'a pas de
+   * compte client). Les sessions legacy « homenet » sont normalisées par
+   * usageOf côté front, et par la migration de retraite côté serveur. */
   usage?: AccountUsage | "";
   /** 2FA TOTP active (sécurité S4). */
   totpEnabled?: boolean;
@@ -78,10 +80,6 @@ export interface RegisterPayload {
   country: string;
   /** Ville d'activité (texte libre). */
   city: string;
-  /** N°101 — usage du compte : « hotspot » (lieu public) ou « homenet »
-   * (foyer — inscription OUVERTE depuis la Phase 3). Absent = hotspot
-   * (comportement historique). */
-  usage?: AccountUsage;
 }
 
 export interface AuthResponse {
@@ -99,8 +97,8 @@ export interface AccountSummary {
   owner: string;
   /** Santé de l'abonnement SaaS du compte (console plateforme). */
   subscription?: "active" | "expired" | "essai";
-  /** N°98 — usage du compte : la console plateforme segmente Hotspot/HomeNet
-   * (support, relances, roadmap produit). Absent = hotspot (ère pré-colonne). */
+  /** Usage du compte — N°324 : toujours « hotspot » (mono-mode, la colonne
+   * reste transportée pour compatibilité affichage). */
   usage?: AccountUsage;
   /** F (signup enrichi) — contact propriétaire + segmentation géographique. */
   email?: string;
@@ -186,13 +184,12 @@ export interface AccountDetail {
 
 /** Corps de PUT /api/admin/accounts/{id}/subscription (attribution plateforme). */
 export interface SubscriptionUpdatePayload {
-  /** N°122 — formules segmentées par mode (les identifiants historiques
-   * restent acceptés par le serveur, résolus à l'usage du compte). */
+  /** N°122 — formules du catalogue (mono-mode Hotspot — N°324 : les
+   * identifiants historiques restent acceptés par le serveur, résolus
+   * vers les formules hotspot). */
   planId:
     | "hotspot-mensuel"
     | "hotspot-annuel"
-    | "homenet-mensuel"
-    | "homenet-annuel"
     | "essentiel"
     | "illimite"
     | "essai"
@@ -1077,35 +1074,9 @@ export interface PppApiCreds {
   note: string;
 }
 
-/** N°101 — appareil du foyer (bail DHCP, GET /api/devices — console HomeNet).
- * L'identité stable est la MAC ; le nom affiché replie nom affecté →
- * host-name DHCP → MAC. `status` = dernier bail rapporté par la box
- * (bound = en ligne) ; « gone » = bail retiré du dernier rapport complet. */
-export interface HomeDevice {
-  id: string;
-  accountId?: string;
-  routerId: string;
-  routerName: string;
-  mac: string;
-  /** Nom affecté par la famille (« TV du salon ») — vide = repli host-name/MAC. */
-  name: string;
-  /** host-name DHCP rapporté par l'appareil (souvent vide ou générique). */
-  hostname: string;
-  ip: string;
-  status: string;
-  /** Durée brute RouterOS du bail (« 30m »), affichée telle quelle. */
-  expires: string;
-  /** Horodatage RFC3339 du dernier rapport agent qui a nourri ces champs. */
-  leaseAt: string;
-  createdAt: string;
-  /** Pause dîner — état EFFECTIF au moment de la lecture (serveur). */
-  paused: boolean;
-  /** RFC3339 ; "" = illimité (jusqu'à réactivation). */
-  pausedUntil: string;
-}
-
-/** Options de pause dîner proposées par l'UI (minutes ; 0 = illimité). */
-export const DEVICE_PAUSE_PRESETS = [30, 60, 120, 0] as const;
+/** N°101 — appareil du foyer (console HomeNet). N°324 — le type et les
+ * endpoints /api/devices sont RETIRÉS avec le mode foyer : le registre
+ * appareils ne vit désormais que pour le module Cybercafé (serveur). */
 
 export interface Reseller {
   id: string;
@@ -1747,11 +1718,10 @@ export interface AppSettings {
   autoImportRouterUsers?: boolean;
 }
 
-/** Formule d'abonnement 403Shield (catalogue GET /api/plans — segmenté par
- * mode depuis le N°122 : le serveur ne renvoie au compte que les formules
- * de SON usage). */
+/** Formule d'abonnement 403Shield (catalogue GET /api/plans — N°324 :
+ * mono-mode Hotspot, le serveur renvoie la grille unique). */
 export interface SaasPlan {
-  id: "hotspot-mensuel" | "hotspot-annuel" | "homenet-mensuel" | "homenet-annuel" | string;
+  id: "hotspot-mensuel" | "hotspot-annuel" | string;
   name: string;
   priceFcfa: number;
   period: "mois" | "an";
@@ -1759,8 +1729,9 @@ export interface SaasPlan {
   perRouter: boolean;
   /** true : routeurs illimités (formules annuelles). */
   unlimited: boolean;
-  /** Mode de la formule : "hotspot" (réseaux publics) | "homenet" (foyers). */
-  usage: "hotspot" | "homenet" | string;
+  /** Mode de la formule — N°324 : toujours « hotspot » (champ conservé
+   * pour compatibilité contrat serveur). */
+  usage: "hotspot" | string;
   tagline: string;
   badge?: string;
 }
@@ -1791,10 +1762,11 @@ export interface SubscriptionView {
   status: "active" | "expired" | "suspended" | "none";
   routerCount: number;
   currentAmountFcfa: number;
-  /** Formules du MODE du compte uniquement (filtrées serveur, N°122). */
+  /** Formules du catalogue (N°324 : grille unique mono-mode). */
   plans: SaasPlan[];
-  /** Usage du compte : "hotspot" | "homenet" (segmentation N°122). */
-  usage: "hotspot" | "homenet" | string;
+  /** Usage du compte — N°324 : toujours « hotspot » (champ conservé pour
+   * compatibilité contrat serveur). */
+  usage: "hotspot" | string;
   waveConfigured: boolean;
   /** Montants par moyen pour chaque formule (répercussion des frais, serveur). */
   pricing?: PlanPricing[];
@@ -2171,13 +2143,10 @@ export type ViewId =
   // dans l'onglet éponyme. L'ancienne URL /app/settings/hotspot reste
   // deep-linkable (LEGACY_SLUG_VIEWS → vue « portal », re-normalisée).
   | "security" // N°57-d — section Sécurité de la zone (mot de passe, 2FA, activité)
-  | "team"
-  // N°100 — console HomeNet (comptes usage « homenet ») : le foyer a SA
-  // coquille. « home » = le tableau de bord maison (routeur, appareils,
-  // protection, couvre-feu) ; « devices » = les appareils connectés. Ces
-  // vues n'existent PAS pour les comptes hotspot (canView les leur refuse).
-  | "home"
-  | "devices";
+  | "team";
+  // N°324 — les ViewId « home » et « devices » (console foyer N°100) sont
+  // RETIRÉS avec le mode HomeNet : les URLs /app/home et /app/devices sont
+  // re-normalisées vers le dashboard (LEGACY_SLUG_VIEWS).
 
 /* ─── N°152 — annonces de la plateforme (GET/POST/DELETE /api/admin/announcements,
        GET /api/announcements côté clients) ─── */
@@ -2190,7 +2159,7 @@ export type AnnouncementLevel =
   | "maintenance"
   | "warning"
   | "critical";
-export type AnnouncementAudience = "all" | "hotspot" | "homenet";
+export type AnnouncementAudience = "all" | "hotspot";
 
 /** Niveaux acceptés par le formulaire (miroir de model.AnnouncementLevels). */
 export const ANNOUNCEMENT_LEVELS: readonly AnnouncementLevel[] = [

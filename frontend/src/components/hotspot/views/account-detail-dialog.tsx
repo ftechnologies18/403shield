@@ -28,17 +28,15 @@ import {
   deleteClientAccount,
   fetchAccountDetail,
   impersonateAccount,
-  setAccountUsage,
   updateAccountContact,
   updateAccountSubscription,
 } from "@/lib/hotspot/api";
 import { useI18n } from "@/lib/hotspot/i18n";
 import { useHotspotStore } from "@/lib/hotspot/store";
-import type { AccountDetail, AccountSummary, AccountUsage, SubscriptionInfo } from "@/lib/hotspot/types";
+import type { AccountDetail, AccountSummary, SubscriptionInfo } from "@/lib/hotspot/types";
 import { formatCurrency, formatDate, formatDateTime } from "@/lib/hotspot/format";
 import { useCurrency } from "@/components/hotspot/parts/sd-currency";
 import { StatusBadge } from "@/components/hotspot/status-badge";
-import { UsageBadge } from "@/components/hotspot/usage-badge";
 import { ACCOUNTS_QUERY_KEY } from "./accounts-view";
 import {
   AlertDialog,
@@ -120,15 +118,12 @@ const PLAN_MIRROR: Record<
 > = {
   "hotspot-mensuel": { price: 2500, perRouter: true, period: "mois" },
   "hotspot-annuel": { price: 25000, perRouter: false, period: "an" },
-  "homenet-mensuel": { price: 1250, perRouter: true, period: "mois" },
-  "homenet-annuel": { price: 12000, perRouter: false, period: "an" },
 };
 
-/** Les DEUX formules d'un mode + l'essai (options du dialog plateforme). */
-function planOptionsFor(usage: AccountUsage | undefined): { id: string }[] {
-  return usage === "homenet"
-    ? [{ id: "homenet-mensuel" }, { id: "homenet-annuel" }, { id: "essai" }]
-    : [{ id: "hotspot-mensuel" }, { id: "hotspot-annuel" }, { id: "essai" }];
+/** Les formules du catalogue + l'essai (options du dialog plateforme).
+ * N°324 — mono-mode : grille hotspot unique. */
+function planOptionsFor(): { id: string }[] {
+  return [{ id: "hotspot-mensuel" }, { id: "hotspot-annuel" }, { id: "essai" }];
 }
 
 /** Preview locale (indicative) du montant et de l'échéance après attribution —
@@ -281,13 +276,11 @@ function ContactDialog({
 
 function SubscriptionDialog({
   accountId,
-  usage,
   current,
   open,
   onOpenChange,
 }: {
   accountId: string;
-  usage: AccountUsage | undefined;
   current: SubscriptionInfo;
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -296,10 +289,10 @@ function SubscriptionDialog({
   const currency = useCurrency();
   const queryClient = useQueryClient();
 
-  const isHome = usage === "homenet";
-  const planOptions = planOptionsFor(usage);
-  const monthlyId = isHome ? "homenet-mensuel" : "hotspot-mensuel";
-  const annualId = isHome ? "homenet-annuel" : "hotspot-annuel";
+  // N°324 — mono-mode : grille hotspot unique.
+  const planOptions = planOptionsFor();
+  const monthlyId = "hotspot-mensuel";
+  const annualId = "hotspot-annuel";
 
   const [planId, setPlanId] = useState<string>(monthlyId);
   const [months, setMonths] = useState<string>(
@@ -576,19 +569,6 @@ export function AccountDetailDialog({
     retry: false,
   });
 
-  // N°98 — bascule d'usage (hotspot ⇄ homenet) : plateau uniquement, effet
-  // immédiat sur les gardes API. Réversible d'un clic (aucune donnée n'est
-  // détruite : les endpoints produit redeviennent accessibles au retour).
-  const usageMutation = useMutation({
-    mutationFn: (usage: AccountUsage) => setAccountUsage(account.id, usage),
-    onSuccess: (_res, usage) => {
-      toast.success(tf("accounts.usageToast", { name: account.name, usage: usage === "homenet" ? t("accounts.usageHomeNet") : t("accounts.usageHotspot") }));
-      void queryClient.invalidateQueries({ queryKey: accountDetailKey(account.id) });
-      void queryClient.invalidateQueries({ queryKey: ACCOUNTS_QUERY_KEY });
-    },
-    onError: (err: Error) => toast.error(t("accounts.usageError")),
-  });
-
   const copyUsername = async (value: string) => {
     try {
       await navigator.clipboard.writeText(value);
@@ -664,30 +644,6 @@ export function AccountDetailDialog({
                       </Field>
                       <Field label={t("common.status")}>
                         <StatusBadge status={data.status} dot />
-                      </Field>
-                      {/* N°98 — usage du compte : badge + bascule plateforme. */}
-                      <Field label={t("accounts.usage")}>
-                        <div className="flex items-center gap-2">
-                          <UsageBadge usage={data.usage} />
-                          <Select
-                            value={data.usage ?? "hotspot"}
-                            onValueChange={(v) => usageMutation.mutate(v as AccountUsage)}
-                            disabled={usageMutation.isPending}
-                          >
-                            <SelectTrigger
-                              className="h-8 w-auto gap-1 text-xs"
-                              aria-label={t("accounts.usageChange")}
-                              disabled={usageMutation.isPending}
-                            >
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="hotspot">{t("accounts.usageHotspot")}</SelectItem>
-                              <SelectItem value="homenet">{t("accounts.usageHomeNet")}</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          {usageMutation.isPending && <Loader2 className="size-3.5 animate-spin text-muted-foreground" />}
-                        </div>
                       </Field>
                       <Field label={t("accounts.contact.emailLabel")}>
                         {data.contact?.email || "—"}
@@ -894,7 +850,6 @@ export function AccountDetailDialog({
       {sub && (
         <SubscriptionDialog
           accountId={account.id}
-          usage={account.usage}
           current={sub}
           open={subOpen}
           onOpenChange={setSubOpen}

@@ -37,8 +37,6 @@ const CHUNK_LOADERS: Partial<Record<ViewId, () => Promise<unknown>>> = {
   accounts: () => import("@/components/hotspot/views/accounts-view"),
   billingRequests: () => import("@/components/hotspot/views/billing-requests-view"),
   dashboard: () => import("@/components/hotspot/views/dashboard-view"),
-  devices: () => import("@/components/hotspot/views/devices-view"),
-  home: () => import("@/components/hotspot/views/home-view"),
   logs: () => import("@/components/hotspot/views/logs-view"),
   notifications: () => import("@/components/hotspot/views/notifications-view"),
   platform: () => import("@/components/hotspot/views/platform-overview-view"),
@@ -103,14 +101,6 @@ const VIEW_QUERIES: Partial<Record<ViewId, readonly ViewQuery[]>> = {
     { key: ["/api/transactions"], path: "/api/transactions" },
   ],
   routers: [{ key: ["/api/routers"], path: "/api/routers" }],
-  devices: [
-    { key: ["/api/routers"], path: "/api/routers" },
-    { key: ["/api/devices"], path: "/api/devices" },
-  ],
-  home: [
-    { key: ["/api/routers"], path: "/api/routers" },
-    { key: ["/api/devices"], path: "/api/devices" },
-  ],
   protection: [{ key: ["/api/routers"], path: "/api/routers" }],
   reports: [{ key: ["/api/routers"], path: "/api/routers" }],
   platformVpn: [{ key: ["/api/admin/vpn/overview"], path: "/api/admin/vpn/overview" }],

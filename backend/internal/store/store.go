@@ -8,7 +8,9 @@ package store
 
 import (
 	crand "crypto/rand"
+	"crypto/sha256"
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -155,6 +157,9 @@ func New(dir string) (*Store, error) {
 		if migrateRemoveOperator(s.db) {
 			mtChanged = true
 		}
+		if migrateHomeNetRetirement(s.db) {
+			mtChanged = true
+		}
 		if migrateUsageScopedPlans(s.db) {
 			mtChanged = true
 		}
@@ -213,6 +218,9 @@ func New(dir string) (*Store, error) {
 				mtChanged = true
 			}
 			if migrateRemoveOperator(s.db) {
+				mtChanged = true
+			}
+			if migrateHomeNetRetirement(s.db) {
 				mtChanged = true
 			}
 			if migrateUsageScopedPlans(s.db) {
@@ -560,6 +568,138 @@ func migrateRemoveOperator(db *model.DB) bool {
 	return changed
 }
 
+// migrateHomeNetRetirement — N°324 : RETRAITE DU MODE HOMENET. Décision
+// propriétaire (suite de la vitrine N°322) : la plateforme devient mono-mode
+// Hotspot. Cette migration idempotente convertit AU BOOT tout état hérité :
+//
+//   - comptes   : usage « homenet » → « hotspot » ;
+//   - abonnements & demandes de facturation : PlanID « homenet-mensuel » /
+//     « homenet-annuel » → « hotspot-mensuel » / « hotspot-annuel » (les
+//     périodes et montants en cours sont CONSERVÉS — seuls les renouvellements
+//     futurs basculent sur la grille unique ; les prélèvements GeniusPaySubs
+//     gardent leur PlanID d'origine et restent résolus par ResolvePlan) ;
+//   - annonces  : audience « homenet » → « all » (sinon invisibles à jamais) ;
+//   - pauses dîner : les états des appareils des comptes convertis sont
+//     LEVÉS et une commande device_pause VIDE est enfilée pour leurs box —
+//     le script retire TOUTES les règles « mikcloud-pause » (le convergeur
+//     ne repassera plus pour un compte sans module Cybercafé, il ne faut
+//     pas laisser une coupure familiale à vie sur le routeur).
+//
+// Retourne true si l'état a changé (persistance immédiate par l'appelant).
+// La colonne accounts.usage reste en base (aucun DDL : simple TEXT avec
+// défaut 'hotspot') — la valeur « homenet » ne peut plus renaître (inscription
+// normalisée, admin refusé, bascule supprimée, normalizeAccountUsage rabat
+// tout en lecture).
+func migrateHomeNetRetirement(db *model.DB) bool {
+	changed := false
+	converted := map[string]bool{}
+
+	// (a) Comptes.
+	for i := range db.Accounts {
+		if db.Accounts[i].Usage == model.AccountUsageHomeNet {
+			db.Accounts[i].Usage = model.AccountUsageHotspot
+			converted[db.Accounts[i].ID] = true
+			changed = true
+		}
+	}
+
+	// (b) PlanID hérités (abonnements + demandes de facturation).
+	remap := func(id string) string {
+		switch id {
+		case "homenet-mensuel":
+			return "hotspot-mensuel"
+		case "homenet-annuel":
+			return "hotspot-annuel"
+		}
+		return id
+	}
+	for accID, st := range db.SettingsByAccount {
+		if newID := remap(st.Subscription.PlanID); newID != st.Subscription.PlanID {
+			st.Subscription.PlanID = newID
+			if pl, ok := model.PlanByID(newID); ok {
+				st.Plan = model.Plan{
+					Name:       "403Shield " + pl.Name,
+					MaxRouters: "Illimité",
+					MaxUsers:   "Illimité",
+				}
+				if pl.PerRouter {
+					st.Plan.MaxRouters = "Par routeur"
+				}
+			}
+			db.SettingsByAccount[accID] = st
+			changed = true
+		}
+	}
+	for i := range db.BillingRequests {
+		br := &db.BillingRequests[i]
+		if newID := remap(br.PlanID); newID != br.PlanID {
+			br.PlanID = newID
+			changed = true
+		}
+	}
+
+	// (c) Annonces.
+	for i := range db.Announcements {
+		if db.Announcements[i].Audience == model.AnnouncementAudienceHomeNet {
+			db.Announcements[i].Audience = model.AnnouncementAudienceAll
+			changed = true
+		}
+	}
+
+	// (d) Pauses dîner des comptes convertis (leverage + convergence box).
+	if len(converted) > 0 {
+		routersToConverge := map[string]bool{}
+		for i := range db.Devices {
+			d := &db.Devices[i]
+			if converted[d.AccountID] && (d.Paused || d.PausedUntil != "") {
+				d.Paused = false
+				d.PausedUntil = ""
+				routersToConverge[d.RouterID] = true
+				changed = true
+			}
+		}
+		for i := range db.Routers {
+			rr := &db.Routers[i]
+			if converted[rr.AccountID] && rr.PauseSig != "" {
+				rr.PauseSig = "" // force la re-convergence (ensemble vide) au check-in
+				routersToConverge[rr.ID] = true
+				changed = true
+			}
+		}
+		for routerID := range routersToConverge {
+			accID := ""
+			for i := range db.Routers {
+				if db.Routers[i].ID == routerID {
+					accID = db.Routers[i].AccountID
+					break
+				}
+			}
+			db.Commands = append(db.Commands, model.Command{
+				ID:        model.NewID("cmd-"),
+				RouterID:  routerID,
+				AccountID: accID,
+				Kind:      model.CmdDevicePause,
+				Status:    "queued",
+				Payload:   map[string]any{"macs": ";", "sig": homeNetRetirePauseSig},
+				CreatedAt: model.NowISO(),
+			})
+			changed = true
+		}
+	}
+	return changed
+}
+
+// homeNetRetirePauseSig — signature de l'ensemble vide des pauses (miroir
+// exact de api.devicePauseSig sur la même version « dp-v1 » : hash de la
+// liste vide — la payload « ; » représente zéro MAC, le script retire toutes
+// les règles marquées). Constante calculée une fois : si la version bouge
+// (api.DevicePauseVersion), la re-convergence cyber re-signera de toute
+// façon au check-in suivant.
+var homeNetRetirePauseSig = func() string {
+	h := sha256.Sum256([]byte("dp-v1|"))
+	return "dp-v1-" + hex.EncodeToString(h[:8])
+}()
+
 // migrateUsageScopedPlans — N°122 (tarifs segmentés Hotspot/HomeNet) :
 // réécrit les identifiants de formule HISTORIQUES vers leur équivalent du
 // mode du compte, partout où ils sont stockés :
@@ -579,15 +719,7 @@ func migrateRemoveOperator(db *model.DB) bool {
 // Idempotent : les identifiants segmentés ne re-matchent jamais les anciens.
 func migrateUsageScopedPlans(db *model.DB) bool {
 	usageOf := func(accID string) string {
-		for i := range db.Accounts {
-			if db.Accounts[i].ID == accID {
-				if db.Accounts[i].Usage == model.AccountUsageHomeNet {
-					return model.AccountUsageHomeNet
-				}
-				return model.AccountUsageHotspot
-			}
-		}
-		return model.AccountUsageHotspot
+		return model.AccountUsageHotspot // N°324 — mono-mode (migrateHomeNetRetirement a déjà converti les comptes)
 	}
 	resolve := func(accID, legacy string) string {
 		if p, ok := model.ResolvePlan(legacy, usageOf(accID)); ok {
@@ -647,10 +779,7 @@ func migrateActiveTrialCap(db *model.DB) bool {
 	statusOf := func(accID string) (string, string) {
 		for i := range db.Accounts {
 			if db.Accounts[i].ID == accID {
-				if db.Accounts[i].Usage == model.AccountUsageHomeNet {
-					return db.Accounts[i].Status, model.AccountUsageHomeNet
-				}
-				return db.Accounts[i].Status, model.AccountUsageHotspot
+				return db.Accounts[i].Status, model.AccountUsageHotspot // N°324 — mono-mode
 			}
 		}
 		return "", model.AccountUsageHotspot
@@ -672,10 +801,8 @@ func migrateActiveTrialCap(db *model.DB) bool {
 		if errS != nil || errE != nil {
 			continue
 		}
+		_ = usage // N°324 — mono-mode : unique cap 60 jours (l'ancien cap 30 j foyer est retiré)
 		trialCap := start.AddDate(0, 0, 60)
-		if usage == model.AccountUsageHomeNet {
-			trialCap = start.AddDate(0, 0, 30)
-		}
 		if end.After(trialCap) {
 			s.Subscription.PeriodEnd = trialCap.Format(time.RFC3339)
 			db.SettingsByAccount[accID] = s
@@ -1311,6 +1438,9 @@ func (s *Store) Reload() (ReloadStats, error) {
 		changed = true
 	}
 	if migrateRemoveOperator(s.db) {
+		changed = true
+	}
+	if migrateHomeNetRetirement(s.db) {
 		changed = true
 	}
 	if migrateUsageScopedPlans(s.db) {

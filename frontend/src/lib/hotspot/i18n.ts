@@ -28,7 +28,6 @@ import { frPpp } from "./i18n-fr/ppp";
 import { frVpn } from "./i18n-fr/vpn";
 import { frDashboard } from "./i18n-fr/dashboard";
 import { frForgot } from "./i18n-fr/forgot";
-import { frHomeNet } from "./i18n-fr/homenet";
 import { frHotspot } from "./i18n-fr/hotspot";
 import { frHourly } from "./i18n-fr/hourly";
 import { frJoin } from "./i18n-fr/join";
@@ -97,7 +96,6 @@ const fr: Record<string, string> = {
   ...frVpn,
   ...frDashboard,
   ...frForgot,
-  ...frHomeNet,
   ...frHotspot,
   ...frHourly,
   ...frJoin,

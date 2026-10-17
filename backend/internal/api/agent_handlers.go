@@ -543,10 +543,10 @@ func (a *API) handleAgentCmd(w http.ResponseWriter, r *http.Request) {
 	// du gérant via POST /api/routers/{id}/pool-doctor.
 	a.ensurePoolDoctorLocked(db, router)
 
-	// N°101 — Phase 3 HomeNet : l'inventaire des appareils (bails DHCP,
-	// cadence 2 min — hotspots exclus) puis la convergence de la pause dîner
-	// (l'ensemble désiré est recalculé à CHAQUE check-in : une pause qui
-	// expire change la signature et se lève d'elle-même, pattern N°82).
+	// N°324 — cadenceur + convergeur « appareils » : bails DHCP et pauses ne
+	// vivent plus que pour le module Cybercafé (l'inventaire foyer N°101 est
+	// retiré ; l'ensemble désiré reste recalculé à CHAQUE check-in : une pause
+	// qui expire change la signature et se lève d'elle-même, pattern N°82).
 	a.ensureHomeDevicesLocked(db, router)
 	a.ensureDevicePauseLocked(db, router)
 
@@ -1001,17 +1001,14 @@ func (a *API) handleAgentResult(w http.ResponseWriter, r *http.Request) {
 		summary := a.applyPoolDoctor(db, router, vals)
 		a.logActivity(db, router.AccountID, "router", "Routeur «"+router.Name+"» — "+summary)
 	case cmd.Kind == model.CmdReadDhcp && ok:
-		// N°101 — inventaire : le rapport des bails DHCP nourrit le
-		// registre des appareils pour un compte HOMENET (le clic DHCP
-		// de la console hotspot reste du cache outil F9 : aucune ligne
-		// d'appareil ne naît d'un parc public) OU pour un compte
-		// HOTSPOT avec le module Cybercafé activé (N°290 : la
-		// découverte alimente l'import des postes). La commande reste
+		// N°324 — inventaire : le rapport des bails DHCP nourrit le
+		// registre des appareils pour un compte HOTSPOT avec le module
+		// Cybercafé activé (N°290 : la découverte alimente l'import des
+		// postes — l'usage foyer N°101 est retiré avec le mode). La commande reste
 		// « done » avec son Result["data"] : l'outil F9 y relit son
 		// cache 120 s — les consommateurs du même rapport, zéro conflit.
-		usage := accountUsageLocked(db, router.AccountID)
-		if usage == model.AccountUsageHomeNet ||
-			(usage == model.AccountUsageHotspot && cyberEnabledLocked(db, router.AccountID)) {
+		// N°324 — mono-mode : le registre ne vit que pour le module Cybercafé.
+		if cyberEnabledLocked(db, router.AccountID) {
 			created := a.applyDeviceLeases(db, router, vals)
 			if a.devicesDone == nil {
 				a.devicesDone = map[string]time.Time{}

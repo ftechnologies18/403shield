@@ -295,14 +295,10 @@ func (a *API) Handler() http.Handler {
 	// du ticket/utilisateur, MAC et marque probable de l'appareil (OUI IEEE),
 	// journal récent, traçabilité de vente. Geste de gérant/propriétaire.
 	mux.HandleFunc("GET /api/users/{id}/connection-detail", a.requireRole(2, a.handleUserConnectionDetail))
-	// N°101 — Phase 3 HomeNet : le registre des appareils du foyer (bails
-	// DHCP rapportés par l'agent + noms affectés + pause dîner). Famille
-	// RÉSERVÉE aux comptes homenet (404 pour un compte hotspot — miroir des
-	// vues produit hotspot refusées aux foyers) ; renommage et pause sont
-	// des gestes de gérant de la maison (rang 2, miroir des protections).
-	mux.HandleFunc("GET /api/devices", a.requireUsage(model.AccountUsageHomeNet, a.handleDevicesList))
-	mux.HandleFunc("PUT /api/devices/{id}", a.requireUsage(model.AccountUsageHomeNet, a.requireRole(2, a.handleDeviceRename)))
-	mux.HandleFunc("POST /api/devices/{id}/pause", a.requireUsage(model.AccountUsageHomeNet, a.requireRole(2, a.handleDevicePause)))
+	// N°324 — les routes foyer /api/devices* (registre appareils + pause
+	// dîner, N°101) sont RETIRÉES avec le mode HomeNet : la machinerie
+	// sous-jacente (bails DHCP, device_pause) reste servie par le module
+	// Cybercafé N°290 (/api/cyber/postes*).
 	// N°290 — module Cybercafé (overlay hotspot, activable par compte) :
 	// registre des postes + import DHCP + attribution code-temps + pause
 	// poste + activation. Lecture ouverte à l'équipe (rang 1) ; écritures
@@ -497,9 +493,9 @@ func (a *API) Handler() http.Handler {
 	// P2 — fiche client, attribution/renouvellement d'abonnement, suppression.
 	mux.HandleFunc("GET /api/admin/accounts/{id}", a.requireRole(3, a.handleAdminAccountDetail))
 	mux.HandleFunc("PUT /api/admin/accounts/{id}/subscription", a.requireRole(3, a.handleAdminAccountSubscription))
-	// N°98 — usage du compte (Hotspot ⇄ HomeNet) : le SEUL point de bascule
-	// en Phase 1 (l'identité produit d'un compte ne se change pas côté client).
-	mux.HandleFunc("PUT /api/admin/accounts/{id}/usage", a.requireRole(3, a.handleAdminAccountUsage))
+	// N°324 — la bascule d'usage (PUT /api/admin/accounts/{id}/usage, N°98)
+	// est RETIRÉE avec le mode HomeNet : plus d'identité produit à changer
+	// (les comptes foyer existants sont convertis par la migration de retraite).
 	mux.HandleFunc("PUT /api/admin/accounts/{id}/contact", a.requireRole(3, a.handleAdminAccountContact))
 	mux.HandleFunc("DELETE /api/admin/accounts/{id}", a.requireRole(3, a.handleAdminAccountDelete))
 	// Bascule support : ouvrir la console d'un compte client à la demande

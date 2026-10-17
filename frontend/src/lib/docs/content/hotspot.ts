@@ -495,7 +495,7 @@ export const HOTSPOT_GUIDES: Guide[] = [
       {
         with: "Le mode foyer (homenet)",
         body:
-          "Le foyer pilote le WiFi de la MAISON (contrôle parental) ; le PPPoE vend l'accès aux clients d'un RÉSEAU de quartier. Deux produits.",
+          "Historique : le foyer pilotait le WiFi de la MAISON (contrôle parental) ; le PPPoE vend l'accès aux clients d'un RÉSEAU de quartier. Le mode foyer est retiré du produit (N°324) — le PPPoE reste un produit de réseau public.",
       },
     ],
     recoit: [

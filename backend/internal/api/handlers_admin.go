@@ -251,11 +251,9 @@ func (a *API) handleAdminAccountCreate(w http.ResponseWriter, r *http.Request) {
 		Phone    string `json:"phone"`
 		Country  string `json:"country"`
 		City     string `json:"city"`
-		// N°98 — usage du compte (hotspot | homenet). Contrairement à
-		// l'inscription PUBLIQUE (hotspot seul en Phase 1), la console
-		// plateforme peut créer directement un compte homenet —
-		// c'est le chemin de test de la Phase 2 (coquille de
-		// navigation) avant l'ouverture publique.
+		// N°324 — usage du compte : mono-mode Hotspot. Le champ reste lu
+		// pour REFUSER explicitement « homenet » (contrat d'API clair :
+		// le mode foyer est retiré du système) — vide = hotspot.
 		Usage string `json:"usage"`
 	}
 	if err := decodeBody(r, &req); err != nil {
@@ -288,14 +286,15 @@ func (a *API) handleAdminAccountCreate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// N°98 — usage du compte : vide → « hotspot » (défaut historique) ;
-	// toute autre valeur que hotspot|homenet est refusée.
+	// N°324 — usage du compte : mono-mode Hotspot — vide accepté (défaut
+	// historique), « homenet » REFUSÉ (mode retiré du système), toute autre
+	// valeur inconnue refusée.
 	usage := strings.ToLower(strings.TrimSpace(req.Usage))
 	if usage == "" {
 		usage = model.AccountUsageHotspot
 	}
-	if usage != model.AccountUsageHotspot && usage != model.AccountUsageHomeNet {
-		writeErr(w, http.StatusBadRequest, "Mode de compte inconnu (hotspot | homenet)")
+	if usage != model.AccountUsageHotspot {
+		writeErr(w, http.StatusBadRequest, "Mode de compte inconnu (hotspot) — le mode foyer est retiré")
 		return
 	}
 
@@ -361,10 +360,9 @@ func (a *API) handleAdminAccountCreate(w http.ResponseWriter, r *http.Request) {
 			PlanID:      "essai",
 			Status:      "active",
 			PeriodStart: now.Format(time.RFC3339),
-			// N°123 — même essai segmenté que l'inscription publique
-			// (trialPeriodEnd) : 60 jours Hotspot, 30 jours HomeNet.
-			// Avant : 3 mois fixes quelle que soit l'usage du compte.
-			PeriodEnd:   trialPeriodEnd(now, usage).Format(time.RFC3339),
+			// N°324 — même essai que l'inscription publique (60 jours,
+			// mono-mode ; l'essai segmenté foyer est retiré).
+			PeriodEnd:   trialPeriodEnd(now).Format(time.RFC3339),
 			RouterSlots: 1,
 		},
 	}

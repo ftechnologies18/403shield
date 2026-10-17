@@ -1,8 +1,8 @@
 "use client";
 
 // N°290 — vue « Cybercafé » (module activable, overlay du mode hotspot) :
-// le registre des POSTES (machines identifiées par leur MAC, mêmes
-// disciplines que les appareils HomeNet N°101), l'attribution d'un
+// le registre des POSTES (machines identifiées par leur MAC — mêmes
+// disciplines que l'ancien registre foyer N°101, aujourd'hui retiré), l'attribution d'un
 // CODE-TEMPS par poste (voucher limit-uptime créé sur le gabarit de
 // génération + caisse enregistrée — Transaction/Sale canal « direct ») et
 // la PAUSE par poste (commande device_pause réutilisée — l'ensemble désiré
@@ -100,7 +100,7 @@ const REFRESH_OPTIONS = [
   { value: "60000", label: "60 s" },
 ];
 
-/** Presets de pause poste — mêmes durées que la pause dîner HomeNet. */
+/** Presets de pause poste — mêmes durées que l'ancienne pause dîner. */
 const PAUSE_PRESETS = [
   { minutes: 30, key: "cyber.pause.30" },
   { minutes: 60, key: "cyber.pause.60" },

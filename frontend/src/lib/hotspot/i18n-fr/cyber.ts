@@ -118,4 +118,11 @@ export const frCyber: Record<string, string> = {
   "cyber.renameToast": "Poste renommé",
   "cyber.deleteToast": "Poste supprimé",
   "cyber.assignToast": "Code attribué au poste",
+
+  // N°324 — toasts de pause de poste, empruntés au fragment foyer N°101
+  // (mêmes phrases « Internet de X coupé… ») : le fragment homenet est
+  // supprimé avec le mode, ces clés restent LA référence du module Cybercafé.
+  "devices.pauseToast": "Internet de {device} coupé pendant {duration}.",
+  "devices.pauseForeverToast": "Internet de {device} coupé jusqu'à réactivation.",
+  "devices.resumeToast": "Internet de {device} rétabli.",
 };

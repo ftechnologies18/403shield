@@ -25,7 +25,6 @@ export const enAnnouncements: Record<string, string> = {
   "ann.level.critical": "Incident",
   "ann.audience.all": "All accounts",
   "ann.audience.hotspot": "Hotspot accounts",
-  "ann.audience.homenet": "HomeNet accounts",
   "ann.status.active": "Visible",
   "ann.status.scheduled": "Scheduled",
   "ann.status.expired": "Expired",

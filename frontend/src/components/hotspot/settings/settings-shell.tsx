@@ -53,10 +53,8 @@ export function SettingsSidebar({ onBack, rail = false }: SettingsSidebarProps) 
   const setView = useHotspotStore((s) => s.setView);
   const view = useHotspotStore((s) => s.view);
   const user = useHotspotStore((s) => s.user);
-  // N°100 — l'usage du compte filtre la composition de la zone : un foyer
-  // n'a pas de section Hotspot (hub/portail/modèles = produit des
-  // établissements, endpoints 404 pour lui).
-  const sections = settingsSectionsFor(user?.role, user?.usage);
+  // N°324 — mono-mode : composition de zone identique pour tous les comptes.
+  const sections = settingsSectionsFor(user?.role);
   if (sections.length === 0) return null;
 
   // N°195 — rail d'icônes : Retour + sections, infobulles à droite (le

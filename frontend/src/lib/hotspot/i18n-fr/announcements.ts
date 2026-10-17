@@ -25,7 +25,6 @@ export const frAnnouncements: Record<string, string> = {
   "ann.level.critical": "Incident",
   "ann.audience.all": "Tous les comptes",
   "ann.audience.hotspot": "Comptes Hotspot",
-  "ann.audience.homenet": "Comptes HomeNet",
   "ann.status.active": "Visible",
   "ann.status.scheduled": "Programmée",
   "ann.status.expired": "Expirée",

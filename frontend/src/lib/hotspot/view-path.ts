@@ -59,11 +59,6 @@ const VIEW_SLUGS: Record<ViewId, string> = {
   // SafeWiFi/Shield/FamilyGuard) vit dans la navigation principale — un
   // argument de vente ne s'enterre pas dans la zone Paramètres.
   protection: "protection",
-  // N°100 — console HomeNet : le tableau de bord maison (/app/home) et les
-  // appareils connectés (/app/devices). Segments simples, zone Paramètres
-  // partagée (settings/…) — la traduction ViewId ↔ chemin reste bijective.
-  home: "home",
-  devices: "devices",
   // N°57-e — section Abonnement de la zone Paramètres (facturation de
   // l’espace : formule, échéance, renouvellement, factures).
   subscription: "settings/subscription",
@@ -140,6 +135,11 @@ const LEGACY_SLUG_VIEWS: Record<string, ViewId> = {
   // N°112 — ancien chemin canonique N°57 de la vue Routeurs (pré-retour
   // en navigation principale) : /app/settings/routers → /app/routers.
   "settings/routers": "routers",
+  // N°324 — anciens chemins de la console foyer (HomeNet retiré) :
+  // /app/home et /app/devices re-atterrissent sur le tableau de bord
+  // métier (signets des comptes convertis).
+  home: "dashboard",
+  devices: "dashboard",
 };
 
 /** Chemin complet d'une vue : /app/<slug>, ou /app/<slug>/<détail> quand la

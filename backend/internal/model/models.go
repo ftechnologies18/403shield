@@ -700,13 +700,16 @@ const (
 	RolePlatformAdmin = "platform_admin" // super-admin 403Shield (multi-comptes)
 )
 
-// Usages de compte SaaS (N°98) — un compte EST hotspot OU homenet, il ne
-// bascule pas (contrairement à la console plateforme qui se choisit par
-// rôle). Le cas « je gère un cyber ET ma maison » = deux comptes (comme
-// deux espaces Slack), pas un mode hybride.
+// Usages de compte SaaS (N°98) — N°324 : la plateforme est MONO-MODE, un
+// compte est toujours « hotspot » (le mode foyer est supprimé du système).
+// AccountUsageHomeNet reste déclaré en CONSTANTE LÉGACY : elle n'est plus
+// jamais PRODUITE (inscription, admin, bascule refusés) — seule la
+// migration de retraite (store.migrateHomeNetRetirement) la lit pour
+// convertir les comptes/historiques antérieurs, et les littéraux de plans
+// homenet-* restent résolus par ResolvePlan (abonnements GeniusPay en vol).
 const (
 	AccountUsageHotspot = "hotspot" // réseaux publics payants — vouchers, revendeurs, Mode Vente
-	AccountUsageHomeNet = "homenet" // réseaux privés domestiques — appareils, famille, couvre-feu
+	AccountUsageHomeNet = "homenet" // LÉGACY N°324 — valeur de retraite, plus jamais produite
 )
 
 // Activity — journal d'activité/audit (N°7 : trace QUI a agi, pas seulement quoi).

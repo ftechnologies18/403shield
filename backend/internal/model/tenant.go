@@ -196,16 +196,21 @@ type SaasPlan struct {
 	Badge   string `json:"badge,omitempty"`
 }
 
-// SaasPlans — catalogue des formules 403Shield (marché FCFA concurrentiel),
-// segmenté par usage depuis le N°122 :
+// SaasPlans — catalogue des formules 403Shield (marché FCFA concurrentiel).
+// N°324 — MONO-MODE : les formules foyer (homenet-mensuel 1 250 F,
+// homenet-annuel 12 000 F) sont RETIRÉES du catalogue avec le mode HomeNet
+// (décision propriétaire, suite de la vitrine N°322). La grille est unique
+// (historique N°122 : segmentation hotspot|foyer) :
 //   - HOTSPOT (réseaux publics payants — cybercafé, maquis, boutique) :
 //     Mensuel 2 500 F/mois/routeur (acquisition, sans engagement) ; Annuel
 //     25 000 F/an routeurs illimités (verrouille 12 mois, consolide tous
 //     les sites du réseau).
-//   - HOMENET (pare-feu cloud des foyers résidentiels) : Mensuel
-//     1 250 F/mois/routeur ; Annuel 12 000 F/an routeurs illimités (le prix
-//     historique du produit, la maison paie deux fois moins cher que le lieu
-//     public : moins de charge, moins de tickets).
+//
+// Compat facturation : les identifiants homenet-* HISTORIQUES restent
+// résolus par ResolvePlan vers les formules hotspot équivalentes (période
+// et quota-routeurs identiques) — les abonnements GeniusPay récurrents en
+// vol gardent leur PlanID d'origine et leur MONTANT souscrit ; seuls les
+// renouvellements futurs basculent sur la grille unique.
 //
 // N°123 — le badge « 2 mois offerts » est RETIRÉ des formules annuelles
 // (l'argument prix est porté par le tarif affiché, pas par une promesse de
@@ -216,8 +221,6 @@ type SaasPlan struct {
 // dans le catalogue mais restent résolus par ResolvePlan (à l'usage du compte)
 // pour les abonnements antérieurs au N°122 — la migration store les réécrit
 // vers les identifiants segmentés au démarrage.
-
-// SaasPlans — catalogue des formules 403Shield (marché FCFA concurrentiel).
 var SaasPlans = []SaasPlan{
 	{
 		ID: "hotspot-mensuel", Name: "Hotspot Mensuel", PriceFcfa: 2500, Period: "mois",
@@ -228,16 +231,6 @@ var SaasPlans = []SaasPlan{
 		ID: "hotspot-annuel", Name: "Hotspot Annuel", PriceFcfa: 25000, Period: "an",
 		Unlimited: true, Usage: AccountUsageHotspot,
 		Tagline: "Tous vos routeurs, un seul prix", // N°123 : sans badge
-	},
-	{
-		ID: "homenet-mensuel", Name: "HomeNet Mensuel", PriceFcfa: 1250, Period: "mois",
-		PerRouter: true, Usage: AccountUsageHomeNet,
-		Tagline: "Protégez votre foyer sans engagement", Badge: "Sans engagement",
-	},
-	{
-		ID: "homenet-annuel", Name: "HomeNet Annuel", PriceFcfa: 12000, Period: "an",
-		Unlimited: true, Usage: AccountUsageHomeNet,
-		Tagline: "Votre maison protégée toute l'année", // N°123 : sans badge
 	},
 }
 
@@ -255,35 +248,49 @@ func PlanByID(id string) (SaasPlan, bool) {
 	return SaasPlan{}, false
 }
 
-// PlansForUsage — les DEUX formules du mode demandé (mensuel puis annuel),
-// dans l'ordre d'affichage de la console. Usage vide/inconnu → hotspot
-// (produit historique, cf. normalizeAccountUsage).
+// PlansForUsage — les DEUX formules du catalogue (mensuel puis annuel),
+// dans l'ordre d'affichage de la console. N°324 — mono-mode : tout usage
+// (y compris « homenet » léger résiduel) lit la grille Hotspot unique.
 func PlansForUsage(usage string) []SaasPlan {
-	if usage != AccountUsageHomeNet {
-		usage = AccountUsageHotspot
-	}
 	out := make([]SaasPlan, 0, 2)
 	for _, p := range SaasPlans {
-		if p.Usage == usage {
+		if p.Usage == AccountUsageHotspot {
 			out = append(out, p)
 		}
 	}
 	return out
 }
 
-// ResolvePlan — résout un identifiant de formule À L'USAGE du compte :
-//   - identifiant segmenté (« hotspot-mensuel»…) → la formule exacte ;
+// ResolvePlan — résout un identifiant de formule :
+//   - identifiant du CATALOGUE (« hotspot-mensuel»…) → la formule exacte ;
+//   - identifiant HISTORIQUE foyer (« homenet-mensuel », « homenet-annuel »
+//     — N°324 : formules retirées du catalogue) → la formule hotspot de la
+//     MÊME PÉRIODE (mensuel par routeur / annuel illimité) : les abonnements
+//     GeniusPay récurrents en vol gardent leur PlanID d'origine et leur
+//     montant souscrit — seuls les renouvellements basculent sur la grille
+//     unique ;
 //   - identifiant HISTORIQUE (« essentiel », « illimite » — abonnements
-//     posés avant le N°122) → la formule du MÊME MODE que le compte :
-//     un compte hotspot renouvelle « essentiel » au tarif Hotspot Mensuel,
-//     un compte homenet au tarif HomeNet Mensuel ;
+//     posés avant le N°122) → la formule du même rang (mensuel/annuel) ;
 //   - « essai » et tout identifiant inconnu → pas de formule (false).
 //
-// Source unique du pricing segmenté : applySubscriptionLocked, la demande
+// Source unique du pricing : applySubscriptionLocked, la demande
 // client, le webhook Wave et le prélèvement carte passent tous par ici.
 func ResolvePlan(id, usage string) (SaasPlan, bool) {
 	if p, ok := PlanByID(id); ok {
 		return p, true
+	}
+	// N°324 — alias foyer retirés : mappés sur la formule hotspot de la même
+	// période (facturation en vol, classification IsAnnual/IsPerRouter via
+	// les littéraux homenet-* qui restent listés plus bas).
+	switch id {
+	case "homenet-mensuel":
+		if p, ok := PlanByID("hotspot-mensuel"); ok {
+			return p, true
+		}
+	case "homenet-annuel":
+		if p, ok := PlanByID("hotspot-annuel"); ok {
+			return p, true
+		}
 	}
 	plans := PlansForUsage(usage)
 	switch id {

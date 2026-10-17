@@ -26,7 +26,7 @@ var AnnouncementLevels = []string{
 const (
 	AnnouncementAudienceAll     = "all"     // tous les comptes clients
 	AnnouncementAudienceHotspot = "hotspot" // comptes établissements (cybers, hôtels…)
-	AnnouncementAudienceHomeNet = "homenet" // comptes foyers
+	AnnouncementAudienceHomeNet = "homenet" // LÉGACY N°324 — valeur de retraite (migration → « all »), plus jamais produite
 )
 
 // Announcement — une annonce diffusée aux clients 403Shield.
@@ -41,7 +41,7 @@ type Announcement struct {
 	Title     string `json:"title"`
 	Body      string `json:"body,omitempty"`
 	Level     string `json:"level"`    // info | warning | critical
-	Audience  string `json:"audience"` // all | hotspot | homenet
+	Audience  string `json:"audience"` // all | hotspot (N°324 ; « homenet » léger lu par la migration)
 	CreatedAt string `json:"createdAt"`
 	// PublishAt — date de DIFFUSION programmée (RFC 3339, N°165). Vide =
 	// diffusion immédiate (comportement historique). Avant cette date :

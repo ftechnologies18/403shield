@@ -11,13 +11,8 @@ export const frSignup: Record<string, string> = {
   "signup.subtitleStep2": "Pour vous aider et segmenter notre offre — nous ne spammons jamais.",
   "signup.step1": "Compte",
   "signup.step2": "Profil",
-  // N°101 — usage du réseau : la première question de l'inscription
-  // choisit la console d'atterrissage (lieu public vs foyer).
-  "signup.usage.label": "Votre réseau",
-  "signup.usage.hotspot.title": "Hotspot",
-  "signup.usage.hotspot.desc": "Hôtel, cybercafé, boutique — vous vendez l'accès internet.",
-  "signup.usage.homenet.title": "HomeNet",
-  "signup.usage.homenet.desc": "Sécurité internet résidentiel — protégez le réseau familial et ses appareils.",
+  // N°324 — la question d'usage (« Votre réseau », N°101) est retirée :
+  // plateforme mono-mode Hotspot, le serveur pose « hotspot » par défaut.
   "signup.name": "Nom du compte",
   "signup.username": "Identifiant",
   "signup.usernameHint": "3 à 32 caractères : a-z, 0-9, tirets et tirets bas",

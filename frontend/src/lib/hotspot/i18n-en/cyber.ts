@@ -117,4 +117,12 @@ export const enCyber: Record<string, string> = {
   "cyber.renameToast": "Workstation renamed",
   "cyber.deleteToast": "Workstation deleted",
   "cyber.assignToast": "Code assigned to the workstation",
+
+  // N°324 — workstation pause toasts, borrowed from the N°101 household
+  // fragment (same "X's internet cut…" sentences): the homenet fragment is
+  // deleted with the mode, these keys remain THE reference for the Cybercafé
+  // module.
+  "devices.pauseToast": "{device}'s internet cut for {duration}.",
+  "devices.pauseForeverToast": "{device}'s internet cut until re-enabled.",
+  "devices.resumeToast": "{device}'s internet restored.",
 };

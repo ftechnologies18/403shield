@@ -368,20 +368,12 @@ func (a *API) handleRegister(w http.ResponseWriter, r *http.Request) {
 	}
 	city := strings.TrimSpace(req.City)
 
-	// N°98 → N°101 — usage du compte : l'inscription publique accepte les
-	// DEUX usages depuis la Phase 3 (la coquille N°100 et les features
-	// maison existent : dashboard, appareils par bail DHCP, protection
-	// re-skinée — un foyer qui s'inscrit arrive sur SA console). Valeur
-	// vide = défaut « hotspot » (les clients HTTP existants ne changent
-	// pas d'un octet).
-	usage := strings.ToLower(strings.TrimSpace(req.Usage))
-	if usage == "" {
-		usage = model.AccountUsageHotspot
-	}
-	if usage != model.AccountUsageHotspot && usage != model.AccountUsageHomeNet {
-		writeErr(w, http.StatusBadRequest, "Mode de compte inconnu")
-		return
-	}
+	// N°324 — usage du compte : la plateforme est MONO-MODE (Hotspot). Le
+	// champ usage du corps est IGNORÉ (un frontend pas encore rafraîchi qui
+	// enverrait « homenet » est silencieusement normalisé — pas de 400 :
+	// l'inscription publique ne doit jamais casser pendant la fenêtre de
+	// déploiement) ; tout compte naît hotspot, essai 60 jours.
+	_ = strings.ToLower(strings.TrimSpace(req.Usage))
 
 	// N°74 — hachage bcrypt AVANT le verrou : l'inscription est publique
 	// (rate-limit 12/min/IP mais distribuée, plusieurs gèles/s de TOUTE
@@ -424,7 +416,7 @@ func (a *API) handleRegister(w http.ResponseWriter, r *http.Request) {
 		Phone:     phone,
 		Country:   country,
 		City:      city,
-		Usage:     usage, // N°98/N°101 — hotspot OU homenet (l'atterrissage client suit : dashboard vs maison)
+		Usage:     model.AccountUsageHotspot, // N°324 — mono-mode (toute valeur reçue est normalisée)
 	}
 	db.Accounts = append(db.Accounts, acc)
 	u := model.AdminUser{
@@ -451,9 +443,9 @@ func (a *API) handleRegister(w http.ResponseWriter, r *http.Request) {
 			PlanID:      "essai",
 			Status:      "active",
 			PeriodStart: now.Format(time.RFC3339),
-			// N°122 → N°123 — essai segmenté : 60 jours en Hotspot,
-			// 30 jours en HomeNet (le foyer décide vite).
-			PeriodEnd:   trialPeriodEnd(now, usage).Format(time.RFC3339),
+			// N°122 → N°324 — essai : 60 jours (mono-mode ; l'essai segmenté
+			// 30 j foyer est retiré avec le mode).
+			PeriodEnd:   trialPeriodEnd(now).Format(time.RFC3339),
 			RouterSlots: 1,
 		},
 	}

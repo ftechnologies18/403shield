@@ -284,7 +284,7 @@ func (a *API) handleAdminAccountSubscription(w http.ResponseWriter, r *http.Requ
 		writeErrCode(w, http.StatusNotFound, "not_found", "Compte introuvable", nil)
 		return
 	}
-	accUsage := accountUsageLocked(db, id)
+	// N°324 — mono-mode : plus d'usage de compte à lire ici (grille unique).
 	// La formule et le montant sont calculés par applySubscriptionLocked.
 	months := req.Months
 	if model.IsAnnualPlanID(planID) && months <= 0 {
@@ -294,7 +294,7 @@ func (a *API) handleAdminAccountSubscription(w http.ResponseWriter, r *http.Requ
 		months = 1
 	}
 	if planID == "essai" && months <= 0 {
-		months = trialDefaultMonths(accUsage) // N°122 : 1 mois HomeNet, 3 mois Hotspot
+		months = trialDefaultMonths() // N°324 : 2 mois (mono-mode)
 	}
 	if months < 1 || months > 36 {
 		a.store.Unlock()
@@ -689,66 +689,10 @@ func (a *API) handleAdminAccountStatus(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]bool{"ok": true})
 }
 
-// handleAdminAccountUsage — N°98 : la plateforme change l'usage d'un compte
-// (hotspot ⇄ homenet), PUT /api/admin/accounts/{id}/usage. C'est le SEUL
-// point de bascule en Phase 1 : l'usage est l'identité PRODUIT du compte,
-// elle ne se change pas depuis la console du client (et l'inscription
-// publique ne crée que du hotspot tant que la coquille HomeNet — Phase 2 —
-// n'est pas livrée).
-//
-// Effet immédiat (la garde relit l'usage à CHAQUE requête, pas au login) :
-// les endpoints produit hotspot passent de 200 à 404 pour ce compte — et
-// réciproquement pour les futurs endpoints homenet. Idempotent (même valeur
-// → ok sans écriture ni journal). Le compte principal est refusé : ses
-// données sont celles de l'ère mono-tenant, donc du hotspot.
-func (a *API) handleAdminAccountUsage(w http.ResponseWriter, r *http.Request) {
-	if !isPlatformAdmin(r) {
-		writeErrCode(w, http.StatusForbidden, "forbidden", "Réservé aux administrateurs de la plateforme", nil)
-		return
-	}
-	id := r.PathValue("id")
-	var req struct {
-		Usage string `json:"usage"`
-	}
-	if err := decodeBody(r, &req); err != nil {
-		writeErrCode(w, http.StatusBadRequest, "bad_request", "Corps de requête invalide", nil)
-		return
-	}
-	usage := strings.ToLower(strings.TrimSpace(req.Usage))
-	if usage != model.AccountUsageHotspot && usage != model.AccountUsageHomeNet {
-		writeErrCode(w, http.StatusBadRequest, "bad_usage", "Usage inconnu (hotspot | homenet)", nil)
-		return
-	}
-	// Le compte principal est refusé AVANT même la recherche : l'ID est
-	// réservé (données de l'ère mono-tenant = hotspot) — réponse déterministe
-	// même sur un état où il n'existe pas encore.
-	if id == model.AccountMainID {
-		writeErrCode(w, http.StatusBadRequest, "main_account",
-			"Le compte principal ne peut pas changer d'usage (données hotspot historiques)", nil)
-		return
-	}
-	a.store.Lock()
-	db := a.store.Data()
-	var acc *model.Account
-	for i := range db.Accounts {
-		if db.Accounts[i].ID == id {
-			acc = &db.Accounts[i]
-			break
-		}
-	}
-	if acc == nil {
-		a.store.Unlock()
-		writeErrCode(w, http.StatusNotFound, "not_found", "Compte introuvable", nil)
-		return
-	}
-	if acc.Usage != usage {
-		acc.Usage = usage
-		a.logActivityBy(r, db, acc.ID, "compte", "Usage du compte « "+acc.Name+" » : "+usage)
-		a.store.Save()
-	}
-	a.store.Unlock()
-	writeJSON(w, http.StatusOK, map[string]any{"ok": true, "usage": usage})
-}
+// N°324 — handleAdminAccountUsage (PUT /api/admin/accounts/{id}/usage, N°98)
+// est SUPPRIMÉ avec le mode HomeNet : plus de bascule d'usage — la route est
+// retirée de routes.go et les comptes foyer existants sont convertis au boot
+// par la migration de retraite (store.migrateHomeNetRetirement).
 
 // ---------------------------------------------------------------------------
 // N°305 — contact d'un compte client : PUT /api/admin/accounts/{id}/contact

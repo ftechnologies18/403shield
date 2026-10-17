@@ -1,18 +1,16 @@
-// usage_guard.go — N°98, Phase 1 du produit bi-mode : garde d'usage de compte
-// (Hotspot vs HomeNet).
+// usage_guard.go — N°98, Phase 1 du produit bi-mode : garde d'usage de compte.
 //
-// La séparation des CONSOLES (sidebars dédiées, Phase 2) ne sera jamais le
-// garde : un compte HomeNet qui forgerait des appels vers /api/vouchers doit
-// être refusé par le SERVEUR (défense en profondeur — même philosophie que
+// N°324 — RETRAITE DU MODE HOMENET : la plateforme est mono-mode Hotspot.
+// normalizeAccountUsage rabat TOUTE valeur (y compris « homenet » résiduel
+// en base ou dans un JWT en vol) vers « hotspot » — les gardes
+// requireUsage("hotspot") des routes produit restent en place (défense en
+// profondeur inchangée, désormais toujours vraie pour des données saines) et
+// la migration store.migrateHomeNetRetirement convertit les comptes au boot.
+//
+// Phase 1 historique : la séparation des CONSOLES (sidebars dédiées) ne sera
+// jamais le garde — un compte forged des appels vers /api/vouchers doit être
+// refusé par le SERVEUR (défense en profondeur — même philosophie que
 // requireRole : « l'UI masque, le serveur refuse »).
-//
-// Phase 1 = plomberie invisible : la colonne accounts.usage existe, la
-// session la transporte (login/register/me), les endpoints produit HOTSPOT
-// refusent les comptes homenet — mais AUCUN compte homenet n'est créable
-// publiquement : l'inscription publique n'accepte que « hotspot » (le
-// formulaire est inchangé), seuls la console plateforme et l'API admin
-// peuvent poser « homenet » (comptes de test en attendant la coquille de
-// navigation Phase 2).
 //
 // Exemption : les administrateurs plateforme (session support comprise) —
 // le garde sépare les CLIENTS entre eux, pas l'opérateur du SaaS de ses
@@ -25,13 +23,10 @@ import (
 	"mikcloud/hotspot-api/internal/model"
 )
 
-// normalizeAccountUsage — repli défensif : tout usage vide ou inconnu est lu
-// comme « hotspot » (produit historique = le comportement d'avant la colonne,
-// y compris pour les états non encore normalisés par migrateMultiTenant).
+// normalizeAccountUsage — N°324 : repli mono-mode — toute valeur (vide,
+// inconnue, « homenet » léger) est lue « hotspot » (produit unique ; les
+// comptes convertis par la migration de retraite ne changent pas d'un iota).
 func normalizeAccountUsage(u string) string {
-	if u == model.AccountUsageHomeNet {
-		return model.AccountUsageHomeNet
-	}
 	return model.AccountUsageHotspot
 }
 

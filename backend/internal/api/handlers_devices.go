@@ -1,27 +1,16 @@
-// handlers_devices.go — N°101, Phase 3 Hotspot/HomeNet : les appareils du
-// foyer (registre des bails DHCP + noms affectés + pause dîner).
+// handlers_devices.go — machinerie « appareils » du module Cybercafé (N°290).
 //
-// La vue Appareils de la Phase 2 vivait du PONT de données des sessions
-// hotspot (GET /api/sessions) — un pis-aller : un foyer n'a PAS de portail
-// captif, ses appareils rejoignent le WiFi et reçoivent un bail DHCP du
-// routeur. La Phase 3 leur donne LEUR source de vérité :
-//
-//   - l'agent rapporte /ip dhcp-server lease (commande read_dhcp, déjà
-//     construite pour l'outil F9) sur un cadenceur dédié aux routeurs agent
-//     de comptes HOMENET (ensureHomeDevicesLocked — les parcs hotspot ne
-//     paient pas ce cycle : leurs clics DHCP restent du cache outil F9) ;
-//   - chaque bail devient une ligne « device » (upsert par MAC — l'identité
-//     stable), la famille lui affecte un nom (PUT), et peut couper son
-//     internet pour un temps donné (POST pause — la pause dîner) ;
-//   - la pause est un ÉTAT DÉSIRÉ cloud (pattern FamilyGuard N°82) : la
-//     commande agent device_pause fait converger le routeur, l'expiration
-//     est recalculée à chaque check-in (aucune horloge routeur consultée).
+// N°324 — RETRAITE DU MODE HOMENET : les handlers foyer (GET /api/devices,
+// PUT nom affecté, POST pause dîner — N°101) sont SUPPRIMÉS avec le mode ;
+// ce fichier conserve la MÉCANIQUE réutilisée par le module Cybercafé :
+// cadenceur read_dhcp, upsert des bails (applyDeviceLeases), convergence
+// device_pause (état désiré cloud, pattern FamilyGuard N°82) et import
+// d'un bail comme poste (findDeviceScoped — handlers_cyber.go).
 package api
 
 import (
 	"crypto/sha256"
 	"encoding/hex"
-	"net/http"
 	"sort"
 	"strconv"
 	"strings"
@@ -43,198 +32,8 @@ const devicesMinInterval = 2 * time.Minute
 // badgue jamais sur un rapport incomplet).
 const deviceReadCap = 100
 
-// ---------------------------------------------------------------------------
-// GET /api/devices — le registre du foyer
-// ---------------------------------------------------------------------------
-
-func (a *API) handleDevicesList(w http.ResponseWriter, r *http.Request) {
-	acc := accountScope(r)
-	now := time.Now().UTC()
-	a.store.Lock()
-	db := a.store.Data()
-	devices := make([]model.Device, 0, len(db.Devices))
-	for i := range db.Devices {
-		d := db.Devices[i]
-		if d.AccountID != acc {
-			continue
-		}
-		// Le nom du routeur est rafraîchi à la volée (un renommage de la box
-		// ne laisse jamais d'étiquette périmée dans le registre).
-		if rr := findRouterScoped(db, d.RouterID, acc); rr != nil {
-			d.RouterName = rr.Name
-		}
-		// État EFFECTIF de la pause à l'instant de la lecture (une pause
-		// expirée s'affiche déjà levée — le check-in suivant la lèvera côté
-		// routeur, l'UI ne ment jamais dans l'autre sens).
-		d.Paused = d.PauseActiveAt(now)
-		devices = append(devices, d)
-	}
-	a.store.Unlock()
-
-	// Ordre de lecture familiale : en ligne d'abord, puis en pause, puis le
-	// reste ; au sein de chaque groupe, par nom affiché (nom affecté, sinon
-	// host-name, sinon MAC — même repli que l'UI).
-	deviceDisplayName := func(d model.Device) string {
-		if d.Name != "" {
-			return d.Name
-		}
-		if d.Hostname != "" {
-			return d.Hostname
-		}
-		return d.MAC
-	}
-	sort.Slice(devices, func(i, j int) bool {
-		pi, pj := devicePauseRank(devices[i]), devicePauseRank(devices[j])
-		if pi != pj {
-			return pi < pj
-		}
-		return strings.ToLower(deviceDisplayName(devices[i])) < strings.ToLower(deviceDisplayName(devices[j]))
-	})
-	// N°75 — ETag/304 : la vue Appareils poll tant qu'elle est ouverte ; le
-	// corps ne change qu'au cycle read_dhcp suivant (~2 min) ou à une action.
-	writeJSONCacheable(w, r, http.StatusOK, devices)
-}
-
-// devicePauseRank — ordre d'affichage : en ligne (0) < en pause (1) < hors
-// ligne (2). Un appareil en pause MAIS hors ligne reste visible en groupe
-// pause (l'action attend le retour de l'appareil).
-func devicePauseRank(d model.Device) int {
-	if model.DeviceOnline(d.Status) {
-		return 0
-	}
-	if d.Paused {
-		return 1
-	}
-	return 2
-}
-
-// ---------------------------------------------------------------------------
-// PUT /api/devices/{id} — le nom affecté (« TV du salon », « Tel de mama »)
-// ---------------------------------------------------------------------------
-
-func (a *API) handleDeviceRename(w http.ResponseWriter, r *http.Request) {
-	acc := accountScope(r)
-	id := r.PathValue("id")
-	var req struct {
-		Name string `json:"name"`
-	}
-	if err := decodeBody(r, &req); err != nil {
-		writeErr(w, http.StatusBadRequest, "Corps de requête invalide")
-		return
-	}
-	name := strings.TrimSpace(req.Name)
-	// Un nom vide est LÉGITIME (retour à l'anonymat : host-name/MAC) — seule
-	// la BORNE est rejetée (48 caractères après trim, runes : les accents
-	// comptent pour un, un nom de famille s'écrit avec).
-	if len([]rune(name)) > model.DeviceNameMax {
-		writeErr(w, http.StatusBadRequest, "Nom trop long (48 caractères maximum)")
-		return
-	}
-	a.store.Lock()
-	db := a.store.Data()
-	idx := findDeviceScoped(db, id, acc)
-	if idx < 0 {
-		a.store.Unlock()
-		writeErr(w, http.StatusNotFound, "Appareil introuvable")
-		return
-	}
-	d := &db.Devices[idx]
-	old := d.Name
-	d.Name = name
-	if old != name {
-		label := name
-		if label == "" {
-			label = d.MAC
-		}
-		a.logActivityBy(r, db, acc, "device", "Appareil renommé : "+label)
-	}
-	a.store.Save()
-	a.store.Unlock()
-	writeJSON(w, http.StatusOK, map[string]any{"ok": true, "name": name})
-}
-
-// ---------------------------------------------------------------------------
-// POST /api/devices/{id}/pause — la pause dîner
-// ---------------------------------------------------------------------------
-
-// Durées proposées par l'UI (minutes). 0 = illimité (« jusqu'à réactivation »).
-// Le serveur accepte toute valeur 0..1440 (une journée) : le contrat reste
-// simple, l'UI curate les raccourcis.
-const (
-	devicePauseMaxMinutes = 1440
-)
-
-func (a *API) handleDevicePause(w http.ResponseWriter, r *http.Request) {
-	acc := accountScope(r)
-	id := r.PathValue("id")
-	var req struct {
-		Paused  bool `json:"paused"`
-		Minutes int  `json:"minutes"`
-	}
-	if err := decodeBody(r, &req); err != nil {
-		writeErr(w, http.StatusBadRequest, "Corps de requête invalide")
-		return
-	}
-	if req.Minutes < 0 || req.Minutes > devicePauseMaxMinutes {
-		writeErr(w, http.StatusBadRequest, "Durée de pause invalide (0 à 1440 minutes)")
-		return
-	}
-	a.store.Lock()
-	db := a.store.Data()
-	idx := findDeviceScoped(db, id, acc)
-	if idx < 0 {
-		a.store.Unlock()
-		writeErr(w, http.StatusNotFound, "Appareil introuvable")
-		return
-	}
-	d := &db.Devices[idx]
-	rr := findRouterScoped(db, d.RouterID, acc)
-	if rr == nil {
-		a.store.Unlock()
-		writeErr(w, http.StatusNotFound, "Routeur de l'appareil introuvable")
-		return
-	}
-	now := time.Now().UTC()
-	until := ""
-	if req.Paused {
-		d.Paused = true
-		if req.Minutes > 0 {
-			until = now.Add(time.Duration(req.Minutes) * time.Minute).Format(time.RFC3339)
-		}
-		d.PausedUntil = until // "" = illimité
-	} else {
-		d.Paused = false
-		d.PausedUntil = ""
-	}
-	// Convergence immédiate : la commande device_pause est (re)posée dans la
-	// file avec l'ensemble désiré COURANT — servie au prochain check-in de la
-	// box (≤ 45 s console ouverte, ≤ 180 s en veille — l'appel console vient
-	// de marquer le routeur « sous attention », N°75).
-	a.queueDevicePauseLocked(db, rr)
-	label := d.Name
-	if label == "" {
-		if d.Hostname != "" {
-			label = d.Hostname
-		} else {
-			label = d.MAC
-		}
-	}
-	if req.Paused {
-		if req.Minutes > 0 {
-			a.logActivityBy(r, db, acc, "device", "Pause dîner : internet de "+label+" coupé ("+strconv.Itoa(req.Minutes)+" min, en attente de la box)")
-		} else {
-			a.logActivityBy(r, db, acc, "device", "Pause dîner : internet de "+label+" coupé (jusqu'à réactivation, en attente de la box)")
-		}
-	} else {
-		a.logActivityBy(r, db, acc, "device", "Internet de "+label+" rétabli (en attente de la box)")
-	}
-	// Instantanés AVANT déverrouillage : d pointe dans db.Devices (le verrou
-	// du store est la seule protection de ces champs — jamais lus après).
-	paused, pausedUntil := d.Paused, d.PausedUntil
-	a.store.Save()
-	a.store.Unlock()
-	writeJSON(w, http.StatusOK, map[string]any{"ok": true, "paused": paused, "pausedUntil": pausedUntil})
-}
+// N°324 — les handlers foyer (GET/PUT/POST /api/devices*, N°101) sont supprimés
+// avec le mode HomeNet : la machinerie read_dhcp/device_pause reste (Cybercafé).
 
 // ---------------------------------------------------------------------------
 // Convergence device_pause (pattern FamilyGuard : le cloud calcule, le
@@ -311,9 +110,10 @@ func (a *API) queueDevicePauseLocked(db *model.DB, router *model.Router) {
 // routeurs n'ont ni appareil ni poste en pause — aucun bruit de file.
 // À appeler sous le verrou depuis handleAgentCmd.
 func (a *API) ensureDevicePauseLocked(db *model.DB, router *model.Router) {
-	usage := accountUsageLocked(db, router.AccountID)
-	cyber := usage == model.AccountUsageHotspot && cyberEnabledLocked(db, router.AccountID)
-	if router.Mode != "agent" || (usage != model.AccountUsageHomeNet && !cyber) {
+	// N°324 — mono-mode : seuls les routeurs agent de comptes HOTSPOT avec
+	// module Cybercafé activé portent des pauses de postes (le foyer est
+	// retiré ; normalizeAccountUsage rabat tout compte vers hotspot).
+	if router.Mode != "agent" || !cyberEnabledLocked(db, router.AccountID) {
 		return
 	}
 	now := time.Now().UTC()
@@ -341,9 +141,10 @@ func (a *API) ensureDevicePauseLocked(db *model.DB, router *model.Router) {
 // (2) aucun n'est déjà en file/vol, (3) le dernier rapport appliqué date de
 // plus de devicesMinInterval. À appeler sous le verrou depuis handleAgentCmd.
 func (a *API) ensureHomeDevicesLocked(db *model.DB, router *model.Router) {
-	usage := accountUsageLocked(db, router.AccountID)
-	cyber := usage == model.AccountUsageHotspot && cyberEnabledLocked(db, router.AccountID)
-	if router.Mode != "agent" || (usage != model.AccountUsageHomeNet && !cyber) {
+	// N°324 — mono-mode : le cadenceur read_dhcp ne vit plus que pour les
+	// comptes HOTSPOT avec module Cybercafé activé (N°290 : la découverte
+	// nourrit l'import des postes — l'inventaire foyer est retiré).
+	if router.Mode != "agent" || !cyberEnabledLocked(db, router.AccountID) {
 		return
 	}
 	for i := range db.Commands {

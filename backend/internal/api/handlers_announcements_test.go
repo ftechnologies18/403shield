@@ -158,15 +158,26 @@ func TestAnnouncementLifecycleAndValidation(t *testing.T) {
 	_ = st
 }
 
-// TestAnnouncementAudienceAndExpiry — l'audience cible par usage et
-// l'expiration bornent la visibilité côté client (route ET cloche).
+// TestAnnouncementAudienceAndExpiry — l'audience cible et l'expiration
+// bornent la visibilité côté client (route ET cloche). N°324 : l'audience
+// « homenet » n'est plus CRÉABLE (400 — mode foyer retiré) ; les annonces
+// héritées posées en base avec Audience « homenet » sont converties « all »
+// par la migration de retraite (couverte côté store par
+// TestMigrateHomeNetRetirement).
 func TestAnnouncementAudienceAndExpiry(t *testing.T) {
 	st, ts := newTestServerWithStore(t)
 	adminToken := adminTokenOf(t, ts)
 
-	// Deux comptes clients d'usages différents + leurs tokens.
+	// Compte client (mono-mode : tout compte naît hotspot — plus de compte
+	// foyer à mettre hors audience).
 	hotToken, _, _ := registerAccount(t, ts, "ann-hot", "") // usage défaut hotspot
-	homeID, homeOwner := createAdminAccount(t, ts, adminToken, "ann-home", "homenet")
+
+	// N°324 — audience « homenet » : refusée à la création (mode retiré).
+	if s, out := createAnnouncement(t, ts, adminToken, map[string]any{
+		"title": "Message foyer", "level": "info", "audience": "homenet",
+	}); s != 400 {
+		t.Fatalf("audience homenet : 400 attendu (mode retiré — N°324), %d obtenu (%v)", s, out)
+	}
 
 	// Annonce hotspot uniquement.
 	if s, _ := createAnnouncement(t, ts, adminToken, map[string]any{
@@ -183,20 +194,13 @@ func TestAnnouncementAudienceAndExpiry(t *testing.T) {
 	st.Save()
 	st.Unlock()
 
-	homeToken := loginTokenOf(t, ts, "ann-home", "mot-de-passe-8+")
-
-	// Le compte hotspot voit SA annonce, pas l'expirée.
+	// Le compte voit SA annonce, pas l'expirée.
 	hot := clientAnnouncementsOf(t, ts, hotToken)
 	if len(hot) != 1 || hot[0].Title != "Nouveauté vouchers" {
-		t.Fatalf("hotspot : 1 annonce « Nouveauté vouchers » attendue, obtenu %v", hot)
-	}
-	// Le compte homenet ne voit RIEN (audience hotspot + expirée exclue).
-	if got := clientAnnouncementsOf(t, ts, homeToken); len(got) != 0 {
-		t.Fatalf("homenet : 0 annonce attendue, %d obtenues", len(got))
+		t.Fatalf("compte client : 1 annonce « Nouveauté vouchers » attendue, obtenu %v", hot)
 	}
 
-	// La cloche du compte hotspot porte l'item announcement ; celle du
-	// homenet non.
+	// La cloche du compte porte l'item announcement.
 	found := false
 	for _, it := range bellItemsOf(t, ts, hotToken) {
 		if it.Type == "announcement" && it.Title == "Nouveauté vouchers" && it.Level == "info" {
@@ -204,20 +208,15 @@ func TestAnnouncementAudienceAndExpiry(t *testing.T) {
 		}
 	}
 	if !found {
-		t.Fatal("cloche hotspot : item announcement attendu")
+		t.Fatal("cloche client : item announcement attendu")
 	}
-	for _, it := range bellItemsOf(t, ts, homeToken) {
-		if it.Type == "announcement" {
-			t.Fatalf("cloche homenet : aucune annonce attendue, obtenu %+v", it)
-		}
-	}
-	_ = homeID
-	_ = homeOwner
 }
 
 // TestAnnouncementEmailBestEffort — création avec email=true : un envoi par
 // compte DESTINATAIRE (audience, actif, e-mail connu, expéditeur résoluble),
-// jamais le compte plateforme ; trace notif_log kind announcement.
+// jamais le compte plateforme ; trace notif_log kind announcement. N°324 :
+// l'audience « homenet » est refusée (400) et tout compte client est
+// hotspot — les DEUX comptes du fixture sont destinataires de l'audience.
 func TestAnnouncementEmailBestEffort(t *testing.T) {
 	ts, st := newTransactionalServer(t) // (server, store) — ordre inverse de newTestServerWithStore
 	adminToken := adminTokenOf(t, ts)
@@ -232,11 +231,19 @@ func TestAnnouncementEmailBestEffort(t *testing.T) {
 	// Expéditeur : réglages du compte principal (fallback plateforme).
 	seedResend(t, st, model.AccountMainID)
 
-	// Deux comptes : un hotspot avec e-mail, un homenet (hors audience « hotspot »).
+	// N°324 — l'audience « homenet » n'est plus créable (mode foyer retiré).
+	if s, _ := createAnnouncement(t, ts, adminToken, map[string]any{
+		"title": "Message foyer", "level": "info", "audience": "homenet",
+	}); s != 400 {
+		t.Fatalf("audience homenet : 400 attendu (mode retiré — N°324), %d obtenu", s)
+	}
+
+	// Deux comptes HOTSPOT avec e-mail (mono-mode : tous deux dans l'audience
+	// « hotspot » — plus de compte foyer à écarter).
 	registerAccount(t, ts, "ann-mail1", "")
-	createAdminAccount(t, ts, adminToken, "ann-mail2", "homenet")
-	wg.Wait()               // le welcome de ann-mail1 est capté…
-	resetSentEmails(&calls) // …et écarté : seuls les e-mail d'ANNONCE comptent
+	createAdminAccount(t, ts, adminToken, "ann-mail2", "")
+	wg.Wait()               // les welcomes sont captés…
+	resetSentEmails(&calls) // …et écartés : seuls les e-mails d'ANNONCE comptent
 
 	s, out := createAnnouncement(t, ts, adminToken, map[string]any{
 		"title": "Maintenance samedi soir", "body": "Indisponibilité brève du cloud.",
@@ -245,21 +252,22 @@ func TestAnnouncementEmailBestEffort(t *testing.T) {
 	if s != 201 {
 		t.Fatalf("création : 201 attendu, %d obtenu (%v)", s, out)
 	}
-	if em, _ := out["emailedCount"].(float64); em != 1 {
-		t.Fatalf("emailedCount : 1 destinataire attendu (hotspot seulement), obtenu %v", out["emailedCount"])
+	if em, _ := out["emailedCount"].(float64); em != 2 {
+		t.Fatalf("emailedCount : 2 destinataires attendus (les deux comptes, mono-mode), obtenu %v", out["emailedCount"])
 	}
 	wg.Wait()
-	if len(calls) != 1 {
-		t.Fatalf("1 e-mail attendu (le compte homenet est hors audience), %d obtenus", len(calls))
+	if len(calls) != 2 {
+		t.Fatalf("2 e-mails attendus (un par compte destinataire), %d obtenus", len(calls))
 	}
-	m := calls[0]
-	if !strings.Contains(m.to, "@") || !strings.Contains(m.title, "Maintenance samedi soir") {
-		t.Fatalf("e-mail mal adressé : to=%q title=%q", m.to, m.title)
+	for _, m := range calls {
+		if !strings.Contains(m.to, "@") || !strings.Contains(m.title, "Maintenance samedi soir") {
+			t.Fatalf("e-mail mal adressé : to=%q title=%q", m.to, m.title)
+		}
+		if !strings.Contains(m.body, "Indisponibilité brève") || !strings.Contains(m.html, "Action recommandée") {
+			t.Fatal("copie de l'e-mail incomplète (corps/niveau manquants)")
+		}
 	}
-	if !strings.Contains(m.body, "Indisponibilité brève") || !strings.Contains(m.html, "Action recommandée") {
-		t.Fatal("copie de l'e-mail incomplète (corps/niveau manquants)")
-	}
-	// Trace notif_log.
+	// Trace notif_log : une par envoi.
 	st.Lock()
 	kinds := 0
 	for _, l := range st.Data().NotifLog {
@@ -268,8 +276,8 @@ func TestAnnouncementEmailBestEffort(t *testing.T) {
 		}
 	}
 	st.Unlock()
-	if kinds != 1 {
-		t.Fatalf("trace notif_log announcement : 1 attendue, %d obtenues", kinds)
+	if kinds != 2 {
+		t.Fatalf("trace notif_log announcement : 2 attendues (un par envoi), %d obtenues", kinds)
 	}
 }
 

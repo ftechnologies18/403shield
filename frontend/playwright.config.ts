@@ -9,9 +9,9 @@
 //                    R2, rapport + export CSV) — dépend de « setup » ;
 //   - « resellers » : cycle de vie d'un revendeur par l'API (gardes 409,
 //                    cascade, révocation) — autonome ;
-//   - « homenet »   : le parcours familial doré (N°102, Phase 4) — inscription
-//                    publique « Ma maison », découverte par baux DHCP, pause
-//                    dîner et convergence, gardes d'usage — autonome.
+//   - N°324 — le project « homenet » (parcours familial doré N°102) est
+//                    SUPPRIMÉ avec le mode foyer : inscription publique
+//                    mono-mode, plus de baux/pause dîner côté foyer.
 //
 // Le frontend est testé en build de production (NEXT_PUBLIC_API_BASE pointe
 // directement vers l'API — pas de passerelle ; CORS autorisé côté backend via
@@ -51,7 +51,6 @@ export default defineConfig({
     { name: "setup", testMatch: /bootstrap\.spec\.ts/ },
     { name: "sell", testMatch: /sell\.spec\.ts/, dependencies: ["setup"] },
     { name: "resellers", testMatch: /resellers-lifecycle\.spec\.ts/ },
-    { name: "homenet", testMatch: /homenet\.spec\.ts/ },
   ],
   webServer: [
     {
@@ -67,8 +66,8 @@ export default defineConfig({
         DATABASE_URL: "",
         PORT: String(API_PORT),
         DATA_DIR: "/tmp/mikcloud-e2e-api",
-        // N°102 — vide par défaut : porte d'inscription OUVERTE (parcours UI
-        // publique du spec homenet). E2E_REGISTER_KEY referme en bêta privée.
+        // N°102 — vide par défaut : porte d'inscription OUVERTE (tests UI
+        // publics). E2E_REGISTER_KEY referme en bêta privée.
         REGISTER_KEY,
         // N°102 — le runner partage UNE IP pour quatre suites : sans marge,
         // le plafond S1-A2 (120 req/min/IP, preflights OPTIONS compris)

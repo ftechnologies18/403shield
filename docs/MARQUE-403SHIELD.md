@@ -284,6 +284,31 @@ mobile 390 sans débordement · FR/EN · 0 erreur console partout.
 Portes : lint 0 · tsc 0 (les DEUX apps) · parité FR/EN 410+87 chemins +
 26 assertions métier (script /home/z/scratch323/parity323.ts).
 
+## 6-sexies. N°324 — le mode HomeNet est supprimé du système (mono-mode Hotspot)
+
+Décision propriétaire, suite et fin de §6-quater (N°322 : « HomeNet cesse
+d'être un service indépendant ») : le MODE foyer lui-même est retiré —
+produit, catalogue, console, inscription, chatbot, e-mails. La plateforme
+SaaS devient mono-mode Hotspot ; le particulier a les tunnels WireGuard
+(boutique /checkout, N°323) et les protections famille restent disponibles
+sur tout routeur géré (FamilyGuard, couvre-feu, filtrage — ce sont des
+modules du compte, pas du mode).
+
+Ce que la suppression a gardé (jugement d'architecte, pas un coup de
+règle) :
+- **La machinerie « appareils »** (read_dhcp, bails, device_pause) reste
+  pour le module Cybercafé N°290 — seule la famille d'APIs/console foyer
+  tombe. Le registre appareils et la pause de poste continuent de vivre.
+- **La compat facturation** : les identifiants homenet-* historiques restent
+  résolus (renouvellements GeniusPay en vol au montant souscrit), la
+  migration de retraite convertit l'état au boot (comptes, PlanID,
+  audiences, pauses levées + convergence des box), zéro DDL.
+- **L'honnêteté du chatbot** : les questions « foyer/maison » reçoivent la
+  réponse vraie (offre retirée, alternatives réelles) — jamais un silence.
+
+Miroir du CHANGELOG N°324 ; relevé de vérification production consigné par
+le tuteur après déploiement.
+
 ## 7. Actifs de marque
 
 `docs/brand/` : `403shield-clay.png` (1024², bouclier clay menthe + étoile dorée

@@ -37,6 +37,11 @@ import (
 
 // cyberEnabledLocked — le module Cybercafé est-il actif pour CE compte ?
 // (settings.Tenant.CyberEnabled — nil = OFF, module opt-in.) Sous verrou.
+// cyberPauseMaxMinutes — N°324 — borne de la pause de poste Cybercafé en minutes
+// (0 à 1440 — une journée) : l'ancienne devicePauseMaxMinutes du foyer N°101
+// est retirée avec le mode, la borne est recréée ici pour le module.
+const cyberPauseMaxMinutes = 1440
+
 func cyberEnabledLocked(db *model.DB, acc string) bool {
 	s, ok := db.SettingsByAccount[acc]
 	if !ok {
@@ -630,7 +635,7 @@ func (a *API) handleCyberPostePause(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusBadRequest, "Corps de requête invalide")
 		return
 	}
-	if req.Minutes < 0 || req.Minutes > devicePauseMaxMinutes {
+	if req.Minutes < 0 || req.Minutes > cyberPauseMaxMinutes {
 		writeErr(w, http.StatusBadRequest, "Durée de pause invalide (0 à 1440 minutes)")
 		return
 	}

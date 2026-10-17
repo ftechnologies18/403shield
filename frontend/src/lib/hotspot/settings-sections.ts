@@ -59,18 +59,9 @@ import { Bell, CreditCard, Settings, ShieldCheck, UsersRound, Wifi } from "lucid
 import { canView } from "./roles";
 import type { ViewId } from "./types";
 
-/** Usage du compte de session (N°100) — la zone Paramètres est PARTAGÉE par
- * les deux consoles, mais sa composition change : la section Hotspot
- * (hub portail/vouchers & tickets) est le produit des ÉTABLISSEMENTS — un
- * foyer n'a ni portail captif ni gabarits de vouchers, ses endpoints sont
- * d'ailleurs 404 pour lui (requireUsage, N°98). */
-type Usage = "hotspot" | "homenet" | "" | undefined;
-
 /** Section de la zone Paramètres — une entrée de la sidebar de zone.
  * `views` regroupe les vues rendues DANS la section (onglets du hub Hotspot
- * inclus) : surlignage actif + filtrage par rôle couvrent le groupe entier.
- * N°100 — `hotspotOnly` : section réservée à la console hotspot (produit
- * des établissements) — absente de la zone d'un compte homenet. */
+ * inclus) : surlignage actif + filtrage par rôle couvrent le groupe entier. */
 export interface SettingsSection {
   /** Vue racine de la section — destination du clic dans la sidebar. */
   id: ViewId;
@@ -79,8 +70,6 @@ export interface SettingsSection {
   icon: LucideIcon;
   /** Toutes les vues de la section (surlignage actif, zone, garde-fous). */
   views: readonly ViewId[];
-  /** N°100 — la section n'existe que pour les comptes hotspot (défaut non). */
-  hotspotOnly?: boolean;
 }
 
 /** Sections de la zone, dans l'ordre de la sidebar (N°57-d) : identité →
@@ -94,13 +83,11 @@ export interface SettingsSection {
  * ACTIONS de renouvellement/paiement restent rang 3, gardées côté Go). */
 export const SETTINGS_SECTIONS: readonly SettingsSection[] = [
   { id: "settings", labelKey: "settings.tabGeneral", icon: Settings, views: ["settings"] },
-  // N°100 — section marquée « hotspot » : cachée aux comptes homenet
-  // (canView refuse déjà portal/templates pour ces comptes — ce marqueur
-  // ne fait qu'écourter le filtrage, la barrière réelle est VIEW_MIN_RANK +
-  // HOMENET_VIEWS dans roles.ts).
   // N°184 — racine « portal » (fusion Expérience → Portail) : la chaîne
   // ROUTEUR → SITE → COMPTE vit dans UN onglet, les tickets dans l'autre.
-  { id: "portal", labelKey: "settings.tabHotspot", icon: Wifi, views: ["portal", "templates"], hotspotOnly: true },
+  // N°324 — plus de marqueur hotspotOnly (mono-mode : la section est
+  // visible pour tous les comptes).
+  { id: "portal", labelKey: "settings.tabHotspot", icon: Wifi, views: ["portal", "templates"] },
   { id: "security", labelKey: "settings.tabAdvanced", icon: ShieldCheck, views: ["security"] },
   // N°112 — plus de section « routers » ici : la vue Routeurs vit en
   // navigation principale (section Infrastructure de nav.ts, /app/routers).
@@ -124,32 +111,25 @@ export function isSettingsView(view: string): boolean {
  * serveur refuserait de toute façon, pattern N°7). Une section apparaît dès
  * qu'UNE de ses vues est accessible : le gérant voit « Hotspot » (onglets
  * Portail et Vouchers & tickets — les formulaires du compte, rang 3, y sont
- * simplement masqués), jamais « Général » ni « Sécurité ». N°100 — `usage`
- * retire la section Hotspot de la zone d'un foyer (les vues portal/templates
- * lui sont de toute façon refusées par canView : la section serait vide). */
-export function settingsSectionsFor(role: string | undefined, usage: Usage = "hotspot"): SettingsSection[] {
-  return SETTINGS_SECTIONS.filter(
-    (s) => !(usage === "homenet" && s.hotspotOnly) && s.views.some((v) => canView(role, v, usage)),
-  );
+ * simplement masqués), jamais « Général » ni « Sécurité ». N°324 — plus de
+ * paramètre usage (mono-mode). */
+export function settingsSectionsFor(role: string | undefined): SettingsSection[] {
+  return SETTINGS_SECTIONS.filter((s) => s.views.some((v) => canView(role, v)));
 }
 
 /** Première section autorisée pour ce rôle — destination du fallback quand
  * une section interdite est demandée directement (lien direct, rechargement
- * après changement de rôle). null = aucune section accessible. N°100 — la
- * destination respecte l'usage. N°112 — sans la section Routeurs (partie en
- * navigation principale), le gérant d'un foyer atterrit sur « Notifications »,
- * le gérant d'un établissement sur le hub Hotspot — N°184 : la racine de la
- * section est désormais l'onglet Portail, où le gérant atterrissait déjà. */
-export function firstSettingsView(role: string | undefined, usage: Usage = "hotspot"): ViewId | null {
-  return settingsSectionsFor(role, usage)[0]?.id ?? null;
+ * après changement de rôle). null = aucune section accessible. N°324 —
+ * mono-mode : le gérant atterrit sur le hub Hotspot (racine Portail —
+ * N°184), le rôle 1 sur Notifications. */
+export function firstSettingsView(role: string | undefined): ViewId | null {
+  return settingsSectionsFor(role)[0]?.id ?? null;
 }
 
 /** Destination des entrées « Paramètres » (sidebar, palette, menus profil) :
  * le propriétaire atterrit sur Général, le gérant sur sa première section
  * accessible (rang 2 — Hotspot, onglet Portail depuis N°184) — jamais sur
- * une vue que le serveur refuserait (403). N°100 — pour un foyer (gérant ou
- * propriétaire) la première section est toujours saine (Notifications pour
- * le gérant, Général pour le propriétaire — jamais le hub Hotspot). */
-export function settingsLandingView(role: string | undefined, usage: Usage = "hotspot"): ViewId {
-  return firstSettingsView(role, usage) ?? "settings";
+ * une vue que le serveur refuserait (403). N°324 — mono-mode. */
+export function settingsLandingView(role: string | undefined): ViewId {
+  return firstSettingsView(role) ?? "settings";
 }

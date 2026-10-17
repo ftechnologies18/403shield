@@ -14,7 +14,7 @@
 //     signé + resynchronisation sur les factures réelles — idempotent, donc
 //     un seul reçu par paiement).
 //   - handleRegister          : e-mail de bienvenue à la création du compte
-//     (essai gratuit 60 j Hotspot / 30 j HomeNet).
+//     (essai gratuit 60 j — N°324 : mono-mode, plus d'essai segmenté foyer).
 //
 // DISCIPLINE DE VERROU (règle absolue du store) : les résolutions (compte,
 // propriétaire, expéditeur) se font sous le verrou de l'APPELANT (les
@@ -135,8 +135,8 @@ type welcomeEmailData struct {
 	OwnerName    string // nom affiché du propriétaire
 	AccountName  string // nom du compte 403Shield
 	Username     string // identifiant de connexion
-	Usage        string // hotspot | homenet — copie et étapes adaptées
-	TrialDays    int    // 60 (Hotspot) / 30 (HomeNet)
+	Usage        string // N°324 : toujours « hotspot » (champ conservé pour compat)
+	TrialDays    int    // 60 jours (mono-mode)
 	TrialEnd     string // fin d'essai (RFC3339)
 	FrontendBase string
 }
@@ -172,11 +172,8 @@ func formatFcfaMail(n int) string {
 	return formatFcfa(n) + " FCFA"
 }
 
-// usageLabelFr — libellé français de l'usage du compte.
+// usageLabelFr — libellé français de l'usage du compte (N°324 : mono-mode).
 func usageLabelFr(usage string) string {
-	if usage == model.AccountUsageHomeNet {
-		return "réseau maison"
-	}
 	return "hotspot"
 }
 
@@ -329,26 +326,16 @@ Conservez cet e-mail&nbsp;: il tient lieu de reçu pour votre paiement ` + metho
 func buildWelcomeEmailText(d welcomeEmailData) string {
 	var b strings.Builder
 	b.WriteString("Bonjour " + d.OwnerName + ",\n\n")
-	if d.Usage == model.AccountUsageHomeNet {
-		b.WriteString("Bienvenue sur 403Shield ! Votre compte maison « " + d.AccountName + " » est prêt : pilotez votre réseau familial (appareils, protection, couvre-feu) depuis une seule console.\n\n")
-	} else {
-		b.WriteString("Bienvenue sur 403Shield ! Votre compte hotspot « " + d.AccountName + " » est prêt : générez vos vouchers, suivez vos sessions et vendez du Wi-Fi payant comme un pro.\n\n")
-	}
+	b.WriteString("Bienvenue sur 403Shield ! Votre compte hotspot « " + d.AccountName + " » est prêt : générez vos vouchers, suivez vos sessions et vendez du Wi-Fi payant comme un pro.\n\n")
 	b.WriteString("— Votre essai gratuit —\n")
 	b.WriteString("Durée : " + strconv.Itoa(d.TrialDays) + " jours\n")
 	b.WriteString("Compte : " + d.AccountName + "\n")
 	b.WriteString("Identifiant : " + d.Username + "\n")
 	b.WriteString("Fin de l'essai : " + dateLabelOf(d.TrialEnd) + "\n\n")
 	b.WriteString("Pour commencer :\n")
-	if d.Usage == model.AccountUsageHomeNet {
-		b.WriteString("1. Ajoutez votre box ou routeur MikroTik dans la console\n")
-		b.WriteString("2. Découvrez vos appareils connectés, bail par bail\n")
-		b.WriteString("3. Protégez votre famille (contrôle parental, couvre-feu)\n")
-	} else {
-		b.WriteString("1. Connectez votre routeur MikroTik (agent 403Shield)\n")
-		b.WriteString("2. Générez vos premiers vouchers Wi-Fi\n")
-		b.WriteString("3. Installez l'app mobile (PWA) pour vendre partout\n")
-	}
+	b.WriteString("1. Connectez votre routeur MikroTik (agent 403Shield)\n")
+	b.WriteString("2. Générez vos premiers vouchers Wi-Fi\n")
+	b.WriteString("3. Installez l'app mobile (PWA) pour vendre partout\n")
 	b.WriteString("\nOuvrez votre console : " + strings.TrimRight(d.FrontendBase, "/") + "/app\n\n")
 	b.WriteString("— 403Shield")
 	return b.String()
@@ -370,24 +357,14 @@ func buildWelcomeEmailHTML(d welcomeEmailData) string {
 	console := html.EscapeString(strings.TrimRight(d.FrontendBase, "/") + "/app")
 	year := strconv.Itoa(time.Now().UTC().Year())
 
-	// Copie et étapes adaptées à l'usage du compte.
+	// N°324 — copie unique mono-mode (l'ancienne variante foyer est retirée).
 	intro, eyebrow, steps := "", "", [3][2]string{}
-	if d.Usage == model.AccountUsageHomeNet {
-		eyebrow = "VOTRE RÉSEAU MAISON"
-		intro = "Votre compte maison <strong style=\"color:#102019;\">" + account + "</strong> est prêt. Pilotez votre réseau familial — appareils, protection, couvre-feu — depuis une seule console."
-		steps = [3][2]string{
-			{"Ajoutez votre box", "Déclarez votre box ou routeur MikroTik : 403Shield découvre votre réseau."},
-			{"Regardez vos appareils", "La liste des appareils connectés, bail par bail, en temps réel."},
-			{"Protégez votre famille", "Contrôle parental, blocage des contenus et couvre-feu des enfants."},
-		}
-	} else {
-		eyebrow = "VOTRE HOTSPOT"
-		intro = "Votre compte hotspot <strong style=\"color:#102019;\">" + account + "</strong> est prêt. Générez vos vouchers, suivez vos sessions et vendez du Wi-Fi payant comme un pro."
-		steps = [3][2]string{
-			{"Connectez votre routeur", "L'agent 403Shield relie votre MikroTik à la console en quelques minutes."},
-			{"Générez vos vouchers", "Créez vos tickets Wi-Fi, imprimez-les ou envoyez-les par WhatsApp."},
-			{"Vendez partout", "Installez l'app mobile (PWA) : vos revendeurs vendent même sans réseau."},
-		}
+	eyebrow = "VOTRE HOTSPOT"
+	intro = "Votre compte hotspot <strong style=\"color:#102019;\">" + account + "</strong> est prêt. Générez vos vouchers, suivez vos sessions et vendez du Wi-Fi payant comme un pro."
+	steps = [3][2]string{
+		{"Connectez votre routeur", "L'agent 403Shield relie votre MikroTik à la console en quelques minutes."},
+		{"Générez vos vouchers", "Créez vos tickets Wi-Fi, imprimez-les ou envoyez-les par WhatsApp."},
+		{"Vendez partout", "Installez l'app mobile (PWA) : vos revendeurs vendent même sans réseau."},
 	}
 
 	var b strings.Builder
@@ -604,10 +581,7 @@ func (a *API) queueWelcomeEmail(db *model.DB, acc model.Account, owner model.Adm
 	if !ok {
 		return
 	}
-	trialDays := 60
-	if acc.Usage == model.AccountUsageHomeNet {
-		trialDays = 30
-	}
+	trialDays := 60 // N°324 — mono-mode
 	ownerName := owner.Name
 	if ownerName == "" {
 		ownerName = acc.Name

@@ -108,15 +108,15 @@ export function SearchPalette() {
   const queryClient = useQueryClient();
   const isAdmin = user?.role === "admin" || user?.role === "platform_admin";
   const shellMode = useHotspotStore((s) => s.shellMode);
-  // La palette propose les vues de la console ACTIVE (plateforme, client
-  // métier ou MAISON — N°100 : même usage, mêmes vues que la sidebar).
+  // La palette propose les vues de la console ACTIVE (plateforme ou client
+  // métier — N°324 : mono-mode, mêmes vues que la sidebar).
   const mode: "platform" | "client" = isAdmin && shellMode === "platform" ? "platform" : "client";
   const items = useMemo(() => {
-    const list = navItemsFor(user?.role, isAdmin, mode, user?.usage);
+    const list = navItemsFor(user?.role, isAdmin, mode);
     // Session support (console client ouverte) : « Comptes » reste un outil
     // plateforme — il n'encombre pas la palette du client consulté.
     return mode === "client" ? list.filter((item) => item.id !== "accounts") : list;
-  }, [user?.role, user?.usage, isAdmin, mode]);
+  }, [user?.role, isAdmin, mode]);
 
   // ⌘K / Ctrl+K — ouvre (ou referme) la palette depuis n'importe où.
   useEffect(() => {
@@ -344,10 +344,9 @@ export function ActivityBell() {
   // Le journal d'activité est réservé aux gérants+ (requireRole 2 côté API,
   // miroir canView côté client) — la cloche suit la même règle. N°100 — la
   // vue pivot de la cloche est « notifications » (sa destination « tout
-  // voir ») : l'activité (/api/bell, ouvert aux deux usages) intéresse
-  // un foyer autant qu'un établissement, et cette section de zone est
-  // partagée — contrairement au Journal (user-logs, produit hotspot).
-  const allowed = canView(user?.role, "notifications", user?.usage);
+  // voir ») : l'activité (/api/bell) intéresse tout compte, et cette
+  // section de zone est partagée.
+  const allowed = canView(user?.role, "notifications");
 
   // N°151 — la boîte de notifications vit côté SERVEUR : GET /api/bell
   // renvoie items (filtrés RBAC N°149 : un gérant ne voit ni billing ni

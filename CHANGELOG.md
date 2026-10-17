@@ -10,6 +10,85 @@ sous-marque FTech CI) ; l'historique ci-dessous conserve les noms d'époque.
 N°319 : le DÉPÔT GitHub lui-même devient `ftechnologies18/403shield`
 (anciennes URL redirigées en 301 par GitHub — web, git et API).
 
+## 2026-10-18 — N°324 — **SUPPRESSION DU MODE HOMENET DU SYSTÈME : la plateforme devient mono-mode Hotspot (landing vitrine, inscription, console SaaS, catalogue, chatbot, e-mails — migration de retraite au boot)**
+
+### Déclencheur (propriétaire)
+« Supprimer le mode HomeNet du système et mettre à jour la landing page. » —
+suite et fin de N°322 (où HomeNet avait cessé d'être un service indépendant
+de la vitrine, le tarif foyer restant LIÉ aux cartes Hotspot) : le propriétaire
+retire désormais le MODE lui-même, produit et système.
+
+### Décision produit
+La console SaaS 403Shield devient **mono-mode Hotspot** (réseaux publics :
+vouchers, portail captif, revendeurs, protections). Les protections famille
+(FamilyGuard, couvre-feu, filtrage) restent disponibles sur tout routeur
+géré ; les tunnels WireGuard (VPN & Accès Pro) restent la porte d'entrée du
+particulier (boutique /checkout, N°323). Seule l'offre foyer — formules
+segmentées 1 250 F/mois et 12 000 F/an, essai 30 jours, console maison
+(dashboard foyer, appareils par bail DHCP, pause dîner) — disparaît.
+
+### Livré (front + back, une seule poussée)
+1. **Vitrine** — plus AUCUNE mention foyer/HomeNet : segment « Hotspot »
+   seul (chips « Foyers » retirées), sous-titre « réseau public rentable »,
+   notes devises sans « deux modes », marquee sans « Mode HomeNet », cartes
+   sans lignes « Mode foyer (HomeNet) » (les 3 tarifs foyer affichés depuis
+   N°322 disparaissent), hero sans « households », suggestion chat
+   « Quelles sont les protections ? ». La modale d'inscription ne pose PLUS
+   la question « Votre réseau » (N°101) : tout compte naît hotspot, essai
+   60 jours.
+2. **Console SaaS (frontend)** — la console foyer est retirée : navigation
+   `NAV_HOMENET_SECTIONS` supprimée, vues `home-view`/`devices-view`
+   supprimées (822 lignes), ViewId `home`/`devices` retirés (URLs
+   `/app/home` et `/app/devices` re-normalisées vers le dashboard via
+   LEGACY_SLUG_VIEWS), badge usage et bascule admin supprimés (colonne
+   « Usage » de la liste comptes, sélecteur de création, switch de la fiche
+   compte, route `setAccountUsage`), `canView` sans paramètre d'usage,
+   fragment i18n foyer supprimé (les 3 clés « pause » déménagent vers le
+   fragment Cybercafé qui les consomme), e2e `homenet.spec.ts` et project
+   Playwright « homenet » supprimés.
+3. **Backend** — le catalogue ne contient PLUS que `hotspot-mensuel`
+   (2 500 F) et `hotspot-annuel` (25 000 F) ; `ResolvePlan` résout les
+   identifiants historiques `homenet-*` vers les formules hotspot équivalentes
+   (compat renouvellements GeniusPay en vol : le MONTANT souscrit est
+   conservé, seuls les renouvellements futurs basculent sur la grille
+   unique) ; l'inscription publique IGNORE le champ usage (un vieux
+   frontend qui enverrait « homenet » est silencieusement normalisé) ; la
+   création plateforme REFUSE « homenet » (400) ; les 3 routes
+   `/api/devices*` (registre foyer, pause dîner) et la bascule
+   `PUT /api/admin/accounts/{id}/usage` sont SUPPRIMÉES ; essai unique
+   60 jours / 2 mois ; audience d'annonces `all|hotspot` ; chatbot et
+   e-mails de bienvenue réécrits mono-mode (réponse honnête aux questions
+   « foyer/maison » : protections famille toujours là, tunnels pour le
+   particulier, offre résidentielle dédiée retirée).
+4. **Migration de retraite au boot** — `migrateHomeNetRetirement` (les 3
+   points d'entrée du store) : comptes `homenet` → `hotspot`, PlanID
+   `homenet-*` → `hotspot-*` (abonnements + demandes de facturation),
+   audience d'annonces `homenet` → `all`, pauses dîner LEVÉES + une
+   commande `device_pause` VIDE enfilée pour les box converties (le script
+   retire toutes les règles « mikcloud-pause » — sans elle, une coupure
+   familiale serait restée à vie sur un routeur sans convergeur).
+   Idempotente, aucun DDL (la colonne `accounts.usage` reste, la valeur
+   « homenet » ne peut plus renaître : lecture normalisée, écritures
+   refusées).
+
+### Intacts par construction
+- Le chemin de paiement : Wave/GeniusPay/carte, webhook, provisioning VPN,
+  tunnels et Accès Pro (N°301/316/323), renouvellements 1-clic.
+- La MÉCANERIE « appareils » : `read_dhcp`, `applyDeviceLeases`,
+  `device_pause` restent servies par le module Cybercafé (N°290) — seule la
+   famille d'APIs foyer tombe.
+- Les 88 gardes `requireUsage("hotspot")` restent en place (défense en
+  profondeur inchangée, désormais toujours vraie).
+- prix catalogue tunnels (1 500/15 000/3 500/35 000), caisse /checkout,
+  vitrine N°321-323 (seules les mentions foyer partent).
+
+### Portes
+gofmt 0 · go vet OK · go build OK · go test 11/11 packages OK (16 tests
+réécrits : usage mono-mode, résolution alias, routes retirées 404,
+machinerie cyber, migration de retraite + idempotence) · frontend lint 0 ·
+tsc 0 · parité FR/EN de la vitrine (les mêmes champs retirés des deux
+langues).
+
 ## 2026-10-18 — N°323 — **FIN DE LA CACOPHONIE DES LANDING PAGES : la console devient une PURE application (racine → 308 → /login, pattern dash.cloudflare.com) et la boutique RETOURNE au site marketing (/checkout, modèle OVH « commander sur www, gérer dans le manager »)**
 
 ### Déclencheur (propriétaire)

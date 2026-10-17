@@ -1,9 +1,8 @@
 "use client";
 
-// Carte Abonnement SaaS — tarifs SEGMENTÉS par mode (N°122), le serveur ne
-// renvoie que les DEUX formules du mode du compte (PlansForUsage) :
-//   • Hotspot — Mensuel 2 500 F/mois/routeur, Annuel 25 000 F/an illimité ;
-//   • HomeNet — Mensuel 1 250 F/mois/routeur, Annuel 12 000 F/an illimité.
+// Carte Abonnement SaaS — tarifs du catalogue (N°324 : mono-mode Hotspot,
+// le serveur renvoie la grille unique — Mensuel 2 500 F/mois/routeur,
+// Annuel 25 000 F/an illimité).
 // VERROU FACTURATION : la souscription n'active RIEN côté client — choisir
 // une formule enregistre une demande, renvoie le montant et le lien de
 // paiement Wave de la PLATEFORME (WAVE_PAY_LINK) ; l'activation de la
@@ -72,12 +71,11 @@ export function useStripeSub() {
 // annuelle — les prix viennent du catalogue serveur (segmentés par mode).
 const COMPARISON_ROUTERS = [1, 2, 5, 10];
 
-// Caractéristiques des formules — clés i18n (traduites FR/EN), segmentées
-// par usage du compte (N°122) : Hotspot (réseau public) vs HomeNet (foyer).
+// Caractéristiques des formules — clés i18n (traduites FR/EN) — N°324 :
+// grille unique (la segmentation N°122 par usage est retirée avec le mode
+// foyer).
 const HOTSPOT_MONTHLY_KEYS = ["sub.feat.ess1", "sub.feat.ess2", "sub.feat.ess3", "sub.feat.ess4"] as const;
 const HOTSPOT_ANNUAL_KEYS = ["sub.feat.ill1", "sub.feat.ill2", "sub.feat.ill3", "sub.feat.ill4"] as const;
-const HOMENET_MONTHLY_KEYS = ["sub.feat.homeM1", "sub.feat.homeM2", "sub.feat.homeM3", "sub.feat.homeM4"] as const;
-const HOMENET_ANNUAL_KEYS = ["sub.feat.homeA1", "sub.feat.homeA2", "sub.feat.homeA3", "sub.feat.homeA4"] as const;
 
 // Montant d'une période pour une formule (miroir de planAmount côté Go).
 function planAmount(plan: SaasPlan, routerCount: number): number {
@@ -259,16 +257,15 @@ export function SubscriptionCard() {
 
   const status = view.status;
   const currentPlan = view.plans.find((p) => p.id === view.subscription.planId);
-  // N°122 — formules du mode du compte : le serveur filtre déjà le catalogue
-  // (PlansForUsage) ; on repère mensuelle/annuelle par PÉRIODE, pas par id —
-  // robuste aux identifiants segmentés comme historiques.
-  const isHome = view.usage === "homenet";
+  // Le serveur filtre déjà le catalogue (grille unique N°324) ; on repère
+  // mensuelle/annuelle par PÉRIODE, pas par id — robuste aux identifiants
+  // segmentés comme historiques.
   const monthly = view.plans.find((p) => p.period === "mois");
   const annual = view.plans.find((p) => p.period === "an");
-  const monthlyKeys = isHome ? HOMENET_MONTHLY_KEYS : HOTSPOT_MONTHLY_KEYS;
-  const annualKeys = isHome ? HOMENET_ANNUAL_KEYS : HOTSPOT_ANNUAL_KEYS;
-  const monthlyPrice = monthly?.priceFcfa ?? (isHome ? 1250 : 2500);
-  const annualPrice = annual?.priceFcfa ?? (isHome ? 12000 : 25000);
+  const monthlyKeys = HOTSPOT_MONTHLY_KEYS;
+  const annualKeys = HOTSPOT_ANNUAL_KEYS;
+  const monthlyPrice = monthly?.priceFcfa ?? 2500;
+  const annualPrice = annual?.priceFcfa ?? 25000;
   const statusBadge =
     status === "active" ? (
       <Badge className="gap-1 border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400" variant="outline">

@@ -1,23 +1,27 @@
-// plans_usage_test.go — N°122 : tarifs segmentés Hotspot/HomeNet.
+// plans_usage_test.go — N°122 → N°324 : tarifs MONO-MODE Hotspot.
 //
-// Couvre la SOURCE UNIQUE du pricing (model.ResolvePlan), le moteur
-// d'application des périodes (applySubscriptionLocked : montants par mode,
-// normalisation des identifiants historiques, forfaits annuels pro-ratisés),
-// l'essai segmenté à l'inscription (30 j HomeNet / 60 j Hotspot — N°123) et la
-// garde de mode sur la demande de souscription (un compte HomeNet ne peut
-// pas souscrire au tarif Hotspot, et réciproquement).
+// Couvre la SOURCE UNIQUE du pricing (model.ResolvePlan — catalogue unique
+// + alias foyer homenet-* mappés pour les abonnements GeniusPay en vol),
+// le moteur d'application des périodes (applySubscriptionLocked : montants
+// de la grille hotspot quel que soit l'usage du compte, normalisation des
+// identifiants historiques, forfaits annuels pro-ratisés), l'essai unique
+// de 60 jours à l'inscription (l'essai segmenté 30 j foyer est retiré avec
+// le mode) et la demande de souscription (un planId « homenet-* » HISTORIQUE
+// résout et aboutit — compat renouvellement ; un planId inconnu → 400).
 package api
 
 import (
+	"strings"
 	"testing"
 	"time"
 
 	"mikcloud/hotspot-api/internal/model"
 )
 
-// TestResolvePlanSegmented — résolution du catalogue : identifiants segmentés
-// exacts, identifiants historiques mappés au mode du compte, inconnus refusés.
-func TestResolvePlanSegmented(t *testing.T) {
+// TestResolvePlanMonoMode — résolution du catalogue unique : identifiants
+// exacts, alias foyer homenet-* mappés sur la formule hotspot de la même
+// période, identifiants historiques compris, inconnus refusés.
+func TestResolvePlanMonoMode(t *testing.T) {
 	cas := []struct {
 		nom      string
 		id       string
@@ -26,15 +30,16 @@ func TestResolvePlanSegmented(t *testing.T) {
 		wantID   string
 		wantPrix int
 	}{
-		{"segmenté exact hotspot mensuel", "hotspot-mensuel", "hotspot", true, "hotspot-mensuel", 2500},
-		{"segmenté exact hotspot annuel", "hotspot-annuel", "hotspot", true, "hotspot-annuel", 25000},
-		{"segmenté exact homenet mensuel", "homenet-mensuel", "homenet", true, "homenet-mensuel", 1250},
-		{"segmenté exact homenet annuel", "homenet-annuel", "homenet", true, "homenet-annuel", 12000},
+		{"catalogue exact hotspot mensuel", "hotspot-mensuel", "hotspot", true, "hotspot-mensuel", 2500},
+		{"catalogue exact hotspot annuel", "hotspot-annuel", "hotspot", true, "hotspot-annuel", 25000},
+		{"alias foyer mensuel → hotspot (compat GeniusPay)", "homenet-mensuel", "homenet", true, "hotspot-mensuel", 2500},
+		{"alias foyer annuel → hotspot (compat GeniusPay)", "homenet-annuel", "homenet", true, "hotspot-annuel", 25000},
+		{"alias foyer mensuel, usage hotspot", "homenet-mensuel", "hotspot", true, "hotspot-mensuel", 2500},
 		{"legacy essentiel → mensuel hotspot", "essentiel", "hotspot", true, "hotspot-mensuel", 2500},
-		{"legacy essentiel → mensuel homenet", "essentiel", "homenet", true, "homenet-mensuel", 1250},
+		{"legacy essentiel usage homenet → mensuel hotspot", "essentiel", "homenet", true, "hotspot-mensuel", 2500},
 		{"legacy essentiel usage vide → hotspot", "essentiel", "", true, "hotspot-mensuel", 2500},
 		{"legacy illimite → annuel hotspot", "illimite", "hotspot", true, "hotspot-annuel", 25000},
-		{"legacy illimite → annuel homenet", "illimite", "homenet", true, "homenet-annuel", 12000},
+		{"legacy illimite usage homenet → annuel hotspot", "illimite", "homenet", true, "hotspot-annuel", 25000},
 		{"essai n'est PAS une formule payante", "essai", "hotspot", false, "", 0},
 		{"inconnu refusé", "premium-gold", "hotspot", false, "", 0},
 	}
@@ -51,15 +56,18 @@ func TestResolvePlanSegmented(t *testing.T) {
 		}
 	}
 
-	// PlansForUsage — deux formules par mode, dans l'ordre mensuel puis annuel.
-	if got := model.PlansForUsage("homenet"); len(got) != 2 || got[0].ID != "homenet-mensuel" || got[1].ID != "homenet-annuel" {
-		t.Fatalf("PlansForUsage(homenet) = %+v", got)
-	}
-	if got := model.PlansForUsage(""); len(got) != 2 || got[0].PriceFcfa != 2500 || got[1].PriceFcfa != 25000 {
-		t.Fatalf("PlansForUsage(\"\") doit replier sur hotspot (2500/25000), obtenu %+v", got)
+	// PlansForUsage — la grille hotspot UNIQUE, quelque soit l'usage passé
+	// (N°324 — mono-mode : « homenet » léger résiduel compris).
+	for _, usage := range []string{"hotspot", "homenet", "", "nimporte-quoi"} {
+		got := model.PlansForUsage(usage)
+		if len(got) != 2 || got[0].ID != "hotspot-mensuel" || got[1].ID != "hotspot-annuel" ||
+			got[0].PriceFcfa != 2500 || got[1].PriceFcfa != 25000 {
+			t.Fatalf("PlansForUsage(%q) = %+v, attendu la grille hotspot unique (2500/25000)", usage, got)
+		}
 	}
 
-	// Classification — identifiants historiques compris (défense en profondeur).
+	// Classification — identifiants historiques et alias foyer compris
+	// (défense en profondeur : les abonnements en vol gardent leur PlanID).
 	for _, id := range []string{"hotspot-annuel", "homenet-annuel", "illimite"} {
 		if !model.IsAnnualPlanID(id) {
 			t.Fatalf("IsAnnualPlanID(%q) = faux", id)
@@ -75,14 +83,16 @@ func TestResolvePlanSegmented(t *testing.T) {
 	}
 }
 
-// TestApplySubscriptionUsagePricing — le moteur de périodes applique les
-// tarifs du MODE du compte : montants, quotas, libellés et NORMALISATION des
-// identifiants historiques vers les identifiants segmentés.
+// TestApplySubscriptionUsagePricing — le moteur de périodes applique
+// TOUJOURS les tarifs de la grille hotspot (N°324 — mono-mode), quel que
+// soit l'usage du compte (y compris un compte « homenet » léger en base) :
+// montants, quotas, libellés et NORMALISATION des identifiants historiques
+// et des alias foyer vers les identifiants catalogue.
 func TestApplySubscriptionUsagePricing(t *testing.T) {
 	db := &model.DB{
 		Accounts: []model.Account{
 			{ID: "acc-hot", Usage: model.AccountUsageHotspot},
-			{ID: "acc-home", Usage: model.AccountUsageHomeNet},
+			{ID: "acc-home", Usage: model.AccountUsageHomeNet}, // N°324 — léger : lu hotspot
 		},
 		Routers: []model.Router{
 			{ID: "r1", AccountID: "acc-hot"},
@@ -107,16 +117,16 @@ func TestApplySubscriptionUsagePricing(t *testing.T) {
 		{"hotspot mensuel explicite", "acc-hot", "hotspot-mensuel", 1, 2, "hotspot-mensuel", 5000, 2, "403Shield Hotspot Mensuel"},
 		{"hotspot annuel 12 mois", "acc-hot", "hotspot-annuel", 12, 0, "hotspot-annuel", 25000, 0, "403Shield Hotspot Annuel"},
 		{"hotspot annuel 24 mois (empilement tarifaire)", "acc-hot", "hotspot-annuel", 24, 0, "hotspot-annuel", 50000, 0, "403Shield Hotspot Annuel"},
-		{"legacy essentiel homenet (park 0 → plancher 1)", "acc-home", "essentiel", 1, 0, "homenet-mensuel", 1250, 1, "403Shield HomeNet Mensuel"},
-		{"homenet mensuel explicite", "acc-home", "homenet-mensuel", 1, 1, "homenet-mensuel", 1250, 1, "403Shield HomeNet Mensuel"},
-		{"legacy illimite homenet", "acc-home", "illimite", 12, 0, "homenet-annuel", 12000, 0, "403Shield HomeNet Annuel"},
-		{"homenet annuel explicite", "acc-home", "homenet-annuel", 12, 0, "homenet-annuel", 12000, 0, "403Shield HomeNet Annuel"},
+		{"legacy essentiel compte léger (park 0 → plancher 1)", "acc-home", "essentiel", 1, 0, "hotspot-mensuel", 2500, 1, "403Shield Hotspot Mensuel"},
+		{"alias homenet-mensuel (renouvellement en vol) → tarif hotspot", "acc-home", "homenet-mensuel", 1, 1, "hotspot-mensuel", 2500, 1, "403Shield Hotspot Mensuel"},
+		{"legacy illimite compte léger", "acc-home", "illimite", 12, 0, "hotspot-annuel", 25000, 0, "403Shield Hotspot Annuel"},
+		{"alias homenet-annuel (renouvellement en vol) → tarif hotspot", "acc-home", "homenet-annuel", 12, 0, "hotspot-annuel", 25000, 0, "403Shield Hotspot Annuel"},
 		{"essai reste hors catalogue", "acc-hot", "essai", 1, 0, "essai", 0, 1, "Essai"},
 	}
 	for _, c := range cas {
 		sub, label, planName, amount := applySubscriptionLocked(db, c.acc, c.planID, c.months, c.slots, true)
 		if sub.PlanID != c.wantPlan {
-			t.Fatalf("%s : PlanID stocké = %q, attendu %q (normalisation segmentée)", c.nom, sub.PlanID, c.wantPlan)
+			t.Fatalf("%s : PlanID stocké = %q, attendu %q (grille unique — N°324)", c.nom, sub.PlanID, c.wantPlan)
 		}
 		if amount != c.wantMont {
 			t.Fatalf("%s : montant = %d, attendu %d", c.nom, amount, c.wantMont)
@@ -150,10 +160,11 @@ func TestApplySubscriptionUsagePricing(t *testing.T) {
 	}
 }
 
-// TestSignupTrialSegmented — l'essai public est segmenté : 30 jours en mode
-// HomeNet, 60 jours en mode Hotspot (N°123 — réduit de 90). Vérifié bout-en-bout via
-// l'inscription publique puis l'état d'abonnement renvoyé à la console.
-func TestSignupTrialSegmented(t *testing.T) {
+// TestSignupTrialMonoMode — N°324 : l'essai public est UNIQUE — 60 jours,
+// même quand un vieux frontend envoie encore usage « homenet » (champ
+// ignoré à l'inscription). Vérifié bout-en-bout via l'inscription publique
+// puis l'état d'abonnement renvoyé à la console.
+func TestSignupTrialMonoMode(t *testing.T) {
 	ts := newTestServer(t)
 
 	inscrire := func(suffix, usage string) (string, map[string]any) {
@@ -163,7 +174,7 @@ func TestSignupTrialSegmented(t *testing.T) {
 			"password": "Essai-123456",
 			"name":     "Essai " + suffix,
 			"email":    suffix + "@trial-mikcloud.test",
-			"phone":    "22507070" + map[string]string{"home01": "11", "hot002": "22"}[suffix] + "9",
+			"phone":    uniquePhone(),
 			"country":  "ci",
 			"city":     "Abidjan",
 			"usage":    usage,
@@ -191,77 +202,86 @@ func TestSignupTrialSegmented(t *testing.T) {
 		return t1.Sub(t0).Hours() / 24
 	}
 
+	// Vieux frontend « homenet » : 60 jours, compte HOTSPOT (champ ignoré).
 	tokHome, outHome := inscrire("home01", "homenet")
-	if days := dureeJours(tokHome); days < 29.9 || days > 30.1 {
-		t.Fatalf("essai HomeNet = %.1f jours, attendu 30", days)
+	if days := dureeJours(tokHome); days < 59 || days > 61 {
+		t.Fatalf("essai (usage homenet envoyé) = %.1f jours, attendu 60 (essai unique — N°324)", days)
 	}
-	if u, _ := outHome["user"].(map[string]any); u == nil || u["usage"] != "homenet" {
-		t.Fatalf("la session doit transporter usage=homenet, obtenu %v", outHome["user"])
+	if u, _ := outHome["user"].(map[string]any); u == nil || u["usage"] != "hotspot" {
+		t.Fatalf("la session doit transporter usage=hotspot (mono-mode), obtenu %v", outHome["user"])
 	}
 
-	tokHot, outHot := inscrire("hot002", "hotspot")
+	// Champ absent : mêmes 60 jours (l'essai segmenté 30 j foyer est retiré).
+	tokHot, outHot := inscrire("hot002", "")
 	if days := dureeJours(tokHot); days < 59 || days > 61 {
-		t.Fatalf("essai Hotspot = %.1f jours, attendu 60", days)
+		t.Fatalf("essai (sans usage) = %.1f jours, attendu 60", days)
 	}
 	if u, _ := outHot["user"].(map[string]any); u == nil || u["usage"] != "hotspot" {
 		t.Fatalf("la session doit transporter usage=hotspot, obtenu %v", outHot["user"])
 	}
 
-	// Catalogue filtré par mode : le compte HomeNet ne voit QUE ses formules.
+	// Catalogue UNIQUE : le compte lit exactement la grille hotspot.
 	_, view := doJSON(t, ts, "GET", "/api/subscription", tokHome, nil)
-	if view["usage"] != "homenet" {
-		t.Fatalf("usage renvoyé = %v, attendu homenet", view["usage"])
+	if view["usage"] != "hotspot" {
+		t.Fatalf("usage renvoyé = %v, attendu hotspot", view["usage"])
 	}
 	plans, _ := view["plans"].([]any)
 	if len(plans) != 2 {
-		t.Fatalf("le compte homenet doit voir exactement 2 formules, obtenu %d", len(plans))
+		t.Fatalf("la grille doit compter exactement 2 formules, obtenu %d", len(plans))
 	}
-	for _, p := range plans {
-		if pm, _ := p.(map[string]any); pm != nil && pm["id"] == "hotspot-mensuel" {
-			t.Fatal("le compte homenet ne doit PAS voir la formule hotspot-mensuel")
+	want := []string{"hotspot-mensuel", "hotspot-annuel"}
+	for i, p := range plans {
+		if pm, _ := p.(map[string]any); pm == nil || pm["id"] != want[i] {
+			t.Fatalf("formule n°%d = %v, attendu %q (grille unique — N°324)", i, p, want[i])
 		}
 	}
 }
 
-// TestSubscriptionPostWrongMode — garde de mode sur la demande de souscription :
-// la formule d'un autre mode est refusée (400, code wrong_mode) ; celle du mode
-// du compte aboutit avec le montant catalogue correspondant.
-func TestSubscriptionPostWrongMode(t *testing.T) {
+// TestSubscriptionPostLegacyHomeNetPlan — N°324 : la garde de mode est morte
+// (tout compte et tout plan résolu sont hotspot) ; un planId « homenet-* »
+// HISTORIQUE aboutit désormais — résolu en hotspot-* (compat renouvellement
+// GeniusPay en vol) au tarif de la grille unique ; un planId inconnu reste
+// refusé (400 « Formule inconnue »).
+func TestSubscriptionPostLegacyHomeNetPlan(t *testing.T) {
 	ts := newTestServer(t)
 
 	code, out := doJSON(t, ts, "POST", "/api/auth/register", "", map[string]any{
-		"username": "mode-home",
+		"username": "mode-legacy",
 		"password": "Essai-123456",
-		"name":     "Maison Mode",
-		"email":    "mode-home@mikcloud.test",
-		"phone":    "22507070808",
+		"name":     "Renouvellement Legacy",
+		"email":    "mode-legacy@mikcloud.test",
+		"phone":    uniquePhone(),
 		"country":  "ci",
 		"city":     "Abidjan",
-		"usage":    "homenet",
+		"usage":    "homenet", // vieux frontend — ignoré (N°324)
 	})
 	if code != 201 {
 		t.Fatalf("inscription : code %d, corps %v", code, out)
 	}
+	if u, _ := out["user"].(map[string]any); u == nil || u["usage"] != "hotspot" {
+		t.Fatalf("la session doit transporter usage=hotspot, obtenu %v", out["user"])
+	}
 	tok, _ := out["token"].(string)
 
-	// Formule d'un AUTRE mode → refus explicite.
-	code, out = doJSON(t, ts, "POST", "/api/subscription", tok, map[string]any{"planId": "hotspot-mensuel"})
-	if code != 400 {
-		t.Fatalf("demande cross-mode doit être refusée : code %d, corps %v", code, out)
-	}
-	if ec, _ := out["code"].(string); ec != "wrong_mode" {
-		t.Fatalf("code machine attendu wrong_mode, obtenu %q", ec)
-	}
-
-	// Formule du mode → demande enregistrée au tarif HomeNet (base catalogue).
+	// Formule foyer HISTORIQUE : résolue en hotspot-mensuel — la demande
+	// aboutit au tarif de la grille unique (base catalogue 2 500 F).
 	code, out = doJSON(t, ts, "POST", "/api/subscription", tok, map[string]any{"planId": "homenet-mensuel"})
 	if code != 200 {
-		t.Fatalf("demande homenet-mensuel : code %d, corps %v", code, out)
+		t.Fatalf("demande homenet-mensuel : code %d, corps %v (alias résolu — N°324)", code, out)
 	}
-	if base, _ := out["baseAmountFcfa"].(float64); int(base) != 1250 {
-		t.Fatalf("base catalogue homenet-mensuel = %v, attendu 1250", out["baseAmountFcfa"])
+	if base, _ := out["baseAmountFcfa"].(float64); int(base) != 2500 {
+		t.Fatalf("base catalogue (résolution hotspot-mensuel) = %v, attendu 2500", out["baseAmountFcfa"])
 	}
 	if pending, _ := out["pending"].(bool); !pending {
 		t.Fatal("la demande doit rester en attente d'encaissement plateforme")
+	}
+
+	// Formule inconnue → 400 « Formule inconnue » (message mono-mode).
+	code, out = doJSON(t, ts, "POST", "/api/subscription", tok, map[string]any{"planId": "premium-gold"})
+	if code != 400 {
+		t.Fatalf("formule inconnue : code %d, attendu 400, corps %v", code, out)
+	}
+	if msg, _ := out["error"].(string); !strings.Contains(msg, "Formule inconnue") {
+		t.Fatalf("message = %q, attendu « Formule inconnue (hotspot-mensuel | hotspot-annuel) »", msg)
 	}
 }

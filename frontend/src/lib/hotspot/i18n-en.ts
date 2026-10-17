@@ -23,7 +23,6 @@ import { enPpp } from "./i18n-en/ppp";
 import { enVpn } from "./i18n-en/vpn";
 import { enDashboard } from "./i18n-en/dashboard";
 import { enForgot } from "./i18n-en/forgot";
-import { enHomeNet } from "./i18n-en/homenet";
 import { enHotspot } from "./i18n-en/hotspot";
 import { enHourly } from "./i18n-en/hourly";
 import { enJoin } from "./i18n-en/join";
@@ -78,7 +77,6 @@ export const enDict: Record<string, string> = {
   ...enVpn,
   ...enDashboard,
   ...enForgot,
-  ...enHomeNet,
   ...enHotspot,
   ...enHourly,
   ...enJoin,

@@ -160,7 +160,8 @@ func TestReceiptEmailHTMLEscape(t *testing.T) {
 }
 
 // ---------------------------------------------------------------------------
-// Gabarits — bienvenue (Hotspot ET HomeNet : copies et essais distincts)
+// Gabarits — bienvenue (copie Hotspot unique — N°324 : la variante foyer
+// est retirée avec le mode HomeNet)
 // ---------------------------------------------------------------------------
 
 func TestWelcomeEmailBuildersHotspot(t *testing.T) {
@@ -189,28 +190,10 @@ func TestWelcomeEmailBuildersHotspot(t *testing.T) {
 	}
 }
 
-func TestWelcomeEmailBuildersHomeNet(t *testing.T) {
-	d := welcomeEmailData{
-		OwnerName: "Famille Diallo", AccountName: "Maison Cocody", Username: "diallo",
-		Usage: model.AccountUsageHomeNet, TrialDays: 30,
-		TrialEnd:     time.Now().AddDate(0, 0, 30).Format(time.RFC3339),
-		FrontendBase: "https://mikcloud.ftci.fr",
-	}
-	text := buildWelcomeEmailText(d)
-	if !strings.Contains(text, "30 jours") {
-		t.Error("bienvenue texte (homenet) : essai 30 jours absent")
-	}
-	if !strings.Contains(text, "réseau familial") {
-		t.Error("bienvenue texte (homenet) : copie maison absente")
-	}
-	html := buildWelcomeEmailHTML(d)
-	if !strings.Contains(html, "VOTRE RÉSEAU MAISON") {
-		t.Error("bienvenue HTML (homenet) : eyebrow maison absent")
-	}
-	if strings.Contains(html, "VOTRE HOTSPOT") {
-		t.Error("bienvenue HTML (homenet) : copie hotspot présente à tort")
-	}
-}
+// N°324 — TestWelcomeEmailBuildersHomeNet est SUPPRIMÉ : la variante foyer
+// de l'e-mail de bienvenue (copie « réseau familial », essai 30 jours) est
+// retirée avec le mode HomeNet — la copie hotspot ci-dessus est désormais
+// la seule.
 
 // ---------------------------------------------------------------------------
 // Mise en forme française

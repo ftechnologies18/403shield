@@ -13,7 +13,6 @@ import type {
   AccountDetail,
   AccountStatus,
   AccountSummary,
-  AccountUsage,
   AdminAnnouncementRow,
   Announcement,
   AnnouncementCreatePayload,
@@ -303,8 +302,9 @@ export async function apiDownload(path: string, filename: string, params?: ApiOp
 }
 
 /** register — inscription SaaS (rôle owner). Renvoie token + utilisateur comme le login.
- * N°101 — l'usage (hotspot | homenet) est porté par le corps : le sélecteur
- * du formulaire d'inscription choisit la console d'atterrissage. */
+ * N°324 — plus de champ usage : la plateforme est mono-mode Hotspot, le
+ * serveur pose « hotspot » par défaut (toute valeur homenet legacy est
+ * normalisée de son côté). */
 export async function register(payload: RegisterPayload): Promise<AuthResponse> {
   return api<AuthResponse>("/api/auth/register", {
     method: "POST",
@@ -318,8 +318,6 @@ export async function register(payload: RegisterPayload): Promise<AuthResponse> 
       phone: payload.phone,
       country: payload.country,
       city: payload.city,
-      // N°101 — usage du compte (absent = hotspot, comportement historique).
-      usage: payload.usage || undefined,
     },
   });
 }
@@ -334,13 +332,6 @@ export async function setAccountStatus(id: string, status: AccountStatus): Promi
   return api<{ ok: boolean }>(`/api/admin/accounts/${id}/status`, { method: "POST", body: { status } });
 }
 
-/** setAccountUsage — N°98 : change l'usage d'un compte (hotspot ⇄ homenet).
- * Plateforme uniquement — effet immédiat sur les gardes API (le serveur relit
- * l'usage à chaque requête, pas au login). */
-export async function setAccountUsage(id: string, usage: AccountUsage): Promise<{ ok: boolean }> {
-  return api<{ ok: boolean }>(`/api/admin/accounts/${id}/usage`, { method: "PUT", body: { usage } });
-}
-
 /** updateAccountContact — N°305 : corrige le contact propriétaire d'un compte
  * client (e-mail, WhatsApp, pays, ville) — erreur de saisie, boîte fermée.
  * Plateforme uniquement ; erreurs exploitables : 400 bad_email / bad_phone /
@@ -350,31 +341,6 @@ export async function updateAccountContact(
   payload: { email: string; phone: string; country: string; city: string },
 ): Promise<{ ok: boolean }> {
   return api<{ ok: boolean }>(`/api/admin/accounts/${id}/contact`, { method: "PUT", body: payload });
-}
-
-// ---------------------------------------------------------------------------
-// N°101 — appareils du foyer (console HomeNet)
-// ---------------------------------------------------------------------------
-
-/** renameDevice — affecte le nom familier d'un appareil (« TV du salon »).
- * Un nom vide est légitime (retour à l'anonymat host-name/MAC). */
-export async function renameDevice(id: string, name: string): Promise<{ ok: boolean; name: string }> {
-  return api<{ ok: boolean; name: string }>(`/api/devices/${id}`, { method: "PUT", body: { name } });
-}
-
-/** pauseDevice — pause dîner : coupe l'internet de l'appareil.
- * `paused` pose/ lève la pause ; `minutes` (0 ou absent = illimité) borne la
- * durée — l'échéance est calculée serveur, la coupure appliquée par la box
- * à son prochain check-in (≤ 1 min console ouverte). */
-export async function pauseDevice(
-  id: string,
-  paused: boolean,
-  minutes?: number,
-): Promise<{ ok: boolean; paused: boolean; pausedUntil: string }> {
-  return api<{ ok: boolean; paused: boolean; pausedUntil: string }>(`/api/devices/${id}/pause`, {
-    method: "POST",
-    body: { paused, minutes: minutes ?? 0 },
-  });
 }
 
 // ---------------------------------------------------------------------------
@@ -455,14 +421,12 @@ export async function fleetRouterOSUpdate(
 }
 
 /** createClientAccount — crée un compte client complet (compte + owner).
- * Les identifiants renvoyés doivent être remis au client. N°98 — usage
- * optionnel (défaut « hotspot ») : c'est le chemin de test des comptes
- * HomeNet en Phase 1 (l'inscription publique, elle, reste hotspot seul). */
+ * Les identifiants renvoyés doivent être remis au client. N°324 — plus de
+ * champ usage : compte mono-mode Hotspot. */
 export async function createClientAccount(payload: {
   name: string;
   username: string;
   password: string;
-  usage?: AccountUsage;
 }): Promise<{ account: { id: string; name: string; status: string; createdAt: string }; owner: { username: string; role: string } }> {
   return api("/api/admin/accounts", { method: "POST", body: payload });
 }

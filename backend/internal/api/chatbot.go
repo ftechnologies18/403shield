@@ -54,8 +54,12 @@ var chatIntents = []chatIntent{
 			"maison", "foyer", "famille", "mode", "modes",
 			"which mode", "home network", "home internet",
 		},
-		answerFr: "Le mode Hotspot s'adresse aux réseaux publics que vous exploitez (cybercafé, maquis, boutique) : vouchers, portail captif, revendeurs. Le mode HomeNet, c'est la sécurité internet résidentiel : pare-feu cloud, filtrage DNS, couvre-feu et contrôle des appareils pour votre foyer. Même console 403Shield, mêmes protections — seuls les tarifs diffèrent (HomeNet paie deux fois moins cher).",
-		answerEn: "Hotspot mode targets the public networks you operate (cybercafé, bar, shop): vouchers, captive portal, resellers. HomeNet is residential internet security: cloud firewall, DNS filtering, curfew and device control for your household. Same 403Shield console, same protections — only the prices differ (HomeNet pays half the Hotspot rate).",
+		// N°324 — mono-mode : réponse honnête aux questions foyer/maison (les
+		// mots-clés restent écoutés) : le mode résidentiel est retiré, les
+		// protections famille restent sur tout routeur géré, le VPN personnel
+		// vit sur la boutique tunnels.
+		answerFr: "403Shield gère les réseaux publics que vous exploitez (cybercafé, maquis, boutique, hôtel) : vouchers, portail captif, revendeurs et quatre protections pare-feu — dont le couvre-feu FamilyGuard et le filtrage familial, disponibles sur tout routeur géré. Pour un usage personnel (VPN à IP fixe France), la boutique propose des tunnels WireGuard. L'offre foyer résidentielle dédiée a été retirée.",
+		answerEn: "403Shield runs the public networks you operate (cybercafé, bar, shop, hotel): vouchers, captive portal, resellers and four firewall protections — including the FamilyGuard curfew and family filtering, available on any managed router. For personal use (VPN with a fixed French IP), the shop offers WireGuard tunnels. The dedicated residential household offer has been retired.",
 	},
 	{
 		id: "pricing",
@@ -66,8 +70,9 @@ var chatIntents = []chatIntent{
 			"price", "pricing", "cost", "how much", "subscription", "fee",
 			"monthly", "yearly", "annual", "unlimited", "plan",
 		},
-		answerFr: "Deux modes, deux grilles. Hotspot (réseaux publics) : 2 500 F/mois par routeur, sans engagement — ou 25 000 F/an pour tous vos routeurs (illimité). HomeNet (sécurité internet résidentiel) : 1 250 F/mois par routeur, ou 12 000 F/an routeurs illimités. Des frais de paiement s'appliquent selon le moyen choisi (carte +6 %, Wave −3 %). Vous voulez essayer avant ? L'essai est gratuit et sans carte bancaire.",
-		answerEn: "Two modes, two price grids. Hotspot (public networks): 2,500 F/month per router, no commitment — or 25,000 F/year for all your routers (unlimited). HomeNet (residential internet security): 1,250 F/month per router, or 12,000 F/year with unlimited routers. Payment fees apply depending on the method (card +6%, Wave −3%). Want to try first? The trial is free and requires no credit card.",
+		// N°324 — grille unique mono-mode ; tunnels renvoyés à la boutique.
+		answerFr: "Une grille unique : 2 500 F/mois par routeur, sans engagement — ou 25 000 F/an pour tous vos routeurs (illimité). Des frais de paiement s'appliquent selon le moyen choisi (carte +6 %, Wave −3 %). Les tunnels WireGuard (VPN personnel à IP fixe France, Accès Pro) se commandent sur la boutique dédiée. Vous voulez essayer avant ? L'essai est gratuit et sans carte bancaire.",
+		answerEn: "One single grid: 2,500 F/month per router, no commitment — or 25,000 F/year for all your routers (unlimited). Payment fees apply depending on the method (card +6%, Wave −3%). WireGuard tunnels (personal VPN with a fixed French IP, Pro Access) are ordered on the dedicated shop. Want to try first? The trial is free and requires no credit card.",
 	},
 	{
 		id: "trial",
@@ -77,8 +82,9 @@ var chatIntents = []chatIntent{
 			"periode", "free", "trial", "try", "how long", "days",
 			"credit card", "without card",
 		},
-		answerFr: "L'essai est gratuit et sans carte bancaire : 60 jours en mode Hotspot, 30 jours en mode HomeNet — la durée est posée à l'inscription selon votre usage, et l'équipe support peut la prolonger depuis la plateforme. Aucun engagement : vous ne payez que si vous continuez après l'essai.",
-		answerEn: "The trial is free and requires no credit card: 60 days in Hotspot mode, 30 days in HomeNet mode — the duration is set at sign-up based on your usage, and the support team can extend it from the platform. No commitment: you only pay if you keep going after the trial.",
+		// N°324 — essai unique 60 jours (la segmentation foyer est retirée).
+		answerFr: "L'essai est gratuit et sans carte bancaire : 60 jours, 1 routeur, toutes les fonctions — et l'équipe support peut le prolonger depuis la plateforme. Aucun engagement : vous ne payez que si vous continuez après l'essai.",
+		answerEn: "The trial is free and requires no credit card: 60 days, 1 router, every feature — and the support team can extend it from the platform. No commitment: you only pay if you keep going after the trial.",
 	},
 	{
 		id: "router",
@@ -168,8 +174,8 @@ var chatIntents = []chatIntent{
 			"bonjour", "bonsoir", "salut", "coucou", "hello", "hey",
 			"good morning", "good evening", "good afternoon", "hi",
 		},
-		answerFr: "Bonjour ! Je suis l'assistant 403Shield. Je peux vous renseigner sur les modes Hotspot et HomeNet, les tarifs, l'essai gratuit, la compatibilité routeur ou les protections — touchez une suggestion ou posez votre question. Et si vous préférez un humain, demandez-le à tout moment.",
-		answerEn: "Hello! I'm the 403Shield assistant. I can tell you about the Hotspot and HomeNet modes, pricing, the free trial, router compatibility or the protections — tap a suggestion or ask your question. And if you'd rather talk to a human, just ask at any time.",
+		answerFr: "Bonjour ! Je suis l'assistant 403Shield. Je peux vous renseigner sur l'offre Hotspot, les tarifs, l'essai gratuit, la compatibilité routeur ou les protections — touchez une suggestion ou posez votre question. Et si vous préférez un humain, demandez-le à tout moment.",
+		answerEn: "Hello! I'm the 403Shield assistant. I can tell you about the Hotspot offer, pricing, the free trial, router compatibility or the protections — tap a suggestion or ask your question. And if you'd rather talk to a human, just ask at any time.",
 	},
 	{
 		id: "thanks",
@@ -189,8 +195,8 @@ const chatIntentHuman = "human"
 const (
 	chatFallbackFr = "Je n'ai pas de réponse certaine à cette question. Vous pouvez la reformuler, toucher une suggestion ci-dessous — ou demander un conseiller humain : je vous transmets en un clic."
 	chatFallbackEn = "I'm not sure about that one. You can rephrase it, tap a suggestion below — or ask for a human advisor: I'll transfer you in one tap."
-	chatWelcomeFr  = "Bonjour et bienvenue sur 403Shield. Je suis l'assistant de la vitrine : modes Hotspot et HomeNet, tarifs, essai gratuit, compatibilité routeur, protections… Posez votre question ou touchez une suggestion. Vous pouvez aussi demander un humain à tout moment."
-	chatWelcomeEn  = "Hello and welcome to 403Shield. I'm the 403Shield assistant: Hotspot and HomeNet modes, pricing, free trial, router compatibility, protections… Ask your question or tap a suggestion. You can also ask for a human at any time."
+	chatWelcomeFr  = "Bonjour et bienvenue sur 403Shield. Je suis l'assistant de la vitrine : offre Hotspot, tarifs, essai gratuit, compatibilité routeur, protections… Posez votre question ou touchez une suggestion. Vous pouvez aussi demander un humain à tout moment."
+	chatWelcomeEn  = "Hello and welcome to 403Shield. I'm the 403Shield assistant: Hotspot offer, pricing, free trial, router compatibility, protections… Ask your question or tap a suggestion. You can also ask for a human at any time."
 	chatHandoffFr  = "Je vous transmets à un membre de l'équipe 403Shield. Il reprendra cette conversation depuis la console de support — patientez un instant, vos prochains messages lui parviennent directement."
 	chatHandoffEn  = "I'm handing you over to a member of the 403Shield team. They will pick up this conversation from the support console — hold on a moment, your next messages go straight to them."
 	chatClosedFr   = "Conversation clôturée par le support 403Shield. Merci de votre visite — vous pouvez rouvrir une nouvelle conversation à tout moment."
