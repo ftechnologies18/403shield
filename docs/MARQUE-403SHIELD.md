@@ -137,27 +137,36 @@ dispatchés avec preuves. Gestes posés :
    `api.mikcloud.ftci.fr, api.403shield.ftci.fr` (backup + validate +
    reload) — l'ACME émettra SEUL dès le DNS.
 
-### Recettes propriétaire restantes (valeurs exactes, Cloudflare zone ftci.fr)
+### Recettes propriétaire — EXÉCUTÉES le 17/10/2026 (N°320), preuves mesurées
 
-**console.403shield.ftci.fr (2 records, puis 1 dispatch)** :
-1. TXT `_vercel.ftci.fr` =
+**console.403shield.ftci.fr (2 records, puis 1 dispatch) — FAIT** :
+1. ✅ TXT `_vercel.ftci.fr` =
    `vc-domain-verify=console.403shield.ftci.fr,559ecca8236acf29de36`
-   (AJOUTER — le TXT existant de 403shield.ftci.fr reste en place : plusieurs
-   valeurs de même nom sont licites) ;
-2. CNAME `console` → `cname.vercel-dns.com`, DNS only (nuage gris) ;
-3. la vérification Vercel se fait seule (minutes) — puis
-   `ops-vercel-domains.yml` action=redirect, domain=tunnel.ftci.fr,
-   redirect_to=https://console.403shield.ftci.fr, confirm=EXECUTER (la garde
-   exige que la cible réponde 200 — jamais de 301 avant).
+   (posé à côté des 6 TXT existants — plusieurs valeurs licites) ;
+2. ✅ CNAME `console.403shield` → `cname.vercel-dns.com`, DNS only ;
+3. ✅ vérification Vercel (`POST …/verify` → `verified:true`), HTTP 200,
+   puis 301 tunnel.ftci.fr → `https://console.403shield.ftci.fr` posée
+   puis re-dispatchée sur le workflow CORRIGÉ (run #39058805829
+   SUCCESS). **LEÇON N°320 : le PATCH Vercel exige le domaine NU dans
+   `redirect`** — une URL `https://…` rend 400 « domain not added to
+   the project » (l'API compare la cible aux noms de domaines du
+   projet) ; fix commit d92e726 (normalisation TO → TO_DOMAIN).
 
-**api.403shield.ftci.fr (1 record)** :
-1. A `api.403shield.ftci.fr` → `84.235.228.160`, DNS only (nuage gris) ;
-2. le certificat ACME se fait seul (journal caddy), preuve
-   `curl -sI https://api.403shield.ftci.fr/` → 200 ;
-3. SEULEMENT ALORS : bascule `NEXT_PUBLIC_API_BASE` (Vercel) — jamais avant.
+**api.403shield.ftci.fr (1 record) — FAIT** :
+1. ✅ A `api.403shield.ftci.fr` → `84.235.228.160`, DNS only ;
+2. ✅ certificat Let's Encrypt émis (subject `CN=api.403shield.ftci.fr`,
+   17/10/2026 → 15/01/2027) — le backoff certmagic ne se réveille pas
+   seul quand le DNS atterrit (cause racine du T2 N°245-b) : dispatch
+   `t2-caddy-rescue.yml` (restart) → émission immédiate ;
+   `curl -sI https://api.403shield.ftci.fr/` → 200, `{"ok":true}` ;
+3. ✅ bascule `NEXT_PUBLIC_API_BASE` → `https://api.403shield.ftci.fr`
+   (production + preview, PATCH puis redeploy dpl_GrtumFJ…) — le bundle
+   de la console ne référence PLUS QUE api.403shield.ftci.fr (preuve :
+   grep des chunks /login /verify /me : 1 chunk nouveau, 0 ancien).
 
 **Smoke test terrain** (l'étalon physique, 15 min sur place) : achat 1 F →
-retour boutique → conf livrée → tunnel → espace client → renouvellement.
+retour boutique → conf livrée → tunnel → espace client → renouvellement —
+**SEUL geste restant** au propriétaire.
 
 ## 7. Actifs de marque
 

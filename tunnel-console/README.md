@@ -61,7 +61,7 @@ Variables d'environnement :
 
 | Variable | Défaut | Rôle |
 |---|---|---|
-| `NEXT_PUBLIC_API_BASE` | `https://api.mikcloud.ftci.fr` | Base de l'API — CORS WHITELIST côté backend (`corsMiddleware`, `main.go` — fail-closed P1 #16) : `tunnel.ftci.fr`, `miktunnel.vercel.app` (N°316) puis `403shield.ftci.fr`, `403shield.vercel.app`, `403shield-console.vercel.app` (N°318) puis `console.403shield.ftci.fr` (N°319, AVANT toute 301) figurent dans `ALLOWED_ORIGIN` de la VM (geste `ops-cors-whitelist.yml` — PARAMÉTRABLE depuis N°318 : les origines se passent en input du dispatch, non-régression prouvée par le workflow) |
+| `NEXT_PUBLIC_API_BASE` | `https://api.403shield.ftci.fr` | Base de l'API — **basculée N°320** (l'ancienne `https://api.mikcloud.ftci.fr` reste vivante, rollback = re-PATCH + redeploy). CORS WHITELIST côté backend (`corsMiddleware`, `main.go` — fail-closed P1 #16) : `tunnel.ftci.fr`, `miktunnel.vercel.app` (N°316) puis `403shield.ftci.fr`, `403shield.vercel.app`, `403shield-console.vercel.app` (N°318) puis `console.403shield.ftci.fr` (N°319, AVANT toute 301) figurent dans `ALLOWED_ORIGIN` de la VM (geste `ops-cors-whitelist.yml` — PARAMÉTRABLE depuis N°318 : les origines se passent en input du dispatch, non-régression prouvée par le workflow) |
 | `TUNNEL_DEV_API_PROXY` | — | `=1` en dev local : proxy `/api/*` → `http://localhost:4000` (backend local) |
 
 Côté BACKEND (N°316) : `TUNNEL_PUBLIC_URL` (défaut `https://tunnel.ftci.fr`)
@@ -114,3 +114,21 @@ resets).
   (403shield-console) et l'origine est déjà whitelistée côté API. Recette
   Cloudflare restante (2 records) + 301 finale par workflow : cf.
   `docs/MARQUE-403SHIELD.md` §6-bis (valeurs exactes).
+
+## N°320 — le domaine console est VIVANT, la 301 posée, l'API basculée
+
+- **console.403shield.ftci.fr : VÉRIFIÉ et HTTP 200** (certificat Vercel) —
+  les 2 records Cloudflare (TXT `_vercel` + CNAME `console.403shield`, DNS
+  only) sont posés sur la zone ftci.fr.
+- **301 tunnel.ftci.fr → console.403shield.ftci.fr** (301, chemins + query
+  préservés) — posée via `ops-vercel-domains.yml` action=redirect APRES
+  correction d'un bug du toolbox (leçon N°320 : le PATCH Vercel exige le
+  domaine NU dans `redirect`, pas une URL `https://…` — commit d92e726,
+  run #39058805829 SUCCESS). La boutique `/shop` vit désormais sur
+  `console.403shield.ftci.fr`.
+- **`NEXT_PUBLIC_API_BASE` = `https://api.403shield.ftci.fr`** (production
+  + preview, bascule N°320 APRÈS certificat vivant — preuve dans le
+  bundle : les chunks ne référencent plus que l'hôte 403shield).
+  L'API porte un certificat Let's Encrypt (relance `t2-caddy-rescue.yml` :
+  le backoff certmagic ne se réveille pas seul quand le DNS atterrit).
+- Reste propriétaire : le **smoke test terrain** seul (cf. MARQUE §6-bis).

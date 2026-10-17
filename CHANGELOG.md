@@ -10,6 +10,72 @@ sous-marque FTech CI) ; l'historique ci-dessous conserve les noms d'époque.
 N°319 : le DÉPÔT GitHub lui-même devient `ftechnologies18/403shield`
 (anciennes URL redirigées en 301 par GitHub — web, git et API).
 
+## 2026-10-17 — N°320 — **LA CONSOLE ET L'API SUR LEURS ADRESSES 403SHIELD : les 3 records Cloudflare posés (token de compte ré-fourni) + console.403shield.ftci.fr vérifié et vivant + 301 tunnel.ftci.fr (bug du workflow redirect trouvé et corrigé — LEÇON N°320 : l'API Vercel exige le domaine NU) + api.403shield.ftci.fr certifié Let's Encrypt (relance caddy du toolbox N°245-b) + bascule NEXT_PUBLIC_API_BASE prouvée dans le bundle — le reste propriétaire se réduit au smoke test terrain**
+
+### Déclencheur (propriétaire)
+« L'action 3 déjà réalisée et fonctionnel. Réalise les tâches suivantes à
+partir des API tokens » — transmission des tokens GitHub, Cloudflare (de
+compte, portée zone ftci.fr `dns_records:edit`), Vercel, Render, Supabase
+et Neon. Le token Cloudflare fonctionne CONTRE L'APPARENCE : `/user/tokens/
+verify` répond « Invalid » pour tout token de compte, mais `GET /zones`
+répond (piège documenté N°318) — les gestes DNS directs sont donc redevenus
+possibles, en complément du coffre GitHub.
+
+### Gestes exécutés (preuves mesurées)
+1. **3 records Cloudflare posés (zone ftci.fr, DNS only — nuage gris)** :
+   TXT `_vercel.ftci.fr` = `vc-domain-verify=console.403shield.ftci.fr,
+   559ecca8236acf29de36` (posé À CÔTÉ des 6 TXT existants — plusieurs
+   valeurs de même nom sont licites) ; CNAME `console.403shield` →
+   `cname.vercel-dns.com` ; A `api.403shield` → `84.235.228.160`
+   (miroir de `api.mikcloud`, tous deux DNS only).
+2. **console.403shield.ftci.fr VÉRIFIÉ puis VIVANT** : `POST …/verify` →
+   `{"verified":true}` instantanément (le TXT était en place) ; certificat
+   Vercel émis en ~1 min → HTTP 200 — la cible de la 301 est vivante,
+   la garde du workflow est satisfaite.
+3. **301 tunnel.ftci.fr → console.403shield.ftci.fr** — le dispatch
+   (run #39058398609) a EXPOSÉ UN BUG du toolbox : la garde vivante
+   passait (cible HTTP 200) mais le PATCH envoyait l'URL `https://…` et
+   l'API Vercel répond 400 « domain not added to the project » — elle
+   compare la cible aux NOMS de domaines du projet (l'état N°318 stocke
+   bien `403shield.ftci.fr` SANS schéma). **LEÇON N°320 : le PATCH Vercel
+   exige le domaine NU.** La 301 a été posée en domaine nu (PATCH direct
+   HTTP 200 : `redirect: console.403shield.ftci.fr`,
+   `redirectStatusCode: 301`), le workflow CORRIGÉ (normalisation bash
+   `TO` → `TO_DOMAIN`, commit d92e726) puis re-dispatché → run
+   #39058805829 SUCCESS avec preuve. Preuves curl : `/` → 301 →
+   `console.403shield.ftci.fr/` ; `/shop?order=MCV-PREUVE` → 301 →
+   `console.403shield.ftci.fr/shop?order=MCV-PREUVE` (chemins + query
+   préservés par Vercel).
+4. **api.403shield.ftci.fr certifié** : le record A posé, Caddy restait
+   en backoff certmagic (l'ACME échouait depuis N°319 tant que le DNS
+   n'existait pas — reprise exponentielle jusqu'à 24 h : poser le DNS ne
+   déclenche AUCUNE nouvelle tentative, cause racine du T2 N°245-b).
+   Dispatch `t2-caddy-rescue.yml` (restart caddy) → run #39058914459
+   SUCCESS → émission IMMÉDIATE : Let's Encrypt (issuer CN=YE2), subject
+   `CN=api.403shield.ftci.fr`, valide 17/10/2026 → 15/01/2027 ;
+   `GET /` → `{"ok":true}` HTTP 200 ; non-régression api.mikcloud 200.
+5. **Bascule `NEXT_PUBLIC_API_BASE` (seulement APRÈS le certificat —
+   recette §6-bis respectée)** : PATCH env → `https://api.403shield.ftci.fr`
+   (production + preview) puis redeploy production depuis `main`
+   (dpl_GrtumFJ…, gitSource GitHub) → READY. PREUVE DANS LE BUNDLE : les
+   chunks de `/login`, `/verify` et `/me` servent `api.403shield.ftci.fr`
+   (1 chunk — le module API) et ZÉRO référence à `api.mikcloud.ftci.fr`.
+   CORS prouvé : preflight OPTIONS depuis l'origine console → 204 +
+   `access-control-allow-origin: https://console.403shield.ftci.fr`.
+
+### Chaîne GeniusPay complète (post-301)
+`403shield.ftci.fr/vpn?order=MCV-SMOKE320` → 308 →
+`tunnel.ftci.fr/shop?order=…` → 301 → `console.403shield.ftci.fr/shop?order=…`
+→ 200 ; `GET /api/public/vpn/offers` (Origin console) → 200, catalogue
+403Shield (`enabled:true`, `onlinePayment:true`). La boutique vit
+désormais sur le domaine console, l'ancien tunnel.ftci.fr redirige.
+
+### Reste à la main du propriétaire
+- **Smoke test terrain** (achat 1 F → retour boutique → conf livrée →
+  tunnel → espace client → renouvellement) — l'étalon physique, 15 min
+  sur place. Rien d'autre : les 3 records, la 301 et la bascule env
+  sont FAITS et prouvés.
+
 ## 2026-10-17 — N°319 — **LES GESTES AUTOMATISABLES DU « RESTE PROPRIÉTAIRE » : vitrine B2C OUVERTE + libellés DB 403Shield + dépôt GitHub renommé + console.403shield.ftci.fr attaché (gestes Vercel+CORS) + api.403shield.ftci.fr armé sur Caddy — trois workflows ops pilotés depuis le coffre GitHub**
 
 ### Déclencheur (propriétaire)
