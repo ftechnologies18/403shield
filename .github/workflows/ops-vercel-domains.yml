@@ -20,7 +20,10 @@ name: ops-vercel-domains
 #   action=redirect : pose la 301 (confirm=EXECUTER requis) — REFUSE tant
 #                     que la cible ne répond pas 200 (leçon N°318 : jamais
 #                     de 301 vers un domaine pas encore en ligne — la vitrine
-#                     deviendrait injoignable).
+#                     deviendrait injoignable) ; le PATCH envoie le domaine
+#                     NU de la cible (leçon N°320 : une URL « https://… »
+#                     rend 400 « domain not added to the project » — l'API
+#                     compare la cible aux noms de domaines du projet).
 #
 # Sécurité : le token ne circule qu'en en-tête Authorization (jamais affiché,
 # jamais dans un log) ; les réponses Vercel ci-dessous ne contiennent aucun
@@ -180,10 +183,21 @@ jobs:
           LIVE="$(curl -sS -o /dev/null -w '%{http_code}' --max-time 25 "$TO" || true)"
           echo "cible $TO → HTTP ${LIVE:-injoignable}"
           [ "$LIVE" = "200" ] || { echo "✗ la cible ne répond pas 200 — poser le DNS d'abord, puis vérifier (action=status)"; exit 1; }
+          # Leçon N°320 : l'API Vercel attend le domaine NU dans « redirect »
+          # (l'état N°318 stocke mikcloud.ftci.fr → « 403shield.ftci.fr ») —
+          # une URL « https://… » rend 400 « domain not added to the
+          # project ». L'entrée https://… ne sert qu'à la garde vivante.
+          TO_DOMAIN="${TO#*://}"
+          TO_DOMAIN="${TO_DOMAIN%%[/?]*}"
+          TO_DOMAIN="${TO_DOMAIN%%:*}"
+          case "$TO_DOMAIN" in
+            *..*|.*|*[!a-z0-9.-]*|'') echo "✗ cible invalide après normalisation : «$TO_DOMAIN»"; exit 1;;
+          esac
+          echo "redirect → $TO_DOMAIN (domaine nu, miroir de l'état N°318)"
           CODE="$(curl -sS --max-time 30 -o /tmp/domain.json -w '%{http_code}' \
             -X PATCH "https://api.vercel.com/v10/projects/$PROJ_ID/domains/$DOMAIN$TEAM_Q" \
             -H "Authorization: Bearer $VERCEL_TOKEN" -H "Content-Type: application/json" \
-            -d "{\"redirect\":\"$TO\",\"redirectStatusCode\":301}")"
+            -d "{\"redirect\":\"$TO_DOMAIN\",\"redirectStatusCode\":301}")"
           echo "PATCH HTTP $CODE"
           jq . /tmp/domain.json
           [ "$CODE" = "200" ] || exit 1
