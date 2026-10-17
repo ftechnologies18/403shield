@@ -10,6 +10,69 @@ sous-marque FTech CI) ; l'historique ci-dessous conserve les noms d'époque.
 N°319 : le DÉPÔT GitHub lui-même devient `ftechnologies18/403shield`
 (anciennes URL redirigées en 301 par GitHub — web, git et API).
 
+## 2026-10-17 — N°321 — **LA VITRINE RATTRAPE L'ÉVOLUTION 403SHIELD : la page d'accueil n'est plus figée sur l'ère hotspot — les Tunnels WireGuard deviennent le 4e pilier (super-pouvoir + section dédiée + segment tarifs) et le VPN comme l'Accès Pro sont présentés comme UNE SEULE offre « un tunnel, deux usages »**
+
+### Déclencheur (propriétaire)
+« Amélioration : la page d'accueil semble figée sur les services hotspot
+d'avant, elle ne reflète pas l'évolution 403Shield. VPN WireGuard et tunnel
+apparaissent comme des services différents alors qu'ils sont liés. » —
+deux griefs précis : (1) le corps de la vitrine `/` racontait encore
+l'histoire MikCloud (3 super-pouvoirs Hotspot/Protection/Parc, stats et
+tarifs SaaS uniquement), l'offre tunnels ne vivant que dans deux pages
+produit déconnectées ; (2) `/vpn` et `/tunnels` semblaient dire deux
+produits alors qu'ils sont les deux usages d'un MÊME tunnel WireGuard.
+
+### Ce qui change (5 fichiers, +505/−118)
+1. **4 piliers au panthéon** — les super-pouvoirs passent de 3 à 4
+   (« Une suite, quatre piliers ») : la carte **Tunnels WireGuard**
+   rejoint Hotspot / Protection Cloud / Pilotage du parc. La grille
+   `.mkl-powers` passe en 2×2 (même langage clay que les pages produit),
+   les variantes p1→p3 cyclent sur la 4e carte, la règle `span 2` de
+   l'ère 3-cartes est retirée.
+2. **Section `#tunnels` dédiée** (rail desktop + barre tactile mobile +
+   IntersectionObserver, icône Waypoints) entre Hotspot et Parc —
+   kicker « Tunnels WireGuard », titre « Un seul tunnel chiffré, tous vos
+   réseaux », 4 feats (VPN personnel · Accès Pro routeurs · LAN étendu
+   caméras/NAS · une console une boutique) et un panneau maquette
+   « Tunnel WireGuard · Marseille » dont les boutons sont de VRAIS liens
+   (console + boutique) contrairement au parc décoratif.
+3. **Segment tarifs « Tunnels »** — 3e position du sélecteur Hotspot /
+   HomeNet / **Tunnels** (« Trois univers, un nuage ») avec les PRIX
+   CATALOGUE RÉELS du backend (`publicvpnorder.go` : VPN Mensuel 1 500 /
+   VPN Annuel 15 000 · Accès Pro Mensuel 3 500 / Annuel 35 000 FCFA —
+   familles b2c & pro) ; les CTA de ces plans sont des liens externes
+   boutique/console (`plan.href`, nouvel onglet) au lieu d'ouvrir la
+   modale d'inscription SaaS ; la 4e stat du bandeau devient
+   « 2 usages du tunnel — VPN & Accès Pro » ; hero, marquee, note
+   devises et CTA final portent le même message unifié.
+4. **Nav unifiée** — le topbar (vitrine + pages produit) porte UNE entrée
+   « Tunnels WireGuard » (→ /tunnels, hub de la famille) au lieu de deux
+   entrées jumelles VPN · Tunnels ; sur `/vpn` le lien famille est actif
+   (les deux pages = les deux usages). `/vpn` reste lié : hero de
+   `/tunnels` (« Découvrir le VPN »), footer (« VPN — Tunnels
+   WireGuard »), section #tunnels et segment tarifs.
+5. **Pages produit réalignées** — `/vpn` : badge « Tunnels WireGuard ·
+   VPN », note « Un seul tunnel, deux usages » (l'Accès Pro étend CE
+   tunnel) ; `/tunnels` devient le hub : hero « Un seul tunnel. Deux
+   usages. », meta couvrant les deux offres, carte pivot « VPN personnel
+   — le même tunnel », CTA final console.
+6. **URLs canoniques** — tous les liens vitrine/console/boutique passent
+   de `tunnel.ftci.fr` (301 depuis N°320) à **console.403shield.ftci.fr**
+   direct (un saut de moins) ; la redirection GeniusPay `vercel.json`
+   `/vpn?order=` vise désormais la boutique canonique.
+
+### Intacts par construction
+Clés localStorage, marqueurs RouterOS, styles clay existants (le panneau
+tunnels réutilise les rangées `.mkl-fleet-row`), garde de session/PWA de
+la vitrine, assistant chat et suggestions (pas de capacité inventée au
+bot), `/wifi` `/sell` `/docs`, GeniusPay (query `order=` préservée).
+
+### Portes
+`bun run lint` 0 erreur · `bunx tsc --noEmit` 0 erreur · parité FR/EN
+programmatique 442 chemins = 442 chemins, 15 assertions métier OK
+(4 feats, 4 cartes, 3 segments, 3 plans href, croisés /vpn↔/tunnels,
+zéro `tunnel.ftci.fr` résiduel dans la copie).
+
 ## 2026-10-17 — N°320 — **LA CONSOLE ET L'API SUR LEURS ADRESSES 403SHIELD : les 3 records Cloudflare posés (token de compte ré-fourni) + console.403shield.ftci.fr vérifié et vivant + 301 tunnel.ftci.fr (bug du workflow redirect trouvé et corrigé — LEÇON N°320 : l'API Vercel exige le domaine NU) + api.403shield.ftci.fr certifié Let's Encrypt (relance caddy du toolbox N°245-b) + bascule NEXT_PUBLIC_API_BASE prouvée dans le bundle — le reste propriétaire se réduit au smoke test terrain**
 
 ### Déclencheur (propriétaire)

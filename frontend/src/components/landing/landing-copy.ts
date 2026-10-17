@@ -27,9 +27,16 @@
 // site marketing multipage à menu complet + UNE console transactionnelle).
 // La vitrine devient le site unifié : Hotspot · VPN · Tunnels, endossée
 // « powered by FTech CI » (ftci.fr). Nouveau bloc `pages` (copie des pages
-// produit /hotspot, /vpn, /tunnels) et menu complet `header.nav`. Les prix
-// VPN ne sont PAS codés en dur ici : la page /vpn renvoie à la boutique pour
-// les prix live.
+// produit /hotspot, /vpn, /tunnels) et menu complet `header.nav`.
+//
+// N°321 — la vitrine rattrape l'évolution 403Shield : les Tunnels
+// WireGuard deviennent un PILIER de la page d'accueil (4e super-pouvoir,
+// section dédiée, segment tarifs) et le VPN comme l'Accès Pro y sont
+// présentés comme UNE SEULE offre « un tunnel, deux usages » (même
+// WireGuard, même console, même boutique). Les prix catalogue tunnels
+// (1 500 / 15 000 / 3 500 / 35 000 FCFA) recopient les constantes produit
+// réelles du backend (publicvpnorder.go — familles b2c & pro) ; le prix
+// final par moyen de paiement reste calculé sur la boutique.
 
 export type Lang = "fr" | "en";
 
@@ -70,6 +77,8 @@ export interface LandingCopy {
     powers: string;
     protection: string;
     hotspot: string;
+    /** N°321 — ancre de la nouvelle section Tunnels WireGuard. */
+    tunnels: string;
     fleet: string;
     pricing: string;
   };
@@ -139,6 +148,21 @@ export interface LandingCopy {
       peak: string;
     };
   };
+  /** N°321 — Tunnels WireGuard : UN service, deux usages (VPN personnel +
+      Accès Pro). La section existe pour rendre visible le lien entre le VPN
+      et les tunnels — même WireGuard, même console, même boutique. */
+  tunnels: {
+    kicker: string;
+    title: string;
+    body: string;
+    feats: { title: string; desc: string }[];
+    panel: {
+      title: string;
+      rows: { name: string; detail: string; state: string }[];
+      console: string;
+      shop: string;
+    };
+  };
   fleet: {
     kicker: string;
     title: string;
@@ -158,9 +182,10 @@ export interface LandingCopy {
     subtitle: string;
     /** N°122 — aria-label du sélecteur de mode (Hotspot / HomeNet). */
     modesLabel: string;
-    /** N°122 — tarifs segmentés par mode : chaque mode a ses 3 formules. */
+    /** N°122 — tarifs segmentés par mode : chaque mode a ses 3 formules.
+        N°321 — 3e segment « tunnels » (boutique dédiée, CTA liens externes). */
     segments: {
-      id: "hotspot" | "homenet";
+      id: "hotspot" | "homenet" | "tunnels";
       label: string;
       hint: string;
       /** N°124 — clientèle cible (chips clay) — uniquement le mode Hotspot. */
@@ -174,6 +199,9 @@ export interface LandingCopy {
         highlight: boolean;
         features: string[];
         badge?: string;
+        /** N°321 — cible externe (boutique/console) : le bouton devient un
+            lien nouvel onglet au lieu d'ouvrir la modale d'inscription. */
+        href?: string;
       }[];
     }[];
     currencyNote: string;
@@ -227,6 +255,8 @@ const fr: LandingCopy = {
     powers: "Super-pouvoirs",
     protection: "Protection",
     hotspot: "Hotspot",
+    // N°321 — le tunnel unifié entre au rail : VPN & Accès Pro, un seul service.
+    tunnels: "Tunnels WireGuard",
     fleet: "Parc routeurs",
     pricing: "Tarifs",
   },
@@ -240,7 +270,10 @@ const fr: LandingCopy = {
       home: "Accueil",
       hotspot: "Hotspot",
       vpn: "VPN",
-      tunnels: "Tunnels",
+      // N°321 — libellé famille : le nav porte UNE entrée « Tunnels WireGuard »
+      // (→ /tunnels) ; la page /vpn reste liée depuis /tunnels, le footer,
+      // la section tunnels et le segment tarifs.
+      tunnels: "Tunnels WireGuard",
       pricing: "Tarifs",
     },
   },
@@ -250,17 +283,17 @@ const fr: LandingCopy = {
     titleAccent: "bouclier.",
     title2: "",
     subtitle:
-      "L'erreur 403, c'est pour les autres. Hotspot WiFi public rentable, VPN WireGuard à IP fixe France et tunnels chiffrés dans le cloud : 403Shield réunit une suite complète de sécurité réseau pour les travailleurs nomades, les entreprises et les particuliers — powered by FTech CI.",
+      "L'erreur 403, c'est pour les autres. Hotspot WiFi public rentable, quatre boucliers pare-feu dans le cloud, et un seul tunnel WireGuard pour tous vos usages — VPN personnel à IP fixe France, Accès Pro pour vos routeurs, caméras et NAS : 403Shield réunit une suite complète de sécurité réseau pour les travailleurs nomades, les entreprises et les particuliers — powered by FTech CI.",
     ctaPrimary: "Protéger mon réseau",
     ctaSecondary: "Découvrir la suite",
     trialHint: "Essai gratuit · sans carte bancaire — 60 jours Hotspot · 30 jours HomeNet",
-    chips: ["Erreur 403 — aux autres", "4/4 protections actives", "500 vouchers par lot"],
+    chips: ["Erreur 403 — aux autres", "4/4 protections actives", "Tunnels WireGuard · IP fixe France"],
   },
   marquee: [
     "Vouchers & codes d'accès",
     "VPN WireGuard · IP fixe France",
     "Filtrage DNS Quad9",
-    "Tunnels cloud chiffrés",
+    "Un seul tunnel, deux usages",
     "Anti-piratage WiFi",
     "Accès distant Pro — routeurs, caméras, NAS",
     "Couvre-feu internet",
@@ -273,10 +306,12 @@ const fr: LandingCopy = {
     "Paiement Wave & Mobile Money",
   ],
   powers: {
-    eyebrow: "Une suite, trois super-pouvoirs",
+    // N°321 — quatre piliers : les Tunnels WireGuard rejoignent le panthéon
+    // (la vitrine n'est plus figée sur l'ère hotspot).
+    eyebrow: "Une suite, quatre piliers",
     title: "Tout ce qu'il faut pour régner sur votre réseau.",
     subtitle:
-      "Gestion hotspot, protection cloud et pilotage du parc : 403Shield réunit en une seule interface tout ce que votre infrastructure réclame — sans Winbox, sans serveur à maintenir.",
+      "Hotspot rentable, protection cloud, pilotage de parc et tunnels WireGuard : 403Shield réunit en une seule suite tout ce que votre infrastructure réclame — sans Winbox, sans serveur à maintenir.",
     cards: [
       {
         tag: "Fondation",
@@ -309,6 +344,17 @@ const fr: LandingCopy = {
           "Télémétrie CPU, mémoire, uptime",
           "QoS agrégée & forfait FAI",
           "Docteur Pool IP & auto-réparation",
+        ],
+      },
+      {
+        tag: "WireGuard",
+        title: "Tunnels WireGuard",
+        desc: "Un seul tunnel chiffré, deux usages : VPN personnel à IP fixe France et Accès Pro pour vos routeurs, caméras et NAS — une console, une boutique, un abonnement.",
+        items: [
+          "VPN personnel · IP fixe France dédiée",
+          "Accès Pro — routeurs, caméras, NAS",
+          "Console sans mot de passe · code e-mail",
+          "Hébergé à Marseille · chiffré de bout en bout",
         ],
       },
     ],
@@ -379,6 +425,41 @@ const fr: LandingCopy = {
       peak: "24 h",
     },
   },
+  /* N°321 — LE service unifié : VPN personnel et Accès Pro rendus comme
+     deux usages d'un MÊME tunnel WireGuard (même console, même boutique). */
+  tunnels: {
+    kicker: "Tunnels WireGuard",
+    title: "Un seul tunnel chiffré, tous vos réseaux.",
+    body: "Le VPN 403Shield et l'Accès Pro ne font qu'un : c'est le même tunnel WireGuard, hébergé à Marseille et chiffré de bout en bout. Sur votre téléphone, il protège votre trafic et vous donne une IP fixe France ; branché sur vos réseaux, il devient Accès Pro — routeurs, caméras et NAS joignables en privé, même derrière CGNAT. Une console, une boutique, un abonnement : tout vit au même endroit.",
+    feats: [
+      {
+        title: "VPN personnel — IP fixe France",
+        desc: "Votre trafic sort par Marseille avec une adresse dédiée, rien qu'à vous. Activation en 30 secondes, configuration livrée par e-mail.",
+      },
+      {
+        title: "Accès Pro — routeurs distants",
+        desc: "Le même tunnel posé sur vos routeurs MikroTik supervisés : administration, API et SSH à distance, sans exposer une seule interface sur Internet.",
+      },
+      {
+        title: "LAN étendu — caméras & NAS",
+        desc: "L'Accès Pro étend le tunnel à votre réseau local : caméras, NAS et imprimantes restent joignables en privé, où que vous soyez.",
+      },
+      {
+        title: "Une console, une boutique",
+        desc: "Un code e-mail à 6 chiffres suffit : achats, renouvellement 1-clic et portefeuille d'appareils — VPN et Accès Pro au même endroit.",
+      },
+    ],
+    panel: {
+      title: "Tunnel WireGuard · Marseille",
+      rows: [
+        { name: "VPN personnel", detail: "IP fixe France dédiée", state: "Actif" },
+        { name: "Accès Pro · Routeurs", detail: "Supervision distante", state: "Actif" },
+        { name: "LAN étendu · Caméras & NAS", detail: "Extension privée", state: "Chiffré" },
+      ],
+      console: "Ouvrir la console",
+      shop: "Voir la boutique",
+    },
+  },
   fleet: {
     kicker: "Parc & flotte",
     title: "Votre parc MikroTik, sans quitter la console.",
@@ -412,13 +493,14 @@ const fr: LandingCopy = {
     { value: 500, label: "vouchers par lot" },
     { value: 4, label: "boucliers pare-feu" },
     { value: 54, label: "pays africains visés" },
-    { value: 2, label: "modes — Hotspot & HomeNet" },
+    // N°321 — le 4e chiffre porte le message unifié du tunnel.
+    { value: 2, label: "usages du tunnel — VPN & Accès Pro" },
   ],
   pricing: {
     eyebrow: "Tarifs",
-    title: "Deux modes, un nuage.",
+    title: "Trois univers, un nuage.",
     subtitle:
-      "Exploitez un réseau public ou protégez votre foyer : 403Shield s'adapte. L'essai est offert dans les deux cas, sans engagement.",
+      "Exploitez un réseau public, protégez votre foyer ou branchez vos tunnels : 403Shield s'adapte. L'essai console est offert ; les abonnements tunnels se commandent sur la boutique dédiée.",
     modesLabel: "Choisir votre mode",
     segments: [
       {
@@ -524,9 +606,66 @@ const fr: LandingCopy = {
           },
         ],
       },
+      /* N°321 — 3e segment : les Tunnels WireGuard. Prix catalogue = constantes
+         produit réelles du backend (publicvpnorder.go : b2c 1500/15000,
+         pro 3500/35000 FCFA). Les CTA pointent sur la boutique/console — le
+         tunnel s'achète là-bas, pas via la modale d'inscription SaaS. */
+      {
+        id: "tunnels",
+        label: "Tunnels",
+        hint: "Un seul tunnel WireGuard, deux usages : VPN personnel à IP fixe France et Accès Pro pour vos routeurs, caméras et NAS. Achat sur la boutique dédiée, payable Wave ou carte.",
+        plans: [
+          {
+            name: "VPN Mensuel",
+            price: "1 500",
+            period: "FCFA / mois",
+            tagline: "Sans engagement, mois par mois",
+            cta: "Acheter sur la boutique",
+            highlight: false,
+            href: "https://console.403shield.ftci.fr/shop",
+            features: [
+              "IP fixe France dédiée",
+              "WireGuard — activation en 30 s",
+              "Paiement Wave ou carte",
+              "Configuration livrée par e-mail",
+            ],
+          },
+          {
+            name: "VPN Annuel",
+            price: "15 000",
+            period: "FCFA / an",
+            tagline: "12 mois au prix de 10",
+            badge: "2 mois offerts",
+            highlight: true,
+            href: "https://console.403shield.ftci.fr/shop",
+            cta: "Acheter sur la boutique",
+            features: [
+              "IP fixe France dédiée",
+              "WireGuard — activation en 30 s",
+              "Renouvellement en 1 clic",
+              "Console sans mot de passe",
+            ],
+          },
+          {
+            name: "Accès Pro",
+            price: "3 500",
+            period: "FCFA / mois · 35 000 / an",
+            tagline: "Vos routeurs, caméras et NAS dans le tunnel",
+            cta: "Souscrire l'Accès Pro",
+            highlight: false,
+            href: "https://console.403shield.ftci.fr/pro",
+            features: [
+              "Supervision distante des routeurs MikroTik",
+              "LAN étendu — caméras & NAS",
+              "Même tunnel WireGuard, même console",
+              "Derrière CGNAT, sans port ouvert",
+            ],
+          },
+        ],
+      },
     ],
     currencyNote:
-      "Frais de paiement répercutés sur le prix de liste : carte +6 %, Wave −3 % (remise mobile money). Essai offert : 60 jours en mode Hotspot, 30 jours en mode HomeNet.",
+      "Frais de paiement répercutés sur le prix de liste : carte +6 %, Wave −3 % (remise mobile money). Essai offert : 60 jours en mode Hotspot, 30 jours en mode HomeNet. Tunnels WireGuard (VPN & Accès Pro) : prix catalogue boutique, remise mobile money incluse.",
   },
   chat: {
     fabLabel: "Discuter avec l'assistant",
@@ -557,20 +696,22 @@ const fr: LandingCopy = {
     kicker: "Prêt·e à passer au niveau supérieur ?",
     title: "Blindez votre réseau en moins de 5 minutes.",
     subtitle:
-      "Créez votre compte, collez le script agent sur votre routeur, activez vos protections. Sans carte bancaire, sans serveur à maintenir.",
+      "Créez votre compte, collez le script agent sur votre routeur, activez vos protections. Besoin d'un VPN ? La boutique livre une configuration WireGuard en 30 secondes. Sans carte bancaire, sans serveur à maintenir.",
     primary: "Créer mon compte gratuit",
     secondary: "Se connecter",
   },
   footer: {
     tagline:
-      "La suite sécurité réseau cloud : Hotspot, VPN WireGuard et tunnels chiffrés — powered by FTech CI.",
+      "La suite sécurité réseau cloud : Hotspot, protection et tunnels WireGuard — VPN & Accès Pro — powered by FTech CI.",
     columns: [
       {
         title: "Produit",
         links: [
           { label: "Hotspot", href: "/hotspot" },
-          { label: "VPN", href: "/vpn" },
-          { label: "Tunnels", href: "/tunnels" },
+          // N°321 — la famille tunnels est explicite dans les libellés : le VPN
+          // et l'Accès Pro sont les deux usages du MÊME tunnel WireGuard.
+          { label: "VPN — Tunnels WireGuard", href: "/vpn" },
+          { label: "Accès Pro — Tunnels WireGuard", href: "/tunnels" },
           { label: "Protection cloud", href: "/#protection" },
           { label: "Tarifs", href: "/#tarifs" },
         ],
@@ -591,11 +732,13 @@ const fr: LandingCopy = {
       },
       {
         // N°317 — écosystème : maison-mère FTech CI, console et boutique VPN.
+        // N°321 — URLs canoniques console.403shield.ftci.fr (tunnel.ftci.fr
+        // répond 301 depuis N°320 — on évite le saut supplémentaire).
         title: "Écosystème",
         links: [
           { label: "FTech CI", href: "https://ftci.fr", external: true },
-          { label: "Console 403Shield", href: "https://tunnel.ftci.fr", external: true },
-          { label: "Boutique VPN", href: "https://tunnel.ftci.fr/shop", external: true },
+          { label: "Console 403Shield", href: "https://console.403shield.ftci.fr", external: true },
+          { label: "Boutique VPN", href: "https://console.403shield.ftci.fr/shop", external: true },
         ],
       },
     ],
@@ -661,14 +804,15 @@ const fr: LandingCopy = {
           "Un VPN WireGuard qui sort par notre serveur de Marseille avec une IP fixe France dédiée. Activation en 30 secondes, paiement Wave ou carte, géré depuis votre espace sans mot de passe.",
       },
       hero: {
-        badge: "403Shield VPN",
+        // N°321 — badge famille : le VPN est un usage du tunnel WireGuard 403Shield.
+        badge: "Tunnels WireGuard · VPN",
         title1: "Une IP fixe France.",
         titleAccent: "À vous seul.",
         title2: "",
         subtitle:
-          "Votre trafic, chiffré de bout en bout par WireGuard, sort par notre serveur de Marseille avec une adresse IP dédiée. Activation en 30 secondes — sans toucher à un fichier de configuration.",
+          "Votre trafic, chiffré de bout en bout par WireGuard, sort par notre serveur de Marseille avec une adresse IP dédiée. Activation en 30 secondes — sans toucher à un fichier de configuration. Et pour joindre vos routeurs, caméras ou NAS : l'Accès Pro étend ce même tunnel.",
         ctaPrimary: "Acheter mon VPN",
-        ctaPrimaryHref: "https://tunnel.ftci.fr/shop",
+        ctaPrimaryHref: "https://console.403shield.ftci.fr/shop",
         ctaSecondary: "Découvrir les tunnels",
         ctaSecondaryHref: "/tunnels",
       },
@@ -695,34 +839,38 @@ const fr: LandingCopy = {
         ],
       },
       note: {
-        title: "Deux formules, un seul produit",
-        body: "Mensuel sans engagement, ou annuel — 10 mois payés, 2 offerts. Prix en FCFA sur la boutique, remise mobile money incluse : c'est là que la commande se passe.",
+        // N°321 — la note porte le message unifié : un tunnel, deux usages.
+        title: "Un seul tunnel, deux usages.",
+        body: "Mensuel sans engagement, ou annuel — 10 mois payés, 2 offerts. Prix en FCFA sur la boutique, remise mobile money incluse. Et quand vos réseaux doivent passer par le même chemin : l'Accès Pro étend ce même tunnel WireGuard à vos routeurs, caméras et NAS — même console, même boutique.",
       },
       cta: {
         kicker: "Prêt à chiffrer votre trafic ?",
         title: "Votre configuration part par e-mail en 30 secondes.",
         body: "Choisissez votre formule sur la boutique, payez en Wave ou par carte : la configuration WireGuard complète arrive par e-mail, prête à importer.",
         primary: "Acheter mon VPN",
-        primaryHref: "https://tunnel.ftci.fr/shop",
+        primaryHref: "https://console.403shield.ftci.fr/shop",
         secondary: "J'ai déjà un VPN — mon espace",
-        secondaryHref: "https://tunnel.ftci.fr",
+        secondaryHref: "https://console.403shield.ftci.fr",
       },
     },
     tunnels: {
       meta: {
-        title: "403Shield Tunnels — accès distant chiffré : routeurs, caméras, NAS",
+        // N°321 — hub de la famille : le meta couvre les DEUX usages du tunnel.
+        title: "403Shield Tunnels WireGuard — VPN IP fixe France & Accès Pro : routeurs, caméras, NAS",
         description:
-          "Supervisez vos routeurs MikroTik, caméras et NAS à travers un tunnel WireGuard chiffré, où que vous soyez. Console sans mot de passe, payable en Mobile Money.",
+          "Un seul tunnel WireGuard chiffré, hébergé à Marseille : VPN personnel à IP fixe France et Accès Pro pour superviser routeurs MikroTik, caméras et NAS. Console sans mot de passe, payable en Mobile Money.",
       },
       hero: {
-        badge: "403Shield Tunnels",
-        title1: "Vos réseaux distants,",
-        titleAccent: "à portée",
-        title2: "de main.",
+        badge: "Tunnels WireGuard",
+        title1: "Un seul tunnel.",
+        titleAccent: "Deux usages.",
+        title2: "",
         subtitle:
-          "Supervisez vos routeurs MikroTik — puis vos caméras et vos NAS — à travers le même tunnel chiffré WireGuard, où que vous soyez. Achat, gestion et renouvellement au même endroit.",
-        ctaPrimary: "Ouvrir la console",
-        ctaPrimaryHref: "https://tunnel.ftci.fr",
+          "VPN personnel à IP fixe France, Accès Pro pour vos routeurs, LAN étendu pour caméras et NAS : le même tunnel WireGuard chiffré de bout en bout, hébergé à Marseille — une console, une boutique, un abonnement. Achat, gestion et renouvellement au même endroit.",
+        ctaPrimary: "Acheter mon VPN",
+        ctaPrimaryHref: "https://console.403shield.ftci.fr/shop",
+        // Lien croisé interne : la page VPN (usage personnel) reste à un clic
+        // du hub famille — la console, elle, vit dans le CTA final ci-dessous.
         ctaSecondary: "Découvrir le VPN",
         ctaSecondaryHref: "/vpn",
       },
@@ -731,8 +879,9 @@ const fr: LandingCopy = {
         title: "Le pont privé entre vous et vos réseaux.",
         cards: [
           {
-            title: "VPN de voyage",
-            desc: "Un VPN WireGuard à IP fixe France pour vos déplacements : trafic chiffré de bout en bout, sortant de Marseille.",
+            // N°321 — carte pivot : le VPN présenté comme le MÊME tunnel.
+            title: "VPN personnel — le même tunnel",
+            desc: "Votre trafic chiffré de bout en bout sort par Marseille avec une IP fixe France dédiée. C'est le même WireGuard, la même console — que vous protégiez vos déplacements ou supervisiez un parc.",
           },
           {
             title: "Accès Pro — routeurs",
@@ -743,8 +892,8 @@ const fr: LandingCopy = {
             desc: "L'Accès Pro étend le tunnel à votre LAN : caméras, NAS et autres équipements restent joignables en privé, jamais exposés.",
           },
           {
-            title: "Console sans mot de passe",
-            desc: "Un code e-mail à 6 chiffres suffit : espace client, portefeuille d'appareils, renouvellement 1-clic, révélation de configuration.",
+            title: "Une console, une boutique",
+            desc: "Un code e-mail à 6 chiffres suffit : espace client, portefeuille d'appareils, renouvellement 1-clic — VPN et Accès Pro vivent au même endroit.",
           },
         ],
       },
@@ -753,9 +902,9 @@ const fr: LandingCopy = {
         title: "Ouvrez votre tunnel en moins de 5 minutes.",
         body: "Code e-mail, boutique Wave/carte, configuration livrée par e-mail : le tunnel s'installe sans toucher à un fichier de configuration.",
         primary: "Ouvrir la console",
-        primaryHref: "https://tunnel.ftci.fr",
+        primaryHref: "https://console.403shield.ftci.fr",
         secondary: "Voir la boutique VPN",
-        secondaryHref: "https://tunnel.ftci.fr/shop",
+        secondaryHref: "https://console.403shield.ftci.fr/shop",
       },
     },
   },
@@ -767,6 +916,8 @@ const en: LandingCopy = {
     powers: "Superpowers",
     protection: "Protection",
     hotspot: "Hotspot",
+    // N°321 — the unified tunnel joins the rail: VPN & Pro Access, one service.
+    tunnels: "WireGuard tunnels",
     fleet: "Router fleet",
     pricing: "Pricing",
   },
@@ -780,7 +931,10 @@ const en: LandingCopy = {
       home: "Home",
       hotspot: "Hotspot",
       vpn: "VPN",
-      tunnels: "Tunnels",
+      // N°321 — family label: the nav carries ONE "WireGuard tunnels" entry
+      // (→ /tunnels); the /vpn page stays linked from /tunnels, the footer,
+      // the tunnels section and the pricing segment.
+      tunnels: "WireGuard tunnels",
       pricing: "Pricing",
     },
   },
@@ -790,17 +944,17 @@ const en: LandingCopy = {
     titleAccent: "shielded.",
     title2: "",
     subtitle:
-      "Error 403 is for the others. A revenue-ready public Hotspot, a WireGuard VPN with a dedicated fixed French IP and cloud-encrypted tunnels: 403Shield brings together a complete network security suite for nomadic workers, businesses and households — powered by FTech CI.",
+      "Error 403 is for the others. A revenue-ready public Hotspot, four cloud firewall shields, and a single WireGuard tunnel for every use — a personal VPN with a fixed French IP, Pro Access for your routers, cameras and NAS: 403Shield brings together a complete network security suite for nomadic workers, businesses and households — powered by FTech CI.",
     ctaPrimary: "Protect my network",
     ctaSecondary: "Explore the suite",
     trialHint: "Free trial · no credit card — 60 days Hotspot · 30 days HomeNet",
-    chips: ["Error 403 — for the others", "4/4 protections active", "500 vouchers per batch"],
+    chips: ["Error 403 — for the others", "4/4 protections active", "WireGuard tunnels · fixed French IP"],
   },
   marquee: [
     "Vouchers & access codes",
     "WireGuard VPN · fixed French IP",
     "Quad9 DNS filtering",
-    "Encrypted cloud tunnels",
+    "One tunnel, two uses",
     "WiFi anti-hacking",
     "Pro remote access — routers, cameras, NAS",
     "Internet curfew",
@@ -813,10 +967,12 @@ const en: LandingCopy = {
     "Wave & Mobile Money payments",
   ],
   powers: {
-    eyebrow: "One suite, three superpowers",
+    // N°321 — four pillars: WireGuard tunnels join the pantheon (the landing
+    // is no longer frozen on the hotspot era).
+    eyebrow: "One suite, four pillars",
     title: "Everything you need to rule your network.",
     subtitle:
-      "Hotspot management, cloud protection and fleet control: 403Shield gathers in a single interface everything your infrastructure demands — no Winbox, no server to maintain.",
+      "A profitable Hotspot, cloud protection, fleet control and WireGuard tunnels: 403Shield gathers in a single suite everything your infrastructure demands — no Winbox, no server to maintain.",
     cards: [
       {
         tag: "Foundation",
@@ -849,6 +1005,17 @@ const en: LandingCopy = {
           "CPU, memory & uptime telemetry",
           "Aggregate QoS & ISP plan",
           "IP pool doctor & self-healing",
+        ],
+      },
+      {
+        tag: "WireGuard",
+        title: "WireGuard Tunnels",
+        desc: "One encrypted tunnel, two uses: a personal VPN with a fixed French IP and Pro Access for your routers, cameras and NAS — one console, one shop, one subscription.",
+        items: [
+          "Personal VPN · dedicated fixed French IP",
+          "Pro Access — routers, cameras, NAS",
+          "Passwordless console · email code",
+          "Hosted in Marseille · encrypted end-to-end",
         ],
       },
     ],
@@ -919,6 +1086,41 @@ const en: LandingCopy = {
       peak: "24 h",
     },
   },
+  /* N°321 — THE unified service: personal VPN and Pro Access rendered as
+     two uses of ONE WireGuard tunnel (same console, same shop). */
+  tunnels: {
+    kicker: "WireGuard tunnels",
+    title: "One encrypted tunnel, every network of yours.",
+    body: "The 403Shield VPN and Pro Access are one and the same: a single WireGuard tunnel, hosted in Marseille and encrypted end-to-end. On your phone, it shields your traffic and hands you a fixed French IP; wired to your networks, it becomes Pro Access — routers, cameras and NAS reachable privately, even behind CGNAT. One console, one shop, one subscription: everything lives in the same place.",
+    feats: [
+      {
+        title: "Personal VPN — fixed French IP",
+        desc: "Your traffic exits through Marseille with a dedicated address, yours alone. 30-second activation, configuration delivered by email.",
+      },
+      {
+        title: "Pro Access — remote routers",
+        desc: "The same tunnel laid onto your supervised MikroTik routers: administration, API and SSH from anywhere — without exposing a single interface to the Internet.",
+      },
+      {
+        title: "Extended LAN — cameras & NAS",
+        desc: "Pro Access extends the tunnel to your local network: cameras, NAS and printers stay privately reachable, wherever you are.",
+      },
+      {
+        title: "One console, one shop",
+        desc: "A 6-digit email code is enough: purchases, 1-click renewal and device wallet — VPN and Pro Access in the same place.",
+      },
+    ],
+    panel: {
+      title: "WireGuard tunnel · Marseille",
+      rows: [
+        { name: "Personal VPN", detail: "Dedicated fixed French IP", state: "Active" },
+        { name: "Pro Access · Routers", detail: "Remote supervision", state: "Active" },
+        { name: "Extended LAN · Cameras & NAS", detail: "Private extension", state: "Encrypted" },
+      ],
+      console: "Open the console",
+      shop: "Visit the shop",
+    },
+  },
   fleet: {
     kicker: "Fleet & routers",
     title: "Your MikroTik fleet, without leaving the console.",
@@ -952,12 +1154,14 @@ const en: LandingCopy = {
     { value: 500, label: "vouchers per batch" },
     { value: 4, label: "firewall shields" },
     { value: 54, label: "African countries" },
-    { value: 2, label: "modes — Hotspot & HomeNet" },
+    // N°321 — the 4th figure carries the unified tunnel message.
+    { value: 2, label: "uses of the tunnel — VPN & Pro Access" },
   ],
   pricing: {
     eyebrow: "Pricing",
-    title: "Two modes, one cloud.",
-    subtitle: "Run a public network or shield your home: 403Shield adapts. The trial is free in both cases, no commitment.",
+    title: "Three worlds, one cloud.",
+    subtitle:
+      "Run a public network, shield your home or plug in your tunnels: 403Shield adapts. The console trial is free; tunnel subscriptions are ordered on the dedicated shop.",
     modesLabel: "Choose your mode",
     segments: [
       {
@@ -1063,9 +1267,66 @@ const en: LandingCopy = {
           },
         ],
       },
+      /* N°321 — 3rd segment: WireGuard tunnels. Catalogue prices = real
+         backend product constants (publicvpnorder.go: b2c 1500/15000,
+         pro 3500/35000 FCFA). CTAs point to the shop/console — the tunnel
+         is bought there, not through the SaaS signup modal. */
+      {
+        id: "tunnels",
+        label: "Tunnels",
+        hint: "One WireGuard tunnel, two uses: a personal VPN with a fixed French IP and Pro Access for your routers, cameras and NAS. Ordered on the dedicated shop, payable with Wave or card.",
+        plans: [
+          {
+            name: "VPN Monthly",
+            price: "1,500",
+            period: "FCFA / month",
+            tagline: "No commitment, month by month",
+            cta: "Buy on the shop",
+            highlight: false,
+            href: "https://console.403shield.ftci.fr/shop",
+            features: [
+              "Dedicated fixed French IP",
+              "WireGuard — 30 s activation",
+              "Wave or card payment",
+              "Configuration delivered by email",
+            ],
+          },
+          {
+            name: "VPN Yearly",
+            price: "15,000",
+            period: "FCFA / year",
+            tagline: "12 months for the price of 10",
+            badge: "2 months free",
+            highlight: true,
+            href: "https://console.403shield.ftci.fr/shop",
+            cta: "Buy on the shop",
+            features: [
+              "Dedicated fixed French IP",
+              "WireGuard — 30 s activation",
+              "1-click renewal",
+              "Passwordless console",
+            ],
+          },
+          {
+            name: "Pro Access",
+            price: "3,500",
+            period: "FCFA / month · 35,000 / year",
+            tagline: "Your routers, cameras and NAS in the tunnel",
+            cta: "Subscribe to Pro Access",
+            highlight: false,
+            href: "https://console.403shield.ftci.fr/pro",
+            features: [
+              "Remote supervision of MikroTik routers",
+              "Extended LAN — cameras & NAS",
+              "Same WireGuard tunnel, same console",
+              "Behind CGNAT, no open port",
+            ],
+          },
+        ],
+      },
     ],
     currencyNote:
-      "Payment fees passed through the list price: card +6%, Wave −3% (mobile money discount). Free trial: 60 days in Hotspot mode, 30 days in HomeNet mode.",
+      "Payment fees passed through the list price: card +6%, Wave −3% (mobile money discount). Free trial: 60 days in Hotspot mode, 30 days in HomeNet mode. WireGuard tunnels (VPN & Pro Access): shop catalogue prices, mobile money discount included.",
   },
   chat: {
     fabLabel: "Chat with the assistant",
@@ -1096,20 +1357,22 @@ const en: LandingCopy = {
     kicker: "Ready to level up?",
     title: "Shield your network in under 5 minutes.",
     subtitle:
-      "Create your account, paste the agent script on your router, switch on your protections. No credit card, no server to maintain.",
+      "Create your account, paste the agent script on your router, switch on your protections. Need a VPN? The shop delivers a WireGuard configuration within 30 seconds. No credit card, no server to maintain.",
     primary: "Create my free account",
     secondary: "Sign in",
   },
   footer: {
     tagline:
-      "The cloud network-security suite: Hotspot, WireGuard VPN and encrypted tunnels — powered by FTech CI.",
+      "The cloud network-security suite: Hotspot, protection and WireGuard tunnels — VPN & Pro Access — powered by FTech CI.",
     columns: [
       {
         title: "Product",
         links: [
           { label: "Hotspot", href: "/hotspot" },
-          { label: "VPN", href: "/vpn" },
-          { label: "Tunnels", href: "/tunnels" },
+          // N°321 — the tunnels family is explicit in the labels: the VPN and
+          // Pro Access are the two uses of the SAME WireGuard tunnel.
+          { label: "VPN — WireGuard tunnels", href: "/vpn" },
+          { label: "Pro Access — WireGuard tunnels", href: "/tunnels" },
           { label: "Cloud protection", href: "/#protection" },
           { label: "Pricing", href: "/#tarifs" },
         ],
@@ -1130,11 +1393,13 @@ const en: LandingCopy = {
       },
       {
         // N°317 — ecosystem: FTech CI parent company, console and VPN shop.
+        // N°321 — canonical URLs console.403shield.ftci.fr (tunnel.ftci.fr
+        // answers 301 since N°320 — we skip the extra hop).
         title: "Ecosystem",
         links: [
           { label: "FTech CI", href: "https://ftci.fr", external: true },
-          { label: "403Shield Console", href: "https://tunnel.ftci.fr", external: true },
-          { label: "VPN shop", href: "https://tunnel.ftci.fr/shop", external: true },
+          { label: "403Shield Console", href: "https://console.403shield.ftci.fr", external: true },
+          { label: "VPN shop", href: "https://console.403shield.ftci.fr/shop", external: true },
         ],
       },
     ],
@@ -1200,14 +1465,15 @@ const en: LandingCopy = {
           "A WireGuard VPN exiting through our Marseille server with a dedicated fixed French IP. 30-second activation, Wave or card payment, managed from your passwordless account.",
       },
       hero: {
-        badge: "403Shield VPN",
+        // N°321 — family badge: the VPN is one use of the 403Shield WireGuard tunnel.
+        badge: "WireGuard tunnels · VPN",
         title1: "A fixed French IP.",
         titleAccent: "Yours alone.",
         title2: "",
         subtitle:
-          "Your traffic, end-to-end encrypted by WireGuard, exits through our Marseille server with a dedicated IP address. 30-second activation — without touching a single config file.",
+          "Your traffic, end-to-end encrypted by WireGuard, exits through our Marseille server with a dedicated IP address. 30-second activation — without touching a single config file. And to reach your routers, cameras or NAS: Pro Access extends that very same tunnel.",
         ctaPrimary: "Buy my VPN",
-        ctaPrimaryHref: "https://tunnel.ftci.fr/shop",
+        ctaPrimaryHref: "https://console.403shield.ftci.fr/shop",
         ctaSecondary: "Explore tunnels",
         ctaSecondaryHref: "/tunnels",
       },
@@ -1234,34 +1500,38 @@ const en: LandingCopy = {
         ],
       },
       note: {
-        title: "Two plans, one product",
-        body: "Monthly with no commitment, or yearly — pay 10 months, get 2 offered. Prices in FCFA on the shop, mobile-money discount included: that's where the order happens.",
+        // N°321 — the note carries the unified message: one tunnel, two uses.
+        title: "One tunnel, two uses.",
+        body: "Monthly with no commitment, or yearly — pay 10 months, get 2 offered. Prices in FCFA on the shop, mobile-money discount included. And when your networks need the same path: Pro Access extends this very WireGuard tunnel to your routers, cameras and NAS — same console, same shop.",
       },
       cta: {
         kicker: "Ready to encrypt your traffic?",
         title: "Your configuration is emailed within 30 seconds.",
         body: "Pick your plan on the shop, pay with Wave or card: the full WireGuard configuration arrives by email, ready to import.",
         primary: "Buy my VPN",
-        primaryHref: "https://tunnel.ftci.fr/shop",
+        primaryHref: "https://console.403shield.ftci.fr/shop",
         secondary: "I already have a VPN — my account",
-        secondaryHref: "https://tunnel.ftci.fr",
+        secondaryHref: "https://console.403shield.ftci.fr",
       },
     },
     tunnels: {
       meta: {
-        title: "403Shield Tunnels — encrypted remote access: routers, cameras, NAS",
+        // N°321 — family hub: the meta covers BOTH uses of the tunnel.
+        title: "403Shield WireGuard Tunnels — fixed-IP VPN & Pro Access: routers, cameras, NAS",
         description:
-          "Supervise your MikroTik routers, cameras and NAS through an encrypted WireGuard tunnel, from anywhere. Passwordless console, payable with Mobile Money.",
+          "One encrypted WireGuard tunnel hosted in Marseille: a personal VPN with a fixed French IP and Pro Access to supervise MikroTik routers, cameras and NAS. Passwordless console, payable with Mobile Money.",
       },
       hero: {
-        badge: "403Shield Tunnels",
-        title1: "Your remote networks,",
-        titleAccent: "within",
-        title2: "reach.",
+        badge: "WireGuard tunnels",
+        title1: "One single tunnel.",
+        titleAccent: "Two uses.",
+        title2: "",
         subtitle:
-          "Supervise your MikroTik routers — then your cameras and NAS — through the same encrypted WireGuard tunnel, wherever you are. Purchase, management and renewal in one place.",
-        ctaPrimary: "Open the console",
-        ctaPrimaryHref: "https://tunnel.ftci.fr",
+          "A personal VPN with a fixed French IP, Pro Access for your routers, an extended LAN for cameras and NAS: the same end-to-end encrypted WireGuard tunnel, hosted in Marseille — one console, one shop, one subscription. Purchase, management and renewal in one place.",
+        ctaPrimary: "Buy my VPN",
+        ctaPrimaryHref: "https://console.403shield.ftci.fr/shop",
+        // Internal cross-link: the VPN page (personal use) stays one click
+        // from the family hub — the console lives in the final CTA below.
         ctaSecondary: "Explore the VPN",
         ctaSecondaryHref: "/vpn",
       },
@@ -1270,8 +1540,9 @@ const en: LandingCopy = {
         title: "The private bridge between you and your networks.",
         cards: [
           {
-            title: "Travel VPN",
-            desc: "A WireGuard VPN with a fixed French IP for your trips: end-to-end encrypted traffic, exiting from Marseille.",
+            // N°321 — pivot card: the VPN presented as the SAME tunnel.
+            title: "Personal VPN — the same tunnel",
+            desc: "Your end-to-end encrypted traffic exits through Marseille with a dedicated fixed French IP. It is the same WireGuard, the same console — whether you shield your travels or supervise a fleet.",
           },
           {
             title: "Pro Access — routers",
@@ -1282,8 +1553,8 @@ const en: LandingCopy = {
             desc: "Pro Access extends the tunnel to your LAN: cameras, NAS and other equipment stay privately reachable, never exposed.",
           },
           {
-            title: "Passwordless console",
-            desc: "A 6-digit email code is enough: client area, device wallet, 1-click renewal, configuration reveal.",
+            title: "One console, one shop",
+            desc: "A 6-digit email code is enough: client area, device wallet, 1-click renewal — the VPN and Pro Access live in the same place.",
           },
         ],
       },
@@ -1292,9 +1563,9 @@ const en: LandingCopy = {
         title: "Open your tunnel in under 5 minutes.",
         body: "Email code, Wave/card shop, configuration delivered by email: the tunnel installs itself without touching a config file.",
         primary: "Open the console",
-        primaryHref: "https://tunnel.ftci.fr",
+        primaryHref: "https://console.403shield.ftci.fr",
         secondary: "Browse the VPN shop",
-        secondaryHref: "https://tunnel.ftci.fr/shop",
+        secondaryHref: "https://console.403shield.ftci.fr/shop",
       },
     },
   },

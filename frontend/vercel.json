@@ -6,7 +6,7 @@
     {
       "source": "/vpn",
       "has": [{ "type": "query", "key": "order" }],
-      "destination": "https://tunnel.ftci.fr/shop",
+      "destination": "https://console.403shield.ftci.fr/shop",
       "permanent": true
     }
   ]

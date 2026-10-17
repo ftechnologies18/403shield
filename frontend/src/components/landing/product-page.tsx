@@ -33,7 +33,6 @@ import {
   Lock,
   Palette,
   Router,
-  Send,
   ShieldCheck,
   Store,
   Ticket,
@@ -49,11 +48,12 @@ import "./landing-clay.css";
 
 export type ProductPageKey = "hotspot" | "vpn" | "tunnels";
 
-/* ─── Icônes des cartes « ce que fait le produit » (par page) ─── */
+/* ─── Icônes des cartes « ce que fait le produit » (par page) — N°321 :
+    la page /tunnels ouvre sur le VPN (Globe) : même tunnel, autre usage. ─── */
 const PAGE_ICONS: Record<ProductPageKey, ComponentType<LucideProps>[]> = {
   hotspot: [Palette, Ticket, Store, BarChart3],
   vpn: [Globe, Lock, CircleDollarSign, KeyRound],
-  tunnels: [Send, Router, Cctv, KeyRound],
+  tunnels: [Globe, Router, Cctv, KeyRound],
 };
 
 /* ─── Résolution des CTA (hero + CTA final) ───
@@ -128,14 +128,20 @@ export default function ProductPage({ page, onSignIn, onSignUp }: ProductPagePro
   const toggleLang = () => setLang(lang === "fr" ? "en" : "fr");
 
   /* Menu complet du site unifié : Accueil EN PREMIER, puis les pages
-     produit — lien actif souligné (classe mkl-active, cf. landing-clay.css). */
+     produit — lien actif souligné (classe mkl-active, cf. landing-clay.css).
+     N°321 — UNE entrée « Tunnels WireGuard » (famille VPN + Accès Pro) :
+     elle porte le lien actif sur /tunnels COMME sur /vpn (les deux pages
+     sont les deux usages du même tunnel — plus d'entrées jumelles). */
   const navItems: { href: string; label: string; active: boolean }[] = [
     { href: "/", label: copy.header.nav.home, active: pathname === "/" },
     { href: "/hotspot", label: copy.header.nav.hotspot, active: pathname === "/hotspot" },
-    { href: "/vpn", label: copy.header.nav.vpn, active: pathname === "/vpn" },
-    { href: "/tunnels", label: copy.header.nav.tunnels, active: pathname === "/tunnels" },
+    {
+      href: "/tunnels",
+      label: copy.header.nav.tunnels,
+      active: pathname === "/tunnels" || pathname === "/vpn",
+    },
   ];
-  const navAriaLabel = `${copy.header.brand} — ${copy.header.nav.home} · ${copy.header.nav.hotspot} · ${copy.header.nav.vpn} · ${copy.header.nav.tunnels}`;
+  const navAriaLabel = `${copy.header.brand} — ${copy.header.nav.home} · ${copy.header.nav.hotspot} · ${copy.header.nav.tunnels}`;
   const navClass = (active: boolean) =>
     active ? "mkl-link-quiet mkl-active" : "mkl-link-quiet";
 

@@ -29,6 +29,7 @@ import {
   Cloud,
   Globe,
   Home,
+  KeyRound,
   Lock,
   MoonStar,
   Palette,
@@ -39,6 +40,8 @@ import {
   Ticket,
   Wifi,
   Zap,
+  Cctv,
+  Waypoints,
   type LucideProps,
 } from "lucide-react";
 
@@ -52,20 +55,31 @@ import "./landing-clay.css";
 
 /* ─── Polices display & texte : instances partagées ./landing-fonts.ts (N°317) ─── */
 
-/* ─── Icônes des sections du rail (name → lucide) ─── */
+/* ─── Icônes des sections du rail (name → lucide) — N°321 : « tunnels »
+    rejoint la famille (Waypoints : le tunnel et ses deux branches). ─── */
 const RAIL_ICONS: Record<string, ComponentType<LucideProps>> = {
   home: Home,
   powers: Sparkles,
   protection: ShieldCheck,
   hotspot: Wifi,
+  tunnels: Waypoints,
   fleet: Router,
   pricing: CircleDollarSign,
 };
-const POWER_ICONS = [Ticket, ShieldCheck, Router];
+/* N°321 — 4e pilier : la carte « Tunnels WireGuard » des super-pouvoirs. */
+const POWER_ICONS = [Ticket, ShieldCheck, Router, Waypoints];
 const PROTECTION_FEAT_ICONS = [Globe, Lock, MoonStar, Ban];
 const HOTSPOT_FEAT_ICONS = [Palette, Ticket, BarChart3];
+/* N°321 — section tunnels : VPN personnel, Accès Pro, LAN étendu, console. */
+const TUNNELS_FEAT_ICONS = [Globe, Router, Cctv, KeyRound];
 const FLEET_FEAT_ICONS = [RefreshCw, Activity, Bell];
 const CHIP_ICONS = [ShieldCheck, Ticket, Zap];
+
+/* N°321 — URLs canoniques de l'écosystème tunnels (console N°320 : le
+    domaine console.403shield.ftci.fr est vivant et vérifié ; tunnel.ftci.fr
+    répond 301 — on pointe direct, sans le saut supplémentaire). */
+const TUNNELS_CONSOLE_URL = "https://console.403shield.ftci.fr";
+const TUNNELS_SHOP_URL = "https://console.403shield.ftci.fr/shop";
 
 /* ─── Reveal on scroll — module partagé ./reveal.tsx (N°317) ─── */
 
@@ -265,12 +279,14 @@ export default function LandingPage({ onSignIn, onSignUp }: LandingPageProps) {
   const copy = landingCopy[lang];
   const reduce = useReducedMotion();
 
-  /* Section active dans le rail (IntersectionObserver) */
+  /* Section active dans le rail (IntersectionObserver) — N°321 : la section
+     « tunnels » s'intercale entre hotspot et parc. */
   const [active, setActive] = useState("top");
-  /* N°122 — mode de tarifs affiché : Hotspot (défaut) ou HomeNet */
-  const [priceMode, setPriceMode] = useState<"hotspot" | "homenet">("hotspot");
+  /* N°122 — mode de tarifs affiché : Hotspot (défaut), HomeNet ou Tunnels
+     (N°321 — segment boutique, CTA liens externes). */
+  const [priceMode, setPriceMode] = useState<"hotspot" | "homenet" | "tunnels">("hotspot");
   useEffect(() => {
-    const sections = ["top", "pouvoirs", "protection", "hotspot", "parc", "tarifs"];
+    const sections = ["top", "pouvoirs", "protection", "hotspot", "tunnels", "parc", "tarifs"];
     const io = new IntersectionObserver(
       (entries) => {
         for (const e of entries) {
@@ -296,8 +312,10 @@ export default function LandingPage({ onSignIn, onSignUp }: LandingPageProps) {
 
   const toggleLang = () => setLang(lang === "fr" ? "en" : "fr");
 
-  const railKeys = ["home", "powers", "protection", "hotspot", "fleet", "pricing"] as const;
-  const railIds = ["top", "pouvoirs", "protection", "hotspot", "parc", "tarifs"];
+  /* N°321 — le rail porte la famille complète : le tunnel unifié entre
+     Hotspot et Parc (libellé « Tunnels WireGuard », cf. landing-copy.ts). */
+  const railKeys = ["home", "powers", "protection", "hotspot", "tunnels", "fleet", "pricing"] as const;
+  const railIds = ["top", "pouvoirs", "protection", "hotspot", "tunnels", "parc", "tarifs"];
 
   /* N°124 — segment de tarifs actif : hint, clientèle cible et formules. */
   const activeSegment =
@@ -387,20 +405,20 @@ export default function LandingPage({ onSignIn, onSignUp }: LandingPageProps) {
               {copy.header.brand}
             </a>
             <div className="flex items-center gap-2">
-              {/* N°317 — menu complet du site unifié (voie Cloudflare/OVH) :
-                  les pages produit vivent sur ce domaine, plus de lien externe.
+              {/* N°321 — menu du site unifié : UNE entrée « Tunnels WireGuard »
+                  (→ /tunnels, hub de la famille VPN + Accès Pro) au lieu de
+                  deux entrées jumelles qui semblaient dire des services
+                  distincts. La page /vpn reste liée depuis /tunnels, le footer,
+                  la section #tunnels et le segment tarifs.
                   Caché sous sm (et sous 860 px par la règle .mkl-topbar
                   .mkl-link-quiet de landing-clay.css) : sur mobile, la nav
                   passe par le footer et les liens de contenu. */}
               <nav
                 className="hidden items-center gap-2 sm:flex"
-                aria-label={`${copy.header.brand} — ${copy.header.nav.hotspot} · ${copy.header.nav.vpn} · ${copy.header.nav.tunnels}`}
+                aria-label={`${copy.header.brand} — ${copy.header.nav.hotspot} · ${copy.header.nav.tunnels}`}
               >
                 <Link href="/hotspot" className="mkl-link-quiet">
                   {copy.header.nav.hotspot}
-                </Link>
-                <Link href="/vpn" className="mkl-link-quiet">
-                  {copy.header.nav.vpn}
                 </Link>
                 <Link href="/tunnels" className="mkl-link-quiet">
                   {copy.header.nav.tunnels}
@@ -491,8 +509,10 @@ export default function LandingPage({ onSignIn, onSignUp }: LandingPageProps) {
               {copy.powers.cards.map((card, i) => {
                 const Icon = POWER_ICONS[i] ?? Ticket;
                 return (
+                  /* N°321 — 4 cartes : les variantes clay cyclent (p1→p3),
+                     comme sur les pages produit (mêmes cartes mkl-power). */
                   <Reveal key={card.title} delay={i * 0.08} className="h-full">
-                    <article className={`mkl-power mkl-p${i + 1} h-full`}>
+                    <article className={`mkl-power mkl-p${(i % 3) + 1} h-full`}>
                       <span className="mkl-tag">{card.tag}</span>
                       <div className="mkl-icon" aria-hidden="true">
                         <Icon className="size-7" />
@@ -599,6 +619,80 @@ export default function LandingPage({ onSignIn, onSignUp }: LandingPageProps) {
                     </div>
                   );
                 })}
+              </div>
+            </Reveal>
+          </div>
+        </section>
+
+        {/* ═══ TUNNELS WIREGUARD (N°321 — LE service unifié : le VPN et
+            l'Accès Pro rendus comme deux usages d'un MÊME tunnel) ═══ */}
+        <section id="tunnels">
+          <div className="mkl-wrap mkl-split">
+            <Reveal>
+              <span className="mkl-kicker">{copy.tunnels.kicker}</span>
+              <h2>{copy.tunnels.title}</h2>
+              <p className="mkl-body">{copy.tunnels.body}</p>
+              <div className="mkl-feat-list">
+                {copy.tunnels.feats.map((feat, i) => {
+                  const Icon = TUNNELS_FEAT_ICONS[i] ?? Globe;
+                  return (
+                    <div key={feat.title} className="mkl-feat">
+                      <div className="mkl-fi" aria-hidden="true">
+                        <Icon className="size-5" />
+                      </div>
+                      <div>
+                        <h4>{feat.title}</h4>
+                        <p>{feat.desc}</p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </Reveal>
+            <Reveal delay={0.1} className="mkl-split-visual">
+              {/* Maquette illustrative du portefeuille tunnel (produit réel
+                  N°315/N°320 : mêmes rangées clay que le parc, vrais liens). */}
+              <div className="mkl-panel">
+                <div className="mkl-panel-top" aria-hidden="true">
+                  <i /><i /><i />
+                </div>
+                <p className="font-bold" style={{ marginBottom: 16 }}>
+                  {copy.tunnels.panel.title}
+                </p>
+                <div className="flex flex-col gap-2.5">
+                  {copy.tunnels.panel.rows.map((row) => (
+                    <div key={row.name} className="mkl-fleet-row">
+                      <b>{row.name}</b>
+                      <span className="mkl-ver">{row.detail}</span>
+                      <span
+                        className="mkl-ver"
+                        style={{ color: "var(--mkl-teal-dark)", fontWeight: 800, whiteSpace: "nowrap" }}
+                      >
+                        {row.state}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+                {/* Vrais liens (contrairement au parc décoratif) : la console
+                    et la boutique sont les chemins de conversion du tunnel. */}
+                <div className="mkl-fleet-actions">
+                  <a
+                    className="mkl-btn mkl-btn-teal"
+                    href={TUNNELS_CONSOLE_URL}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    {copy.tunnels.panel.console}
+                  </a>
+                  <a
+                    className="mkl-btn mkl-btn-cream"
+                    href={TUNNELS_SHOP_URL}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    {copy.tunnels.panel.shop}
+                  </a>
+                </div>
               </div>
             </Reveal>
           </div>
@@ -750,13 +844,29 @@ export default function LandingPage({ onSignIn, onSignUp }: LandingPageProps) {
                         <li key={f}>{f}</li>
                       ))}
                     </ul>
-                    <button
-                      className={`mkl-btn ${plan.highlight ? "mkl-btn-cream" : "mkl-btn-teal"}`}
-                      style={{ justifyContent: "center" }}
-                      onClick={onSignUp}
-                    >
-                      {plan.cta}
-                    </button>
+                    {/* N°321 — plans à href externe (segment Tunnels) : le CTA
+                        devient un lien vers la boutique/console au lieu
+                        d'ouvrir la modale d'inscription SaaS. */}
+                    {plan.href ? (
+                      <a
+                        className={`mkl-btn ${plan.highlight ? "mkl-btn-cream" : "mkl-btn-teal"}`}
+                        style={{ justifyContent: "center" }}
+                        href={plan.href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        {plan.cta}
+                        <span className="sr-only"> — nouvel onglet</span>
+                      </a>
+                    ) : (
+                      <button
+                        className={`mkl-btn ${plan.highlight ? "mkl-btn-cream" : "mkl-btn-teal"}`}
+                        style={{ justifyContent: "center" }}
+                        onClick={onSignUp}
+                      >
+                        {plan.cta}
+                      </button>
+                    )}
                   </article>
                 </Reveal>
               ))}

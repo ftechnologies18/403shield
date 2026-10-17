@@ -621,9 +621,12 @@
 }
 
 /* ============ CARTES SUPER-POUVOIRS ============ */
+/* N°321 — quatre piliers (Hotspot · Protection · Parc · Tunnels WireGuard) :
+   la grille passe de 3 colonnes à 2×2 (même langage que les cartes des pages
+   produit) ; les variantes clay p1→p3 cyclent sur la 4e carte. */
 .mkl-powers {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(2, 1fr);
   gap: 26px;
 }
 .mkl-power {
@@ -1911,9 +1914,9 @@
   .mkl-foot-grid {
     grid-template-columns: 1fr 1fr;
   }
-  .mkl-power.mkl-p1 {
-    grid-column: span 2;
-  }
+  /* N°321 — plus de règle .mkl-power.mkl-p1 { span 2 } : elle servait à
+     équilibrer 3 cartes sur 2 colonnes ; avec 4 cartes en 2×2 elle
+     déséquilibrerait la grille (1 pleine largeur + 2 + 1). */
 }
 @media (max-width: 860px) {
   .mkl-hero-grid,
@@ -1929,9 +1932,6 @@
   .mkl-powers,
   .mkl-pricing {
     grid-template-columns: 1fr;
-  }
-  .mkl-power.mkl-p1 {
-    grid-column: auto;
   }
   .mkl-topbar .mkl-link-quiet {
     display: none;
