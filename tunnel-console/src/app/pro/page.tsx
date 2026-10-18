@@ -1,16 +1,38 @@
 "use client";
 
-// pro/page.tsx — N°315 — offre ACCÈS PRO + LAN ÉTENDU (caméras/NAS) de la
-// console (design D-B1, décision D-T4 : le LAN étendu est livré comme offre
-// « Pro » de CETTE console — fut la « console MikTunnel » N°313-316, rebrandée
-// « 403Shield Console » en N°317).
+// pro/page.tsx — N°337 — REFONTE DE L'ACCÈS PRO AU STYLE CONSOLE /app/vpn
+// (miroir de la refonte /me N°334-B — consigne propriétaire « la refonte
+// de /pro »). L'offre ACCÈS PRO + LAN ÉTENDU (caméras/NAS) de la console
+// garde son contrat N°315 intégral — seul l'habillage change :
 //
-// Contrat backend (handlers_tunnel_pro.go, N°315) :
+//   - THÈME CLAIR « console » (fond neutre #F5F6F8, cartes blanches,
+//     accents émeraude, wordmark aurora) — /pro peint son propre monde
+//     (doctrine N°326), le html bascule en clair pendant la visite ;
+//   - KPI STAT CARDS (miroir /me + /app/vpn) : routeurs supervisés (dont
+//     en ligne) · LAN étendus · accès Pro actifs · prochaine échéance —
+//     données RÉELLES du contrat /api/tunnel/pro uniquement (doctrine :
+//     aucun faux chiffre) ;
+//   - LA MÊME RÉPARATION UX QUE N°334-B : la modale « Voir la
+//     configuration » livrait la conf en TEXTE SEUL — elle livre
+//     désormais un QR SCANNABLE (qrcode.react, même lib/même version que
+//     la console opérateur et que /me, marge de silence incluse) + copie
+//     + TÉLÉCHARGEMENT .conf (RouterOS 7 : « import ») + instructions
+//     adaptées à l'usage Pro (routeur/NAS — le QR se scanne depuis
+//     l'app WireGuard d'un téléphone de secours) ;
+//   - modale bottom-sheet mobile + Escape + focus au titre (même confort
+//     que /me et la console opérateur) ;
+//   - le poll de détection LAN (≤ 45 s), l'APPLICATION explicite (set-lan
+//     VM + règles routeur), le portefeuille, la commande Wave/carte
+//     GeniusPay (canal manuel en repli) et le bandeau de retour de
+//     paiement sont conservés à l'identique.
+//
+// Contrat backend (handlers_tunnel_pro.go, N°315 — INCHANGÉ) :
 //   GET  /api/tunnel/pro                    → éligibilité + routeurs + LAN + portefeuille
 //   POST /api/tunnel/pro/detect             → enfile la détection (lecture pure)
 //   GET  /api/tunnel/pro/lan/{routerId}     → poll de la détection (≤ 45 s)
 //   POST /api/tunnel/pro/lan/{routerId}     → APPLICATION (set-lan VM + règles routeur)
 //   POST /api/tunnel/pro/order              → commande Pro (Wave/carte/manual)
+//   POST /api/tunnel/orders/{ref}/reveal    → {ref, conf, ipv4, plan, expiresAt…}
 //
 // Honnêteté produit : l'Accès Pro relie VOS routeurs supervisés par la
 // plateforme 403Shield (compte gérant apparié par e-mail) — sans compte, la
@@ -19,15 +41,19 @@
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { QRCodeSVG } from "qrcode.react";
 import {
+  CalendarClock,
   Camera,
   Check,
   Copy,
   CreditCard,
+  Download,
   Lightbulb,
   Loader2,
   LogOut,
   Network,
+  QrCode,
   RefreshCw,
   Router as RouterIcon,
   ShieldCheck,
@@ -43,6 +69,7 @@ import {
   tunnelProOrder,
   tunnelProStatus,
   tunnelReveal,
+  type ProOrderRef,
   type ProRouter,
   type ProStatusResponse,
   type RevealResponse,
@@ -72,6 +99,46 @@ function formatFcfa(n: number): string {
   return n.toLocaleString("fr-FR") + " FCFA";
 }
 
+// N°337 — statut LAN d'un routeur, palette CLAIRE (miroir des badges de la
+// vue /app/vpn — plus de texte-slate-300 du thème sombre).
+function lanLine(r: ProRouter, pollingId: string): { label: string; tone: string } {
+  if (r.lanApplied) {
+    return {
+      label: "LAN étendu : " + (r.wgLan ?? ""),
+      tone: "border-emerald-600/40 bg-emerald-500/10 text-emerald-700",
+    };
+  }
+  const d = r.lanDetect;
+  if (d?.state === "done" && d.valid) {
+    return {
+      label: "Réseau détecté : " + (d.lan ?? "") + " — prêt à étendre",
+      tone: "border-sky-500/40 bg-sky-500/10 text-sky-700",
+    };
+  }
+  if (d?.state === "done" && !d.valid) {
+    return {
+      label: "Réseau détecté hors périmètre (" + (d.lan ?? "?") + ") — renumérotez le LAN (ex. 10.10.x)",
+      tone: "border-amber-500/40 bg-amber-500/10 text-amber-700",
+    };
+  }
+  if (d?.state === "queued" || d?.state === "sent" || pollingId === r.id) {
+    return {
+      label: "Détection en cours (≤ 45 s)…",
+      tone: "border-slate-300 bg-slate-400/10 text-slate-500",
+    };
+  }
+  if (d?.state === "error") {
+    return {
+      label: "Détection impossible sur ce routeur",
+      tone: "border-red-500/40 bg-red-500/10 text-red-700",
+    };
+  }
+  return {
+    label: "Réseau local non détecté",
+    tone: "border-slate-300 bg-slate-400/10 text-slate-500",
+  };
+}
+
 export default function ProPage() {
   const router = useRouter();
   const [status, setStatus] = useState<ProStatusResponse | null>(null);
@@ -93,12 +160,14 @@ export default function ProPage() {
   const [buyError, setBuyError] = useState("");
 
   // Reveal de la conf d'un appareil Pro.
-  const [revealRef, setRevealRef] = useState("");
+  const [revealFor, setRevealFor] = useState<ProOrderRef | null>(null);
   const [reveal, setReveal] = useState<RevealResponse | null>(null);
   const [revealLoading, setRevealLoading] = useState(false);
   const [revealError, setRevealError] = useState("");
   const [copied, setCopied] = useState(false);
+  const [downloaded, setDownloaded] = useState(false);
   const confRef = useRef<HTMLDivElement | null>(null);
+  const revealHeadRef = useRef<HTMLHeadingElement | null>(null);
 
   const load = useCallback(async () => {
     const token = getToken();
@@ -135,6 +204,24 @@ export default function ProPage() {
       if (pollTimer.current) clearInterval(pollTimer.current);
     };
   }, [load]);
+
+  // N°337 — Escape ferme la modale reveal (clavier, même confort que /me
+  // N°334-B et la console opérateur) ; le focus part sur le titre.
+  useEffect(() => {
+    if (!revealFor) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setRevealFor(null);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [revealFor]);
+
+  useEffect(() => {
+    if (revealFor) {
+      // Le rendu suivant existe : donner le focus au titre (lecteur d'écran).
+      requestAnimationFrame(() => revealHeadRef.current?.focus());
+    }
+  }, [revealFor]);
 
   function logout() {
     clearToken();
@@ -193,7 +280,6 @@ export default function ProPage() {
     try {
       const out = await tunnelProLanApply(r.id, token);
       if (out.queued) {
-        startPolling(r.id);
         setNotice("Détection LAN enfilée — convergence de l'agent en cours (≤ 45 s), la page se rafraîchira.");
       } else if (out.needPro) {
         setNotice(
@@ -249,19 +335,20 @@ export default function ProPage() {
     }
   }
 
-  async function openReveal(ref: string) {
+  async function openReveal(o: ProOrderRef) {
     const token = getToken();
     if (!token) {
       router.replace("/login");
       return;
     }
-    setRevealRef(ref);
+    setRevealFor(o);
     setReveal(null);
     setRevealError("");
     setCopied(false);
+    setDownloaded(false);
     setRevealLoading(true);
     try {
-      setReveal(await tunnelReveal(ref, token));
+      setReveal(await tunnelReveal(o.ref, token));
     } catch (err) {
       setRevealError(err instanceof Error ? err.message : "Configuration indisponible — réessayez");
     } finally {
@@ -276,6 +363,7 @@ export default function ProPage() {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
+      // Repli : sélection manuelle du bloc affiché.
       const range = document.createRange();
       if (confRef.current) {
         range.selectNodeContents(confRef.current);
@@ -286,48 +374,66 @@ export default function ProPage() {
     }
   }
 
-  function lanLine(r: ProRouter): { label: string; tone: string } {
-    if (r.lanApplied) {
-      return { label: "LAN étendu : " + (r.wgLan ?? ""), tone: "border-emerald-500/30 bg-emerald-500/10 text-emerald-300" };
-    }
-    const d = r.lanDetect;
-    if (d?.state === "done" && d.valid) {
-      return { label: "Réseau détecté : " + (d.lan ?? "") + " — prêt à étendre", tone: "border-sky-500/30 bg-sky-500/10 text-sky-300" };
-    }
-    if (d?.state === "done" && !d.valid) {
-      return { label: "Réseau détecté hors périmètre (" + (d.lan ?? "?") + ") — renumérotez le LAN (ex. 10.10.x)", tone: "border-amber-500/30 bg-amber-500/10 text-amber-300" };
-    }
-    if (d?.state === "queued" || d?.state === "sent" || polling === r.id) {
-      return { label: "Détection en cours (≤ 45 s)…", tone: "border-slate-600/40 bg-slate-700/20 text-slate-400" };
-    }
-    if (d?.state === "error") {
-      return { label: "Détection impossible sur ce routeur", tone: "border-red-500/30 bg-red-500/10 text-red-300" };
-    }
-    return { label: "Réseau local non détecté", tone: "border-slate-600/40 bg-slate-700/20 text-slate-400" };
+  // N°337 — téléchargement .conf : la voie d'import officielle de RouterOS 7
+  // (l'import de tunnel WireGuard se fait par fichier — un routeur n'a pas
+  // de caméra ; le QR reste pour le téléphone de secours, miroir N°334-B).
+  function downloadConf() {
+    if (!reveal?.conf) return;
+    const name = `403shield-pro-${reveal.ref || revealFor?.ref || "acces"}.conf`;
+    const blob = new Blob([reveal.conf], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = name;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 4000);
+    setDownloaded(true);
+    setTimeout(() => setDownloaded(false), 2000);
   }
 
+  // — KPI dérivés du SEUL contrat /api/tunnel/pro (doctrine : aucun faux
+  // chiffre — rien n'est inventé, tout se relit sur le statut) —
+  const routersTotal = status?.routers.length ?? 0;
+  const routersOnline = status?.routers.filter((r) => r.online).length ?? 0;
+  const lanExtended = status?.routers.filter((r) => r.lanApplied).length ?? 0;
+  const activePro =
+    status?.proOrders.filter((o) => {
+      const left = daysLeft(o.expiresAt);
+      return left !== null && left >= 0;
+    }) ?? [];
+  const nextExpiry = activePro.map((o) => o.expiresAt).sort()[0];
+
   return (
-    <div className="flex min-h-screen flex-col">
-      <header className="border-b border-slate-800/60">
-        <div className="mx-auto flex max-w-4xl items-center justify-between px-4 py-4 sm:px-6">
+    <div className="mkpro-page flex min-h-screen flex-col bg-[#f5f6f8] text-slate-800">
+      <header className="sticky top-0 z-30 border-b border-slate-200/80 bg-white/85 backdrop-blur">
+        <div className="mx-auto flex max-w-5xl items-center justify-between gap-3 px-4 py-3 sm:px-6">
           <div className="flex items-center gap-2.5">
             <Image src="/logo.png" alt="403Shield" width={32} height={32} className="h-8 w-8 rounded-lg" />
             <div className="flex flex-wrap items-center gap-2 leading-tight">
-              <p className="text-sm font-semibold tracking-tight text-slate-100">403Shield · Accès Pro</p>
-              <span className="rounded-full border border-emerald-500/40 px-1.5 py-0.5 text-[9px] font-medium text-emerald-300">Console</span>
-              <p className="text-[11px] text-slate-500">powered by FTech CI</p>
+              <p className="mkpro-aurora text-base font-bold tracking-tight">403Shield</p>
+              <span className="rounded-full border border-emerald-600/30 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">
+                Accès Pro
+              </span>
+              <p className="hidden text-[11px] text-slate-500 sm:block">powered by FTech CI</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
+            {status?.email && (
+              <p className="hidden max-w-48 truncate text-xs text-slate-500 md:block" title={status.email}>
+                {status.email}
+              </p>
+            )}
             <a
               href="/me"
-              className="rounded-lg border border-slate-700 px-3.5 py-2 text-xs font-medium text-slate-300 transition hover:border-slate-500 hover:text-slate-50"
+              className="inline-flex min-h-11 items-center rounded-xl border border-slate-300 bg-white px-3.5 text-xs font-semibold text-slate-700 transition hover:border-slate-400 hover:bg-slate-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600"
             >
               Mon espace
             </a>
             <button
               onClick={logout}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-slate-700 px-3.5 py-2 text-xs font-medium text-slate-300 transition hover:border-slate-500 hover:text-slate-50"
+              className="inline-flex min-h-11 items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-3.5 text-xs font-semibold text-slate-700 transition hover:border-slate-400 hover:bg-slate-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600"
             >
               <LogOut className="h-3.5 w-3.5" aria-hidden />
               Déconnexion
@@ -336,33 +442,42 @@ export default function ProPage() {
         </div>
       </header>
 
-      <main className="hero-glow flex-1">
-        <div className="mx-auto max-w-4xl px-4 py-10 sm:px-6">
+      <main className="flex-1">
+        <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6">
           {returnOrder && (
-            <div className="mb-6 rounded-2xl border border-sky-500/30 bg-sky-500/10 p-4 text-sm text-sky-200">
-              <p className="flex items-center gap-2 font-medium">
+            <div
+              role="status"
+              className="mb-6 rounded-2xl border border-sky-500/30 bg-sky-500/10 p-4 text-sm text-sky-800"
+            >
+              <p className="flex items-center gap-2 font-semibold">
                 <ShieldCheck className="h-4 w-4 shrink-0" aria-hidden />
                 Paiement de la commande {returnOrder}
               </p>
-              <p className="mt-1 text-sky-300/80">
+              <p className="mt-1 text-sky-700/80">
                 Si votre paiement est confirmé, votre Accès Pro apparaît ci-dessous — sinon
                 dans quelques instants. En cas de doute, rafraîchissez.
               </p>
-              <button onClick={() => void load()} className="mt-2 font-medium underline underline-offset-2">
+              <button
+                onClick={() => void load()}
+                className="mt-2 font-semibold underline underline-offset-2"
+              >
                 Rafraîchir maintenant
               </button>
             </div>
           )}
 
           {notice && (
-            <div className="mb-6 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-sm text-emerald-200">
+            <div
+              role="status"
+              className="mb-6 rounded-2xl border border-emerald-600/40 bg-emerald-500/10 p-4 text-sm text-emerald-800"
+            >
               {notice}
             </div>
           )}
           {error && (
-            <div className="mb-6 rounded-2xl border border-red-500/30 bg-red-500/10 p-5 text-sm text-red-300">
+            <div className="mb-6 rounded-2xl border border-red-500/30 bg-red-500/10 p-5 text-sm text-red-700">
               {error}
-              <button onClick={() => void load()} className="ml-3 font-medium underline underline-offset-2">
+              <button onClick={() => void load()} className="ml-3 font-semibold underline underline-offset-2">
                 Réessayer
               </button>
             </div>
@@ -370,23 +485,29 @@ export default function ProPage() {
 
           {loading && !status && (
             <div className="space-y-4" aria-busy="true" aria-label="Chargement de l'offre">
-              <div className="h-24 animate-pulse rounded-2xl border border-slate-800 bg-slate-900/60" />
-              <div className="h-44 animate-pulse rounded-2xl border border-slate-800 bg-slate-900/60" />
+              <div className="h-28 animate-pulse rounded-2xl border border-slate-200 bg-white" />
+              <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+                {[0, 1, 2, 3].map((i) => (
+                  <div key={i} className="h-24 animate-pulse rounded-2xl border border-slate-200 bg-white" />
+                ))}
+              </div>
+              <div className="h-44 animate-pulse rounded-2xl border border-slate-200 bg-white" />
             </div>
           )}
 
           {status && (
             <>
-              <section className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5 sm:p-6">
-                <p className="text-xs font-medium uppercase tracking-wider text-emerald-400/80">Accès Pro</p>
-                <h1 className="mt-1 text-xl font-semibold text-slate-100">
+              <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+                <p className="text-xs font-semibold uppercase tracking-wider text-emerald-700">Accès Pro</p>
+                <h1 className="mt-1 text-xl font-bold tracking-tight text-slate-900">
                   Vos routeurs, vos caméras, vos NAS — dans un seul tunnel chiffré
                 </h1>
-                <p className="mt-2 text-sm leading-relaxed text-slate-400">
+                <p className="mt-2 text-sm leading-relaxed text-slate-600">
                   L&apos;Accès Pro pose un tunnel WireGuard depuis votre téléphone ou votre
                   ordinateur vers votre réseau : supervision de vos routeurs MikroTik (Winbox,
-                  API, SSH, web) <strong className="text-slate-200">et extension vers votre réseau local</strong> —
-                  caméras, NAS, imprimantes — où que vous soyez, même derrière le CGNAT.
+                  API, SSH, web){" "}
+                  <strong className="font-semibold text-slate-800">et extension vers votre réseau local</strong>{" "}
+                  — caméras, NAS, imprimantes — où que vous soyez, même derrière le CGNAT.
                 </p>
                 <p className="mt-2 text-xs text-slate-500">
                   Périmètre honnête : le tunnel ne route NI votre navigation Internet, NI votre
@@ -395,12 +516,12 @@ export default function ProPage() {
               </section>
 
               {!status.eligible ? (
-                <section className="mt-6 rounded-2xl border border-amber-500/30 bg-amber-500/10 p-5 text-sm text-amber-200">
-                  <p className="flex items-center gap-2 font-medium">
+                <section className="mt-4 rounded-2xl border border-amber-500/40 bg-amber-500/10 p-5 text-sm text-amber-800">
+                  <p className="flex items-center gap-2 font-semibold">
                     <Lightbulb className="h-4 w-4 shrink-0" aria-hidden />
                     L&apos;Accès Pro relie VOS routeurs supervisés par 403Shield
                   </p>
-                  <p className="mt-2 text-amber-200/80">
+                  <p className="mt-2 text-amber-800/80">
                     Connectez-vous avec l&apos;<strong>e-mail de votre compte gérant 403Shield</strong>{" "}
                     (celui utilisé à l&apos;inscription, avec au moins un routeur en mode agent).
                     Pas encore de compte ?{" "}
@@ -408,19 +529,19 @@ export default function ProPage() {
                       href="https://403shield.ftci.fr"
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="font-medium underline underline-offset-2"
+                      className="font-semibold underline underline-offset-2 hover:text-amber-900"
                     >
                       Découvrez 403Shield
                     </a>{" "}
                     — puis revenez ici : vos routeurs apparaîtront automatiquement.
                   </p>
-                  <p className="mt-2 text-amber-200/60">
+                  <p className="mt-2 text-amber-800/60">
                     Vous cherchez un VPN pour votre téléphone ?{" "}
                     <a
                       href="https://403shield.ftci.fr/checkout"
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="underline underline-offset-2"
+                      className="underline underline-offset-2 hover:text-amber-900"
                     >
                       La boutique 403Shield
                     </a>{" "}
@@ -429,11 +550,77 @@ export default function ProPage() {
                 </section>
               ) : (
                 <>
+                  {/* KPI — miroir de la vue /app/vpn et de /me N°334-B : que du
+                      réel, dérivé du statut (aucun faux chiffre). */}
+                  <section aria-label="Aperçu de l'Accès Pro" className="mt-4 grid grid-cols-2 gap-3 xl:grid-cols-4">
+                    <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                      <div className="flex items-center gap-2 text-xs font-semibold text-slate-500">
+                        <RouterIcon className="h-4 w-4 text-emerald-600" aria-hidden />
+                        Routeurs supervisés
+                      </div>
+                      <p className="mt-1 text-2xl font-bold tabular-nums text-slate-900">
+                        {routersTotal}
+                      </p>
+                      <p className="mt-0.5 text-[11px] text-slate-500">
+                        dont {routersOnline} en ligne
+                        {status.account ? ` · ${status.account.name}` : ""}
+                      </p>
+                    </div>
+                    <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                      <div className="flex items-center gap-2 text-xs font-semibold text-slate-500">
+                        <Network
+                          className={`h-4 w-4 ${lanExtended > 0 ? "text-emerald-600" : "text-slate-400"}`}
+                          aria-hidden
+                        />
+                        LAN étendus
+                      </div>
+                      <p
+                        className={`mt-1 text-2xl font-bold tabular-nums ${
+                          lanExtended > 0 ? "text-emerald-700" : "text-slate-900"
+                        }`}
+                      >
+                        {lanExtended}
+                        <span className="ml-1 text-sm font-normal text-slate-500">/ {routersTotal}</span>
+                      </p>
+                      <p className="mt-0.5 text-[11px] text-slate-500">sous-réseaux routés dans le tunnel</p>
+                    </div>
+                    <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                      <div className="flex items-center gap-2 text-xs font-semibold text-slate-500">
+                        <ShieldCheck className="h-4 w-4 text-emerald-600" aria-hidden />
+                        Accès Pro actifs
+                      </div>
+                      <p className="mt-1 text-2xl font-bold tabular-nums text-slate-900">
+                        {activePro.length}
+                        <span className="ml-1 text-sm font-normal text-slate-500">
+                          / {status.proOrders.length} cmd
+                        </span>
+                      </p>
+                      <p className="mt-0.5 text-[11px] text-slate-500">appareils couverts par l&apos;offre</p>
+                    </div>
+                    <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                      <div className="flex items-center gap-2 text-xs font-semibold text-slate-500">
+                        <CalendarClock
+                          className={`h-4 w-4 ${activePro.length > 0 ? "text-amber-500" : "text-slate-400"}`}
+                          aria-hidden
+                        />
+                        Prochaine échéance
+                      </div>
+                      <p className="mt-1 text-sm font-bold text-slate-900">
+                        {nextExpiry ? formatDate(nextExpiry) : "—"}
+                      </p>
+                      <p className="mt-0.5 text-[11px] text-slate-500">
+                        {nextExpiry
+                          ? `${daysLeft(nextExpiry) ?? "—"} jour(s) restant(s)`
+                          : "aucun accès actif à échéance"}
+                      </p>
+                    </div>
+                  </section>
+
                   {/* ---- Routeurs + LAN étendu ---- */}
-                  <section className="mt-6">
-                    <div className="mb-3 flex items-center justify-between">
-                      <h2 className="flex items-center gap-2 text-base font-semibold text-slate-100">
-                        <RouterIcon className="h-4 w-4 text-emerald-400" aria-hidden />
+                  <section className="mt-8" aria-label="Vos routeurs">
+                    <div className="mb-3 flex items-center justify-between gap-3">
+                      <h2 className="flex items-center gap-2 text-base font-bold tracking-tight text-slate-900">
+                        <RouterIcon className="h-4 w-4 text-emerald-600" aria-hidden />
                         Vos routeurs ({status.routers.length})
                         {status.account && (
                           <span className="text-xs font-normal text-slate-500">· {status.account.name}</span>
@@ -442,7 +629,7 @@ export default function ProPage() {
                       <button
                         onClick={() => void load()}
                         disabled={loading}
-                        className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-400 transition hover:text-slate-200 disabled:opacity-50"
+                        className="inline-flex min-h-11 items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-3 text-xs font-semibold text-slate-600 transition hover:border-slate-400 hover:bg-slate-50 disabled:opacity-50"
                       >
                         <RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} aria-hidden />
                         Rafraîchir
@@ -450,16 +637,18 @@ export default function ProPage() {
                     </div>
                     <ul className="space-y-3">
                       {status.routers.map((r) => {
-                        const lan = lanLine(r);
+                        const lan = lanLine(r, polling);
                         const detectBusy = busyRouter === r.id || polling === r.id;
                         const isAgent = r.mode === "agent";
                         return (
-                          <li key={r.id} className="rounded-2xl border border-slate-800 bg-slate-900/60 p-4 sm:p-5">
+                          <li key={r.id} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
                             <div className="flex flex-wrap items-center justify-between gap-2">
                               <div className="min-w-0">
-                                <p className="flex items-center gap-2 text-sm font-semibold text-slate-100">
+                                <p className="flex items-center gap-2 text-sm font-semibold text-slate-900">
                                   <span
-                                    className={`inline-block h-2 w-2 shrink-0 rounded-full ${r.online ? "bg-emerald-400" : "bg-slate-600"}`}
+                                    className={`inline-block h-2 w-2 shrink-0 rounded-full ${
+                                      r.online ? "bg-emerald-500" : "bg-slate-300"
+                                    }`}
                                     aria-hidden
                                   />
                                   {r.name}
@@ -474,7 +663,7 @@ export default function ProPage() {
                                   <button
                                     onClick={() => void askDetect(r)}
                                     disabled={detectBusy}
-                                    className="inline-flex items-center gap-1.5 rounded-lg border border-slate-700 px-3 py-1.5 text-xs font-medium text-slate-300 transition hover:border-slate-500 hover:text-slate-50 disabled:opacity-50"
+                                    className="inline-flex min-h-11 items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-3 text-xs font-semibold text-slate-700 transition hover:border-slate-400 hover:bg-slate-50 disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600"
                                   >
                                     {detectBusy ? (
                                       <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
@@ -488,7 +677,7 @@ export default function ProPage() {
                                   <button
                                     onClick={() => void applyLan(r)}
                                     disabled={detectBusy}
-                                    className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-500 px-3 py-1.5 text-xs font-semibold text-slate-950 transition hover:bg-emerald-400 disabled:opacity-50"
+                                    className="inline-flex min-h-11 items-center gap-1.5 rounded-xl bg-emerald-600 px-3 text-xs font-semibold text-white shadow-sm transition hover:bg-emerald-700 disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600"
                                   >
                                     <Camera className="h-3.5 w-3.5" aria-hidden />
                                     Étendre au LAN
@@ -499,7 +688,7 @@ export default function ProPage() {
                                     onClick={() => void applyLan(r)}
                                     disabled={detectBusy}
                                     title="Re-apply l'extension (idempotent — rafraîchit les règles)"
-                                    className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-500/40 px-3 py-1.5 text-xs font-medium text-emerald-300 transition hover:border-emerald-400 disabled:opacity-50"
+                                    className="inline-flex min-h-11 items-center gap-1.5 rounded-xl border border-emerald-600/40 bg-emerald-500/10 px-3 text-xs font-semibold text-emerald-700 transition hover:border-emerald-600 disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600"
                                   >
                                     <RefreshCw className="h-3.5 w-3.5" aria-hidden />
                                     Re-apply
@@ -508,7 +697,7 @@ export default function ProPage() {
                               </div>
                             </div>
                             <div className="mt-3 flex flex-wrap items-center gap-2">
-                              <span className={`rounded-full border px-2.5 py-0.5 text-xs font-medium ${lan.tone}`}>
+                              <span className={`rounded-full border px-2.5 py-0.5 text-xs font-semibold ${lan.tone}`}>
                                 {lan.label}
                               </span>
                               {r.lanApplied && r.lanRuleState && r.lanRuleState !== "none" && r.lanRuleState !== "done" && (
@@ -524,10 +713,10 @@ export default function ProPage() {
                   </section>
 
                   {/* ---- Portefeuille Pro / achat ---- */}
-                  <section className="mt-6">
-                    <div className="mb-3 flex items-center justify-between">
-                      <h2 className="flex items-center gap-2 text-base font-semibold text-slate-100">
-                        <ShieldCheck className="h-4 w-4 text-emerald-400" aria-hidden />
+                  <section className="mt-8" aria-label="Vos accès Pro">
+                    <div className="mb-3 flex items-center justify-between gap-3">
+                      <h2 className="flex items-center gap-2 text-base font-bold tracking-tight text-slate-900">
+                        <ShieldCheck className="h-4 w-4 text-emerald-600" aria-hidden />
                         {status.anyActive ? "Vos accès Pro" : "Souscrire l'Accès Pro"}
                       </h2>
                     </div>
@@ -537,28 +726,41 @@ export default function ProPage() {
                         {status.proOrders.map((o) => {
                           const left = daysLeft(o.expiresAt);
                           return (
-                            <li key={o.ref} className="rounded-2xl border border-slate-800 bg-slate-900/60 p-4 sm:p-5">
-                              <div className="flex flex-wrap items-center justify-between gap-2">
-                                <div>
-                                  <p className="text-sm font-semibold text-slate-100">{o.plan}</p>
+                            <li key={o.ref} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+                              <div className="flex flex-wrap items-start justify-between gap-3">
+                                <div className="min-w-0">
+                                  <p className="font-mono text-sm font-semibold text-slate-900">{o.ref}</p>
                                   <p className="mt-0.5 text-xs text-slate-500">
-                                    réf. {o.ref} · adresse tunnel {o.peerIpv4}
+                                    {o.plan} · adresse tunnel {o.peerIpv4}
                                   </p>
-                                  <p className="mt-0.5 text-xs text-slate-500">
-                                    couvert jusqu&apos;au {formatDate(o.expiresAt)}
-                                    {left !== null ? ` (${left} j)` : ""}
-                                  </p>
+                                  {o.expiresAt && (
+                                    <p
+                                      className={`mt-1 flex items-center gap-1.5 text-xs font-medium ${
+                                        left !== null && left <= 7 && left >= 0
+                                          ? "text-amber-600"
+                                          : left !== null && left < 0
+                                            ? "text-slate-400"
+                                            : "text-slate-500"
+                                      }`}
+                                    >
+                                      <CalendarClock className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                                      {left !== null && left >= 0
+                                        ? `Couvert jusqu'au ${formatDate(o.expiresAt)} — ${left} jour${left > 1 ? "s" : ""} restant${left > 1 ? "s" : ""}`
+                                        : `Terme atteint le ${formatDate(o.expiresAt)}`}
+                                    </p>
+                                  )}
                                 </div>
                                 <button
-                                  onClick={() => void openReveal(o.ref)}
-                                  className="inline-flex items-center gap-1.5 rounded-lg border border-slate-700 px-3.5 py-2 text-xs font-medium text-slate-200 transition hover:border-slate-500 hover:text-slate-50"
+                                  onClick={() => void openReveal(o)}
+                                  className="inline-flex min-h-11 items-center gap-1.5 rounded-xl bg-emerald-600 px-4 text-xs font-semibold text-white shadow-sm transition hover:bg-emerald-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600"
                                 >
+                                  <QrCode className="h-3.5 w-3.5" aria-hidden />
                                   Voir la configuration
                                 </button>
                               </div>
                               <p className="mt-2 text-xs text-slate-500">
                                 Le renouvellement se fait depuis{" "}
-                                <a href="/me" className="underline underline-offset-2 hover:text-slate-300">
+                                <a href="/me" className="font-semibold text-emerald-700 underline underline-offset-2 hover:text-emerald-800">
                                   votre espace
                                 </a>{" "}
                                 (bouton « Renouveler » sur la commande {o.ref}).
@@ -568,82 +770,102 @@ export default function ProPage() {
                         })}
                       </ul>
                     ) : (
-                      <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5 sm:p-6">
-                        <div className="grid gap-3 sm:grid-cols-2">
-                          {status.plans.map((p) => (
-                            <label
-                              key={p.id}
-                              className={`cursor-pointer rounded-xl border p-4 transition ${
-                                buyPlan === p.id
-                                  ? "border-emerald-500/60 bg-emerald-500/10"
-                                  : "border-slate-800 bg-slate-900/60 hover:border-slate-700"
+                      <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+                        <fieldset>
+                          <legend className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                            Formule
+                          </legend>
+                          <div className="mt-2 grid gap-3 sm:grid-cols-2">
+                            {status.plans.map((p) => (
+                              <label
+                                key={p.id}
+                                className={`min-h-11 cursor-pointer rounded-xl border p-4 transition ${
+                                  buyPlan === p.id
+                                    ? "border-emerald-600 bg-emerald-500/10"
+                                    : "border-slate-300 bg-white hover:border-slate-400"
+                                }`}
+                              >
+                                <input
+                                  type="radio"
+                                  name="pro-plan"
+                                  value={p.id}
+                                  checked={buyPlan === p.id}
+                                  onChange={() => setBuyPlan(p.id)}
+                                  className="sr-only"
+                                />
+                                <p className="text-sm font-semibold text-slate-900">{p.periodLabel}</p>
+                                <p className="mt-1 text-lg font-bold tabular-nums text-emerald-700">
+                                  {formatFcfa(p.baseFcfa)}
+                                </p>
+                                <p className="mt-1 text-xs text-slate-500">{p.label}</p>
+                              </label>
+                            ))}
+                          </div>
+                        </fieldset>
+
+                        <fieldset className="mt-4">
+                          <legend className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                            Moyen de paiement
+                          </legend>
+                          <div className="mt-2 grid grid-cols-2 gap-2">
+                            <button
+                              type="button"
+                              onClick={() => setBuyMethod("wave")}
+                              aria-pressed={buyMethod === "wave"}
+                              className={`flex min-h-11 items-center justify-center gap-2 rounded-xl border px-4 text-sm font-semibold transition ${
+                                buyMethod === "wave"
+                                  ? "border-emerald-600 bg-emerald-500/10 text-slate-900"
+                                  : "border-slate-300 bg-white text-slate-700 hover:border-slate-400"
                               }`}
                             >
+                              <Smartphone className="h-4 w-4" aria-hidden />
+                              Wave
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setBuyMethod("card")}
+                              aria-pressed={buyMethod === "card"}
+                              className={`flex min-h-11 items-center justify-center gap-2 rounded-xl border px-4 text-sm font-semibold transition ${
+                                buyMethod === "card"
+                                  ? "border-emerald-600 bg-emerald-500/10 text-slate-900"
+                                  : "border-slate-300 bg-white text-slate-700 hover:border-slate-400"
+                              }`}
+                            >
+                              <CreditCard className="h-4 w-4" aria-hidden />
+                              Carte bancaire
+                            </button>
+                          </div>
+                          {buyMethod === "wave" && (
+                            <div className="mt-3">
+                              <label htmlFor="pro-phone" className="text-xs font-medium text-slate-600">
+                                Numéro Wave à débiter
+                              </label>
                               <input
-                                type="radio"
-                                name="pro-plan"
-                                value={p.id}
-                                checked={buyPlan === p.id}
-                                onChange={() => setBuyPlan(p.id)}
-                                className="sr-only"
+                                id="pro-phone"
+                                type="tel"
+                                inputMode="tel"
+                                autoComplete="tel"
+                                value={buyPhone}
+                                onChange={(e) => setBuyPhone(e.target.value)}
+                                placeholder="07 00 00 00 00"
+                                className="mt-1 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-emerald-600 focus:outline-2 focus:outline-offset-1 focus:outline-emerald-600/40"
                               />
-                              <p className="text-sm font-semibold text-slate-100">{p.periodLabel}</p>
-                              <p className="mt-1 text-lg font-bold text-emerald-400">{formatFcfa(p.baseFcfa)}</p>
-                              <p className="mt-1 text-xs text-slate-500">{p.label}</p>
-                            </label>
-                          ))}
-                        </div>
+                            </div>
+                          )}
+                        </fieldset>
 
-                        <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                          <label className="flex cursor-pointer items-center gap-2 rounded-xl border border-slate-800 bg-slate-900/60 p-3 text-sm text-slate-200">
-                            <input
-                              type="radio"
-                              name="pro-method"
-                              checked={buyMethod === "wave"}
-                              onChange={() => setBuyMethod("wave")}
-                              className="accent-emerald-500"
-                            />
-                            <Smartphone className="h-4 w-4 text-emerald-400" aria-hidden />
-                            Wave
-                          </label>
-                          <label className="flex cursor-pointer items-center gap-2 rounded-xl border border-slate-800 bg-slate-900/60 p-3 text-sm text-slate-200">
-                            <input
-                              type="radio"
-                              name="pro-method"
-                              checked={buyMethod === "card"}
-                              onChange={() => setBuyMethod("card")}
-                              className="accent-emerald-500"
-                            />
-                            <CreditCard className="h-4 w-4 text-emerald-400" aria-hidden />
-                            Carte bancaire
-                          </label>
-                        </div>
-                        {buyMethod === "wave" && (
-                          <div className="mt-3">
-                            <label htmlFor="pro-phone" className="text-xs font-medium text-slate-400">
-                              Numéro Wave à débiter
-                            </label>
-                            <input
-                              id="pro-phone"
-                              type="tel"
-                              inputMode="tel"
-                              value={buyPhone}
-                              onChange={(e) => setBuyPhone(e.target.value)}
-                              placeholder="07 00 00 00 00"
-                              className="mt-1 w-full rounded-lg border border-slate-800 bg-slate-950/60 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-600 focus:border-emerald-500/60 focus:outline-none"
-                            />
+                        {buyError && (
+                          <div className="mt-4 rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-700">
+                            {buyError}
                           </div>
                         )}
-
-                        {buyError && <p className="mt-3 text-sm text-red-300">{buyError}</p>}
 
                         <button
                           onClick={() => void submitBuy()}
                           disabled={buyLoading}
-                          className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-lg bg-emerald-500 px-5 py-2.5 text-sm font-semibold text-slate-950 transition hover:bg-emerald-400 disabled:opacity-50 sm:w-auto"
+                          className="mt-4 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-5 text-sm font-bold text-white shadow-sm transition hover:bg-emerald-700 disabled:opacity-60 sm:w-auto"
                         >
-                          {buyLoading && <Loader2 className="h-4 w-4 animate-spin" aria-hidden />}
-                          Souscrire l&apos;Accès Pro
+                          {buyLoading ? "Création du paiement…" : "Souscrire l'Accès Pro"}
                         </button>
                         <p className="mt-3 text-xs leading-relaxed text-slate-500">
                           Sans clés de paiement en ligne, la commande passera en canal manuel
@@ -661,15 +883,15 @@ export default function ProPage() {
         </div>
       </main>
 
-      <footer className="mt-auto border-t border-slate-800/60">
-        <div className="mx-auto flex max-w-4xl flex-col items-start justify-between gap-2 px-4 py-6 text-xs text-slate-500 sm:flex-row sm:items-center sm:px-6">
+      <footer className="mt-auto border-t border-slate-200/80 bg-white/60">
+        <div className="mx-auto flex max-w-5xl flex-col items-start justify-between gap-2 px-4 py-5 text-xs text-slate-500 sm:flex-row sm:items-center sm:px-6">
           <p>403Shield Console · powered by FTech CI · Accès Pro : tunnels WireGuard hébergés à Marseille</p>
           <div className="flex gap-4">
             <a
               href="https://403shield.ftci.fr/checkout"
               target="_blank"
               rel="noopener noreferrer"
-              className="hover:text-slate-300"
+              className="hover:text-slate-700"
             >
               Boutique VPN
             </a>
@@ -677,7 +899,7 @@ export default function ProPage() {
               href="https://403shield.ftci.fr"
               target="_blank"
               rel="noopener noreferrer"
-              className="hover:text-slate-300"
+              className="hover:text-slate-700"
             >
               Site 403Shield
             </a>
@@ -686,58 +908,138 @@ export default function ProPage() {
       </footer>
 
       {/* ---- Modal reveal (conf WireGuard d'un appareil Pro) ---- */}
-      {revealRef && (
+      {revealFor && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 p-4"
+          className="fixed inset-0 z-50 flex items-end justify-center bg-slate-900/50 p-4 backdrop-blur-sm sm:items-center"
           role="dialog"
           aria-modal="true"
           aria-label="Configuration WireGuard"
-          onClick={() => setRevealRef("")}
+          onClick={() => setRevealFor(null)}
         >
           <div
-            className="max-h-[85vh] w-full max-w-xl overflow-y-auto rounded-2xl border border-slate-800 bg-slate-900 p-5 sm:p-6"
+            className="max-h-[92dvh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-slate-200 bg-white p-5 shadow-xl sm:p-6"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between gap-2">
-              <h3 className="text-sm font-semibold text-slate-100">
-                Configuration WireGuard — {revealRef}
-              </h3>
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h2
+                  ref={revealHeadRef}
+                  tabIndex={-1}
+                  className="text-base font-bold tracking-tight text-slate-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600"
+                >
+                  Configuration WireGuard — {revealFor.ref}
+                </h2>
+                <p className="mt-0.5 text-xs text-slate-500">
+                  {reveal?.plan ?? revealFor.plan}
+                  {reveal?.ipv4 ? ` · tunnel ${reveal.ipv4}` : ""}
+                  {reveal?.expiresAt ? ` · jusqu'au ${formatDate(reveal.expiresAt)}` : ""}
+                </p>
+              </div>
               <button
-                onClick={() => setRevealRef("")}
-                className="rounded-lg border border-slate-700 p-1.5 text-slate-400 transition hover:text-slate-200"
+                onClick={() => setRevealFor(null)}
                 aria-label="Fermer"
+                className="rounded-xl border border-slate-300 bg-white p-2 text-slate-500 transition hover:bg-slate-50 hover:text-slate-800"
               >
                 <X className="h-4 w-4" aria-hidden />
               </button>
             </div>
+
             {revealLoading && (
-              <div className="mt-4 flex items-center gap-2 text-sm text-slate-400">
-                <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-                Ouverture du coffre…
+              <div className="mt-4 h-64 animate-pulse rounded-xl border border-slate-200 bg-slate-100/70" aria-busy="true" />
+            )}
+            {revealError && (
+              <div className="mt-4 rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-700">
+                {revealError}
               </div>
             )}
-            {revealError && <p className="mt-4 text-sm text-red-300">{revealError}</p>}
             {reveal && (
               <>
-                <p className="mt-3 text-xs text-slate-500">
-                  Adresse tunnel : <span className="text-slate-300">{reveal.ipv4 ?? "—"}</span> —
-                  copiez la configuration puis importez-la dans WireGuard (« + » → « Importer
-                  depuis un fichier » ou presse-papiers). Les entrées AllowedIPs portent le
-                  périmètre Pro : vos routeurs + votre LAN étendu le cas échéant.
-                </p>
-                <div
-                  ref={confRef}
-                  className="mt-3 max-h-72 overflow-y-auto rounded-xl border border-slate-800 bg-slate-950/80 p-3 font-mono text-[11px] leading-relaxed text-slate-300"
-                >
-                  <pre className="whitespace-pre-wrap break-all">{reveal.conf}</pre>
+                <div className="mt-4 flex flex-col gap-4 sm:flex-row sm:items-start">
+                  {/* QR SCANNABLE — miroir de la réparation /me N°334-B :
+                      marge de silence incluse (marginSize 2) + fond blanc
+                      encadré — un routeur n'a pas de caméra, mais le QR se
+                      scanne depuis l'app WireGuard d'un téléphone de secours. */}
+                  <div className="mx-auto shrink-0 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:mx-0">
+                    <div
+                      role="img"
+                      aria-label="QR code de la configuration WireGuard — scannez-le depuis l'application WireGuard"
+                      className="rounded-lg bg-white"
+                    >
+                      <QRCodeSVG
+                        value={reveal.conf}
+                        size={204}
+                        level="L"
+                        marginSize={2}
+                        bgColor="#ffffff"
+                        fgColor="#0f172a"
+                        className="h-[204px] w-[204px]"
+                      />
+                    </div>
+                    <p className="mt-2 text-center text-[11px] font-medium text-slate-500">
+                      Scan depuis l&apos;app WireGuard
+                    </p>
+                  </div>
+                  <div className="min-w-0 flex-1 space-y-2">
+                    <div
+                      ref={confRef}
+                      className="max-h-56 overflow-y-auto rounded-xl border border-slate-200 bg-slate-50 p-3 font-mono text-[11px] leading-relaxed whitespace-pre-wrap break-all text-slate-700"
+                    >
+                      {reveal.conf}
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        onClick={() => void copyConf()}
+                        className="inline-flex min-h-11 items-center gap-1.5 rounded-xl bg-emerald-600 px-4 text-xs font-semibold text-white shadow-sm transition hover:bg-emerald-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600"
+                      >
+                        {copied ? (
+                          <>
+                            <Check className="h-3.5 w-3.5" aria-hidden />
+                            Copiée
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="h-3.5 w-3.5" aria-hidden />
+                            Copier
+                          </>
+                        )}
+                      </button>
+                      <button
+                        onClick={downloadConf}
+                        className="inline-flex min-h-11 items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-4 text-xs font-semibold text-slate-700 transition hover:border-slate-400 hover:bg-slate-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600"
+                      >
+                        {downloaded ? (
+                          <>
+                            <Check className="h-3.5 w-3.5" aria-hidden />
+                            Téléchargé
+                          </>
+                        ) : (
+                          <>
+                            <Download className="h-3.5 w-3.5" aria-hidden />
+                            Fichier .conf
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </div>
                 </div>
-                <button
-                  onClick={() => void copyConf()}
-                  className="mt-3 inline-flex items-center gap-2 rounded-lg bg-emerald-500 px-4 py-2 text-sm font-semibold text-slate-950 transition hover:bg-emerald-400"
-                >
-                  {copied ? <Check className="h-4 w-4" aria-hidden /> : <Copy className="h-4 w-4" aria-hidden />}
-                  {copied ? "Copiée" : "Copier la configuration"}
-                </button>
+
+                {/* Instructions PRO (cette page ne révèle que des appareils
+                    Accès Pro) — les voies d'import officielles RouterOS 7 et
+                    WireGuard couvertes. */}
+                <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-4 text-xs leading-relaxed text-slate-600">
+                  <p className="font-semibold text-slate-800">Accès Pro — routeurs, caméras, NAS</p>
+                  <p className="mt-1">
+                    Sur RouterOS 7 : <span className="font-mono">WireGuard</span> →{" "}
+                    <span className="font-mono">Peers</span> → importez le fichier{" "}
+                    <span className="font-mono">.conf</span> téléchargé, ou collez la configuration
+                    copiée dans un tunnel existant (un renouvellement ne change jamais la conf).
+                    Sur téléphone de secours : app WireGuard → «&nbsp;+&nbsp;» →
+                    «&nbsp;Créer à partir d&apos;un QR code&nbsp;». Les entrées{" "}
+                    <span className="font-mono">AllowedIPs</span> portent le périmètre Pro : vos
+                    routeurs + votre LAN étendu le cas échéant — la configuration ne quitte
+                    jamais le coffre sans votre action.
+                  </p>
+                </div>
               </>
             )}
           </div>
