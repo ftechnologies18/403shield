@@ -10,6 +10,24 @@ sous-marque FTech CI) ; l'historique ci-dessous conserve les noms d'époque.
 N°319 : le DÉPÔT GitHub lui-même devient `ftechnologies18/403shield`
 (anciennes URL redirigées en 301 par GitHub — web, git et API).
 
+## 2026-10-18 — N°336-A — **STABILISATION DU FLAKE CI `TestStatsOverviewDayWindows`** — tolérance ±1 s sur `window.prevEnd`
+
+- **Symptôme** : run CI main en rouge (job Backend Go, étape `go test`) —
+  `window.prevEnd = 2026-10-17T16:57:35-04:00, attendu …:34-04:00` : le
+  helper du test et le serveur capturent chacun leur wall-clock ; si la
+  seconde bascule entre les deux (3 seeds + save + HTTP ≈ 0,3-0,8 s),
+  `prevEnd` dérive d'une seconde au format RFC3339 — la sémantique
+  « même instant du jour, hier » reste exacte.
+- **Fix (test uniquement, zéro changement serveur)** : l'assertion
+  `prevEnd` compare les instants **parsés** avec tolérance ±1 s ;
+  `start`/`prevStart` restent stricts (dérivés de minuit, ne peuvent pas
+  flaker).
+- **Preuve** : le test autrefois flaky passe **12/12** consécutifs ;
+  suite complète `go test ./...` exit=0 (11 paquets) ; `-race` ×2 ciblé
+  overview ok (48 s) ; gofmt/vet/build verts.
+- **Schéma DB : AUCUN** (test pur — deploy-oracle redéployé par le filtre
+  `backend/**`, binaire inchangé au comportement près).
+
 ## 2026-10-18 — N°335 — **HYGIÈNE DU DÉPÔT : README RACINE REMIS À LA VÉRITÉ (le « Render + Neon en prod » décrivait un monde disparu depuis N°266/N°303/N°317) + TRI INTÉGRAL DES 6 PR DEPENDABOT EN ATTENTE — 6/6 FUSIONNÉES derrière les portes locales, dont la PR #69 rouge depuis 5 jours par activation de règles React Compiler**
 
 > Renuméroté en N°335 par le présent commit de fusion : ce chantier était
