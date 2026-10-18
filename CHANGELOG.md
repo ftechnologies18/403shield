@@ -10,6 +10,49 @@ sous-marque FTech CI) ; l'historique ci-dessous conserve les noms d'époque.
 N°319 : le DÉPÔT GitHub lui-même devient `ftechnologies18/403shield`
 (anciennes URL redirigées en 301 par GitHub — web, git et API).
 
+## 2026-10-18 — N°337-A — **REFONTE DE L'ACCÈS PRO `/pro` AU STYLE CONSOLE `/app/vpn`** — QR WireGuard scannable + `.conf` téléchargeable + KPI réels (miroir de la refonte `/me` N°334-B)
+
+- **Contexte** : consigne propriétaire « la refonte de /pro » — la page
+  restait au thème sombre slate N°313 avec une modale reveal en TEXTE
+  SEUL (le même défaut UX que `/me` avant N°334-B : la conf WireGuard y
+  était livrée sans QR ni fichier, pénible à importer sur routeur).
+- **Refonte** (`tunnel-console/src/app/pro/page.tsx` +680/−197) : thème
+  clair « console » (`.mkpro-page` + `html:has(.mkpro-page)`, miroir du
+  pattern `mkme`) — fond `#F5F6F8`, cartes blanches, accents émeraude,
+  wordmark aurora, header sticky blanc/backdrop-blur (badge
+  « Accès Pro » · e-mail · « Mon espace ») ; **KPI stat cards réels**
+  dérivés du seul contrat `/api/tunnel/pro` (doctrine : aucun faux
+  chiffre) : routeurs supervisés (dont en ligne · nom du compte) · LAN
+  étendus X/Y · accès Pro actifs X/Y cmd · prochaine échéance (ambre si
+  ≤ 7 j) ; **modale reveal réparée** : QR scannable 204 px (qrcode.react
+  4.2.0, marge de silence incluse) + copie + téléchargement
+  `403shield-pro-REF.conf` (voie d'import officielle RouterOS 7) +
+  instructions adaptées à l'usage Pro (routeur/NAS + QR téléphone de
+  secours, AllowedIPs = périmètre Pro) ; bottom-sheet mobile + Escape +
+  focus au titre ; formulaire d'achat en fieldsets accessibles
+  (aria-pressed, focus-visible, cibles 44 px) ; `hero-glow` du thème
+  sombre abandonné (plus utilisé par aucune page) ; commentaires de
+  registre obsolètes (« /me et /pro conservent le thème sombre »)
+  corrigés dans `globals.css`, `me/page.tsx`, `login/layout.tsx`.
+- **Intacts** : contrat backend N°315 **inchangé** (zéro modification
+  Go) — poll de détection ≤ 45 s, application LAN explicite (set-lan VM
+  + règles routeur), portefeuille, commande Wave/carte/canal manuel,
+  bandeau de retour de paiement, honnêteté produit (périmètre + carte
+  d'orientation `!eligible` sans fuite de routeurs), layout `noindex`.
+- **Preuve** : lint 0 · tsc 0 · `next build` 9/9 · smoke navigateur
+  :3100 sur VRAI backend amorcé (cmd/smokeseed éphémère, jamais commité,
+  pattern N°334-B : gérant éligible + 2 routeurs agents + 2 commandes
+  Pro) — KPIs réels rendus, QR 204×204 mesuré (desktop et mobile 390
+  centré), Copier → « Copiée », `.conf` → « Téléchargé », Escape ferme,
+  « Étendre au LAN » → notice `needPro` réelle, « Détecter mon réseau »
+  → poll « Détection en cours (≤ 45 s)… », achat : validation Wave,
+  bascule carte, succès canal manuel (« Commande MCV-… enregistrée
+  (3 500 FCFA, canal manuel) »), erreur `shop_disabled` affichée
+  honnêtement, parcours `!eligible` sans fuite — 0 erreur console sur
+  tous les parcours · VLM PASS ×12 (desktop ×6 · mobile ×3 · B2C ×3).
+- **Schéma DB : AUCUN** (frontend pur — `ensureSchema` rejoué au
+  démarrage backend, répliques nocturnes Supabase/Neon inchangées).
+
 ## 2026-10-18 — N°336-A — **STABILISATION DU FLAKE CI `TestStatsOverviewDayWindows`** — tolérance ±1 s sur `window.prevEnd`
 
 - **Symptôme** : run CI main en rouge (job Backend Go, étape `go test`) —
