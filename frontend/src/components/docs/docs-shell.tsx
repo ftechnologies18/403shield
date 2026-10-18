@@ -14,6 +14,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useTheme } from "next-themes";
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -25,11 +26,13 @@ import {
   ListTree,
   LogIn,
   Menu,
+  Moon,
   Rocket,
   Router,
   Settings,
   ShieldCheck,
   Smartphone,
+  Sun,
   Ticket,
   Users,
   Wifi,
@@ -247,6 +250,39 @@ export function DocsToc() {
   );
 }
 
+/* ── Bascule Nuit/Jour du shell docs (N°333-D) — la vitrine et la console
+   basculent, les docs restaient figées nuit : le partage/impression en
+   milieu clair souffrait. Pattern officiel next-themes (rendu neutre
+   jusqu'à résolution du thème — évite le mismatch SSR). */
+function DocsThemeToggle() {
+  const { resolvedTheme, setTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- bascule unique post-hydratation, aucun rendu en cascade (même pattern que hotspot/theme-toggle N°78)
+    setMounted(true);
+  }, []);
+
+  const isDark = resolvedTheme !== "light";
+
+  return (
+    <Button
+      variant="ghost"
+      size="icon"
+      className="size-9 text-muted-foreground hover:text-foreground"
+      onClick={() => setTheme(isDark ? "light" : "dark")}
+      aria-label={isDark ? "Passer les guides en mode jour" : "Passer les guides en mode nuit"}
+      title={isDark ? "Mode jour" : "Mode nuit"}
+    >
+      {mounted ? (
+        isDark ? <Moon className="size-4" aria-hidden /> : <Sun className="size-4" aria-hidden />
+      ) : (
+        <Sun className="size-4" aria-hidden />
+      )}
+    </Button>
+  );
+}
+
 /* ── Coquille complète : header + nav + contenu + TOC ──────────────────── */
 export function DocsShell({
   sections,
@@ -265,7 +301,7 @@ export function DocsShell({
 
   return (
     <div className="docs-shell flex min-h-screen flex-col bg-background text-foreground">
-      <header className="docs-header sticky top-0 z-40 border-b border-border/60 bg-background/85 backdrop-blur-md">
+      <header className="docs-header sticky top-0 z-40 border-b border-border/60 bg-background/85 backdrop-blur-md print:hidden">
         <div className="mx-auto flex h-14 w-full max-w-7xl items-center gap-3 px-4 sm:px-6">
           <Sheet open={navOpen} onOpenChange={setNavOpen}>
             <SheetTrigger asChild>
@@ -300,6 +336,7 @@ export function DocsShell({
             {/* Palette ⌘K (N°333-C) : recherche full-text du centre de
                 guides — index lazy, accents-insensible, ancres par bloc. */}
             <DocsCommand />
+            <DocsThemeToggle />
             <Button asChild variant="ghost" size="sm" className="hidden h-9 px-3 text-[13px] text-muted-foreground hover:text-foreground sm:inline-flex">
               <Link href="/">
                 <Wifi className="size-4" aria-hidden />
@@ -316,8 +353,8 @@ export function DocsShell({
         </div>
       </header>
 
-      <div className="mx-auto grid w-full max-w-7xl flex-1 grid-cols-1 gap-8 px-4 py-8 sm:px-6 lg:grid-cols-[248px_minmax(0,1fr)] xl:grid-cols-[248px_minmax(0,1fr)_208px]">
-        <aside className="docs-nav-col hidden lg:block" aria-label="Navigation des guides">
+      <div className="mx-auto grid w-full max-w-7xl flex-1 grid-cols-1 gap-8 px-4 py-8 sm:px-6 lg:grid-cols-[248px_minmax(0,1fr)] xl:grid-cols-[248px_minmax(0,1fr)_208px] print:block print:max-w-none print:px-0 print:py-0">
+        <aside className="docs-nav-col hidden lg:block print:hidden" aria-label="Navigation des guides">
           <div className="sticky top-[76px] max-h-[calc(100vh-100px)] overflow-y-auto pr-2 [scrollbar-width:thin]">
             <DocsNav sections={sections} currentId={currentId} platformGuides={platformGuides} />
           </div>
@@ -328,17 +365,17 @@ export function DocsShell({
         </main>
 
         {withToc ? (
-          <aside className="docs-toc-col hidden xl:block" aria-label="Sommaire">
+          <aside className="docs-toc-col hidden xl:block print:hidden" aria-label="Sommaire">
             <div className="sticky top-[76px]">
               <DocsToc />
             </div>
           </aside>
         ) : (
-          <div className="hidden xl:block" aria-hidden />
+          <div className="hidden xl:block print:hidden" aria-hidden />
         )}
       </div>
 
-      <footer className="docs-footer mt-auto border-t border-border/60 bg-card/40">
+      <footer className="docs-footer mt-auto border-t border-border/60 bg-card/40 print:hidden">
         <div className="mx-auto flex w-full max-w-7xl flex-col items-start justify-between gap-2 px-4 py-5 text-xs text-muted-foreground sm:flex-row sm:items-center sm:px-6">
           <p>
             403Shield — guides d'exploitation · <Link href="/" className="underline-offset-2 hover:underline">403shield.ftci.fr</Link>

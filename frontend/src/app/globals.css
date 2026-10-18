@@ -1440,3 +1440,37 @@ html.pwa-standalone:not(.pwa-ready) .mik-landing-shell {
 .pwa-safe-bottom {
   padding-bottom: env(safe-area-inset-bottom, 0px);
 }
+
+/* ─── Impression des guides /docs (N°333-D) ───
+   Les docs d'un produit B2B finissent imprimées/PDF-ées par les acheteurs
+   et le support : le chrome (header, sidebar, TOC, prev/next, feedback,
+   CTA — déjà print:hidden via Tailwind) disparaît, le contenu s'étale
+   pleine largeur, les captures suivent, les titres de section ne se coupent
+   pas de leur premier paragraphe. Les règles vouchers ci-dessus restent
+   ciblées .print-area : aucun conflit (une page docs n'en porte jamais). */
+@media print {
+  .docs-shell {
+    background: #fff !important;
+    color: #111 !important;
+  }
+  .docs-content {
+    max-width: none !important;
+  }
+  .docs-guide img {
+    max-width: 100% !important;
+    height: auto !important;
+  }
+  .docs-h2,
+  .docs-step {
+    break-inside: avoid;
+  }
+  .docs-guide a[href^="http"]::after {
+    content: " (" attr(href) ")";
+    font-size: 0.85em;
+    color: #555;
+  }
+  .docs-tip,
+  .docs-guide details {
+    break-inside: avoid;
+  }
+}

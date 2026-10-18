@@ -6,6 +6,44 @@ aux dates de livraison — le déploiement est continu : chaque push `main` pass
 la CI puis se déploie automatiquement (frontend Vercel, backend Oracle E5
 depuis le T2 N°266 — Render suspendu N°303). N°317 : le projet change de nom
 de marque — MikCloud et MikTunnel deviennent **403Shield** (marque unifiée,
+## 2026-10-18 — N°333-D — **SEO & RÉTENTION SANS INFRASTRUCTURE (volet D du plan N°333)** — sitemap, JSON-LD @graph, og:image par guide, CTA, feedback, print, thème, teaser privé
+
+### N°333-D (volet D — 12 fichiers)
+
+- **SITEMAP.XML (fin du 404)** : `src/app/sitemap.ts` — 48 URLs (vitrine 6
+  + hub + 9 index de section + 32 guides) avec le VRAI lastmod par guide
+  (guide.updated, la date affichée en page — aucune fausse fraîcheur) ;
+  volet plateforme exclu (noindex), /login /sell /join hors sitemap.
+- **JSON-LD @graph PAR GUIDE** : BreadcrumbList (conforme au fil VISIBLE
+  3 niveaux — exigence Google) + TechArticle (dateModified réel, fr,
+  éditeur FTech CI) + FAQPage (le gabarit Q&A est du vrai contenu visible) ;
+  HowTo volontairement absent (rich results retirés par Google 2023).
+- **OG:IMAGE PAR GUIDE (1200×630)** : générateur ImageResponse au build —
+  42 images (32 guides + 9 sections + hub), style nuit clay typographique
+  (marque 403, kicker, titre 2 lignes max, pied FTech CI) + canonical
+  auto-référent + metadataBase + article:modifiedTime sur les métadonnées.
+- **CONVERSION** : carte « Prêt à essayer sur votre propre routeur ? » en
+  fin de guide (formule Découverte 0 F / 60 j sans carte — promesse exacte)
+  → /hotspot#tarifs + /login · le mur du volet plateforme devient un
+  TEASER (6 titres + résumés + chip « privé », pattern Stripe/Twilio
+  gated) — contenu toujours gardé par PlatformGate sur chaque [slug],
+  noindex conservé : la décision exploitant reste respectée.
+- **FEEDBACK « Cette page vous a aidé ? »** (zéro infrastructure) : Oui/Non
+  → mailto prérempli au canal réel de l'exploitant (id du guide + réponse
+  dans le sujet), message de remerciement, jamais de compteur inventé.
+- **FINITIONS** : toggle Nuit/Jour dans le shell docs (fin du mode nuit
+  imposé — partage et impression en milieu clair) · PRINT CSS complet
+  (chrome masqué, contenu pleine largeur, captures étalées, titres
+  insécables, URLs après les liens externes — bloc dédié, aucun conflit
+  avec les règles vouchers .print-area) · lien « Guides d'exploitation
+  illustrés » de l'écran de connexion passé en i18n FR/EN (fin du hardcodé)
+  · 2 PNG orphelins d'annexes supprimés.
+- **PORTES** : lint 0 · tsgo 0 · next build 61/61 · smoke : sitemap 200
+  (48 URLs) · og:image 200 sur guide/hub/section (73 Ko) · canonical
+  absolu · JSON-LD ×3 types dans le HTML · teaser 6 cartes + lock +
+  noindex · feedback + CTA rendus · toggle présent · VLM PASS guide
+  desktop + hub + mobile 390 (zéro overflow) · schéma DB AUCUN.
+
 ## 2026-10-18 — N°333-C — **NAVIGATION « GRANDE STRUCTURE » (volet C du plan N°333)** — URLs hiérarchiques + 301, palette ⌘K full-text, related rendus, shell plateforme
 
 ### N°333-C (volet C — 13 fichiers, ~+1 100 lignes)

@@ -9,6 +9,8 @@ import { ArrowLeft, ArrowRight } from "lucide-react";
 import { DOC_SECTIONS, PUBLIC_GUIDES, getPublicGuide, guideNeighbors, guidesBySection } from "@/lib/docs/catalog";
 import { DocsShell } from "@/components/docs/docs-shell";
 import { GuideView, type RelatedGuideCard } from "@/components/docs/guide-view";
+import { DocsJsonLd } from "@/components/docs/docs-jsonld";
+import { DocsFeedback } from "@/components/docs/docs-feedback";
 
 interface Params {
   params: Promise<{ section: string; slug: string }>;
@@ -25,12 +27,15 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
   const guide = getPublicGuide(slug);
   if (!guide || guide.sectionId !== section) return { title: "Guide introuvable — 403Shield" };
   return {
+    metadataBase: new URL("https://403shield.ftci.fr"),
+    alternates: { canonical: `/docs/guides/${guide.sectionId}/${guide.id}` },
     title: `${guide.title} — Guides 403Shield`,
     description: guide.summary,
     openGraph: {
       title: guide.title,
       description: guide.summary,
       type: "article",
+      modifiedTime: guide.updated,
     },
   };
 }
@@ -75,6 +80,10 @@ export default async function GuidePage({ params }: Params) {
 
   return (
     <DocsShell sections={sections} currentId={guide.id} withToc>
+      {/* JSON-LD (N°333-D) : BreadcrumbList conforme au fil visible +
+          TechArticle + FAQPage — og:image vient d'opengraph-image.tsx. */}
+      <DocsJsonLd guide={guide} sectionTitle={sectionTitle} />
+
       <nav aria-label="Fil d'Ariane" className="mb-6 flex flex-wrap items-center gap-x-2 text-[13px] text-muted-foreground">
         <Link href="/docs/guides" className="inline-flex items-center gap-1.5 rounded hover:text-foreground">
           <ArrowLeft className="size-3.5" aria-hidden />
@@ -92,7 +101,7 @@ export default async function GuidePage({ params }: Params) {
 
       <GuideView guide={guide} related={related} />
 
-      <nav aria-label="Guides précédent et suivant" className="mt-10 grid gap-3 sm:grid-cols-2">
+      <nav aria-label="Guides précédent et suivant" className="mt-10 grid gap-3 sm:grid-cols-2 print:hidden">
         {prev ? (
           <Link
             href={`/docs/guides/${prev.sectionId}/${prev.id}`}
@@ -120,6 +129,32 @@ export default async function GuidePage({ params }: Params) {
           </Link>
         ) : null}
       </nav>
+
+      {/* Feedback lecteur (N°333-D) — zéro infrastructure : mailto prérempli
+          au canal réel de l'exploitant. Imprimé : masqué. */}
+      <div className="mt-8 print:hidden">
+        <DocsFeedback guideId={guide.id} />
+      </div>
+
+      {/* Conversion (N°333-D) — le lecteur qui FINIT un guide est le prospect
+          le plus chaud : carte sobre vers la formule Découverte (0 F / 60 j,
+          sans carte — promesse exacte, jamais de faux chiffre). */}
+      <div className="mt-8 rounded-xl border border-primary/25 bg-primary/8 p-5 sm:p-6 print:hidden">
+        <p className="text-[15px] font-semibold text-foreground">Prêt à essayer sur votre propre routeur ?</p>
+        <p className="mt-1.5 text-sm leading-6 text-muted-foreground">
+          La formule Découverte est gratuite pendant 60 jours, sans carte bancaire — 1 routeur, toutes les fonctions.
+        </p>
+        <div className="mt-3 flex flex-wrap gap-x-5 gap-y-2 text-sm font-medium">
+          <Link href="/hotspot#tarifs" className="inline-flex items-center gap-1.5 text-primary hover:underline">
+            Voir les formules
+            <ArrowRight className="size-4" aria-hidden />
+          </Link>
+          <Link href="/login" className="inline-flex items-center gap-1.5 text-primary hover:underline">
+            Ouvrir la console
+            <ArrowRight className="size-4" aria-hidden />
+          </Link>
+        </div>
+      </div>
     </DocsShell>
   );
 }

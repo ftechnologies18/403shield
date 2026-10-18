@@ -29,6 +29,8 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
   const s = getSection(section);
   if (!s) return { title: "Section introuvable — 403Shield" };
   return {
+    metadataBase: new URL("https://403shield.ftci.fr"),
+    alternates: { canonical: `/docs/guides/${s.id}` },
     title: `${s.title} — Guides 403Shield`,
     description: s.description,
     openGraph: { title: s.title, description: s.description, type: "website" },

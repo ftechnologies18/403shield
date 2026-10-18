@@ -708,14 +708,16 @@ export default function LoginScreen({ onBack, onSignUp }: { onBack?: () => void;
             )}
 
             {/* N°304 — documentation publique d'exploitation : aide
-                permanente depuis l'écran de connexion (guides illustrés). */}
+                permanente depuis l'écran de connexion (guides illustrés).
+                N°333-D : libellé i18n (fin du FR hardcodé sur l'écran
+                bilingue). */}
             <p className="mik-rise mt-3 text-center text-xs text-muted-foreground/90" style={{ animationDelay: "0.36s" }}>
               <Link
                 href="/docs/guides"
                 className="inline-flex items-center gap-1.5 rounded underline-offset-2 hover:text-foreground hover:underline"
               >
                 <BookOpenText className="size-3.5" aria-hidden />
-                Guides d'exploitation illustrés
+                {t("login.guidesLink")}
               </Link>
             </p>
 

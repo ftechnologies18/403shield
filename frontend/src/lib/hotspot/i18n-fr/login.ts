@@ -68,4 +68,5 @@ export const frLogin: Record<string, string> = {
   "login.mascot.success": "Bien joué, bienvenue !",
   "login.mascot.modeAdmin": "Console Admin",
   "login.mascot.modeReseller": "Mode Vente",
+  "login.guidesLink": "Guides d'exploitation illustrés",
 };
