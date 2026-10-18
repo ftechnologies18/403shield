@@ -38,6 +38,15 @@ const eslintConfig = retroCompatPlugins([...nextCoreWebVitals, ...nextTypescript
     // React rules
     "react-hooks/exhaustive-deps": "off",
     "react-hooks/purity": "off",
+    // eslint-config-next 16.4 active trois règles React Compiler supplémentaires
+    // (set-state-in-effect, refs, immutability) qui flaggent d'un coup 14 sites
+    // PRÉEXISTANTS (dont carousel.tsx et use-mobile.ts générés par shadcn/ui —
+    // l'amont n'est pas conforme non plus). Opt-out en « warn » : la dette reste
+    // visible à chaque lint sans bloquer les mises à jour de dépendances ;
+    // répertoire exact et suivi consignés au CHANGELOG N°334-B.
+    "react-hooks/set-state-in-effect": "warn",
+    "react-hooks/refs": "warn",
+    "react-hooks/immutability": "warn",
     "react/no-unescaped-entities": "off",
     "react/display-name": "off",
     "react/prop-types": "off",
