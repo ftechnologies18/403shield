@@ -27,15 +27,13 @@
 // Honeypot « website » invisible sur les deux POST — rempli = robot : le
 // backend part en silence.
 
-import Image from "next/image";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import {
   ArrowRight,
   CheckCircle2,
   ChevronDown,
-  ExternalLink,
   Loader2,
   Timer,
   X,
@@ -63,6 +61,7 @@ import {
   type PublicVpnOrderStatus,
 } from "@/lib/public-vpn";
 import { landingCopy, type Lang } from "../landing/landing-copy";
+import { EnterpriseHeader } from "../landing/enterprise-header";
 import { LandingFooter } from "../landing/landing-footer";
 import { Reveal } from "../landing/reveal";
 import { fraunces, manrope } from "../landing/landing-fonts";
@@ -99,25 +98,24 @@ export default function CheckoutPage({
   const setLang = useHotspotStore((s) => s.setLang);
   const copy = landingCopy[lang];
   const c = checkoutCopy[lang as CheckoutLang];
-  const pathname = usePathname();
+  const router = useRouter();
 
   const toggleLang = () => setLang(lang === "fr" ? "en" : "fr");
 
-  /* Menu du site unifié (mêmeTopbar que les pages produit) — « Tunnels
-     WireGuard » porte le lien actif sur /tunnels COMME sur /vpn et
-     /checkout (les trois faces du même tunnel). */
-  const navItems: { href: string; label: string; active: boolean }[] = [
-    { href: "/", label: copy.header.nav.home, active: pathname === "/" },
-    { href: "/hotspot", label: copy.header.nav.hotspot, active: pathname === "/hotspot" },
-    {
-      href: "/tunnels",
-      label: copy.header.nav.tunnels,
-      active: pathname === "/tunnels" || pathname === "/vpn" || pathname === "/checkout",
-    },
-  ];
-  const navAriaLabel = `${copy.header.brand} — ${copy.header.nav.home} · ${copy.header.nav.hotspot} · ${copy.header.nav.tunnels}`;
-  const navClass = (active: boolean) =>
-    active ? "mkl-link-quiet mkl-active" : "mkl-link-quiet";
+  /* N°332-C — la caisse adopte l'EnterpriseHeader (méga menus au
+     moment le plus chaud du funnel : l'acheteur qui « remonte » ne
+     perd plus les repères du site). Câblage prudent : AUCUNE modale
+     d'inscription en pleine transaction — « Se connecter » ouvre la
+     console dans un nouvel onglet, « Essai gratuit » mène à la
+     formule Découverte 0 F/60 j de /hotspot#tarifs (promesse exacte).
+     L'ancienne sous-nav mobile mkl-subnav disparaît : le drawer du
+     header la remplace (même mécanique que les pages produit). */
+  const onSignInConsole = () => {
+    window.open(CONSOLE_LOGIN_URL, "_blank", "noopener,noreferrer");
+  };
+  const onSignUpTrial = () => {
+    router.push("/hotspot#tarifs");
+  };
 
   /* ─── Catalogue public (quasi statique : rafraîchi 60 s) ─── */
   const [offers, setOffers] = useState<PublicVpnOffers | null>(null);
@@ -278,69 +276,15 @@ export default function CheckoutPage({
       <div className="mkl-blob mkl-blob-2" aria-hidden="true" />
 
       <div className="mkl-main">
-        {/* ═══ TOPBAR (nav vitrine + « Mon espace VPN » → console) ═══ */}
-        <div className="mkl-topbar">
-          <div className="mkl-wrap flex items-center justify-between py-5">
-            <Link href="/" className="mkl-brand" aria-label={copy.header.homeLink}>
-              <Image
-                src="/logo.png"
-                alt="Logo 403Shield"
-                width={84}
-                height={84}
-                priority
-                className="mkl-brand-logo"
-              />
-              {copy.header.brand}
-            </Link>
-            <div className="flex items-center gap-2">
-              <nav className="hidden items-center gap-2 sm:flex" aria-label={navAriaLabel}>
-                {navItems.map((item) => (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    className={navClass(item.active)}
-                    aria-current={item.active ? "page" : undefined}
-                  >
-                    {item.label}
-                  </Link>
-                ))}
-                <Link href="/#tarifs" className="mkl-link-quiet">
-                  {copy.header.nav.pricing}
-                </Link>
-              </nav>
-              <button className="mkl-lang" onClick={toggleLang} aria-label="Switch language">
-                {copy.header.langLabel}
-              </button>
-              {/* L'espace VPN vit dans la CONSOLE (autre domaine, autre
-                  métier) — pas de bouton d'inscription SaaS ici : la caisse
-                  ne parle que VPN. */}
-              <a
-                className="mkl-btn mkl-btn-teal mkl-btn-sm"
-                href={CONSOLE_LOGIN_URL}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                {c.topbar.space}
-                <ExternalLink className="size-4" aria-hidden />
-                <span className="sr-only"> — nouvel onglet</span>
-              </a>
-            </div>
-          </div>
-          <nav className="mkl-subnav overflow-x-auto sm:hidden" aria-label={navAriaLabel}>
-            <div className="mkl-wrap flex items-center gap-1 py-1.5">
-              {navItems.map((item) => (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={navClass(item.active)}
-                  aria-current={item.active ? "page" : undefined}
-                >
-                  {item.label}
-                </Link>
-              ))}
-            </div>
-          </nav>
-        </div>
+        {/* ═══ N°332-C — EnterpriseHeader (méga menus + drawer) : même
+            header que toute la vitrine — l'ancienne topbar 3 liens et la
+            sous-nav mobile mkl-subnav sont retirées ═══ */}
+        <EnterpriseHeader
+          lang={lang}
+          toggleLang={toggleLang}
+          onSignIn={onSignInConsole}
+          onSignUp={onSignUpTrial}
+        />
 
         {/* ═══ HERO COMPACT (la caisse va droit au but — pas de 92vh) ═══ */}
         <section id="top" style={{ paddingBottom: 0 }}>

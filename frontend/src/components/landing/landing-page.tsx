@@ -75,6 +75,9 @@ const RAIL_ICONS: Record<string, ComponentType<LucideProps>> = {
 };
 
 const POWER_ICONS = [Ticket, ShieldCheck, Server, Waypoints];
+/* N°332-C — les 4 cartes « super-pouvoirs » deviennent un sommaire
+   CLIQUABLE : chaque carte conduit à son pilier (scroll doux interne). */
+const POWERS_TARGETS = ["hotspot", "protection", "isp", "tunnels"];
 const PROTECTION_FEAT_ICONS = [Globe, Lock, MoonStar, Ban];
 const HOTSPOT_FEAT_ICONS = [Palette, Ticket, Monitor, BarChart3];
 const TUNNELS_FEAT_ICONS = [Globe, Router, Cctv, KeyRound];
@@ -265,8 +268,9 @@ export default function LandingPage({ onSignIn, onSignUp }: LandingPageProps) {
   useEffect(() => {
     /* N°332-A — "isp" rejoint les sections observées : l'ancre était
        orpheline (aucune navigation ne la ciblait, le rail gardait "parc"
-       surligné en scrollant dessus). */
-    const sections = ["top", "pouvoirs", "protection", "hotspot", "tunnels", "parc", "isp", "tarifs"];
+       surligné en scrollant dessus). N°332-C — "confiance" et "faq"
+       suivent la même règle d'or : toute nouvelle ancre est observée. */
+    const sections = ["top", "pouvoirs", "protection", "hotspot", "tunnels", "parc", "isp", "confiance", "tarifs", "faq"];
     const io = new IntersectionObserver(
       (entries) => {
         for (const e of entries) {
@@ -434,9 +438,15 @@ export default function LandingPage({ onSignIn, onSignUp }: LandingPageProps) {
             <div className="mkl-powers">
               {copy.powers.cards.map((card, i) => {
                 const Icon = POWER_ICONS[i] ?? Ticket;
+                const target = POWERS_TARGETS[i] ?? "tarifs";
                 return (
                   <Reveal key={card.title} delay={i * 0.08} className="h-full">
-                    <article className={`mkl-power mkl-p${(i % 3) + 1} h-full`}>
+                    <a
+                      href={`#${target}`}
+                      onClick={goTo(target)}
+                      className={`mkl-power mkl-p${(i % 3) + 1} h-full`}
+                      aria-label={`${card.title} — ${copy.powers.explore}`}
+                    >
                       <span className="mkl-tag">{card.tag}</span>
                       <div className="mkl-icon" aria-hidden="true">
                         <Icon className="size-7" />
@@ -448,7 +458,8 @@ export default function LandingPage({ onSignIn, onSignUp }: LandingPageProps) {
                           <li key={item}>{item}</li>
                         ))}
                       </ul>
-                    </article>
+                      <span className="mkl-power-more">{copy.powers.explore} →</span>
+                    </a>
                   </Reveal>
                 );
               })}
@@ -723,6 +734,46 @@ export default function LandingPage({ onSignIn, onSignUp }: LandingPageProps) {
           </Reveal>
         </section>
 
+        {/* N°332-C — CONFIANCE VÉRIFIABLE : preuve sociale honnête, SANS
+            témoignage (consigne propriétaire) — faits techniques + CAPTURES
+            RÉELLES de la console servies depuis public/docs (lazy, srcset). */}
+        <section id="confiance">
+          <div className="mkl-wrap">
+            <Reveal className="mkl-sec-head mkl-center">
+              <span className="mkl-kicker">{copy.trust.eyebrow}</span>
+              <h2>{copy.trust.title}</h2>
+              <p>{copy.trust.subtitle}</p>
+            </Reveal>
+            <Reveal delay={0.06}>
+              <ul className="mkl-trust mkl-trust-lg">
+                {copy.trust.badges.map((b) => (
+                  <li key={b}>
+                    <ShieldCheck className="size-4" aria-hidden="true" />
+                    <span>{b}</span>
+                  </li>
+                ))}
+              </ul>
+            </Reveal>
+            <div className="mkl-shots">
+              {copy.trust.shots.map((shot, i) => (
+                <Reveal key={shot.src} delay={0.08 + i * 0.07} className="h-full">
+                  <figure className="mkl-shot">
+                    <Image
+                      src={shot.src}
+                      alt={shot.alt}
+                      width={720}
+                      height={450}
+                      sizes="(max-width: 900px) 92vw, 380px"
+                      className="mkl-shot-img"
+                    />
+                    <figcaption>{shot.caption}</figcaption>
+                  </figure>
+                </Reveal>
+              ))}
+            </div>
+          </div>
+        </section>
+
         {/* TARIFS */}
         <section id="tarifs">
           <div className="mkl-wrap">
@@ -778,6 +829,27 @@ export default function LandingPage({ onSignIn, onSignUp }: LandingPageProps) {
                 sélecteur de segments + hint + chips restent propres à la
                 home (comparateur complet 2 comptoirs). */}
             <PricingGrid plans={activeSegment.plans} currencyNote={copy.pricing.currencyNote} onCta={onSignUp} />
+          </div>
+        </section>
+
+        {/* N°332-C — FAQ VITRINE : AVANT le CTA final (le visiteur hésite
+            au moment du prix — les réponses désamorcent l'objection). */}
+        <section id="faq">
+          <div className="mkl-wrap mkl-faq-wrap">
+            <Reveal className="mkl-sec-head mkl-center">
+              <span className="mkl-kicker">{copy.faq.eyebrow}</span>
+              <h2>{copy.faq.title}</h2>
+            </Reveal>
+            <div className="mkl-faq">
+              {copy.faq.items.map((item, i) => (
+                <Reveal key={item.q} delay={Math.min(i, 3) * 0.05}>
+                  <details className="mkl-faq-item">
+                    <summary>{item.q}</summary>
+                    <p>{item.a}</p>
+                  </details>
+                </Reveal>
+              ))}
+            </div>
           </div>
         </section>
 

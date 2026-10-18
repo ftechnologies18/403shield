@@ -203,6 +203,8 @@ export interface LandingCopy {
     eyebrow: string;
     title: string;
     subtitle: string;
+    /** N°332-C — libellé du pied de lien des cartes (sommaire cliquable). */
+    explore: string;
     cards: {
       tag: string;
       title: string;
@@ -268,6 +270,23 @@ export interface LandingCopy {
     feats: { title: string; desc: string; tag: string }[];
   };
   stats: { value: number; label: string }[];
+  /* N°332-C — preuve sociale HONNÊTE (consigne propriétaire : AUCUN
+     témoignage) : faits vérifiables + captures réelles de la console
+     (public/docs/**). Ancrage émotionnel sans mensonge repérable. */
+  trust: {
+    eyebrow: string;
+    title: string;
+    subtitle: string;
+    badges: string[];
+    shots: { src: string; alt: string; caption: string }[];
+  };
+  /* N°332-C — FAQ de la vitrine : le visiteur hésite au moment du
+     prix — les réponses sont placées AVANT le CTA final. */
+  faq: {
+    eyebrow: string;
+    title: string;
+    items: { q: string; a: string }[];
+  };
   pricing: {
     eyebrow: string;
     title: string;
@@ -516,6 +535,7 @@ const fr: LandingCopy = {
     title: "Tout ce qu'il faut pour régner sur votre réseau.",
     subtitle:
       "Hotspot rentable, protection cloud, pilotage de parc, gestion d'abonnés PPPoE/Cybercafé et tunnels WireGuard : 403Shield réunit en une seule suite tout ce que votre infrastructure réclame — sans Winbox obligatoire, sans serveur à maintenir.",
+    explore: "Découvrir",
     cards: [
       {
         tag: "Fondation",
@@ -726,6 +746,75 @@ const fr: LandingCopy = {
     { value: 54, label: "pays africains visés" },
     { value: 2, label: "usages du tunnel — VPN & Accès Pro" },
   ],
+  trust: {
+    eyebrow: "Confiance vérifiable",
+    title: "Rien à croire sur parole.",
+    subtitle:
+      "Aucun chiffre gonflé, aucun témoignage arrangé : des faits techniques, des captures réelles de la console et 60 jours d'essai pour vous faire votre propre avis.",
+    badges: [
+      "Paiement Wave & carte — frais réels affichés avant confirmation",
+      "Configuration VPN livrée par e-mail en 30 secondes",
+      "Infrastructure hébergée dans l'Union européenne — Marseille",
+      "WireGuard — protocole court et audité publiquement",
+      "Essai Découverte 60 jours — sans carte bancaire",
+      "powered by FTech CI — Abidjan",
+    ],
+    shots: [
+      {
+        src: "/docs/hotspot/vouchers-wizard-1.png",
+        alt: "Assistant de génération de vouchers par lots de 500 dans la console 403Shield",
+        caption: "Vos vouchers, par lots de 500",
+      },
+      {
+        src: "/docs/analyse/reports-marge.png",
+        alt: "Rapport de marge par profil de forfait dans la console 403Shield",
+        caption: "Vos marges, calculées chaque jour",
+      },
+      {
+        src: "/docs/infrastructure/routers.png",
+        alt: "Parc de routeurs MikroTik supervisé avec versions RouterOS",
+        caption: "Votre parc, supervisé en continu",
+      },
+    ],
+  },
+  faq: {
+    eyebrow: "Questions fréquentes",
+    title: "Les réponses avant de vous décider.",
+    items: [
+      {
+        q: "Par quoi dois-je commencer ?",
+        a: "Par l'essai Découverte : 60 jours gratuits, sans carte bancaire. Créez votre compte, suivez le guide Premiers pas — votre premier routeur est en ligne en quelques minutes.",
+      },
+      {
+        q: "Faut-il être ingénieur réseau ?",
+        a: "Non. L'agent 403Shield se colle sur votre MikroTik en un script ; la console gère le reste. Chaque geste est documenté pas à pas dans les guides, captures à l'appui.",
+      },
+      {
+        q: "Quels paiements acceptez-vous ?",
+        a: "Wave et carte bancaire, en FCFA. Les remises et frais réels sont affichés avant chaque confirmation — jamais de coût caché.",
+      },
+      {
+        q: "Où sont hébergées mes données ?",
+        a: "Sur une infrastructure hébergée dans l'Union européenne (Marseille), avec des répliques nocturnes et un chiffrement de bout en bout sur les tunnels.",
+      },
+      {
+        q: "Puis-je gérer plusieurs établissements ?",
+        a: "Oui : la console est multi-sites. La formule annuelle (25 000 FCFA) supervise autant de routeurs que nécessaire ; le mensuel (2 500 FCFA) se paie par routeur.",
+      },
+      {
+        q: "Le VPN est-il légal ?",
+        a: "Oui — c'est un usage standard du chiffrement personnel et professionnel, bâti sur WireGuard, un protocole audité publiquement et intégré aux systèmes modernes.",
+      },
+      {
+        q: "Comment se passe le support ?",
+        a: "Le chat intégré répond aussitôt et passe la main à un humain quand il faut. Les alertes partent par Telegram, WhatsApp ou e-mail — et chaque module a son guide documenté.",
+      },
+      {
+        q: "Et si j'arrête ?",
+        a: "Le mensuel est sans engagement : vous partez quand vous voulez. Vos rapports s'exportent en CSV ; votre configuration WireGuard vous appartient et reste exportable.",
+      },
+    ],
+  },
   pricing: {
     eyebrow: "Tarifs",
     title: "Un abonnement, un tunnel.",
@@ -1606,6 +1695,7 @@ const en: LandingCopy = {
     title: "Everything you need to rule your network.",
     subtitle:
       "A profitable Hotspot, cloud protection, fleet control, PPPoE/Cybercafé management and WireGuard tunnels: 403Shield gathers in a single suite everything your infrastructure demands — no mandatory Winbox, no server to maintain.",
+    explore: "Explore",
     cards: [
       {
         tag: "Foundation",
@@ -1816,6 +1906,75 @@ const en: LandingCopy = {
     { value: 54, label: "African countries" },
     { value: 2, label: "uses of the tunnel — VPN & Pro Access" },
   ],
+  trust: {
+    eyebrow: "Verifiable trust",
+    title: "Nothing to take on faith.",
+    subtitle:
+      "No inflated numbers, no staged testimonials: technical facts, real console screenshots, and a 60-day trial to make up your own mind.",
+    badges: [
+      "Wave & card payments — real fees shown before confirmation",
+      "VPN configuration emailed within 30 seconds",
+      "Infrastructure hosted in the European Union — Marseille",
+      "WireGuard — short, publicly audited protocol",
+      "60-day Discovery trial — no credit card",
+      "powered by FTech CI — Abidjan",
+    ],
+    shots: [
+      {
+        src: "/docs/hotspot/vouchers-wizard-1.png",
+        alt: "500-voucher batch generation wizard in the 403Shield console",
+        caption: "Your vouchers, in batches of 500",
+      },
+      {
+        src: "/docs/analyse/reports-marge.png",
+        alt: "Per-plan margin report in the 403Shield console",
+        caption: "Your margins, computed daily",
+      },
+      {
+        src: "/docs/infrastructure/routers.png",
+        alt: "Supervised MikroTik fleet with RouterOS versions",
+        caption: "Your fleet, supervised around the clock",
+      },
+    ],
+  },
+  faq: {
+    eyebrow: "Frequently asked questions",
+    title: "The answers before you decide.",
+    items: [
+      {
+        q: "Where should I start?",
+        a: "With the Discovery trial: 60 days free, no credit card. Create your account, follow the First steps guide — your first router is online within minutes.",
+      },
+      {
+        q: "Do I need to be a network engineer?",
+        a: "No. The 403Shield agent is pasted onto your MikroTik as a single script; the console handles the rest. Every step is documented in the guides, screenshots included.",
+      },
+      {
+        q: "Which payments do you accept?",
+        a: "Wave and bank card, in FCFA. Real discounts and fees are shown before every confirmation — never a hidden cost.",
+      },
+      {
+        q: "Where is my data hosted?",
+        a: "On infrastructure hosted in the European Union (Marseille), with nightly replicas and end-to-end encryption on the tunnels.",
+      },
+      {
+        q: "Can I manage several locations?",
+        a: "Yes: the console is multi-site. The yearly plan (25,000 FCFA) supervises as many routers as needed; the monthly plan (2,500 FCFA) is paid per router.",
+      },
+      {
+        q: "Is the VPN legal?",
+        a: "Yes — it is a standard personal and professional use of encryption, built on WireGuard, a publicly audited protocol integrated into modern systems.",
+      },
+      {
+        q: "How does support work?",
+        a: "The built-in chat answers instantly and hands over to a human when needed. Alerts go out via Telegram, WhatsApp or email — and every module has a documented guide.",
+      },
+      {
+        q: "What if I stop?",
+        a: "The monthly plan has no commitment: leave whenever you want. Your reports export to CSV; your WireGuard configuration belongs to you and stays exportable.",
+      },
+    ],
+  },
   pricing: {
     eyebrow: "Pricing",
     title: "One subscription, one tunnel.",
