@@ -10,6 +10,62 @@ sous-marque FTech CI) ; l'historique ci-dessous conserve les noms d'époque.
 N°319 : le DÉPÔT GitHub lui-même devient `ftechnologies18/403shield`
 (anciennes URL redirigées en 301 par GitHub — web, git et API).
 
+## 2026-10-18 — N°328 — **INTÉGRATION DU COMMIT POST-FUSION DU PR #70 (Jules, 3c5cbc8 « complete enterprise multi-page redesign and navbar cleanup ») : la navbar de la vitrine achève sa transition Cloudflare — les liens plats « Hotspot » et « Tunnels » disparaissent du header (doublons du MegaMenu N°325) et les sections resserrent leurs respirations verticales (vitrine plus dense, hero plus compact)**
+
+### Déclencheur (propriétaire)
+« Un nouveau commit dans le PR Jule attend son intégration. » — 26 minutes
+APRÈS la fusion du PR #70 (N°325, merged_at 2026-10-18T00:55Z sur 1ed8b94),
+Jules a poussé `3c5cbc8` sur la même branche
+`feat/enterprise-landing-redesign-6313619506023410653` (01:21Z) : le PR étant
+déjà clos/fusionné, ce commit orphan n'était dans AUCUN main — c'est le
+delta exact `a23fac3..3c5cbc8` (1 commit, 2 fichiers, +3/−37, frontend seul).
+
+### Ce que le commit apporte (2 fichiers)
+- **`enterprise-header.tsx` (−34 lignes)** : retrait des liens plats
+  « Hotspot » (`/hotspot`) et « Tunnels » (`/tunnels`) de la barre desktop
+  ET du drawer mobile. Ces liens doublonnaient le MegaMenu « Produits »
+  posé par N°325 (items Hotspot WiFi Cloud / Gestion Cybercafé /
+  Gestionnaire PPPoE ISP / Tunnels WireGuard & VPN) : la nav plat garde
+  sa mission « générique » (Accueil · Produits · Solutions · Tarifs ·
+  Guides & Docs — exactement le modèle dash.cloudflare.com), les produits
+  vivent dans les MegaMenus.
+- **`landing-clay.css` (±6 lignes)** : resserrement des respirations —
+  `section` padding `clamp(70px, 9vw, 130px)` → `clamp(48px, 6vw, 84px)` ;
+  mobile `64px` → `40px` ; hero mobile `padding-top: 40px` → `24px`. La
+  vitrine gagne en densité sans toucher aux gouttières horizontales
+  (`.mkl-wrap` clamp intact).
+
+### Analyse d'intégration (revue de code du tuteur — aucun renforcement nécessaire)
+- **Pages toujours joignables** : `/hotspot` et `/tunnels` restent servies
+  (routes Next intactes) et atteignables via le MegaMenu Produits (6 items
+  href réels), le footer écosystème (« Hotspot & Cybercafé », « Accès Pro —
+  Tunnels WireGuard » FR/EN), les CTA secondaires des pages produit
+  (`ctaSecondaryHref: "/tunnels"`), ET la topbar de la caisse
+  `checkout-page.tsx` qui consomme toujours `copy.header.nav.hotspot/tunnels`
+  — les clés de copie ne deviennent PAS orphelines (aucune opération de
+  nettoyage de copie à faire).
+- **Rail mobile 7 entrées intact** : le raccourci bas d'écran (Accueil ·
+  Super-pouvoirs · Protection · Hotspot · Tunnels WireGuard · Parc ·
+  Tarifs) est un composant indépendant non touché — sur mobile les deux
+  produits restent à un geste du pouce.
+- **Tests E2E non concernés** : `frontend/e2e/` (sell, resellers,
+  bootstrap) ne référence jamais les liens plats hotspot/tunnels du header.
+- **Zéro conflit** : le delta porte sur l'état N°325 exact (aucun des deux
+  fichiers n'a bougé depuis — main a vécu N°326 console + N°327 workflow,
+  périmètres disjoints) ; `git merge --no-ff` auto-merge propre.
+
+### Portes
+lint 0 · tsc 0 · build production 47/47 pages (parité N°325/326) · smoke
+navigateur local sur le mergé (desktop 1280 : nav plat = Accueil/Tarifs/
+Guides & Docs + MegaMenus Produits/Solutions aria-expanded fonctionnels,
+MegaMenu Produits ouvert par clic → 4 items produits listés ; mobile 390 :
+drawer 3 liens plats + MegaMenus, rail 7 entrées intact, scrollWidth exact
+1280=1280 et 390=390, 0 débordement, 0 erreur console/page) · pages
+`/hotspot` `/tunnels` `/vpn` HTTP 200 · audit VLM desktop PASS (« nav
+conforme, aucun chevauchement, aucun texte coupé, hiérarchie claire ») ;
+schéma DB : AUCUN (frontend pur — deploy-oracle non déclenché, seul le
+pipeline Vercel vitrine/concernés suit le push).
+
 ## 2026-10-18 — N°327 — **LE SECOURS QUOTIDIEN SUPABASE → NEON REDEVIENT VERT après 10 nuits rouges : DEUX défaillances en cascade (secret du dump posé sur le pooler TRANSACTIONNEL refusé par pg_dump, puis POISONNEMENT DU POOL NEON par le set_config du dump qui rend le contrôle d'intégrité aveugle) — double correctif « ceinture et bretelles » dans le workflow + secrets re-posés sur le contrat §10**
 
 ### Déclencheur (vérification de santé post-N°326)
