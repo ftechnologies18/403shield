@@ -10,6 +10,41 @@ sous-marque FTech CI) ; l'historique ci-dessous conserve les noms d'époque.
 N°319 : le DÉPÔT GitHub lui-même devient `ftechnologies18/403shield`
 (anciennes URL redirigées en 301 par GitHub — web, git et API).
 
+## 2026-10-18 — N°334-B — **REFONTE DE L'ESPACE CLIENT /me AU STYLE CONSOLE /app/vpn** — QR WireGuard enfin scannable + fichier .conf + instructions par famille
+
+- **Signalement propriétaire** : « console.403shield.ftci.fr/me est laid,
+  expérience utilisateur brisée, impossible de scanner le QR code de
+  configuration WireGuard ».
+- **Réparation UX n°1 — le QR inexistant** : la modale « Voir la
+  configuration » livrait la conf en TEXTE SEUL pendant que l'aide
+  promettait « importer depuis un fichier ou un QR code ». Désormais :
+  QR scannable (qrcode.react 4.2.0 — même bibliothèque/version que la
+  console opérateur, 204 px, niveau L, marge de silence marginSize 2,
+  fond blanc encadré) + téléchargement `.conf` (Blob + a[download],
+  `403shield-<ref>.conf`) + copie.
+- **Instructions adaptées à la famille** (miroir N°315) — b2c : scan
+  caméra depuis l'app WireGuard ; pro : import fichier sous RouterOS 7
+  (WireGuard → Peers) + lien page Accès Pro.
+- **Style /app/vpn appliqué au client** : thème clair « console »
+  (`.mkme-page` + `html:has(.mkme-page)` — miroir exact du
+  `html:has(.mka-page)` des parcours d'auth N°326), wordmark aurora,
+  KPI stat cards (accès actifs · appareils · expire bientôt ≤ 7 j ·
+  prochaine échéance — dérivés exclusivement du contrat /api/tunnel/me,
+  doctrine aucun faux chiffre), badges famille B2C/B2B, échéances
+  colorées, modales bottom-sheet mobile avec Escape + focus gestion,
+  cibles tactiles min-h-11.
+- **Contrat backend inchangé** (GET /me, POST reveal, POST renew) ;
+  /pro et /shop conservent le thème sombre (doctrine N°326).
+- **Portes** (tunnel-console hors CI — manuelles) : lint 0 · tsc 0 ·
+  next build 9/9 · smoke E2E sur VRAI BACKEND (cmd/smokeseed éphémère,
+  jamais commité : client + 3 commandes réelles + JWT tunnel) — KPIs
+  réels rendus, reveal b2c et pro vérifiés (QR 204×204 mesuré au DOM,
+  centré x=93 en mobile), Copier + Fichier .conf, Renouveler pro
+  (formules famille + validation Wave), 390=390, 0 erreur console ;
+  VLM PASS ×4 (page + modale, 1280 + 390).
+- **Schéma DB : AUCUN** (frontend pur tunnel-console — deploy-oracle
+  non concerné).
+
 ## 2026-10-18 — N°334-A — **RÉPARATION DE LA SECTION #POUVOIRS (cartes super-pouvoirs illisibles)** — régression inline du N°332-A corrigée par `display: block`
 
 > Renuméroté en N°334-A par commit de suivi : la livraison était étiquetée
