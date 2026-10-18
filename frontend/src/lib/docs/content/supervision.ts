@@ -121,7 +121,7 @@ export const SUPERVISION_GUIDES: Guide[] = [
       "Qui est en ligne, sur quel routeur, depuis quand, avec quels volumes — et comment couper proprement une session (kick) en un clic.",
     roles: "Propriétaire · Gérant",
     minutes: 4,
-    updated: "2026-10-12",
+    updated: "2026-10-18",
     sectionId: "supervision",
     vague: "V1",
     quoi:
@@ -138,9 +138,9 @@ export const SUPERVISION_GUIDES: Guide[] = [
           "Le client peut se déconnecter lui-même depuis la page du portail ; le kick agit depuis la console, sans coopération du client.",
       },
       {
-        with: "La pause appareil (foyer)",
+        with: "La déconnexion manuelle du routeur",
         body:
-          "En usage foyer, un appareil se met « en pause » (internet coupé au niveau routeur) ; en hotspot, l'équivalent est le kick de session — même effet immédiat.",
+          "Un appareil peut aussi être coupé depuis la fiche du routeur (l'agent applique la règle au prochain passage) ; le kick de session agit immédiatement, depuis la console, sans toucher au routeur.",
       },
     ],
     recoit: [
@@ -232,11 +232,11 @@ export const SUPERVISION_GUIDES: Guide[] = [
       "Les 4 boucliers 403Shield posés sur le routeur : filtrage des contenus, anti-piratage, couvre-feu familial et blocage des VPN — activation, portée et limites.",
     roles: "Propriétaire · Gérant",
     minutes: 5,
-    updated: "2026-10-12",
+    updated: "2026-10-18",
     sectionId: "supervision",
     vague: "V2",
     quoi:
-      "Supervision → Protection concentre les 4 boucliers de 403Shield. Ils se posent sur le routeur via l'agent (règles pare-feu, DNS filtrant, scheduler) — donc actifs MÊME pour les clients du hotspot, et administrables à distance.\n\nSafeWiFi filtre les contenus (DNS catégorisé) ; Shield durcit le routeur contre les attaques (ports, brute-force, scans) ; FamilyGuard applique un couvre-feu et un filtrage renforcé sur des appareils désignés (usage foyer) ; AntiVPN empêche les clients de masquer leur trafic avec un VPN (équité de bande et conformité).",
+      "Supervision → Protection concentre les 4 boucliers de 403Shield. Ils se posent sur le routeur via l'agent (règles pare-feu, DNS filtrant, scheduler) — donc actifs MÊME pour les clients du hotspot, et administrables à distance.\n\nSafeWiFi filtre les contenus (DNS catégorisé) ; Shield durcit le routeur contre les attaques (ports, brute-force, scans) ; FamilyGuard applique un couvre-feu et un filtrage renforcé sur des appareils désignés (typiquement la tablette des enfants ou l'écran du comptoir) ; AntiVPN empêche les clients de masquer leur trafic avec un VPN (équité de bande et conformité).",
     difference: [
       {
         with: "La QoS du routeur",
@@ -246,7 +246,7 @@ export const SUPERVISION_GUIDES: Guide[] = [
       {
         with: "FamilyGuard et le hotspot",
         body:
-          "FamilyGuard cible les APPAREILS nommés (typique foyer : tablette des enfants). Sur un hotspot public, SafeWiFi + Shield + AntiVPN suffisent.",
+          "FamilyGuard cible les APPAREILS nommés (une tablette, une console, l'écran du comptoir). Sur un hotspot public, SafeWiFi + Shield + AntiVPN suffisent la plupart du temps.",
       },
       {
         with: "Le filtrage du portail",
@@ -290,7 +290,7 @@ export const SUPERVISION_GUIDES: Guide[] = [
           "Sur un hotspot payant, l'AntiVPN empêche un acheteur de temps de le partager depuis chez lui via VPN, et évite qu'un contournement masque un usage abusif. Les tentatives remontent dans le journal — un client récidiviste se repère à la MAC.",
       },
       {
-        title: "FamilyGuard (usage foyer)",
+        title: "FamilyGuard (appareils désignés)",
         body:
           "Désignez les appareils à encadrer (MAC), posez le couvre-feu (heures sans Internet) et le filtrage renforcé. Les appareils hors couvre-feu continuent normalement — seuls les visés sont bridés.",
       },

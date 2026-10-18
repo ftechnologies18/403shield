@@ -6,6 +6,44 @@ aux dates de livraison — le déploiement est continu : chaque push `main` pass
 la CI puis se déploie automatiquement (frontend Vercel, backend Oracle E5
 depuis le T2 N°266 — Render suspendu N°303). N°317 : le projet change de nom
 de marque — MikCloud et MikTunnel deviennent **403Shield** (marque unifiée,
+## 2026-10-18 — N°333-A — **VÉRITÉ & FRAÎCHEUR DU CONTENU (volet A du plan N°333 — réorganisation du centre de guides)** — purge du mode foyer, vitrine-vpn réécrit sur le socle /vpn, 21 dates réelles
+
+### N°333-A (volet A — 9 fichiers de contenu, zéro composant)
+
+- **PURGE DU MODE FOYER (supprimé du produit N°324, encore enseigné vivant)** :
+  `premiers-pas` (le compte ne porte plus d'« usage hotspot ou foyer » — la
+  FAQ « boutique et maison » répond désormais par les comptes/sites
+  cloisonnés) · `sessions-actives` (la « pause appareil (foyer) » devient la
+  coupure depuis la fiche routeur) · `sites-multi-sites` (la « maison
+  (usage foyer) » devient la résidence en site 2) · `protection`
+  (FamilyGuard recadré « appareils désignés » — tablette, console, écran du
+  comptoir — sans évoquer le mode de compte disparu) · `plateforme-cockpit`
+  (la caption « usage (hotspot/foyer) » perd sa colonne disparue).
+- **VITRINE-VPN RÉÉCRIT SUR LE SOCLE /vpn (N°332-B)** : fin de tunnel.ftci.fr/shop
+  et de la capture MikCloud pré-rebrand — le guide documente la vitrine
+  403shield.ftci.fr/vpn (formules 1 500/15 000 F, caisse /checkout?plan=
+  Wave/carte avec frais répercutés +6 %/−3 %, config par e-mail, espace
+  client sans mot de passe) avec UNE CAPTURE RÉELLE de la page live
+  (1440×7930, `public/docs/tunnels/vitrine-vpn.png`) ; FAQ 3 questions
+  (VPN vs Accès Pro, routeur requis, renouvellement) ; related orienté
+  tunnels (acces-pro, console-tunnels — volet B).
+- **HYGIÈNE TEXTUELLE (~15 coquilles)** : « sanstrace », « se pilotée »,
+  « Vérrouillage », « polluler », « deux-troux », « fidèlement »,
+  « ongletatelier », « De boutiques », « Ré générer », « vous remporte »,
+  « la quartier », « mot de demande », « n'empaume », « AGREGATS »,
+  « précaution N° : » ; « see Registre de traitement » francisé ; le
+  codename **MIKLOUD** disparaît du guide public Inscriptions.
+- **DOCTRINE « AUCUN FAUX CHIFFRE » ÉTENDUE** : « un down se sait en 30
+  secondes » → « au check-in suivant (45 s) » ; « zéro litige de comptes » →
+  « chaque mouvement se relit ligne à ligne » ; « Aucune formation
+  nécessaire » ×2 → « pensé pour vendre sans formation » / « trois touches
+  suffisent » ; « déploie le correctif en 48 h » → « planifie par vagues » ;
+  « l'installation tient en 30 secondes » → « se résume à coller un script ».
+- **FRAÎCHEUR RÉELLE** : 21 guides édités portent leur vraie date
+  `updated: 2026-10-18` — fin du plateau factice 36/36 daté 2026-10-12.
+- **PORTES** : lint 0 · tsgo 0 · next build 47/47 · schéma DB AUCUN
+  (contenu pur — deploy-oracle non concerné).
+
 sous-marque FTech CI) ; l'historique ci-dessous conserve les noms d'époque.
 N°319 : le DÉPÔT GitHub lui-même devient `ftechnologies18/403shield`
 (anciennes URL redirigées en 301 par GitHub — web, git et API).

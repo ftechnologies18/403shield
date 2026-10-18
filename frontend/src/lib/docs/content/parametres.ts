@@ -166,7 +166,7 @@ export const PARAMETRES_GUIDES: Guide[] = [
       "Restez au courant sans guetter : la cloche de la console, les relais e-mail, le bot Telegram — et le réglage fin des alertes qui comptent.",
     roles: "Propriétaire · Gérant",
     minutes: 3,
-    updated: "2026-10-12",
+    updated: "2026-10-18",
     sectionId: "parametres",
     vague: "V2",
     quoi:
@@ -225,7 +225,7 @@ export const PARAMETRES_GUIDES: Guide[] = [
       {
         title: "L'exploitant itinérant",
         body:
-          "Telegram + PWA : le réseau se surveille depuis la rue — un down se sait en 30 secondes, pas au lendemain matin.",
+          "Telegram + PWA : le réseau se surveille depuis la rue — un down se sait au check-in suivant (toutes les 45 s), pas au lendemain matin.",
       },
     ],
     pieges: [

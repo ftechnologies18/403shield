@@ -128,10 +128,10 @@ export const INFRASTRUCTURE_GUIDES: Guide[] = [
     id: "outils-routeur",
     title: "Outils du routeur (QoS, pool, scheduler, maintenance)",
     summary:
-      "L'ongletatelier de la fiche : QoS (files et limites), adresse pool (DHCP), scheduler (tâches), pool doctor et mises à jour RouterOS — les réglages fins sans Winbox.",
+      "L'onglet atelier de la fiche : QoS (files et limites), adresse pool (DHCP), scheduler (tâches), pool doctor et mises à jour RouterOS — les réglages fins sans Winbox.",
     roles: "Propriétaire · Gérant",
     minutes: 5,
-    updated: "2026-10-12",
+    updated: "2026-10-18",
     sectionId: "infrastructure",
     vague: "V2",
     quoi:
@@ -191,7 +191,7 @@ export const INFRASTRUCTURE_GUIDES: Guide[] = [
       {
         title: "Système : version RouterOS",
         body:
-          "L'onglet Système montre la version en cours et propose la montée (contrôlée, avec précaution N° : TLS ≥ 7.19 exigé par l'agent — guide Connecter). Testez sur un routeur secondaire avant le routeur principal.",
+          "L'onglet Système montre la version en cours et propose la montée (contrôlée — contrainte d'agent : TLS ≥ 7.19, voir le guide Connecter). Testez sur un routeur secondaire avant le routeur principal.",
       },
     ],
     usages: [
@@ -251,7 +251,7 @@ export const INFRASTRUCTURE_GUIDES: Guide[] = [
       "Un site par établissement : ventilation comptable par antenne, portails distincts, routage des vouchers — la brique multi-boutiques.",
     roles: "Propriétaire",
     minutes: 3,
-    updated: "2026-10-12",
+    updated: "2026-10-18",
     sectionId: "infrastructure",
     vague: "V3",
     quoi:
@@ -307,12 +307,12 @@ export const INFRASTRUCTURE_GUIDES: Guide[] = [
       {
         title: "Chaîne de boutiques",
         body:
-          "De boutiques, deux terrasses : un compte, des sites — chaque caisse lue séparément, la marge consolidée en un coup d'œil.",
+          "Deux boutiques, deux terrasses : un compte, des sites — chaque caisse lue séparément, la marge consolidée en un coup d'œil.",
       },
       {
         title: "Boutique + domicile",
         body:
-          "Le commerce en site 1, la maison (usage foyer) séparée : ni les tickets ni les rapports ne se mélangent.",
+          "Le commerce en site 1, la résidence en site 2 : deux sites bien séparés — ni les tickets ni les rapports ne se mélangent.",
       },
     ],
     pieges: [

@@ -268,7 +268,7 @@ export const HOTSPOT_GUIDES: Guide[] = [
       "Le module Cybercafé ajoute la gestion des postes câblés loués à l'heure : attribution des machines, codes-temps, caisse du jour — en complément du WiFi.",
     roles: "Propriétaire",
     minutes: 4,
-    updated: "2026-10-12",
+    updated: "2026-10-18",
     sectionId: "hotspot",
     vague: "V2",
     quoi:
@@ -312,7 +312,7 @@ export const HOTSPOT_GUIDES: Guide[] = [
       {
         title: "Déclarez les postes",
         body:
-          "Chaque machine du local se déclare avec son nom (POSTE-01…) — le suivi d'état et le démarrage de session s'y rattachent. Un poste en panne se marque « hors service » : il sort du rotateur sans polluler la caisse.",
+          "Chaque machine du local se déclare avec son nom (POSTE-01…) — le suivi d'état et le démarrage de session s'y rattachent. Un poste en panne se marque « hors service » : il sort du rotateur sans polluer la caisse.",
       },
       {
         title: "Vendez des codes-temps",
@@ -372,7 +372,7 @@ export const HOTSPOT_GUIDES: Guide[] = [
       "Vendez des accès VPN WireGuard à vos clients (clés, quotas, péremption) et administrez les peers — le module VPN compte du hotspot.",
     roles: "Propriétaire",
     minutes: 4,
-    updated: "2026-10-12",
+    updated: "2026-10-18",
     sectionId: "hotspot",
     vague: "V2",
     quoi:
@@ -450,7 +450,7 @@ export const HOTSPOT_GUIDES: Guide[] = [
         severity: "warn",
       },
       {
-        title: "Vérrouillage grossiste",
+        title: "Verrouillage grossiste",
         body:
           "Si la plateforme opère en mode grossiste, l'octroi des comptes VPN passe par elle (pool global) — la console vous l'indique. Vendez alors via la vitrine ou demandez l'octroi.",
         severity: "info",
@@ -476,7 +476,7 @@ export const HOTSPOT_GUIDES: Guide[] = [
       "Le segment FAI/WISP de 403Shield : abonnés fixes avec identifiants permanents, sessions, découverte des secrets — pour vendre de la connectivité au mois.",
     roles: "Propriétaire · Gérant",
     minutes: 5,
-    updated: "2026-10-12",
+    updated: "2026-10-18",
     sectionId: "hotspot",
     vague: "V3",
     quoi:
@@ -527,7 +527,7 @@ export const HOTSPOT_GUIDES: Guide[] = [
         title: "Créez un abonné",
         body:
           "Nom d'utilisateur, mot de passe, profil de débit, échéance. Le secret part vers le routeur cible au check-in ; le client configure la connexion PPPoE chez lui (ou sur son routeur CPE fourni).",
-        tip: "Les profils de débit PPPoE se gèrent comme la grille hotspot : créez deux-troux paliers (budget / standard / premium).",
+        tip: "Les profils de débit PPPoE se gèrent comme la grille hotspot : créez deux-trois paliers (budget / standard / premium).",
       },
       {
         title: "Suivez les sessions",
@@ -586,7 +586,7 @@ export const HOTSPOT_GUIDES: Guide[] = [
       "Offrez du WiFi à quota : un site avec QR sur les tables, code gratuit, capture de téléphone optionnelle pour le marketing — l'outil d'accueil/terrasse.",
     roles: "Propriétaire · Gérant",
     minutes: 4,
-    updated: "2026-10-12",
+    updated: "2026-10-18",
     sectionId: "hotspot",
     vague: "V2",
     quoi:
@@ -684,7 +684,7 @@ export const HOTSPOT_GUIDES: Guide[] = [
       {
         title: "Téléphones captés = responsabilité",
         body:
-          "Si vous activez la capture, vous entrez dans un traitement de données (registre, finalité, consentement au QR) — see Registre de traitement.",
+          "Si vous activez la capture, vous entrez dans un traitement de données (registre, finalité, consentement au QR) — voir le registre de traitement.",
         severity: "info",
       },
     ],

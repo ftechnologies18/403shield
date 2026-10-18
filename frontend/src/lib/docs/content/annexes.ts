@@ -10,11 +10,11 @@ export const ANNEXES_GUIDES: Guide[] = [
       "L'écran de votre revendeur : /sell sur téléphone, PIN, vente en 3 touches, QR/impression — la face commerciale sans console.",
     roles: "Revendeur (pour information)",
     minutes: 3,
-    updated: "2026-10-12",
+    updated: "2026-10-18",
     sectionId: "annexes",
     vague: "V2",
     quoi:
-      "Le Mode Vente est l'interface de vente autonome du revendeur : sur SON téléphone (ou une tablette du kiosque), il ouvre 403shield.ftci.fr/sell, choisit l'onglet Revendeur et entre son PIN. Il voit alors SON stock (les lots transférés), vend un ticket (le client reçoit code + QR), et suit son reste.\n\nAucune formation nécessaire : l'écran est pensé grand, tactile, et ne propose QUE la vente. Le mode PIN verrouille tout le reste — aucune donnée de gestion ne fuite sur son appareil.",
+      "Le Mode Vente est l'interface de vente autonome du revendeur : sur SON téléphone (ou une tablette du kiosque), il ouvre 403shield.ftci.fr/sell, choisit l'onglet Revendeur et entre son PIN. Il voit alors SON stock (les lots transférés), vend un ticket (le client reçoit code + QR), et suit son reste.\n\nPensé pour vendre sans formation : l'écran est grand, tactile, et ne propose QUE la vente. Le mode PIN verrouille tout le reste — aucune donnée de gestion ne fuite sur son appareil.",
     difference: [
       {
         with: "La console",
@@ -182,78 +182,86 @@ export const ANNEXES_GUIDES: Guide[] = [
     id: "vitrine-vpn",
     title: "Vitrine VPN B2C (/vpn)",
     summary:
-      "La boutique publique du VPN : achats en ligne autonomes (choix de formule, paiement, livraison des clés WireGuard) — le canal e-commerce du module VPN.",
-    roles: "Propriétaire (activation) · public",
-    minutes: 3,
-    updated: "2026-10-12",
+      "La vitrine publique du VPN personnel 403Shield : formules comparées, caisse du site (Wave/carte), configuration livrée par e-mail — et la console sans mot de passe pour la suite.",
+    roles: "Public · Propriétaire (conseil)",
+    minutes: 4,
+    updated: "2026-10-18",
     sectionId: "annexes",
     vague: "V3",
     quoi:
-      "La boutique publique qui vend vos accès VPN B2C vit désormais sur la console 403Shield — tunnel.ftci.fr/shop (N°316) : le visiteur compare les formules (durée, quota), paie en ligne (Wave, GeniusPay, Stripe selon réglages), et reçoit ses clés WireGuard immédiatement — provision automatique, zéro intervention de votre côté. Les liens de commande historiques (/vpn?order=…) sont redirigés en 301 vers cette boutique.\n\nElle n'existe que si l'offre est activée (réglage plateforme PublicVpnShop — voir le volet privé) : la boutique est SEO-indexée (contrairement aux pages /wifi) et vend 24/7.\n\nNOTE DE CAPTURE : l'illustration montre l'ancienne vitrine MikCloud (mikcloud.ftci.fr/vpn, avant le rebrand N°317) — le parcours vit aujourd'hui sur tunnel.ftci.fr/shop (403Shield).",
+      "La vitrine /vpn (403shield.ftci.fr/vpn) présente le VPN personnel 403Shield : le même tunnel WireGuard qu'en Accès Pro, avec une IP fixe France dédiée qui sort par Marseille. Le visiteur y compare les deux formules — mensuelle (1 500 FCFA/mois, sans engagement) et annuelle (15 000 FCFA/an, 12 mois au prix de 10) — puis passe à la caisse du site (/checkout, formule présélectionnée) payable Wave ou carte.\n\nDepuis la refonte du site unifié, vitrine et caisse vivent sur 403shield.ftci.fr : les anciens liens de commande (tunnel.ftci.fr/shop, /vpn?order=…) sont redirigés. La configuration arrive par e-mail et s'importe dans l'appli WireGuard en quelques gestes — aucun fichier à éditer.",
     difference: [
       {
-        with: "Le module VPN (console)",
+        with: "Le module VPN (console hotspot)",
         body:
-          "Le module administre (peers, quotas, revente manuelle) ; la vitrine VEND (paiement autonome). Guide : VPN WireGuard vendable.",
+          "Le module administre les peers que VOUS revendez à vos clients (quotas, revente manuelle) ; la vitrine vend le VPN personnel 403Shield en direct — deux offres, deux circuits. Guide : VPN WireGuard vendable.",
       },
       {
         with: "Le portail captif",
         body:
-          "Le portail connecte au WiFi ; la vitrine vend du VPN (un tunnel personnel, utilisable partout, pas seulement chez vous).",
+          "Le portail connecte au WiFi de l'établissement ; le VPN personnel protège le trafic du visiteur PARTOUT (téléphone, ordinateur, tablette) derrière une IP fixe France.",
       },
     ],
     recoit: [
-      "Le visiteur : les formules comparées (prix, durée, quota), le paiement en ligne, la livraison immédiate des clés (QR WireGuard) et le suivi de commande.",
-      "Vous : les commandes B2C remontent dans la console (module VPN — onglet commandes), la caisse en ligne se rapproche dans la comptabilité.",
-      "La provision est automatique : paiement → création du peer → livraison — vous n'intervenez qu'en support.",
+      "Le visiteur : les deux formules comparées (prix, promesses, FAQ), la caisse du site payable Wave ou carte (frais répercutés : carte +6 %, Wave −3 % — remise mobile money).",
+      "Après paiement : la configuration WireGuard livrée par e-mail, l'import immédiat dans l'appli, et l'accès à l'espace client (console sans mot de passe — code e-mail à 6 chiffres).",
+      "L'espace client : portefeuille d'appareils, statuts en direct, renouvellement en 1 clic — VPN et Accès Pro vivent au même endroit.",
     ],
     etapes: [
       {
         title: "Le visiteur découvre la vitrine",
         body:
-          "La boutique 403Shield (tunnel.ftci.fr/shop) présente l'offre (comparatif des formules, prix, promesses) — page publique, indexée SEO (elle vend pendant que vous dormez).",
+          "La page /vpn présente l'offre : IP fixe France dédiée, WireGuard, appareils couverts, captures et FAQ — puis le comparatif des formules (mensuelle / annuelle). Page publique, indexée : elle vend pendant que vous dormez.",
         capture: cap(
-          "annexes/vpn-shop.png",
+          "tunnels/vitrine-vpn.png",
           1440,
-          5236,
-          "Vitrine VPN B2C : comparatif des formules VPN avec prix et caractéristiques",
-          "La vitrine VPN — la boutique e-commerce du tunnel.",
+          7930,
+          "Vitrine VPN 403Shield : hero IP fixe France, section WireGuard, grille des formules et FAQ de la page /vpn",
+          "La vitrine /vpn — hero, tarifs et FAQ du VPN personnel.",
         ),
       },
       {
-        title: "Il choisit et paie",
+        title: "Il choisit sa formule et paie",
         body:
-          "Formule → paiement (Wave / GeniusPay / Stripe selon disponibilité) → confirmation. Le paiement validé déclenche la provision automatique.",
+          "Mensuel ou annuel → la caisse du site s'ouvre avec la formule présélectionnée (/checkout?plan=…). Paiement Wave ou carte ; les frais de paiement s'affichent avant confirmation (carte +6 %, Wave −3 %).",
       },
       {
-        title: "Il reçoit ses clés",
+        title: "Il reçoit sa configuration",
         body:
-          "QR + config WireGuard remis à l'écran (et par canal de contact selon réglages) — il scanne dans son appli et le tunnel est actif. Le suivi de commande reste consultable.",
-        tip: "La vitrine tourne seule : votre rôle se réduit au support (client perdu ? guide VPN module — régénération des clés).",
+          "Le paiement validé déclenche la livraison : configuration WireGuard par e-mail, import dans l'appli (téléphone, ordinateur, tablette) — le tunnel est actif. Aucun compte à créer au comptoir, aucun fichier à éditer.",
+        tip: "Le suivi se fait depuis l'espace client (console sans mot de passe — code e-mail à 6 chiffres) : appareils, statuts, renouvellement en 1 clic.",
       },
     ],
     usages: [
       {
-        title: "Revenu passif",
+        title: "Le conseil au comptoir",
         body:
-          "Le VPN vendu en ligne 24/7 : zéro comptoir, provision automatique — la marge s'accumule dans les rapports.",
+          "Vos clients demandent souvent comment protéger leur téléphone au-delà de votre WiFi : la vitrine /vpn est la réponse à leur donner — le tunnel personnel, indépendant de votre établissement.",
       },
     ],
     pieges: [
       {
-        title: "Une vitrine qui vend ce que vous ne supportez pas",
+        title: "Un VPN ne remplace pas l'abonnement internet",
         body:
-          "Le support des clients B2C vous revient (perte de clés, quotas) : n'activez que les formules que vous savez accompagner.",
+          "Le tunnel chiffre et fait sortir le trafic par une IP fixe France — il ne fournit pas d'accès à internet en tant que tel. Le visiteur garde son forfait Orange/Starlink.",
         severity: "info",
       },
     ],
     faq: [
       {
-        q: "Puis-je désactiver la vitrine sans casser les clients existants ?",
-        a: "Oui — la désactivation ferme la BOUTIQUE (plus de nouvelles commandes) ; les peers actifs continuent de fonctionner jusqu'à leur échéance.",
+        q: "VPN ou Accès Pro : que conseiller ?",
+        a: "Les deux vivent sur le même tunnel. Le VPN protège l'usage personnel (téléphone, ordinateur) ; l'Accès Pro y branche routeurs, caméras et NAS avec supervision console — pour un client qui gère un établissement, c'est l'extension naturelle.",
+      },
+      {
+        q: "Faut-il un routeur particulier ?",
+        a: "Pour le VPN seul, aucun routeur : le téléphone ou l'ordinateur suffit. L'Accès Pro demande un MikroTik sous RouterOS 7 (l'agent 403Shield y tourne).",
+      },
+      {
+        q: "Comment se renouvelle l'abonnement ?",
+        a: "Depuis la boutique, avec un rappel par e-mail avant l'échéance — le renouvellement tient en 1 clic depuis l'espace client.",
       },
     ],
-    related: ["vpn-wireguard", "abonnement-facturation"],
+    related: ["vpn-wireguard", "acces-pro", "console-tunnels"],
   },
 
   {
@@ -263,7 +271,7 @@ export const ANNEXES_GUIDES: Guide[] = [
       "Le parcours du client sur l'accès offert : QR de table, page du site, téléphone (option), code reçu, navigation bornée — la face marketing du jetable.",
     roles: "Propriétaire · Gérant (support)",
     minutes: 3,
-    updated: "2026-10-12",
+    updated: "2026-10-18",
     sectionId: "annexes",
     vague: "V3",
     quoi:
@@ -289,7 +297,7 @@ export const ANNEXES_GUIDES: Guide[] = [
       {
         title: "Le client scanne le QR de table",
         body:
-          "Le QR ouvre la page publique du site (/wifi/votre-site) — pas de réseau à chercher, pas de mot de demande. La page porte votre marque et les conditions de l'accueil.",
+          "Le QR ouvre la page publique du site (/wifi/votre-site) — pas de réseau à chercher, pas de code à réclamer au comptoir. La page porte votre marque et les conditions de l'accueil.",
       },
       {
         title: "Il saisit son téléphone (option) puis reçoit son code",

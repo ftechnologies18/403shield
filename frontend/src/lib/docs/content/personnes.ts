@@ -10,11 +10,11 @@ export const PERSONNES_GUIDES: Guide[] = [
       "Les clients à compte : identifiants permanents, solde rechargeable, blocage/déblocage, et la frontière avec les inscriptions publiques.",
     roles: "Propriétaire · Gérant",
     minutes: 4,
-    updated: "2026-10-12",
+    updated: "2026-10-18",
     sectionId: "personnes",
     vague: "V2",
     quoi:
-      "Personnes → Utilisateurs gère les clients qui ont un COMPTE (identifiant + mot de passe), par opposition au voucher jetable : le compte se RECHARGE (du temps ou de l'argent s'accumule), garde son historique et se prête au fidèlement.\n\nLe hub est en deux onglets : Comptes (les clients) et Inscriptions (les demandes créées par le formulaire public — voir le guide Inscriptions publiques pour ce volet).",
+      "Personnes → Utilisateurs gère les clients qui ont un COMPTE (identifiant + mot de passe), par opposition au voucher jetable : le compte se RECHARGE (du temps ou de l'argent s'accumule), garde son historique et se prête à la fidélisation.\n\nLe hub est en deux onglets : Comptes (les clients) et Inscriptions (les demandes créées par le formulaire public — voir le guide Inscriptions publiques pour ce volet).",
     difference: [
       {
         with: "Le voucher",
@@ -133,7 +133,7 @@ export const PERSONNES_GUIDES: Guide[] = [
       "Recrutez des clients par QR code : le formulaire public crée des demandes, vous approuvez d'un clic, le compte est prêt — liens, QR et modération.",
     roles: "Propriétaire · Gérant",
     minutes: 4,
-    updated: "2026-10-12",
+    updated: "2026-10-18",
     sectionId: "personnes",
     vague: "V3",
     quoi:
@@ -145,14 +145,14 @@ export const PERSONNES_GUIDES: Guide[] = [
           "Le jetable donne un accès OFFERT immédiat (code à quota) ; l'inscription crée un COMPTE durable approuvé. Recrutement marketing vs recrutement client.",
       },
       {
-        with: "L'inscription à MIKLOUD (vitrine)",
+        with: "L'inscription à la vitrine (403Shield)",
         body:
           "La vitrine crée des comptes D'EXPLOITANT (un nouveau gérant de hotspot) ; ici on inscrit VOS clients finaux. Deux publics, deux formulaires.",
       },
       {
         with: "La création manuelle",
         body:
-          "Manuel = vous tapez la fiche ; public = le client la remplit et vous validez. L'un pour le comptoir, l'autre pour la quartier.",
+          "Manuel = vous tapez la fiche ; public = le client la remplit et vous validez. L'un pour le comptoir, l'autre pour le quartier.",
       },
     ],
     recoit: [
@@ -237,7 +237,7 @@ export const PERSONNES_GUIDES: Guide[] = [
       "Externalisez la vente : créez des revendeurs avec PIN, créditez-les en tickets, laissez-les vendre depuis leur téléphone (Mode Vente), encaissez les versements.",
     roles: "Propriétaire",
     minutes: 5,
-    updated: "2026-10-12",
+    updated: "2026-10-18",
     sectionId: "personnes",
     vague: "V1",
     quoi:
@@ -251,7 +251,7 @@ export const PERSONNES_GUIDES: Guide[] = [
       {
         with: "Le dépôt-vente papier",
         body:
-          "Même mécanique, sans les carnets : le lot transféré est le dépôt, le versement est l'encaissement, la reprise est le retour d'invendus — tout tracé, zéro litige de comptes.",
+          "Même mécanique, sans les carnets : le lot transféré est le dépôt, le versement est l'encaissement, la reprise est le retour d'invendus — tout tracé, chaque mouvement se relit ligne à ligne dans les rapports.",
       },
       {
         with: "La vitrine VPN",
@@ -293,7 +293,7 @@ export const PERSONNES_GUIDES: Guide[] = [
       {
         title: "Il vend en Mode Vente",
         body:
-          "Sur SON téléphone : 403shield.ftci.fr/sell → onglet Revendeur → PIN. Il voit son stock par forfait, vend (le ticket s'affiche avec QR, partageable/imprimable), et suit son reste. Aucune formation nécessaire — 3 touches.",
+          "Sur SON téléphone : 403shield.ftci.fr/sell → onglet Revendeur → PIN. Il voit son stock par forfait, vend (le ticket s'affiche avec QR, partageable/imprimable), et suit son reste. L'écran ne propose QUE la vente — trois touches suffisent.",
         capture: cap(
           "annexes/mode-vente-login.png",
           1440,
@@ -305,7 +305,7 @@ export const PERSONNES_GUIDES: Guide[] = [
       {
         title: "Encaissez les versements",
         body:
-          "Quand le revendeur vous remporte l'argent : « Encaisser » enregistre le versement (montant, note) — sa créance baisse d'autant. Les transactions récentes de la vue (et les rapports) retracent chaque mouvement.",
+          "Quand le revendeur vous remet l'argent : « Encaisser » enregistre le versement (montant, note) — sa créance baisse d'autant. Les transactions récentes de la vue (et les rapports) retracent chaque mouvement.",
         capture: cap(
           "personnes/reseller-actions.png",
           1440,

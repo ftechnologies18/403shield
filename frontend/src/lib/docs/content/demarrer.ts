@@ -10,11 +10,11 @@ export const DEMARRER_GUIDES: Guide[] = [
       "Inscription, connexion, rôles (gérant / propriétaire), menu profil, recherche ⌘K et installation mobile (PWA) — tout ce qu'il faut avant de brancher le premier routeur.",
     roles: "Propriétaire · Gérant",
     minutes: 5,
-    updated: "2026-10-12",
+    updated: "2026-10-18",
     sectionId: "demarrer",
     vague: "V1",
     quoi:
-      "403Shield se prend en main depuis un simple navigateur : une vitrine publique (403shield.ftci.fr), un écran de connexion, puis une console unique pour toute votre activité WiFi. Votre compte porte un identifiant (ex. « lerobuste »), un rôle (propriétaire = rang 3, gérant = rang 2) et un usage (hotspot ou foyer). Le même compte fonctionne sur ordinateur et sur téléphone — la console est installable comme application (PWA), sans passer par un store.\n\nChaque compte est cloisonné : un gérant nommé par un propriétaire ne voit que le compte de son employeur, jamais les autres établissements de la plateforme.",
+      "403Shield se prend en main depuis un simple navigateur : une vitrine publique (403shield.ftci.fr), un écran de connexion, puis une console unique pour toute votre activité WiFi. Votre compte porte un identifiant (ex. « lerobuste ») et un rôle (propriétaire = rang 3, gérant = rang 2) — chaque compte est un compte hotspot, pensé pour vendre l'accès. Le même compte fonctionne sur ordinateur et sur téléphone — la console est installable comme application (PWA), sans passer par un store.\n\nChaque compte est cloisonné : un gérant nommé par un propriétaire ne voit que le compte de son employeur, jamais les autres établissements de la plateforme.",
     difference: [
       {
         with: "Le compte revendeur (Mode Vente)",
@@ -136,7 +136,7 @@ export const DEMARRER_GUIDES: Guide[] = [
     faq: [
       {
         q: "Puis-je avoir deux comptes (boutique et maison) ?",
-        a: "Chaque établissement a son compte. Pour un même compte, l'usage (hotspot / foyer) se choisit à l'inscription et module les menus — le propriétaire d'un réseau familial voit la console « foyer », plus courte.",
+        a: "Chaque établissement a son compte — et un même compte peut gérer plusieurs sites (guide Sites). Un second établissement = un second compte : les tickets, les rapports et la marge restent cloisonnés.",
       },
       {
         q: "Combien de gérants puis-je inviter ?",
@@ -154,10 +154,10 @@ export const DEMARRER_GUIDES: Guide[] = [
     id: "connecter-routeur-agent",
     title: "Connecter votre premier routeur MikroTik (mode Agent)",
     summary:
-      "Aucune adresse IP publique, aucun port à ouvrir : le routeur appelle 403Shield tout seul, toutes les 45 secondes. Derrière l'Internet Orange CI, en CGNAT ou en Starlink, l'installation tient en 30 secondes.",
+      "Aucune adresse IP publique, aucun port à ouvrir : le routeur appelle 403Shield tout seul, toutes les 45 secondes. Derrière l'Internet Orange CI, en CGNAT ou en Starlink, l'installation se résume à coller un script.",
     roles: "Propriétaire · Gérant",
     minutes: 6,
-    updated: "2026-10-12",
+    updated: "2026-10-18",
     sectionId: "demarrer",
     vague: "V1",
     quoi:
@@ -283,7 +283,7 @@ export const DEMARRER_GUIDES: Guide[] = [
         severity: "info",
       },
       {
-        title: "Ré générer le script coupe l'ancien agent",
+        title: "Régénérer le script coupe l'ancien agent",
         body:
           "Chaque régénération crée un token neuf. Si le routeur tourne avec l'ancien script, il sera rejeté : recollez le NOUVEAU script sur le routeur.",
         severity: "warn",
@@ -319,7 +319,7 @@ export const DEMARRER_GUIDES: Guide[] = [
       "Le circuit commercial complet en une lecture : fixer un tarif (profil), générer un lot de tickets, les imprimer, puis regarder la session du client apparaître — et encaisser.",
     roles: "Propriétaire · Gérant",
     minutes: 7,
-    updated: "2026-10-12",
+    updated: "2026-10-18",
     sectionId: "demarrer",
     vague: "V1",
     quoi:
@@ -460,7 +460,7 @@ export const DEMARRER_GUIDES: Guide[] = [
       {
         title: "Ticket imprimé ≠ ticket vendu",
         body:
-          "La comptabilité compte la VENTE (première utilisation), pas l'impression. Un lot imprimé mais invendu n'empaume pas la marge.",
+          "La comptabilité compte la VENTE (première utilisation), pas l'impression. Un lot imprimé mais invendu ne plombe pas la marge.",
         severity: "info",
       },
     ],

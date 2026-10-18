@@ -151,7 +151,7 @@ export const ANALYSE_GUIDES: Guide[] = [
       "La trace horodatée de tout ce qui se passe : connexions, commandes, alertes, actions d'équipe — l'outil d'investigation et d'audit.",
     roles: "Propriétaire · Gérant",
     minutes: 3,
-    updated: "2026-10-12",
+    updated: "2026-10-18",
     sectionId: "analyse",
     vague: "V3",
     quoi:
@@ -160,7 +160,7 @@ export const ANALYSE_GUIDES: Guide[] = [
       {
         with: "Les rapports",
         body:
-          "Le journal = les FAITS bruts (une ligne par événement) ; les rapports = les AGREGATS (indicateurs de période). L'un répond « que s'est-il passé exactement », l'autre « où en est-on ».",
+          "Le journal = les FAITS bruts (une ligne par événement) ; les rapports = les agrégats (indicateurs de période). L'un répond « que s'est-il passé exactement », l'autre « où en est-on ».",
       },
       {
         with: "La cloche de notifications",

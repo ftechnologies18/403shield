@@ -25,7 +25,7 @@ export const PLATEFORME_GUIDES: Guide[] = [
       "La vue de commandement plateforme : santé du service, comptes clients (création, impersonation, suspensions) et les gestes de support du quotidien.",
     roles: "Admin plateforme",
     minutes: 5,
-    updated: "2026-10-12",
+    updated: "2026-10-18",
     sectionId: "plateforme",
     vague: "V3",
     quoi:
@@ -74,7 +74,7 @@ export const PLATEFORME_GUIDES: Guide[] = [
           1440,
           900,
           "Vue Comptes SaaS : table des comptes clients avec statut, usage, revenus et actions",
-          "Chaque ligne : identifiant du compte, statut, usage (hotspot/foyer), échéance, routeurs, utilisateurs hotspot, revenus — et les boutons d'action par compte.",
+          "Chaque ligne : identifiant du compte, statut, échéance, routeurs, utilisateurs hotspot, revenus — et les boutons d'action par compte.",
         ),
       },
       {
@@ -119,7 +119,7 @@ export const PLATEFORME_GUIDES: Guide[] = [
       {
         title: "Impersonation ≠ invisibilité",
         body:
-          "L'admin impersonnifié agit SOUS son identité de plateforme (traces nominatives) : n'utilisez l'impersonation que pour le support, jamais pour « tester » des actions destructrices sanstrace.",
+          "L'admin impersonnifié agit SOUS son identité de plateforme (traces nominatives) : n'utilisez l'impersonation que pour le support, jamais pour « tester » des actions destructrices sans trace.",
         severity: "warn",
       },
     ],
@@ -139,11 +139,11 @@ export const PLATEFORME_GUIDES: Guide[] = [
       "Le parc matériel de TOUS les comptes : état des agents, mises à jour RouterOS coordonnées en flotte, incidents matériels.",
     roles: "Admin plateforme",
     minutes: 4,
-    updated: "2026-10-12",
+    updated: "2026-10-18",
     sectionId: "plateforme",
     vague: "V3",
     quoi:
-      "La vue Flotte consolide les routeurs raccordés par tous les comptes : modèle, version RouterOS, état agent (en ligne/hors ligne), dernier check-in. Son outil majeur est la MAJ RouterOS EN FLOTTE : déployer une montée de version par vagues (santé, groupes, calendrier) sans intervenir compte par compte.\n\nLa contrainte d'agent (TLS ≥ 7.19) se pilotée ici : les routeurs trop anciens se repèrent à la version et se planifient en montée prioritaire.",
+      "La vue Flotte consolide les routeurs raccordés par tous les comptes : modèle, version RouterOS, état agent (en ligne/hors ligne), dernier check-in. Son outil majeur est la MAJ RouterOS EN FLOTTE : déployer une montée de version par vagues (santé, groupes, calendrier) sans intervenir compte par compte.\n\nLa contrainte d'agent (TLS ≥ 7.19) se pilote ici : les routeurs trop anciens se repèrent à la version et se planifient en montée prioritaire.",
     difference: [
       {
         with: "Le parc d'un compte client",
@@ -190,7 +190,7 @@ export const PLATEFORME_GUIDES: Guide[] = [
       {
         title: "Campagne de sécurité",
         body:
-          "Une faille RouterOS publiée : la flotte identifie les versions exposées et déploie le correctif en 48 h sur tout le parc.",
+          "Une faille RouterOS publiée : la flotte identifie les versions exposées et planifie le correctif par vagues, sans intervention compte par compte.",
       },
     ],
     pieges: [
