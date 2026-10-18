@@ -6,6 +6,82 @@ aux dates de livraison — le déploiement est continu : chaque push `main` pass
 la CI puis se déploie automatiquement (frontend Vercel, backend Oracle E5
 depuis le T2 N°266 — Render suspendu N°303). N°317 : le projet change de nom
 de marque — MikCloud et MikTunnel deviennent **403Shield** (marque unifiée,
+sous-marque FTech CI) ; l'historique ci-dessous conserve les noms d'époque.
+N°319 : le DÉPÔT GitHub lui-même devient `ftechnologies18/403shield`
+(anciennes URL redirigées en 301 par GitHub — web, git et API).
+
+## 2026-10-18 — N°334 — **HYGIÈNE DU DÉPÔT : README RACINE REMIS À LA VÉRITÉ (le « Render + Neon en prod » décrivait un monde disparu depuis N°266/N°303/N°317) + TRI INTÉGRAL DES 6 PR DEPENDABOT EN ATTENTE — 6/6 FUSIONNÉES derrière les portes locales, dont la PR #69 rouge depuis 5 jours par activation de règles React Compiler**
+
+### N°334-A — README racine remis à la vérité (docs/README, docs/env)
+
+- Le README racine décrivait encore **Render comme backend de production et
+  Neon comme base de prod, sous la marque MikCloud et le domaine
+  mikcloud.ftci.fr** — l'état d'avant N°266 (migration Oracle), N°303
+  (suspension Render), N°317/N°318 (rebrand 403Shield + 301) et N°320
+  (api/console.403shield.ftci.fr). Réécrit sur les faits du CHANGELOG (qui
+  fait foi) : marque **403Shield powered by FTech CI**, 3 piliers produit
+  (Hotspot SaaS · Tunnels & Accès Pro · VPN B2C), arborescence réelle du
+  monorepo (backend + frontend + **tunnel-console** + deploy + docs + ops),
+  table de production véridique (VM Oracle E5 → `api.403shield.ftci.fr`
+  via `deploy-oracle.yml` · Vercel ×2 · PostgreSQL 18 local **primaire** +
+  WAL chiffré + répliques nocturnes Supabase/Neon — cf. DB-HYBRIDE), CI à
+  5 jobs avec le job deploy-render marqué **GELÉ par le sentinel**,
+  section Render « suspendu volontairement N°303 » + rollback §9.2,
+  démarrage local étendu aux 3 apps (4000/3000/3100), bloc « avant de
+  pousser » complété du typecheck tsgo, table de documentation remise aux
+  fichiers réels (DB-HYBRIDE, MIGRATION-ORACLE, RUNBOOK-HEBERGEMENT,
+  MARQUE-403SHIELD…), feuille de route périmée retirée (vit au CHANGELOG).
+- `frontend/.env.example` suit : l'exemple pointait vers un service Render
+  fictif → `http://localhost:4000` en dev, `api.403shield.ftci.fr`
+  documenté pour la prod.
+- En-tête du CHANGELOG RÉPARÉ au passage : deux lignes perdues lors d'une
+  insertion précédente (« sous-marque FTech CI… noms d'époque » + la note
+  N°319 sur le renommage du dépôt GitHub) restaurées à l'identique (constat
+  par diff contre le commit N°329).
+
+### N°334-B — tri des 6 PR dependabot en attente (6/6 fusionnées)
+
+- **#69 — 40 mises à jour npm mineures/correctives (rouge en CI depuis le
+  15/10)** : la cause réelle de la stagnation était l'activation par
+  eslint-config-next 16.4.0 de **3 règles React Compiler**
+  (`set-state-in-effect`, `refs`, `immutability`) qui flaggent d'un coup
+  **14 sites PRÉEXISTANTS** — dont `carousel.tsx` et `use-mobile.ts`
+  **générés par shadcn/ui** (l'amont n'est pas conforme non plus). Opt-out
+  en « warn » documenté dans `eslint.config.mjs` (convention du repo :
+  purity/exhaustive-deps déjà « off ») : la dette de règles reste VISIBLE à
+  chaque lint sans bloquer les mises à jour de sécurité. Bénéfices de la
+  vague : next 16.3.5→16.4.0, sharp 0.35.4→0.35.5, @playwright/test
+  1.63→1.64, 25 paquets Radix, zod, react-hook-form, TanStack Query.
+- **#48 — typescript ^5 → ^6 (ouverte le 17/09)** : fusionnée. Le typecheck
+  CI utilise tsgo (TypeScript 7 natif, `tsgo` alias `npm:typescript@7.0.2`)
+  indépendant du paquet ; le build Next type-checke avec typescript 6.0.3 :
+  **61/61 routes vertes**, 42 og:image incluses.
+- **#68 — golang.org/x/crypto 0.57.0→0.58.0 (+ x/sync, x/text indirects)** :
+  fusionnée. La CI verte de la PR ne prouvait rien (backend/ dérivé sur main
+  depuis sa base N°297) : portes Go passées localement — gofmt 0, go vet 0,
+  go build OK, **go test ./... 11 paquets verts** (api 59 s). La CI ajoute
+  -race + govulncheck sur x/crypto 0.58, puis deploy-oracle.yml déploie.
+- **#59/#60/#67 — actions/checkout 4→7, setup-go 5→7, upload-artifact
+  4→7** : fusionnées. ci.yml utilisait déjà v7 partout (prouvé à chaque
+  run) ; ces PR rattrapent les 6 workflows ops restants (deploy-oracle,
+  ops-db-hybrid, ops-wg, ops-wg-mini-install, repair-backup-env,
+  t2-secrets). **Zéro référence d'action antérieure à v7 restante** (grep),
+  YAML tous valides.
+- **Protocole anti gros-bang respecté** : intégration locale des 6 PR avec
+  portes à chaque étape, puis UNE SEULE poussée `main` (une vague CI, un
+  déploiement) — aucune mise en production non vérifiée localement.
+
+### Portes (N°334)
+
+- Frontend : lint **0 erreur** (14 warnings = dette de règles React
+  Compiler répertoriée, backlog dédié) · tsgo 0 · **next build 61/61** avec
+  typescript 6.0.3 + next 16.4.0.
+- Backend : gofmt 0 · go vet 0 · go build OK · go test ./... 11 paquets
+  verts (la CI ajoute -race et govulncheck).
+- Workflows : 0 action < v7, YAML 100 % valides.
+- Schéma DB : AUCUN · code métier : AUCUNE ligne touchée (seuls
+  eslint.config.mjs, README, .env.example et CHANGELOG modifiés à la main).
+
 ## 2026-10-18 — N°333-D — **SEO & RÉTENTION SANS INFRASTRUCTURE (volet D du plan N°333)** — sitemap, JSON-LD @graph, og:image par guide, CTA, feedback, print, thème, teaser privé
 
 ### N°333-D (volet D — 12 fichiers)
