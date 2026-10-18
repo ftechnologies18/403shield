@@ -354,7 +354,13 @@ Ce que la refonte établit (jugement de marque) :
   Money, titre Fraunces au trait crème qui se dessine) + colonne formulaire
   ivoire (carte claymorphe, CTA teal à reflet crème) » — palette FreeTech
   de la vitrine reprise à l'identique (ivoire/crème/sarcelle/menthe/encre),
-  polices Manrope + Fraunces partagées. L'« effet wahou » est mesuré :
+  polices Manrope + Fraunces partagées. N°329 : le split s'inverse au
+  modèle demandé par le propriétaire — formulaire ivoire à GAUCHE, panneau
+  de marque ANIMÉ à DROITE (anneaux radar derrière le logo, constellation
+  scintillante, lignes de données WireGuard qui circulent, dérive lente du
+  dégradé), boutons Google/Apple/Facebook à notice honnête (aucun OAuth
+  branché à ce jour), favicon partagé avec la vitrine. L'« effet wahou »
+  reste mesuré :
   parallaxe au pointeur, dérive des blobs, entrées décalées — et TOUT se
   coupe sur `prefers-reduced-motion` (le calme est un signe de confiance,
   le mouvement un condiment, jamais un plat).

@@ -10,6 +10,77 @@ sous-marque FTech CI) ; l'historique ci-dessous conserve les noms d'époque.
 N°319 : le DÉPÔT GitHub lui-même devient `ftechnologies18/403shield`
 (anciennes URL redirigées en 301 par GitHub — web, git et API).
 
+## 2026-10-18 — N°329 — **LA PORTE DE LA CONSOLE PASSE AU SPLIT INVERSÉ DEMANDÉ (formulaire ivoire À GAUCHE + panneau de marque ANIMÉ À DROITE) + CONNEXION SOCIALE Google/Apple/Facebook À NOTICE HONNÊTE + FAVICON PARTAGÉ AVEC LA VITRINE — le parcours passwordless ne bouge pas d'une ligne de logique**
+
+### Déclencheur (propriétaire)
+« console.403shield.ftci.fr/login : layout split-screen — panneau branding
+animé à droite + formulaire à gauche ; ajouter connexion par Google, Apple,
+Facebook ; ajouter aussi le favicon. » — N°326 avait posé le gabarit
+dash.cloudflare.com/login avec le panneau de marque à GAUCHE ; le
+propriétaire inverse les côtés, enrichit l'animation, veut les boutons
+sociaux et l'icône d'onglet (absente : la console servait le favicon
+Vercel par défaut).
+
+### Ce qui change (tunnel-console, 5 fichiers — frontend pur, zéro backend)
+- **Split inversé** (`auth-shell.tsx` + `globals.css`) : le DOM devient
+  formcol → brand (grille `1fr 1.05fr` ≥1024 — formulaire à gauche, panneau
+  à droite, proportions conservées) ; /verify suit (AuthShell partagé) ;
+  mobile inchangé (panneau masqué < 1024, en-tête mobile conservé).
+- **Panneau de marque ANIMÉ** (nouvelles couches, toutes aria-hidden,
+  toutes coupées par le blanket `prefers-reduced-motion` existant) :
+  anneaux radar qui rayonnent derrière le logo (`mka-rings`, 3 anneaux
+  échelonnés 4,2 s) + flottement doux du logo (`mka-bob` 6,5 s, ±4 px) ;
+  constellation de 8 étoiles menthe/crème qui scintillent (`mka-twinkle`,
+  ≥1280 seulement, calées sur la moitié droite — JAMAIS sur le texte
+  `.mka-mid` max-width 24rem ni sur les chips du bord) ; lignes de données
+  WireGuard — 3 flux en pointillés qui circulent entre 6 nœuds
+  (`mka-dash`/`mka-node`, maillage/tunnel, masqués en hauteur < 800 px où
+  `.mka-mid` descendrait dessus) ; le dégradé sarcelle dérive lentement
+  (`mka-pan` 24 s, background-size 170 %). Le parallaxe pointeur, les
+  blobs, les chips flottantes et le trait crème du titre restent.
+- **Connexion sociale** (`login/page.tsx`) : séparateur « ou continuer
+  avec » + 3 boutons clay fantôme (ivoire, bord encre, ombre clay réduite,
+  logos officiels SVG inline — G multicolore Google, pomme Apple, f
+  Facebook #1877F2 ; libellés masqués < 640 px → boutons icône seuls,
+  aria-label porté par le bouton). **AUCUN OAuth n'est branché** (aucune
+  inscription Google Cloud/Apple Developer/Meta n'existe — création des
+  apps prestataires = geste propriétaire, endpoints backend = phase 2) :
+  le clic pose une notice honnête `mka-info` (role status, aria-live
+  poli) « La connexion {Google|Apple|Facebook} n'est pas encore active
+  (inscription prestataire en préparation côté FTech CI). En attendant,
+  votre e-mail + code à 6 chiffres vous ouvre la console en 10 minutes. »
+  — doctrine maison : jamais de faux parcours ni de lien mort (précédent
+  « bascule manual honnête » N°314).
+- **Favicon** : `src/app/icon.png` (copie exacte de l'icône de la vitrine
+  — même marque partout, marque unifiée N°317) — Next injecte
+  `<link rel="icon" sizes="256x256">` sur TOUTES les routes de la console
+  (login, verify, me, pro — l'onglet ne porte plus le losange Vercel).
+
+### Intacts par construction
+Parcours passwordless complet (honeypot `website`, POST
+`/api/tunnel/auth/request-code` TTL 10 min, redirection `/verify`,
+gardes session N°323 — connecté → /me, rebond sans boucle) · bouton crème
+« Commander un VPN » → caisse du site (équivalent CF « Sign up », N°326) ·
+note « Déjà client VPN sans compte ? » · polices Manrope + Fraunces posées
+par les layouts d'auth uniquement · /me et /pro sombres intacts · robots
+noindex · ZÉRO backend touché (deploy-oracle non déclenché, CORS
+inchangé).
+
+### Portes
+lint 0 · tsc 0 · next build ✓ 9/9 routes · smoke navigateur local sur le
+build de production (desktop 1280 : split vérifié GÉOMÉTRIQUEMENT —
+formcol left 0→624, brand left 624→1280, DOM [formcol, brand] ; les 5
+animations vivent au computed style (mka-ring/mka-twinkle ×8/mka-dash/
+mka-pan/mka-bob) ; clic Google puis Apple → notice mise à jour par
+prestataire ; favicon servi 48 304 o avec `<link rel="icon">` injecté ;
+scrollWidth exact 1280=1280, 0 erreur console/page · mobile 390 :
+libellés sociaux masqués (3 boutons icône), panneau masqué, en-tête
+mobile affiché, 390=390, 0 débordement · /verify : split inversé
+identique, AUCUN bouton social (page de saisie de code — correct) ·
+audit VLM desktop+mobile = PASS (« split conforme, logos corrects G
+multicolore/pomme/f bleu, aucune régression, hiérarchie claire »)) ;
+schéma DB : AUCUN.
+
 ## 2026-10-18 — N°328 — **INTÉGRATION DU COMMIT POST-FUSION DU PR #70 (Jules, 3c5cbc8 « complete enterprise multi-page redesign and navbar cleanup ») : la navbar de la vitrine achève sa transition Cloudflare — les liens plats « Hotspot » et « Tunnels » disparaissent du header (doublons du MegaMenu N°325) et les sections resserrent leurs respirations verticales (vitrine plus dense, hero plus compact)**
 
 ### Déclencheur (propriétaire)

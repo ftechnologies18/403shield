@@ -95,7 +95,8 @@ html:has(.mka-page) {
   background-size: 26px 26px;
 }
 
-/* ── Grille split : 1 colonne mobile, brand|form dès 1024 ── */
+/* ── Grille split : 1 colonne mobile, form|brand dès 1024 (N°329 —
+   formulaire à GAUCHE, panneau de marque animé à DROITE) ── */
 .mka-grid {
   position: relative;
   z-index: 2;
@@ -106,11 +107,11 @@ html:has(.mka-page) {
 
 @media (min-width: 1024px) {
   .mka-grid {
-    grid-template-columns: 1.05fr 1fr;
+    grid-template-columns: 1fr 1.05fr;
   }
 }
 
-/* ══════════════════ PANNEAU DE MARQUE (desktop ≥1024) ══════════════════ */
+/* ══════════════════ PANNEAU DE MARQUE ANIMÉ (desktop ≥1024, à DROITE) ═══ */
 
 .mka-brand {
   position: relative;
@@ -121,7 +122,15 @@ html:has(.mka-page) {
   overflow: hidden;
   padding: clamp(2rem, 3vw, 3rem);
   background: linear-gradient(165deg, #0e7c7b 0%, #0a5c5b 52%, #123b3a 100%);
+  background-size: 170% 170%;
+  animation: mka-pan 24s ease-in-out infinite alternate;
   color: var(--mka-ivory);
+}
+
+/* N°329 — le dégradé sarcelle dérive lentement (fond vivant, subtil). */
+@keyframes mka-pan {
+  from { background-position: 0% 0%; }
+  to { background-position: 100% 100%; }
 }
 
 @media (min-width: 1024px) {
@@ -193,13 +202,149 @@ html:has(.mka-page) {
   transition: transform 0.7s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-/* En-tête du panneau : logo + marque + badge. */
+/* En-tête du panneau : logo + marque + badge. N°329 — anneaux radar qui
+   rayonnent derrière le logo (le contenu passe au-dessus des anneaux). */
 .mka-brand-head {
   position: relative;
   z-index: 2;
   display: flex;
   align-items: center;
   gap: 0.75rem;
+}
+
+.mka-brand-head .mka-logo,
+.mka-brand-name,
+.mka-brand-badge {
+  position: relative;
+  z-index: 1;
+}
+
+.mka-rings {
+  position: absolute;
+  left: 22px; /* centre du logo 44px, premier enfant de l'en-tête */
+  top: 22px;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.mka-rings span {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 44px;
+  height: 44px;
+  translate: -50% -50%;
+  border: 1.5px solid rgba(191, 232, 213, 0.55);
+  border-radius: 50%;
+  animation: mka-ring 4.2s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+}
+
+.mka-rings span:nth-child(2) { animation-delay: 1.4s; }
+.mka-rings span:nth-child(3) { animation-delay: 2.8s; }
+
+@keyframes mka-ring {
+  0% { transform: scale(0.6); opacity: 0.9; }
+  80% { opacity: 0; }
+  100% { transform: scale(2.6); opacity: 0; }
+}
+
+/* Logo du panneau : flottement très doux (les anneaux rayonnent dessous). */
+.mka-brand-head .mka-logo {
+  animation: mka-bob 6.5s ease-in-out infinite;
+}
+
+@keyframes mka-bob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+
+/* Constellation scintillante (≥1280 seulement, moitié droite du panneau,
+   jamais sur le texte .mka-mid — max-width 24rem ancré à gauche — ni sur
+   les chips du bord droit). */
+.mka-stars {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  display: none;
+}
+
+@media (min-width: 1280px) {
+  .mka-stars {
+    display: block;
+  }
+}
+
+.mka-star {
+  position: absolute;
+  border-radius: 50%;
+  background: var(--mka-mint);
+  animation: mka-twinkle 4s ease-in-out infinite;
+}
+
+.mka-star.is-cream {
+  background: var(--mka-cream);
+}
+
+@keyframes mka-twinkle {
+  0%, 100% { opacity: 0.25; scale: 0.75; }
+  50% { opacity: 0.85; scale: 1.15; }
+}
+
+/* Lignes de données WireGuard : trois flux en pointillés qui circulent
+   entre les nœuds du maillage (au-dessus du pied, masquées en hauteur
+   courte où le bloc .mka-mid descendrait dessus). */
+.mka-flow {
+  position: absolute;
+  left: clamp(2rem, 3vw, 3rem);
+  right: clamp(2rem, 3vw, 3rem);
+  bottom: 4.6rem;
+  height: 84px;
+  z-index: 1;
+  pointer-events: none;
+}
+
+@media (max-height: 800px) {
+  .mka-flow {
+    display: none;
+  }
+}
+
+.mka-flow-line {
+  stroke: rgba(191, 232, 213, 0.5);
+  stroke-width: 1.6;
+  stroke-dasharray: 5 11;
+  stroke-linecap: round;
+  animation: mka-dash 3.2s linear infinite;
+}
+
+.mka-flow-line.l2 {
+  stroke: rgba(245, 227, 168, 0.45);
+  animation-duration: 2.6s;
+}
+
+.mka-flow-line.l3 {
+  stroke: rgba(253, 249, 238, 0.32);
+  animation-duration: 3.8s;
+}
+
+@keyframes mka-dash {
+  to { stroke-dashoffset: -16; }
+}
+
+.mka-flow-node {
+  fill: rgba(191, 232, 213, 0.85);
+  animation: mka-node 3s ease-in-out infinite;
+}
+
+.mka-flow-node.n2 {
+  fill: rgba(245, 227, 168, 0.8);
+  animation-delay: 1.5s;
+}
+
+@keyframes mka-node {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 1; }
 }
 
 .mka-brand-name {
@@ -712,6 +857,94 @@ html:has(.mka-page) {
   font-size: 0.78rem;
   color: var(--mka-ink-60);
   line-height: 1.55;
+}
+
+/* ── Connexion sociale (N°329) : Google · Apple · Facebook ──────────────
+   Boutons clay « fantôme » : ivoire, bord encre doux, ombre clay réduite ;
+   libellés masqués < 640 px (boutons icône seuls, aria-label porté par le
+   bouton). Aucune inscription prestataire active à ce jour : le clic pose
+   une notice honnête (mka-info) — jamais de faux parcours. */
+.mka-soc {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.65rem;
+}
+
+.mka-soc-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border: 1.5px solid rgba(18, 59, 58, 0.18);
+  background: #fffdf4;
+  color: var(--mka-ink);
+  font-family: inherit;
+  font-weight: 800;
+  font-size: 0.84rem;
+  padding: 0.78rem 0.5rem;
+  border-radius: 1.1rem;
+  cursor: pointer;
+  box-shadow: 4px 5px 0 rgba(18, 59, 58, 0.1),
+    inset 3px 4px 8px rgba(255, 255, 255, 0.7),
+    inset -3px -4px 8px rgba(18, 59, 58, 0.05);
+  transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
+}
+
+.mka-soc-btn svg {
+  flex: none;
+}
+
+.mka-soc-btn:hover {
+  transform: translate(-2px, -2px);
+  border-color: rgba(14, 124, 123, 0.45);
+  box-shadow: 6px 7px 0 rgba(18, 59, 58, 0.12),
+    inset 3px 4px 8px rgba(255, 255, 255, 0.7),
+    inset -3px -4px 8px rgba(18, 59, 58, 0.05);
+}
+
+.mka-soc-btn:active {
+  transform: translate(0, 0);
+  box-shadow: 3px 4px 0 rgba(18, 59, 58, 0.1),
+    inset 3px 4px 8px rgba(255, 255, 255, 0.7),
+    inset -3px -4px 8px rgba(18, 59, 58, 0.05);
+}
+
+.mka-soc-btn:focus-visible {
+  outline: 3px solid rgba(14, 124, 123, 0.45);
+  outline-offset: 2px;
+}
+
+@media (max-width: 639px) {
+  .mka-soc-label {
+    display: none;
+  }
+
+  .mka-soc-btn {
+    padding: 0.78rem 0.4rem;
+  }
+}
+
+/* Notice honnête « bientôt disponible » (pas encore d'OAuth prestataire) :
+   bandeau menthe/sarcelle discret, rôle status (aria-live). */
+.mka-info {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  border: 1.5px solid rgba(14, 124, 123, 0.35);
+  background: rgba(191, 232, 213, 0.28);
+  color: var(--mka-teal-dark);
+  border-radius: 1rem;
+  padding: 0.8rem 1rem;
+  font-size: 0.84rem;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+.mka-info svg {
+  flex: none;
+  margin-top: 0.12rem;
+  color: var(--mka-teal);
 }
 
 .mka-link {

@@ -49,9 +49,15 @@ rebrand + boutique (N°316), rebrand 403Shield (N°317) :
   (N°313, `backend/internal/api/handlers_tunnel.go`). N°326 : ces deux pages
   portent le gabarit **dash.cloudflare.com/login** habillé dans le design
   system **Clay de la vitrine** (palette FreeTech — ivoire/crème/sarcelle/
-  menthe/encre, polices Manrope + Fraunces, `AuthShell` partagé :
-  panneau de marque desktop + colonne formulaire, parallaxe, chips
-  flottantes — `src/components/auth/` + `mka-*` dans globals.css) ;
+  menthe/encre, polices Manrope + Fraunces, `AuthShell` partagé). N°329 :
+  split-screen inversé — **formulaire ivoire à gauche + panneau de marque
+  animé à droite** (anneaux radar derrière le logo, constellation
+  scintillante, lignes de données WireGuard, dérive du dégradé) · boutons
+  « Continuer avec Google / Apple / Facebook » (notice honnête « bientôt
+  disponible », aucun OAuth branché — inscriptions prestataires = geste
+  propriétaire) · **favicon** partagé avec la vitrine
+  (`src/app/icon.png`) — `src/components/auth/` + `mka-*` dans
+  globals.css ;
   parcours et contrats backend strictement inchangés ;
 - **Espace client complet** (`/me`, N°314) — portefeuille de commandes et
   d'appareils (migration douce : tout achat vitrine avec cet e-mail apparaît
