@@ -802,14 +802,6 @@ const fr: LandingCopy = {
         title: "Légal",
         links: [{ label: "Politique de confidentialité", href: "/legal/confidentialite" }],
       },
-      {
-        title: "Écosystème",
-        links: [
-          { label: "FTech CI", href: "https://ftci.fr", external: true },
-          { label: "Console 403Shield", href: "https://console.403shield.ftci.fr", external: true },
-          { label: "Boutique VPN", href: "/checkout" },
-        ],
-      },
     ],
     legal: "Politique de confidentialité",
   },
@@ -1500,14 +1492,6 @@ const en: LandingCopy = {
       {
         title: "Legal",
         links: [{ label: "Privacy policy", href: "/legal/confidentialite" }],
-      },
-      {
-        title: "Ecosystem",
-        links: [
-          { label: "FTech CI", href: "https://ftci.fr", external: true },
-          { label: "403Shield Console", href: "https://console.403shield.ftci.fr", external: true },
-          { label: "VPN shop", href: "/checkout" },
-        ],
       },
     ],
     legal: "Privacy policy",

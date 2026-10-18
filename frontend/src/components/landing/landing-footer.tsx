@@ -96,7 +96,9 @@ export function LandingFooter({ copy, variant = "landing" }: LandingFooterProps)
               <h5>{col.title}</h5>
               {col.links.map((link) =>
                 link.href.startsWith("http") ? (
-                  // N°317 — liens écosystème externes (ftci.fr, console, boutique).
+                  // Liens externes éventuels (générique — N°330 retire la
+                  // colonne Écosystème : plus aucune colonne n'est externe,
+                  // la branche reste pour défendre tout href « http » futur).
                   <a
                     key={link.label}
                     href={link.href}
