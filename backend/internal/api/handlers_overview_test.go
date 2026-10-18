@@ -158,8 +158,20 @@ func TestStatsOverviewDayWindows(t *testing.T) {
 	if window["prevStart"] != prevStart.Format(time.RFC3339) {
 		t.Fatalf("window.prevStart = %v, attendu %s", window["prevStart"], prevStart.Format(time.RFC3339))
 	}
-	if window["prevEnd"] != prevEnd.Format(time.RFC3339) {
-		t.Fatalf("window.prevEnd = %v, attendu %s", window["prevEnd"], prevEnd.Format(time.RFC3339))
+	// N°336 — tolérance ±1 s (flake CI main) : le helper ci-dessus et le
+	// serveur capturent CHACUN leur wall-clock ; si la seconde bascule
+	// entre les deux (3 seeds + save + aller-retour HTTP ≈ 0,3-0,8 s),
+	// prevEnd dérive d'une seconde au format RFC3339 — la sémantique
+	// « même instant du jour, hier » reste exacte, seule l'égalité de
+	// chaîne stricte flake (run main en rouge pour 16:57:35 vs 16:57:34).
+	// On compare donc les instants PARSÉS avec une tolérance d'une
+	// seconde ; start/prevStart (dérivés de minuit) restent stricts.
+	prevEndGot, perr := time.Parse(time.RFC3339, fmt.Sprint(window["prevEnd"]))
+	if perr != nil {
+		t.Fatalf("window.prevEnd = %v, illisible : %v", window["prevEnd"], perr)
+	}
+	if d := prevEndGot.Sub(prevEnd); d < -time.Second || d > time.Second {
+		t.Fatalf("window.prevEnd = %v, attendu %s (±1 s)", window["prevEnd"], prevEnd.Format(time.RFC3339))
 	}
 	if tz, _ := out["timezone"].(string); tz != "America/New_York" {
 		t.Fatalf("timezone = %q, attendu America/New_York", tz)
