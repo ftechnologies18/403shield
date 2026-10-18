@@ -10,6 +10,55 @@ sous-marque FTech CI) ; l'historique ci-dessous conserve les noms d'époque.
 N°319 : le DÉPÔT GitHub lui-même devient `ftechnologies18/403shield`
 (anciennes URL redirigées en 301 par GitHub — web, git et API).
 
+## 2026-10-18 — N°332-A — **RÉPARATIONS DE COHÉRENCE MENU ↔ PAGES (volet A du plan de refonte N°332, GO global du propriétaire)** — chaque promesse du header atterrit sur sa destination : les 4 liens menteurs corrigés, l'item VPN/Accès Pro scindé, l'ancre #isp vivante, le footer sans 404
+
+### Déclencheur (propriétaire)
+
+Après la livraison N°331 (header + mega menus appréciés), le propriétaire
+demande une refonte complète : « assure que les pages du landing matchent
+parfaitement avec les éléments de chaque menu, en améliorant l'expérience
+utilisateur — une page pro avec tous les services, un marketing qui retient
+les visiteurs ». L'analyse à trois agents (sections vitrine, pages produits,
+expertise UX) a produit le **plan N°332 en 4 volets** (A réparations · B pages
+produits v2 · C marketing/rétention · D finition clay) — GO global reçu avec
+une contrainte explicite : **éviter les témoignages** (la preuve sociale sera
+uniquement vérifiable : badges, captures réelles, constantes produit).
+
+### Ce qui change (volet A — 3 fichiers, +51/−37)
+
+- **4 liens menteurs corrigés** : « Gestion Cybercafé » `/#hotspot` → `/hotspot`
+  (la page dédiée existait) ; « Gestionnaire PPPoE ISP » `/#hotspot` → `/#isp`
+  (l'ancre existait, orpheline) ; Solutions « PME & Fournisseurs d'Accès »
+  `/tunnels` → `/#isp` (la section Extension ISP porte exactement cette
+  promesse) ; footer « Connexion WiFi jetable » `/wifi` (**404** — seule
+  `/wifi/[slug]` existe) → `/docs/guides/wifi-jetable`.
+- **Scission de l'item fusionné** « Tunnels WireGuard & VPN » : « VPN — IP fixe
+  France » → `/vpn` (icône Globe) et « Accès Pro — Routeurs & LAN » → `/tunnels`
+  (icône Cctv) — la page `/vpn` gagne enfin un lien direct dans la nav Produits.
+- **Saut de funnel supprimé** : la carte VPN du méga menu Tarifs ne propose plus
+  de payer depuis le header (`/checkout?plan=vpn-b2c-year` → `/vpn`) — règle
+  d'or : *nav = découverte, CTA interne = transaction*.
+- **Ancre `#isp` réparée** : 8e puce du rail « ISP & Opérateurs » (Server) +
+  IntersectionObserver (le rail gardait « parc » surligné en scrollant dessus).
+- **Faux boutons neutralisés** : les deux `<span>` stylés boutons du panneau
+  parc (« Vérifier/Mettre à jour le parc ») remplacés par un vrai lien « Voir
+  le guide du pilotage de parc » → `/docs/guides/parc-routeurs`.
+- **Copy orpheline supprimée** : `hotspot.panel.peak`, `footer.legal`,
+  `header.nav.vpn` (grep : zéro consommateur) + interfaces nettoyées ;
+  miroir EN complet.
+- **Intacts** : section `/#tarifs` et ses hrefs caisse (segment tunnels),
+  mécanique des méga menus N°331, drawer accordéon, footer N°330, toggle EN.
+
+### Portes
+
+lint 0 · tsc 0 · `next build` 47/47 · HTML prérendu (rail ISP ×2, guide
+parc-routeurs, footer wifi-jetable, 0 faux bouton) · smoke navigateur build
+:3100 (1280 : les 5 items du méga menu Produits pointent aux cibles exactes,
+clic PPPoE → scroll `#isp` + rail actif `#isp` + menu refermé, Tarifs carte
+VPN → `/vpn`, Solutions PME → `/#isp` ; 390 : aucun débordement, rail mobile
+8 puces ; 0 erreur console). Schéma DB : **AUCUN** (frontend pur —
+deploy-oracle non concerné).
+
 ## 2026-10-18 — N°331 — **RÉORGANISATION DU HEADER : LA RANGÉE RESPIRE ENFIN (nav ≥ 1280, hamburger + drawer accordéon complet en dessous) ET « TARIFS » DEVIENT UN MEGA MENU OÙ CHAQUE SERVICE AFFICHE SES PRIX RÉELS — le modèle Plans & Pricing de cloudflare.com appliqué à la vitrine**
 
 ### Déclencheur (propriétaire)
