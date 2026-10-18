@@ -10,36 +10,72 @@ sous-marque FTech CI) ; l'historique ci-dessous conserve les noms d'époque.
 N°319 : le DÉPÔT GitHub lui-même devient `ftechnologies18/403shield`
 (anciennes URL redirigées en 301 par GitHub — web, git et API).
 
-## 2026-10-18 — N°327 — **LE SECOURS QUOTIDIEN SUPABASE → NEON REDEVIENT VERT : le secret du dump était posé sur le pooler TRANSACTIONNEL (6543 + `?pgbouncer=true`), que `pg_dump` refuse — double correctif « ceinture et bretelles »**
+## 2026-10-18 — N°327 — **LE SECOURS QUOTIDIEN SUPABASE → NEON REDEVIENT VERT après 10 nuits rouges : DEUX défaillances en cascade (secret du dump posé sur le pooler TRANSACTIONNEL refusé par pg_dump, puis POISONNEMENT DU POOL NEON par le set_config du dump qui rend le contrôle d'intégrité aveugle) — double correctif « ceinture et bretelles » dans le workflow + secrets re-posés sur le contrat §10**
 
 ### Déclencheur (vérification de santé post-N°326)
-Le seul point rouge du dépôt après la livraison N°325/326 : le run
-`standby-restore` 39107606587 (cron 02:43 UTC) échoue à l'étape
-« pg_dump production → psql secours » avec
-`pg_dump: error: invalid URI query parameter: "pgbouncer"` — le secret
-`SUPABASE_DATABASE_URL` avait été posé avec l'URL du pooler transactionnel
-(`…:6543/postgres?pgbouncer=true`, celle du run applicatif), alors que le
-contrat documenté (header du workflow + RUNBOOK-POSTGRES §10) exige le
-pooler SESSION 5432. RPO impacté : le secours vivant Neon n'était plus
-restauré — l'archive chiffrée hebdo restait le seul recours.
+Le seul point rouge du dépôt après la livraison N°325/326 : `standby-restore`
+rouge depuis **10 nuits consécutives** (dernier succès : 8 oct. — les runs du
+9 au 17 oct. mouraient tous à l'étape de dump). Diagnostic du run
+39107606587 : `pg_dump: error: invalid URI query parameter: "pgbouncer"` —
+le secret `SUPABASE_DATABASE_URL` avait été re-posé (~9 oct.) avec l'URL du
+pooler transactionnel (`…:6543/postgres?pgbouncer=true`, celle du run
+applicatif) alors que le contrat documenté (header du workflow +
+RUNBOOK-POSTGRES §10) exige le pooler session 5432. RPO impacté : le secours
+vivant Neon n'était plus restauré — l'archive chiffrée hebdo restait le seul
+recours.
+
+### Deuxième défaillance découverte en soignant la première (run de
+rattrapage du 18/10, 08h04) : le POISONNEUR DU POOL NEON
+Le premier correctif (assainissement du DSN de dump) a remis le pg_dump au
+vert (12 Mo, 93 table(s)… dont 46 du schéma `public`) et le RESTORE A
+RÉUSSI — les données du jour sont bien arrivées dans le secours
+(`commands=6044`, `web_vitals=8442`, `tunnel_clients` créée — vérifié en
+direct). Mais le CONTRÔLE D'INTÉGRITÉ a répondu « relation does not exist »
+sur chacune des 46 tables public, y compris celles vérifiées présentes avec
+les comptes exacts du dump. Cause racine établie et **reproduite en labo** :
+le dump émet `SELECT pg_catalog.set_config('search_path', '', false)`
+(en-tête standard pg_dump) ; exécuté via le POOLER TRANSACTIONNEL de Neon
+(secret lui aussi re-posé ~9 oct. sur l'URL `-pooler`), cet état persiste
+sur les connexions serveur du pool (pas de `server_reset_query`) — les
+sessions SUIVANTES héritent d'un `search_path` vide : le restore à noms
+QUALIFIÉS fonctionne, le contrôle à noms NUS devient aveugle. Reproduction :
+set_config via pooler → NOUVELLE connexion → `search_path=""` →
+`SELECT count(*) FROM commands` → « relation does not exist ». C'est aussi
+pourquoi tout était vert avant le 9 oct. : le secret pointait alors sur
+l'ENDPOINT DIRECT (pas de pool, pas d'héritage d'état).
 
 ### Ce qui a changé (1 fichier, ops seul — zéro application touchée)
-- **`.github/workflows/standby-restore.yml`** — le DSN de dump est
-  désormais **assaini avant usage** (N°327, pavage dans l'étape de dump) :
-  retrait des paramètres que `pg_dump` rejette (`pgbouncer`, `sslmode` —
-  le TLS est posé inline par `PGSSLMODE`), rebascule d'un éventuel port
-  `6543` du pooler vers `5432` (session). Un secret mal posé ne peut plus
-  casser le secours quotidien ; header du workflow documenté.
-- **Secret GitHub `SUPABASE_DATABASE_URL` re-posé** (API, sealed box
-  libsodium) sur le DSN du pooler SESSION 5432 — la valeur du contrat §10.
+- **`.github/workflows/standby-restore.yml`** :
+  - **Assainissement du DSN de dump** (N°327) : retrait des paramètres que
+    `pg_dump` rejette (`pgbouncer`, `sslmode` — le TLS est posé inline par
+    `PGSSLMODE=verify-full` + racine Supabase committée), rebascule d'un
+    éventuel port `6543` du pooler vers `5432` (session) ;
+  - **Assainissement du DSN Neon** (N°327-bis, dans l'étape de restore ET
+    celle de contrôle) : retrait de « `-pooler` » de l'hôte (port
+    transactionnel 6543 → 5432) — toutes les connexions passent par
+    l'ENDPOINT DIRECT, plus jamais par le pool qui peut être empoisonné ;
+  - **Contrôle qualifié** : `SELECT count(*) FROM "public"."$T"` — même un
+    `search_path` cassé ne peut plus aveugler le contrôle (ceinture ET
+    bretelles) ;
+  - header du workflow documenté (les deux mesures, le run rouge, la
+    reproduction labo).
+- **Secrets GitHub re-posés par API (sealed box libsodium)** :
+  `SUPABASE_DATABASE_URL` sur le pooler session 5432 ;
+  `NEON_STANDBY_DATABASE_URL` sur l'ENDPOINT DIRECT (sans `-pooler`) —
+  les valeurs du contrat §10.
 
 ### Vérifié
-- Assainisseur testé sur les 3 formes d'entrée (6543+pgbouncer, 5432 nu,
-  6543+pgbouncer+sslmode) → `…:5432/postgres` sans paramètre rejeté ;
-  YAML revalidé (le heredoc Python vit dans le bloc scalaire indenté, le
-  runner le voit en colonne 0) ; script extrait exécuté en bash local.
-- `workflow_dispatch` du run de rattrapage → vert de bout en bout (dump,
-  restore, contrôle d'intégrité par comptages) — cf. run de N°327.
+- Sanitiseurs testés sur toutes les formes d'entrée (6543+pgbouncer /
+  5432 nu / 6543+pgbouncer+sslmode / pooler+channel_binding / déjà direct)
+  → sorties propres ; YAML revalidé (heredocs dans le bloc scalaire, colonne
+  0 côté runner) ; scripts extraits exécutés en bash local.
+- Poison du pool reproduit PUIS nettoyé en labo (search_path restauré sur
+  `"$user", public` via le pooler).
+- `workflow_dispatch` de rattrapage → **VERT de bout en bout** : dump 12 Mo,
+  restore, contrôle d'intégrité 46/46 tables public (les 47 autres blocs
+  COPY du dump sont les schémas internes Supabase — vault/auth/storage —
+  non restaurables sur Neon vanilla : bruit non fatal, non-fatal depuis
+  toujours, hors périmètre du contrôle).
 
 ### Verdict base de données
 AUCUN — le schéma de la production n'est pas touché (le restore se verse

@@ -129,6 +129,37 @@ jobs:
           PYEOF
           )"
           echo "→ DSN de dump assaini (paramètres pg_dump valides, port session si besoin)."
+          # N°327-bis — POISONNEUR DU POOL NEON : le dump émet
+          # set_config('search_path', '', false) (en-tête standard pg_dump) ;
+          # via le pooler TRANSACTIONNEL de Neon, cet état persiste sur les
+          # connexions serveur du pool (pas de server_reset_query) — les
+          # sessions SUIVANTES héritent d'un search_path VIDE : le restore à
+          # noms QUALIFIÉS fonctionne, mais le contrôle à noms NUS devient
+          # aveugle (« relation does not exist »). Mesuré le 18/10 : le run
+          # 08h04 a chargé commands=6044 dans le secours ET le contrôle
+          # 08h08 a répondu « relation does not exist » sur cette même table
+          # (reproduit en labo : set_config via pooler → nouvelle session →
+          # search_path="" → requête nue échoue). Toutes les connexions
+          # passent donc par l'ENDPOINT DIRECT (contrat §10) : on retire
+          # « -pooler » de l'hôte (un port 6543 transactionnel devient 5432).
+          NEON_DIRECT_URL="$(python3 - <<'PYEOF'
+          import os
+          from urllib.parse import urlsplit, urlunsplit, parse_qsl, urlencode
+          u = urlsplit(os.environ["NEON_STANDBY_DATABASE_URL"])
+          host = u.hostname or ""
+          if host.endswith("-pooler"):
+              host = host[: -len("-pooler")]
+          port = u.port
+          if port == 6543:
+              port = 5432
+          netloc = host if port is None else "%s:%d" % (host, port)
+          if u.username:
+              userinfo = u.username + ((":" + u.password) if u.password else "")
+              netloc = userinfo + "@" + netloc
+          print(urlunsplit((u.scheme, netloc, u.path, urlencode(parse_qsl(u.query)), "")))
+          PYEOF
+          )"
+          echo "→ DSN Neon assaini : endpoint direct (jamais le pooler)."
           # N°174 — TLS SÉPARÉ PAR CONNEXION : le premier run réel a échoué
           # (« psql: SSL error: certificate verify failed » sur l'endpoint
           # DIRECT Neon) — les exports GLOBAUX verify-full + racine Supabase
@@ -151,7 +182,7 @@ jobs:
           # la racine Supabase (require explicite inline, ne dépend plus de
           # la présence d'un paramètre sslmode dans le secret).
           PGSSLMODE=require \
-          psql -v ON_ERROR_STOP=0 --quiet "$NEON_STANDBY_DATABASE_URL" < /tmp/standby.sql
+          psql -v ON_ERROR_STOP=0 --quiet "$NEON_DIRECT_URL" < /tmp/standby.sql
           echo "→ Restore terminé."
 
       - name: Contrôle d'intégrité (comptages du dump vs secours)
@@ -166,6 +197,29 @@ jobs:
         run: |
           set -euo pipefail
           export PATH="/usr/lib/postgresql/17/bin:$PATH"   # N°171/N°173
+          # N°327-bis — même assainissement que l'étape de restore : le
+          # contrôle passe LUI AUSSI par l'ENDPOINT DIRECT (un pooler
+          # empoisonné par le set_config du dump rendrait les requêtes à
+          # noms nus aveugles), et les requêtes sont QUALIFIÉES "public"
+          # (ceinture ET bretelles : même un search_path cassé ne peut plus
+          # aveugler le contrôle).
+          NEON_DIRECT_URL="$(python3 - <<'PYEOF'
+          import os
+          from urllib.parse import urlsplit, urlunsplit, parse_qsl, urlencode
+          u = urlsplit(os.environ["NEON_STANDBY_DATABASE_URL"])
+          host = u.hostname or ""
+          if host.endswith("-pooler"):
+              host = host[: -len("-pooler")]
+          port = u.port
+          if port == 6543:
+              port = 5432
+          netloc = host if port is None else "%s:%d" % (host, port)
+          if u.username:
+              userinfo = u.username + ((":" + u.password) if u.password else "")
+              netloc = userinfo + "@" + netloc
+          print(urlunsplit((u.scheme, netloc, u.path, urlencode(parse_qsl(u.query)), "")))
+          PYEOF
+          )"
           echo "→ Comptages de référence : parsage du dump (instantané exact à l'instant T)…"
           DUMP_COUNTS="$(awk '
             BEGIN { intable = 0 }
@@ -184,7 +238,7 @@ jobs:
           echo "  · $NTABLES table(s) dans le dump"
           FAILED=0
           while read -r T N; do
-            DST=$(PGSSLMODE=require psql -t -A --quiet "$NEON_STANDBY_DATABASE_URL" -c "SELECT count(*) FROM \"$T\"" || echo "ERR")
+            DST=$(PGSSLMODE=require psql -t -A --quiet "$NEON_DIRECT_URL" -c "SELECT count(*) FROM \"public\".\"$T\"" || echo "ERR")
             if [ "$N" != "$DST" ]; then
               echo "✗ $T : dump=$N secours=$DST"
               FAILED=1
