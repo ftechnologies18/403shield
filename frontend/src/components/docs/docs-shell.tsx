@@ -1,40 +1,91 @@
 "use client";
 
-// Coquille /docs/guides (N°304) — 3 colonnes style documentation moderne :
-// navigation arborescente (gauche) · contenu (centre) · sommaire sticky
-// (droite). Mobile : nav en sheet, sommaire en repli. Thème 403Shield
+// Coquille /docs/guides (N°304, N°333-C) — 3 colonnes style documentation
+// moderne : navigation arborescente (gauche) · contenu (centre) · sommaire
+// sticky (droite). Mobile : nav en sheet, sommaire en repli. Thème 403Shield
 // « Charbon & Corail » (jour/nuit via tokens existants).
+//
+// N°333-C : liens hiérarchiques /docs/guides/<section>/<slug>, section
+// active déduite du pathname (hub, index de section, guide, plateforme),
+// palette de recherche ⌘K (DocsCommand — index full-text lazy), icônes de
+// section rendues 9/9, groupe « Plateforme (privé) » sur le volet gated,
+// TOC auto-caché quand la page n'a pas d'ancres (hub, index).
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { ChevronDown, FileText, ListTree, LogIn, Menu, Rocket, Wifi } from "lucide-react";
+import {
+  BarChart3,
+  ChevronDown,
+  FileText,
+  Gauge,
+  ListTree,
+  LogIn,
+  Menu,
+  Rocket,
+  Router,
+  Settings,
+  ShieldCheck,
+  Smartphone,
+  Ticket,
+  Users,
+  Wifi,
+} from "lucide-react";
 import type { GuideMetaLight } from "@/lib/docs/catalog";
 import { GUIDE_ANCHORS } from "./guide-view";
+import { DocsCommand } from "./docs-command";
 
-/* ── Icône par section (mapping sûr, aucune import dynamique) ─────────── */
+/* ── Icône par section (mapping complet 9/9 + plateforme, N°333-C) ────── */
+const SECTION_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
+  demarrer: Rocket,
+  supervision: Gauge,
+  hotspot: Ticket,
+  tunnels: ShieldCheck,
+  personnes: Users,
+  infrastructure: Router,
+  analyse: BarChart3,
+  parametres: Settings,
+  annexes: Wifi,
+};
+
 function SectionIcon({ id }: { id: string }) {
-  if (id === "demarrer") return <Rocket className="size-3.5" aria-hidden />;
-  if (id === "annexes") return <Wifi className="size-3.5" aria-hidden />;
-  return <FileText className="size-3.5" aria-hidden />;
+  const Icon = SECTION_ICONS[id] ?? FileText;
+  return <Icon className="size-3.5" aria-hidden />;
+}
+
+/* ── État actif déduit du pathname (guide ou index de section) ────────── */
+function useActiveDocs() {
+  const pathname = usePathname() ?? "";
+  const platform = /^\/docs\/guides\/plateforme(?:\/([^/?#]+))?/.exec(pathname);
+  if (platform) return { sectionId: "plateforme", guideId: platform[1] };
+  const m = /^\/docs\/guides\/([^/]+)(?:\/([^/?#]+))?/.exec(pathname);
+  if (m) return { sectionId: m[1], guideId: m[2] };
+  return { sectionId: undefined, guideId: undefined };
 }
 
 /* ── Arbre de navigation : sections repliables + guides ────────────────── */
 export function DocsNav({
   sections,
   currentId,
+  platformGuides,
   onNavigate,
 }: {
   sections: { id: string; title: string; guides: GuideMetaLight[] }[];
   currentId?: string;
+  platformGuides?: { id: string; title: string }[];
   onNavigate?: () => void;
 }) {
+  const { sectionId: pathSection, guideId: pathGuide } = useActiveDocs();
+  const activeGuideId = pathGuide ?? currentId;
+  const activeSectionId =
+    pathSection ?? sections.find((s) => s.guides.some((g) => g.id === currentId))?.id;
+
   const [open, setOpen] = useState<Record<string, boolean>>(() => {
-    const active = sections.find((s) => s.guides.some((g) => g.id === currentId));
     const init: Record<string, boolean> = {};
-    for (const s of sections) init[s.id] = s.id === active?.id || s.id === "demarrer";
+    for (const s of sections) init[s.id] = s.id === activeSectionId || s.id === "demarrer";
     return init;
   });
 
@@ -44,7 +95,7 @@ export function DocsNav({
         {sections.map((s) => (
             <li key={s.id}>
               <Collapsible open={open[s.id] ?? false} onOpenChange={(v) => setOpen((o) => ({ ...o, [s.id]: v }))}>
-                <CollapsibleTrigger className="group flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-left text-[13px] font-semibold uppercase tracking-wide text-muted-foreground transition-colors hover:bg-accent/60 hover:text-foreground">
+                <CollapsibleTrigger className="group flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-left text-[13px] font-semibold uppercase tracking-wide text-muted-foreground transition-colors hover:bg-accent/60 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
                   <SectionIcon id={s.id} />
                   <span className="flex-1">{s.title}</span>
                   <span className="text-[11px] font-normal tabular-nums text-muted-foreground/70">{s.guides.length}</span>
@@ -56,14 +107,14 @@ export function DocsNav({
                 <CollapsibleContent>
                   <ul className="mb-1 ml-1 space-y-0.5 border-l border-border/60 pl-2">
                     {s.guides.map((g) => {
-                      const active = g.id === currentId;
+                      const active = g.id === activeGuideId;
                       return (
                         <li key={g.id}>
                           <Link
-                            href={`/docs/guides/${g.id}`}
+                            href={`/docs/guides/${g.sectionId}/${g.id}`}
                             onClick={onNavigate}
                             aria-current={active ? "page" : undefined}
-                            className={`block truncate rounded-md px-2.5 py-1.5 text-[13.5px] leading-5 transition-colors ${
+                            className={`block truncate rounded-md px-2.5 py-1.5 text-[13.5px] leading-5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
                               active
                                 ? "bg-primary/12 font-medium text-foreground"
                                 : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
@@ -74,11 +125,68 @@ export function DocsNav({
                         </li>
                       );
                     })}
+                    <li>
+                      <Link
+                        href={`/docs/guides/${s.id}`}
+                        onClick={onNavigate}
+                        className={`block truncate rounded-md px-2.5 py-1.5 text-[12.5px] italic leading-5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+                          activeSectionId === s.id && !activeGuideId
+                            ? "text-foreground"
+                            : "text-muted-foreground/70 hover:bg-accent/50 hover:text-foreground"
+                        }`}
+                      >
+                        Vue de la section…
+                      </Link>
+                    </li>
                   </ul>
                 </CollapsibleContent>
               </Collapsible>
             </li>
         ))}
+
+        {platformGuides ? (
+          <li className="pt-2">
+            <p className="flex items-center gap-2 rounded-md px-2.5 py-2 text-[13px] font-semibold uppercase tracking-wide text-primary/80">
+              <ShieldCheck className="size-3.5" aria-hidden />
+              Plateforme (privé)
+            </p>
+            <ul className="ml-1 space-y-0.5 border-l border-primary/25 pl-2">
+              <li>
+                <Link
+                  href="/docs/guides/plateforme"
+                  onClick={onNavigate}
+                  aria-current={activeSectionId === "plateforme" && !activeGuideId ? "page" : undefined}
+                  className={`block truncate rounded-md px-2.5 py-1.5 text-[13.5px] leading-5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+                    activeSectionId === "plateforme" && !activeGuideId
+                      ? "bg-primary/12 font-medium text-foreground"
+                      : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
+                  }`}
+                >
+                  Vue du volet plateforme
+                </Link>
+              </li>
+              {platformGuides.map((g) => {
+                const active = g.id === activeGuideId;
+                return (
+                  <li key={g.id}>
+                    <Link
+                      href={`/docs/guides/plateforme/${g.id}`}
+                      onClick={onNavigate}
+                      aria-current={active ? "page" : undefined}
+                      className={`block truncate rounded-md px-2.5 py-1.5 text-[13.5px] leading-5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+                        active
+                          ? "bg-primary/12 font-medium text-foreground"
+                          : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
+                      }`}
+                    >
+                      {g.title}
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          </li>
+        ) : null}
       </ul>
     </nav>
   );
@@ -87,6 +195,7 @@ export function DocsNav({
 /* ── Sommaire (TOC) : scrollspy sur les ancres du guide ────────────────── */
 export function DocsToc() {
   const [active, setActive] = useState<string>("cest-quoi");
+  const pathname = usePathname() ?? "";
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -103,6 +212,14 @@ export function DocsToc() {
     }
     return () => observer.disconnect();
   }, []);
+
+  // Auto-caché (N°333-C) : le sommaire n'existe que sur les PAGES DE GUIDE
+  // (/docs/guides/<section>/<slug> ou /docs/guides/plateforme/<slug>) —
+  // hub, index de section et index plateforme n'ont pas d'ancres : pas de
+  // sommaire fantôme (règle anti-lien menteur), dérivation par pathname
+  // (zéro état, zéro effet de détection).
+  const isGuidePage = /\/docs\/guides\/(?:plateforme\/)?[^/]+\/[^/]+$/.test(pathname);
+  if (!isGuidePage) return null;
 
   return (
     <nav aria-label="Sommaire du guide" className="docs-toc text-sm">
@@ -134,11 +251,13 @@ export function DocsToc() {
 export function DocsShell({
   sections,
   currentId,
+  platformGuides,
   children,
   withToc,
 }: {
   sections: { id: string; title: string; guides: GuideMetaLight[] }[];
   currentId?: string;
+  platformGuides?: { id: string; title: string }[];
   children: React.ReactNode;
   withToc?: boolean;
 }) {
@@ -164,7 +283,7 @@ export function DocsShell({
                 <span className="flex size-7 items-center justify-center rounded-lg bg-gradient-to-br from-primary to-primary/80 text-[11px] font-bold text-primary-foreground">403</span>
                 403Shield · Guides
               </Link>
-              <DocsNav sections={sections} currentId={currentId} onNavigate={() => setNavOpen(false)} />
+              <DocsNav sections={sections} currentId={currentId} platformGuides={platformGuides} onNavigate={() => setNavOpen(false)} />
             </SheetContent>
           </Sheet>
 
@@ -178,10 +297,13 @@ export function DocsShell({
           </Link>
 
           <div className="ml-auto flex items-center gap-2">
-            <Button asChild variant="ghost" size="sm" className="h-9 px-3 text-[13px] text-muted-foreground hover:text-foreground">
+            {/* Palette ⌘K (N°333-C) : recherche full-text du centre de
+                guides — index lazy, accents-insensible, ancres par bloc. */}
+            <DocsCommand />
+            <Button asChild variant="ghost" size="sm" className="hidden h-9 px-3 text-[13px] text-muted-foreground hover:text-foreground sm:inline-flex">
               <Link href="/">
                 <Wifi className="size-4" aria-hidden />
-                <span className="hidden sm:inline">Accueil</span>
+                <span className="hidden lg:inline">Accueil</span>
               </Link>
             </Button>
             <Button asChild size="sm" className="h-9 px-3.5 text-[13px]">
@@ -197,7 +319,7 @@ export function DocsShell({
       <div className="mx-auto grid w-full max-w-7xl flex-1 grid-cols-1 gap-8 px-4 py-8 sm:px-6 lg:grid-cols-[248px_minmax(0,1fr)] xl:grid-cols-[248px_minmax(0,1fr)_208px]">
         <aside className="docs-nav-col hidden lg:block" aria-label="Navigation des guides">
           <div className="sticky top-[76px] max-h-[calc(100vh-100px)] overflow-y-auto pr-2 [scrollbar-width:thin]">
-            <DocsNav sections={sections} currentId={currentId} />
+            <DocsNav sections={sections} currentId={currentId} platformGuides={platformGuides} />
           </div>
         </aside>
 
@@ -221,7 +343,7 @@ export function DocsShell({
           <p>
             403Shield — guides d'exploitation · <Link href="/" className="underline-offset-2 hover:underline">403shield.ftci.fr</Link>
           </p>
-          <p>Documentation en français · captures production 2026-10-12</p>
+          <p>Documentation en français · captures d&apos;écran réelles de la production</p>
         </div>
       </footer>
     </div>

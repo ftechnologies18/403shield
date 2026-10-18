@@ -1,10 +1,13 @@
 "use client";
 
-// Rendu d'un guide complet (N°304) — gabarit Q&A validé :
+// Rendu d'un guide complet (N°304, N°333-C) — gabarit Q&A validé :
 // C'est quoi ? / Différences / Que recevez-vous ? / Étapes (captures) /
-// Usages / Pièges & astuces / FAQ. Utilisé par les pages publiques
-// (/docs/guides/[slug]) ET par la route gated plateforme (même rendu).
+// Usages / Pièges & astuces / FAQ + « À lire ensuite » (related — rendu
+// depuis N°333-C, données maintenues depuis N°304). Utilisé par les pages
+// publiques (/docs/guides/<section>/<slug>) ET par la route gated
+// plateforme (même rendu).
 
+import Link from "next/link";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -12,6 +15,7 @@ import { Separator } from "@/components/ui/separator";
 import {
   BookOpenText,
   CircleHelp,
+  Clock3,
   GitCompareArrows,
   Inbox,
   Lightbulb,
@@ -23,6 +27,14 @@ import {
 } from "lucide-react";
 import type { Guide } from "@/lib/docs/types";
 import { Capture } from "./capture";
+
+/** Carte « À lire ensuite » (N°333-C) — related pré-résolu par la page. */
+export interface RelatedGuideCard {
+  href: string;
+  title: string;
+  sectionTitle: string;
+  minutes: number;
+}
 
 function paragraphs(text: string) {
   return text.split("\n\n").map((p, i) => (
@@ -62,7 +74,7 @@ function SectionTitle({
   );
 }
 
-export function GuideView({ guide }: { guide: Guide }) {
+export function GuideView({ guide, related }: { guide: Guide; related?: RelatedGuideCard[] }) {
   return (
     <article className="docs-guide">
       {/* ── En-tête du guide ─────────────────────────────────────────── */}
@@ -231,6 +243,39 @@ export function GuideView({ guide }: { guide: Guide }) {
             ))}
           </Accordion>
         </>
+      ) : null}
+
+      {/* ── À lire ensuite (related, N°333-C) ─────────────────────── */}
+      {related && related.length > 0 ? (
+        <section aria-labelledby="a-lire-ensuite" className="mt-12">
+          <h2
+            id="a-lire-ensuite"
+            className="docs-h2 mt-0 flex scroll-mt-24 items-center gap-2.5 text-xl font-semibold tracking-tight text-foreground"
+          >
+            <span className="flex size-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
+              <BookOpenText className="size-4.5" aria-hidden />
+            </span>
+            À lire ensuite
+          </h2>
+          <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {related.map((r) => (
+              <Link
+                key={r.href}
+                href={r.href}
+                className="group rounded-xl border border-border/60 bg-card/70 p-4 transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                <p className="text-[11px] font-medium uppercase tracking-wide text-primary/80">{r.sectionTitle}</p>
+                <p className="mt-1.5 text-sm font-semibold leading-5 text-foreground group-hover:text-primary">
+                  {r.title}
+                </p>
+                <p className="mt-2.5 inline-flex items-center gap-1 text-[11.5px] text-muted-foreground">
+                  <Clock3 className="size-3" aria-hidden />
+                  {r.minutes} min
+                </p>
+              </Link>
+            ))}
+          </div>
+        </section>
       ) : null}
 
       <div className="mt-12 flex items-center justify-between gap-4 rounded-xl border border-border/60 bg-card/60 px-4 py-3 text-xs text-muted-foreground">

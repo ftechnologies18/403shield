@@ -1,20 +1,26 @@
 "use client";
 
-// Hub /docs/guides (N°304) — recherche instantanée + cartes par section.
+// Hub /docs/guides (N°304, N°333-C) — recherche instantanée + cartes par
+// section (liens hiérarchiques /docs/guides/<section>/<slug>, titres de
+// section cliquables vers leur vue dédiée, filtre insensible aux accents).
 // Client component : le filtrage est local (métadonnées légères uniquement,
-// aucun contenu de guide n'entre dans le bundle client).
+// aucun contenu de guide n'entre dans le bundle client). La recherche
+// full-text (corps, FAQ, pièges) vit dans la palette ⌘K du shell.
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowRight, Clock3, Search, UserRound } from "lucide-react";
+import { ArrowRight, ChevronRight, Clock3, Search, UserRound } from "lucide-react";
 import type { GuideMetaLight } from "@/lib/docs/catalog";
+
+/** Minuscules + suppression des diacritiques (« pare-feu » ≈ « parfeu »). */
+const norm = (s: string) => s.toLowerCase().normalize("NFD").replace(/\p{Diacritic}/gu, "");
 
 export function HubView({ sections }: { sections: { id: string; title: string; description: string; guides: GuideMetaLight[] }[] }) {
   const [query, setQuery] = useState("");
-  const q = query.trim().toLowerCase();
+  const q = norm(query.trim());
 
   const filtered = useMemo(() => {
     if (!q) return sections;
@@ -23,10 +29,10 @@ export function HubView({ sections }: { sections: { id: string; title: string; d
         ...s,
         guides: s.guides.filter(
           (g) =>
-            g.title.toLowerCase().includes(q) ||
-            g.summary.toLowerCase().includes(q) ||
-            g.roles.toLowerCase().includes(q) ||
-            s.title.toLowerCase().includes(q),
+            norm(g.title).includes(q) ||
+            norm(g.summary).includes(q) ||
+            norm(g.roles).includes(q) ||
+            norm(s.title).includes(q),
         ),
       }))
       .filter((s) => s.guides.length > 0);
@@ -73,7 +79,13 @@ export function HubView({ sections }: { sections: { id: string; title: string; d
             <div className="flex items-baseline justify-between gap-4">
               <div>
                 <h2 id={`section-${s.id}`} className="text-lg font-semibold tracking-tight">
-                  {s.title}
+                  <Link
+                    href={`/docs/guides/${s.id}`}
+                    className="group inline-flex items-center gap-1 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  >
+                    {s.title}
+                    <ChevronRight className="size-4 text-muted-foreground/50 transition-transform group-hover:translate-x-0.5 group-hover:text-primary" aria-hidden />
+                  </Link>
                 </h2>
                 <p className="mt-1 text-sm leading-6 text-muted-foreground">{s.description}</p>
               </div>
@@ -84,7 +96,7 @@ export function HubView({ sections }: { sections: { id: string; title: string; d
               {s.guides.map((g) => (
                 <Link
                   key={g.id}
-                  href={`/docs/guides/${g.id}`}
+                  href={`/docs/guides/${g.sectionId}/${g.id}`}
                   className="group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
                   <Card className="h-full border-border/60 bg-card/80 transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md">
@@ -127,7 +139,7 @@ export function HubView({ sections }: { sections: { id: string; title: string; d
           Le parcours complet tient en 20 minutes : compte → routeur → première vente.
         </p>
         <Link
-          href="/docs/guides/premiers-pas"
+          href="/docs/guides/demarrer/premiers-pas"
           className="mt-4 inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:underline"
         >
           Commencer par « Créer votre compte »

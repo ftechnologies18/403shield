@@ -12,7 +12,7 @@ import { ArrowLeft, ArrowRight, FileQuestion } from "lucide-react";
 import type { Guide } from "@/lib/docs/types";
 import { PLATFORM_GUIDES_META } from "@/lib/docs/platform-meta";
 import { PlatformGate } from "@/components/docs/platform-gate";
-import { GuideView } from "@/components/docs/guide-view";
+import { GuideView, type RelatedGuideCard } from "@/components/docs/guide-view";
 
 function PlatformGuideBody({ slug }: { slug: string }) {
   const [guide, setGuide] = useState<Guide | null | "pending">("pending");
@@ -70,18 +70,40 @@ function PlatformGuideBody({ slug }: { slug: string }) {
   const prev = i > 0 ? PLATFORM_GUIDES_META[i - 1] : undefined;
   const next = i >= 0 && i < PLATFORM_GUIDES_META.length - 1 ? PLATFORM_GUIDES_META[i + 1] : undefined;
 
+  // « À lire ensuite » (N°333-C) : related résolus sur les seules
+  // métadonnées plateforme (légères, déjà présentes dans le bundle client) —
+  // les related vers des guides PUBLICS ne sont pas rendus ici : les
+  // résoudre exigerait le catalogue complet côté client (contenu intégral
+  // dans le bundle, contraire au design N°304). Ils restent desservis par
+  // les pages publiques et la palette ⌘K.
+  const related: RelatedGuideCard[] = (guide.related ?? [])
+    .map((id) => {
+      const p = PLATFORM_GUIDES_META.find((g) => g.id === id);
+      return p
+        ? { href: `/docs/guides/plateforme/${p.id}`, title: p.title, sectionTitle: "Plateforme (privé)", minutes: p.minutes }
+        : null;
+    })
+    .filter((c): c is RelatedGuideCard => c !== null)
+    .slice(0, 3);
+
   return (
     <>
-      <nav aria-label="Fil d'Ariane" className="mb-6 text-[13px] text-muted-foreground">
-        <Link href="/docs/guides/plateforme" className="inline-flex items-center gap-1.5 rounded hover:text-foreground">
+      <nav aria-label="Fil d'Ariane" className="mb-6 flex flex-wrap items-center gap-x-2 text-[13px] text-muted-foreground">
+        <Link href="/docs/guides" className="inline-flex items-center gap-1.5 rounded hover:text-foreground">
           <ArrowLeft className="size-3.5" aria-hidden />
-          Plateforme
+          Guides
         </Link>
-        <span className="mx-2" aria-hidden>/</span>
-        <span>{guide.roles}</span>
+        <span aria-hidden>/</span>
+        <Link href="/docs/guides/plateforme" className="rounded hover:text-foreground">
+          Plateforme (privé)
+        </Link>
+        <span aria-hidden>/</span>
+        <span className="max-w-[46ch] truncate text-foreground/80" title={guide.title}>
+          {guide.title}
+        </span>
       </nav>
 
-      <GuideView guide={guide} />
+      <GuideView guide={guide} related={related} />
 
       <nav aria-label="Guides précédent et suivant" className="mt-10 grid gap-3 sm:grid-cols-2">
         {prev ? (

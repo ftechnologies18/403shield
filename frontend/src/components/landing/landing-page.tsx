@@ -677,7 +677,7 @@ export default function LandingPage({ onSignIn, onSignUp }: LandingPageProps) {
                     boutons promettaient des actions impossibles (mensonge
                     d'UI) → un vrai lien vers le guide du pilotage de parc. */}
                 <div className="mkl-fleet-actions">
-                  <Link href="/docs/guides/parc-routeurs" className="mkl-link-quiet">
+                  <Link href="/docs/guides/infrastructure/parc-routeurs" className="mkl-link-quiet">
                     {copy.fleet.guideCta} →
                   </Link>
                 </div>

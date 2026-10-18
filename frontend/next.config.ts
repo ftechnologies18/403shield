@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import { PUBLIC_GUIDES } from "./src/lib/docs/catalog";
 
 const nextConfig: NextConfig = {
   /* N°38 — suppression de output: "standalone" : sur Vercel, le builder
@@ -22,6 +23,23 @@ const nextConfig: NextConfig = {
      MIKCLOUD_DEV_API_PROXY=1 (dev local / sandbox). En production Vercel,
      la variable est absente → aucune réécriture (mode direct via
      NEXT_PUBLIC_API_BASE inchangé). Aucun impact contrat d'API. */
+  /* N°333-C — URLs hiérarchiques des guides : les 32 anciennes URLs à plat
+     /docs/guides/<slug> redirigent en 301 vers /docs/guides/<section>/<slug>
+     (plan de réorganisation du centre de guides — map dérivée du catalogue,
+     zéro maintenance manuelle : un guide déplacé met à jour la redirection au
+     rebuild). /docs nu rejoint le hub. Les 301 préservent le capital SEO et
+     les deep-links partagés par le support (règle d'or N°333). */
+  async redirects() {
+    return [
+      { source: "/docs", destination: "/docs/guides", statusCode: 301 },
+      ...PUBLIC_GUIDES.map((g) => ({
+        source: `/docs/guides/${g.id}`,
+        destination: `/docs/guides/${g.sectionId}/${g.id}`,
+        statusCode: 301,
+      })),
+    ];
+  },
+
   async rewrites() {
     if (process.env.MIKCLOUD_DEV_API_PROXY !== "1") return [];
     return [

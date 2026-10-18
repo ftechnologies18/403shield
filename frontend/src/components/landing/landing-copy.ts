@@ -1018,7 +1018,7 @@ const fr: LandingCopy = {
         links: [
           { label: "Se connecter", href: "/login" },
           { label: "Mode Vente", href: "/sell" },
-          { label: "Connexion WiFi jetable", href: "/docs/guides/wifi-jetable" },
+          { label: "Connexion WiFi jetable", href: "/docs/guides/hotspot/wifi-jetable" },
           { label: "Guides d'exploitation", href: "/docs/guides" },
         ],
       },
@@ -1180,17 +1180,17 @@ const fr: LandingCopy = {
           {
             title: "Premiers pas",
             desc: "Créer le compte, installer l'agent, connecter le premier routeur.",
-            href: "/docs/guides/premiers-pas",
+            href: "/docs/guides/demarrer/premiers-pas",
           },
           {
             title: "Vouchers & lots",
             desc: "Générer, imprimer et suivre vos lots de 500 vouchers.",
-            href: "/docs/guides/vouchers-lots",
+            href: "/docs/guides/hotspot/vouchers-lots",
           },
           {
             title: "Module Cybercafé",
             desc: "Postes, temps d'écran et tickets de session.",
-            href: "/docs/guides/cybercafe",
+            href: "/docs/guides/hotspot/cybercafe",
           },
         ],
       },
@@ -1355,12 +1355,12 @@ const fr: LandingCopy = {
           {
             title: "Guide VPN WireGuard",
             desc: "Choisir, acheter et importer sa configuration pas à pas.",
-            href: "/docs/guides/vpn-wireguard",
+            href: "/docs/guides/hotspot/vpn-wireguard",
           },
           {
             title: "Espace client VPN",
             desc: "Portefeuille d'appareils, renouvellement 1-clic, statuts.",
-            href: "/docs/guides/portail-client",
+            href: "/docs/guides/annexes/portail-client",
           },
         ],
       },
@@ -1517,17 +1517,17 @@ const fr: LandingCopy = {
           {
             title: "Accès Pro — le guide",
             desc: "Routeurs, caméras et NAS dans le tunnel, derrière CGNAT.",
-            href: "/docs/guides/acces-pro",
+            href: "/docs/guides/tunnels/acces-pro",
           },
           {
             title: "Console tunnels",
             desc: "Code e-mail, portefeuille d'appareils, renouvellement 1 clic.",
-            href: "/docs/guides/console-tunnels",
+            href: "/docs/guides/tunnels/console-tunnels",
           },
           {
             title: "Vitrine VPN B2C",
             desc: "La boutique /vpn pas à pas : formules, caisse, configuration.",
-            href: "/docs/guides/vitrine-vpn",
+            href: "/docs/guides/tunnels/vitrine-vpn",
           },
         ],
       },
@@ -2187,7 +2187,7 @@ const en: LandingCopy = {
         links: [
           { label: "Sign in", href: "/login" },
           { label: "Sell Mode", href: "/sell" },
-          { label: "Throwaway WiFi login", href: "/docs/guides/wifi-jetable" },
+          { label: "Throwaway WiFi login", href: "/docs/guides/hotspot/wifi-jetable" },
           { label: "Operations guides", href: "/docs/guides" },
         ],
       },
@@ -2349,17 +2349,17 @@ const en: LandingCopy = {
           {
             title: "First steps",
             desc: "Create the account, install the agent, connect the first router.",
-            href: "/docs/guides/premiers-pas",
+            href: "/docs/guides/demarrer/premiers-pas",
           },
           {
             title: "Vouchers & batches",
             desc: "Generate, print and track your 500-voucher batches.",
-            href: "/docs/guides/vouchers-lots",
+            href: "/docs/guides/hotspot/vouchers-lots",
           },
           {
             title: "Cybercafé module",
             desc: "Stations, screen time and session tickets.",
-            href: "/docs/guides/cybercafe",
+            href: "/docs/guides/hotspot/cybercafe",
           },
         ],
       },
@@ -2524,12 +2524,12 @@ const en: LandingCopy = {
           {
             title: "WireGuard VPN guide",
             desc: "Choose, buy and import your configuration step by step.",
-            href: "/docs/guides/vpn-wireguard",
+            href: "/docs/guides/hotspot/vpn-wireguard",
           },
           {
             title: "VPN client area",
             desc: "Device wallet, 1-click renewal, statuses.",
-            href: "/docs/guides/portail-client",
+            href: "/docs/guides/annexes/portail-client",
           },
         ],
       },
@@ -2686,17 +2686,17 @@ const en: LandingCopy = {
           {
             title: "Pro Access — the guide",
             desc: "Routers, cameras and NAS in the tunnel, behind CGNAT.",
-            href: "/docs/guides/acces-pro",
+            href: "/docs/guides/tunnels/acces-pro",
           },
           {
             title: "Tunnels console",
             desc: "Email code, device wallet, 1-click renewal.",
-            href: "/docs/guides/console-tunnels",
+            href: "/docs/guides/tunnels/console-tunnels",
           },
           {
             title: "B2C VPN storefront",
             desc: "The /vpn shop step by step: plans, checkout, configuration.",
-            href: "/docs/guides/vitrine-vpn",
+            href: "/docs/guides/tunnels/vitrine-vpn",
           },
         ],
       },

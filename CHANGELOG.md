@@ -6,6 +6,51 @@ aux dates de livraison — le déploiement est continu : chaque push `main` pass
 la CI puis se déploie automatiquement (frontend Vercel, backend Oracle E5
 depuis le T2 N°266 — Render suspendu N°303). N°317 : le projet change de nom
 de marque — MikCloud et MikTunnel deviennent **403Shield** (marque unifiée,
+## 2026-10-18 — N°333-C — **NAVIGATION « GRANDE STRUCTURE » (volet C du plan N°333)** — URLs hiérarchiques + 301, palette ⌘K full-text, related rendus, shell plateforme
+
+### N°333-C (volet C — 13 fichiers, ~+1 100 lignes)
+
+- **URLS HIÉRARCHIQUES + 301** : `/docs/guides/<section>/<slug>` (SSG 32
+  guides + 9 index de section neufs) ; l'ancienne route à plat supprimée,
+  les 32 anciennes URLs redirigent en **301** vers leur forme sectionnée
+  et `/docs` (404 historique) rejoint le hub — map dérivée du catalogue
+  dans next.config.ts (zéro maintenance : un guide déplacé met à jour sa
+  redirection au rebuild).
+- **PALETTE ⌘K FULL-TEXT** (recherche maison zéro dépendance, agent
+  18-a + durcissement tuteur) : index statique
+  `/docs/search-index.json` (32 guides × 7 blocs, ~150 Ko, exclut
+  STRICTEMENT le volet privé), moteur accents-insensible + préfixe +
+  **tolérance de frappe Levenshtein ≤ 1** + **bigrammes collés** (« parfeu »
+  comme « pare-feu » trouvent « pare-feu » — la requête et l'index
+  partagent la même découpe espaces/apostrophes/tirets) ; palette
+  Dialog+Command (⌘K, Ctrl+K, « / »), index lazy à la première ouverture,
+  debounce 100 ms, résultats ancrés BLOC Q&A (on tombe sur la réponse),
+  navigation clavier complète, états chargement/vide/réseau.
+- **RELATED ENFIN RENDUS** : bloc « À lire ensuite » (3 cartes) en pied de
+  chaque guide — le maillage entretenu depuis N°304 (0 lien cassé) vit à
+  l'écran ; résolution côté serveur sur les pages publiques, côté
+  métadonnées sur le volet privé (les related plateforme→public ne
+  rentrent pas dans le bundle client — choix documenté).
+- **BREADCRUMB 3 NIVEAUX conforme** (Guides › Section › Page — fin du fil
+  d'Ariane « rôles ») · prev/next relookés avec section d'origine.
+- **SHELL ÉTENDU AU VOLET PLATEFORME** : sidebar arborescente + palette ⌘K
+  + header pour le volet privé (garde de contenu inchangée), groupe
+  « Plateforme (privé) » dans la nav · icônes de section **9/9 rendues**
+  (fin des 6 FileText génériques) · TOC auto-caché hors pages de guide
+  (dérivation pathname — zéro sommaire fantôme) · état actif par pathname ·
+  focus-visible ring sur toute la nav.
+- **HUB** : liens hiérarchiques, titres de section cliquables vers leur
+  vue, recherche locale insensible aux accents.
+- **SWEEP ANTI-LIEN MENTEUR** : tous les liens guides de la vitrine
+  (footer FR/EN, pages /hotspot /vpn /tunnels, landing /) passés au format
+  hiérarchique — 0 lien plat restant (grep).
+- **PORTES** : lint 0 · tsgo 0 · next build 59/59 (49 + 9 index + index
+  json) · smoke navigateur : 301 vérifiés (premiers-pas, vitrine-vpn,
+  /docs) · palette : « vouchers » 12 résultats, « parfeu » 1, « pare-feu »
+  2, Entrée → /docs/guides/supervision/protection#cest-quoi · related ×3
+  sur /tunnels/acces-pro · plateforme : shell + gate + noindex · 390 px :
+  390=390, 0 overflow, 0 erreur console · schéma DB AUCUN.
+
 ## 2026-10-18 — N°333-B — **COUVERTURE : LE PILIER TUNNELS DOCUMENTÉ (volet B du plan N°333)** — 9e section « Tunnels & Accès Pro », 2 guides neufs qualité V1, vitrine-vpn déménagée
 
 ### N°333-B (volet B — 6 fichiers, +560/−20)

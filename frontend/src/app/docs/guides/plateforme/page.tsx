@@ -1,13 +1,14 @@
 "use client";
 
-// Index du volet PLATEFORME /docs/guides/plateforme (N°304) — PRIVÉ.
-// Garde : session + rôle admin plateforme (PlatformGate). Le contenu
+// Index du volet PLATEFORME /docs/guides/plateforme (N°304, N°333-C) —
+// PRIVÉ. Garde : session + rôle admin plateforme (PlatformGate). Le contenu
 // complet des guides n'est chargé que par les pages [slug] après la garde ;
-// ici ne vivent que les métadonnées (titres — platform-meta.ts).
+// ici ne vivent que les métadonnées (titres — platform-meta.ts). Le shell
+// (sidebar, palette ⌘K) vient du layout — cette page ne rend que le corps.
 
 import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
-import { Clock3, ShieldCheck } from "lucide-react";
+import { ArrowLeft, Clock3, ShieldCheck } from "lucide-react";
 import { PLATFORM_GUIDES_META, PLATFORM_SECTION } from "@/lib/docs/platform-meta";
 import { PlatformGate } from "@/components/docs/platform-gate";
 
@@ -15,6 +16,15 @@ export default function PlatformDocsIndexPage() {
   return (
     <PlatformGate>
       <div className="docs-platform-index">
+        <nav aria-label="Fil d'Ariane" className="mb-6 flex flex-wrap items-center gap-x-2 text-[13px] text-muted-foreground">
+          <Link href="/docs/guides" className="inline-flex items-center gap-1.5 rounded hover:text-foreground">
+            <ArrowLeft className="size-3.5" aria-hidden />
+            Guides
+          </Link>
+          <span aria-hidden>/</span>
+          <span className="text-foreground/80">Plateforme (privé)</span>
+        </nav>
+
         <header>
           <p className="flex items-center gap-1.5 text-sm font-medium text-primary">
             <ShieldCheck className="size-4" aria-hidden />
