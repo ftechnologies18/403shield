@@ -216,26 +216,6 @@ export function EnterpriseHeader({ lang, toggleLang, onSignIn, onSignUp }: Heade
             )}
           </div>
 
-          <Link
-            href="/hotspot"
-            onClick={closeMenus}
-            className={`mkl-link-quiet px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-              pathname === "/hotspot" ? "mkl-active text-[#123b3a]" : "text-[#123b3a]/80 hover:text-[#123b3a]"
-            }`}
-          >
-            {copy.header.nav.hotspot}
-          </Link>
-
-          <Link
-            href="/tunnels"
-            onClick={closeMenus}
-            className={`mkl-link-quiet px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-              pathname === "/tunnels" || pathname === "/vpn" ? "mkl-active text-[#123b3a]" : "text-[#123b3a]/80 hover:text-[#123b3a]"
-            }`}
-          >
-            {copy.header.nav.tunnels}
-          </Link>
-
           <a
             href="/#tarifs"
             onClick={closeMenus}
@@ -298,20 +278,6 @@ export function EnterpriseHeader({ lang, toggleLang, onSignIn, onSignUp }: Heade
               onClick={closeMenus}
             >
               {copy.header.nav.home}
-            </Link>
-            <Link
-              href="/hotspot"
-              className="px-3 py-2 text-base font-bold text-[#123b3a]"
-              onClick={closeMenus}
-            >
-              {copy.header.nav.hotspot}
-            </Link>
-            <Link
-              href="/tunnels"
-              className="px-3 py-2 text-base font-bold text-[#123b3a]"
-              onClick={closeMenus}
-            >
-              {copy.header.nav.tunnels}
             </Link>
             <a
               href="/#tarifs"
