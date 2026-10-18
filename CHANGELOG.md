@@ -168,6 +168,32 @@ sous-marque FTech CI) ; l'historique ci-dessous conserve les noms d'époque.
 N°319 : le DÉPÔT GitHub lui-même devient `ftechnologies18/403shield`
 (anciennes URL redirigées en 301 par GitHub — web, git et API).
 
+## 2026-10-18 — N°333-A — **RÉPARATION DE LA SECTION #POUVOIRS (cartes super-pouvoirs illisibles)** — régression inline du N°332-A corrigée par `display: block`
+
+- **Symptôme (signalement propriétaire)** : la section « Une suite, quatre
+  piliers d'excellence » présente des problèmes d'affichage — « rend la
+  section illisible ».
+- **Diagnostic mesuré en production** (403shield.ftci.fr, DOM + styles
+  calculés + VLM) : depuis N°332-A les cartes sont des `<a>` **sans règle
+  `display`** → l'ancre reste `inline` (défaut navigateur) et casse la
+  boite : strut fantôme ~24,6 px au-dessus de l'icône (line-height de
+  l'ancre), enfants collés au bord gauche (padding 30 px ignoré des blocs
+  anonymes d'un inline), tag absolu résolu contre un conteneur inline
+  (`left:-8,5 px` HORS carte, largeur contrainte → « 4 boucliers » sur
+  deux lignes), `h-full` inopérant (hauteurs 463/438 inégales en 2×2).
+  `.mkl-power` était le SEUL composant lien de la vitrine sans `display`
+  (`.mkl-btn` inline-flex, `.mkl-guide` flex, `.mkl-share` inline-flex).
+- **Fix — une ligne** : `display: block` sur `.mkl-power`
+  (landing-clay.css) + commentaire de registre ; `h-full` déjà posé
+  redevient opérant (la grille étire chaque rangée, 4 cartes alignées).
+- **Portes** : lint 0 · tsc 0 · next build 47/47 · smoke navigateur
+  build :3100 — 1280 : tag `right:24` respecté UNE ligne (left calculé
+  390,97 = 511-24-96), icône x=198/y=535 (paddings 30/36 rétablis), hauteurs
+  [441,441,441,441], 1280=1280 ; 390 : h3/p/li à x=50 largeur 290,
+  390=390, 0 erreur console ; VLM PASS desktop + mobile (cartes entièrement
+  rendues, aucune coupure).
+- **Schéma DB : AUCUN** (frontend pur — deploy-oracle non concerné).
+
 ## 2026-10-18 — N°332-C + N°332-D — **MARKETING & RÉTENTION SUR LA VITRINE + FINITION PRO CLAY (volets C et D du plan N°332)** — preuve sociale honnête SANS témoignage, FAQ avant le CTA, sommaire cliquable, caisse sous EnterpriseHeader, focus clavier généralisé
 
 ### N°332-C (volet C — 4 fichiers, +350/−86)
