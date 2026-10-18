@@ -651,6 +651,17 @@
   gap: 26px;
 }
 .mkl-power {
+  /* N°333 — RÉPARATION RÉGRESSION N°332-A : les cartes super-pouvoirs sont
+     devenues des <a> (liens d'ancres) sans règle display — l'ancre restait
+     INLINE (défaut navigateur), cassant toute la carte : strut fantôme
+     (~24 px de line-height) au-dessus de l'icône, enfants collés au bord
+     gauche (padding ignoré pour les blocs anonymes d'un inline), tag absolu
+     résolu contre un conteneur inline (left:-8px, hors carte, largeur
+     contrainte → « 4 boucliers » sur deux lignes) et h-full inopérant
+     (hauteurs de lignes inégales en 2×2). display: block rétablit la
+     boite cartésiographie d'origine (N°321) ; h-full (déjà posé sur
+     l'ancre) aligne les hauteurs par rangée via le stretch de la grille. */
+  display: block;
   border-radius: var(--mkl-radius-clay);
   padding: 36px 30px;
   position: relative;
