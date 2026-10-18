@@ -10,6 +10,41 @@ sous-marque FTech CI) ; l'historique ci-dessous conserve les noms d'époque.
 N°319 : le DÉPÔT GitHub lui-même devient `ftechnologies18/403shield`
 (anciennes URL redirigées en 301 par GitHub — web, git et API).
 
+## 2026-10-18 — N°327 — **LE SECOURS QUOTIDIEN SUPABASE → NEON REDEVIENT VERT : le secret du dump était posé sur le pooler TRANSACTIONNEL (6543 + `?pgbouncer=true`), que `pg_dump` refuse — double correctif « ceinture et bretelles »**
+
+### Déclencheur (vérification de santé post-N°326)
+Le seul point rouge du dépôt après la livraison N°325/326 : le run
+`standby-restore` 39107606587 (cron 02:43 UTC) échoue à l'étape
+« pg_dump production → psql secours » avec
+`pg_dump: error: invalid URI query parameter: "pgbouncer"` — le secret
+`SUPABASE_DATABASE_URL` avait été posé avec l'URL du pooler transactionnel
+(`…:6543/postgres?pgbouncer=true`, celle du run applicatif), alors que le
+contrat documenté (header du workflow + RUNBOOK-POSTGRES §10) exige le
+pooler SESSION 5432. RPO impacté : le secours vivant Neon n'était plus
+restauré — l'archive chiffrée hebdo restait le seul recours.
+
+### Ce qui a changé (1 fichier, ops seul — zéro application touchée)
+- **`.github/workflows/standby-restore.yml`** — le DSN de dump est
+  désormais **assaini avant usage** (N°327, pavage dans l'étape de dump) :
+  retrait des paramètres que `pg_dump` rejette (`pgbouncer`, `sslmode` —
+  le TLS est posé inline par `PGSSLMODE`), rebascule d'un éventuel port
+  `6543` du pooler vers `5432` (session). Un secret mal posé ne peut plus
+  casser le secours quotidien ; header du workflow documenté.
+- **Secret GitHub `SUPABASE_DATABASE_URL` re-posé** (API, sealed box
+  libsodium) sur le DSN du pooler SESSION 5432 — la valeur du contrat §10.
+
+### Vérifié
+- Assainisseur testé sur les 3 formes d'entrée (6543+pgbouncer, 5432 nu,
+  6543+pgbouncer+sslmode) → `…:5432/postgres` sans paramètre rejeté ;
+  YAML revalidé (le heredoc Python vit dans le bloc scalaire indenté, le
+  runner le voit en colonne 0) ; script extrait exécuté en bash local.
+- `workflow_dispatch` du run de rattrapage → vert de bout en bout (dump,
+  restore, contrôle d'intégrité par comptages) — cf. run de N°327.
+
+### Verdict base de données
+AUCUN — le schéma de la production n'est pas touché (le restore se verse
+dans le secours Neon, comme conçu).
+
 ## 2026-10-18 — N°326 — **LA CONNEXION DE LA CONSOLE PASSE AU GABARIT dash.cloudflare.com/login, HABILLÉE DANS LES COULEURS CLAY DE LA VITRINE — split « panneau de marque sarcelle + colonne formulaire ivoire », parallaxe, chips flottantes, carte claymorphe ; le parcours passwordless ne bouge pas d'une ligne de logique**
 
 ### Déclencheur (propriétaire)

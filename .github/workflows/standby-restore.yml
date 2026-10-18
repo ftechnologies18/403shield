@@ -30,6 +30,12 @@
 #     déconseillé) — sslmode=require recommandé DANS le DSN.
 # Sans ces secrets, le workflow s'arrête proprement (pas d'échec rouge).
 #
+# N°327 — le DSN de dump est ASSAINI AVANT usage (retrait de pgbouncer/
+# sslmode, rebascule 6543 → 5432) : un secret posé avec l'URL du pooler
+# transactionnel ne casse plus le secours quotidien (mesuré au run
+# 39107606587 : « pg_dump: error: invalid URI query parameter:
+# "pgbouncer" »). Le secret est aussi re-posé sur le pooler session 5432.
+#
 # RPO assumé (écrit noir sur blanc, runbook §10) : le secours a jusqu'à 24 h
 # de retard sur la production. L'état des routeurs/utilisateurs hotspot est
 # reconstituable par les agents ; l'historique de ventes/journal dépend de ce
@@ -102,6 +108,27 @@ jobs:
         run: |
           set -euo pipefail
           export PATH="/usr/lib/postgresql/17/bin:$PATH"   # N°171/N°173
+          # N°327 — ASSAINISSEMENT DÉFENSIF DU DSN : le secret a déjà été posé
+          # avec l'URL du pooler TRANSACTIONNEL (…:6543/postgres?pgbouncer=true
+          # — mesuré au run 39107606587 : « pg_dump: error: invalid URI query
+          # parameter: "pgbouncer" », secours quotidien rouge). pg_dump exige
+          # une connexion SESSION : on retire les paramètres qu'il rejette
+          # (pgbouncer, sslmode — le TLS est posé inline par PGSSLMODE) et on
+          # rebascule un éventuel port 6543 du pooler vers 5432 (session).
+          # Le secret a été re-posé sur le pooler session 5432 : ce pavage est
+          # la ceinture ET les bretelles pour la prochaine dérive de config.
+          SUPABASE_DUMP_URL="$(python3 - <<'PYEOF'
+          import os
+          from urllib.parse import urlsplit, urlunsplit, parse_qsl, urlencode
+          u = urlsplit(os.environ["SUPABASE_DATABASE_URL"])
+          q = [(k, v) for k, v in parse_qsl(u.query) if k not in ("pgbouncer", "sslmode")]
+          netloc = u.netloc
+          if netloc.endswith(":6543"):
+              netloc = netloc[: -len(":6543")] + ":5432"
+          print(urlunsplit((u.scheme, netloc, u.path, urlencode(q), "")))
+          PYEOF
+          )"
+          echo "→ DSN de dump assaini (paramètres pg_dump valides, port session si besoin)."
           # N°174 — TLS SÉPARÉ PAR CONNEXION : le premier run réel a échoué
           # (« psql: SSL error: certificate verify failed » sur l'endpoint
           # DIRECT Neon) — les exports GLOBAUX verify-full + racine Supabase
@@ -114,7 +141,7 @@ jobs:
           PGSSLROOTCERT="$GITHUB_WORKSPACE/backend/certs/supabase-prod-ca-2021.crt" \
           pg_dump --no-owner --no-privileges --clean --if-exists \
             --exclude-table='s4check_*' \
-            "$SUPABASE_DATABASE_URL" > /tmp/standby.sql
+            "$SUPABASE_DUMP_URL" > /tmp/standby.sql
           echo "→ Dump : $(du -h /tmp/standby.sql | cut -f1), $(grep -c '^COPY ' /tmp/standby.sql) table(s)."
           echo "→ Restore vers le secours (Neon, endpoint direct)…"
           # v ON_ERROR_STOP=0 : le --clean émet des DROP ... IF EXISTS sur des
