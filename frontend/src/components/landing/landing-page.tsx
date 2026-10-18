@@ -69,6 +69,7 @@ const RAIL_ICONS: Record<string, ComponentType<LucideProps>> = {
   hotspot: Wifi,
   tunnels: Waypoints,
   fleet: Router,
+  isp: Server,
   pricing: CircleDollarSign,
 };
 
@@ -261,7 +262,10 @@ export default function LandingPage({ onSignIn, onSignUp }: LandingPageProps) {
   const [priceMode, setPriceMode] = useState<"hotspot" | "tunnels">("hotspot");
 
   useEffect(() => {
-    const sections = ["top", "pouvoirs", "protection", "hotspot", "tunnels", "parc", "tarifs"];
+    /* N°332-A — "isp" rejoint les sections observées : l'ancre était
+       orpheline (aucune navigation ne la ciblait, le rail gardait "parc"
+       surligné en scrollant dessus). */
+    const sections = ["top", "pouvoirs", "protection", "hotspot", "tunnels", "parc", "isp", "tarifs"];
     const io = new IntersectionObserver(
       (entries) => {
         for (const e of entries) {
@@ -286,8 +290,8 @@ export default function LandingPage({ onSignIn, onSignUp }: LandingPageProps) {
 
   const toggleLang = () => setLang(lang === "fr" ? "en" : "fr");
 
-  const railKeys = ["home", "powers", "protection", "hotspot", "tunnels", "fleet", "pricing"] as const;
-  const railIds = ["top", "pouvoirs", "protection", "hotspot", "tunnels", "parc", "tarifs"];
+  const railKeys = ["home", "powers", "protection", "hotspot", "tunnels", "fleet", "isp", "pricing"] as const;
+  const railIds = ["top", "pouvoirs", "protection", "hotspot", "tunnels", "parc", "isp", "tarifs"];
 
   const activeSegment =
     copy.pricing.segments.find((s) => s.id === priceMode) ?? copy.pricing.segments[0];
@@ -657,9 +661,13 @@ export default function LandingPage({ onSignIn, onSignUp }: LandingPageProps) {
                     </div>
                   ))}
                 </div>
-                <div className="mkl-fleet-actions" aria-hidden="true">
-                  <span className="mkl-btn mkl-btn-cream">{copy.fleet.panel.checkAll}</span>
-                  <span className="mkl-btn mkl-btn-teal">{copy.fleet.panel.updateAll}</span>
+                {/* N°332-A — fin des faux boutons : deux <span> stylés en
+                    boutons promettaient des actions impossibles (mensonge
+                    d'UI) → un vrai lien vers le guide du pilotage de parc. */}
+                <div className="mkl-fleet-actions">
+                  <Link href="/docs/guides/parc-routeurs" className="mkl-link-quiet">
+                    {copy.fleet.guideCta} →
+                  </Link>
                 </div>
               </div>
             </Reveal>

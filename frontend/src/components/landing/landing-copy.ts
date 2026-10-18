@@ -110,6 +110,7 @@ export interface LandingCopy {
     hotspot: string;
     tunnels: string;
     fleet: string;
+    isp: string;
     pricing: string;
   };
   header: {
@@ -123,7 +124,6 @@ export interface LandingCopy {
       products: string;
       solutions: string;
       hotspot: string;
-      vpn: string;
       tunnels: string;
       pricing: string;
       docs: string;
@@ -185,7 +185,6 @@ export interface LandingCopy {
     panel: {
       title: string;
       online: string;
-      peak: string;
     };
   };
   tunnels: {
@@ -208,9 +207,10 @@ export interface LandingCopy {
     panel: {
       title: string;
       rows: { name: string; version: string; state: string; upToDate: boolean }[];
-      checkAll: string;
-      updateAll: string;
     };
+    /** N°332-A — sortie honnête de la section : les faux boutons de la
+        maquette deviennent un vrai lien vers le guide du pilotage. */
+    guideCta: string;
   };
   ispExtension: {
     kicker: string;
@@ -283,7 +283,6 @@ export interface LandingCopy {
   footer: {
     tagline: string;
     columns: { title: string; links: { label: string; href: string; external?: boolean }[] }[];
-    legal: string;
   };
   pages: {
     hotspot: ProductPageCopy;
@@ -300,6 +299,7 @@ const fr: LandingCopy = {
     hotspot: "Hotspot",
     tunnels: "Tunnels WireGuard",
     fleet: "Parc routeurs",
+    isp: "ISP & Opérateurs",
     pricing: "Tarifs",
   },
   header: {
@@ -313,7 +313,6 @@ const fr: LandingCopy = {
       products: "Produits",
       solutions: "Solutions",
       hotspot: "Hotspot",
-      vpn: "VPN",
       tunnels: "Tunnels WireGuard",
       pricing: "Tarifs",
       docs: "Guides & Docs",
@@ -332,12 +331,12 @@ const fr: LandingCopy = {
             {
               title: "Gestion Cybercafé",
               desc: "Attribution automatique de temps, postes de travail, import DHCP et tickets de session.",
-              href: "/#hotspot",
+              href: "/hotspot",
             },
             {
               title: "Gestionnaire PPPoE ISP",
               desc: "Provisionnement automatique des abonnés, secrets d'accès et reconnexion live MikroTik.",
-              href: "/#hotspot",
+              href: "/#isp",
             },
           ],
         },
@@ -351,8 +350,13 @@ const fr: LandingCopy = {
               badge: "Auto-réparation",
             },
             {
-              title: "Tunnels WireGuard & VPN",
-              desc: "IP fixe France dédiée à Marseille, Accès Pro pour routeurs et LAN étendu caméras/NAS.",
+              title: "VPN — IP fixe France",
+              desc: "Tunnel WireGuard personnel, IP dédiée à Marseille, configuration livrée en 30 secondes.",
+              href: "/vpn",
+            },
+            {
+              title: "Accès Pro — Routeurs & LAN",
+              desc: "Routeurs MikroTik, caméras et NAS dans le tunnel chiffré — LAN étendu supervisé depuis la console.",
               href: "/tunnels",
             },
             {
@@ -380,7 +384,7 @@ const fr: LandingCopy = {
             {
               title: "PME & Fournisseurs d'Accès",
               desc: "Interconnexion multi-sites, supervision de parc et gestion d'abonnés PPPoE.",
-              href: "/tunnels",
+              href: "/#isp",
             },
             {
               title: "Travailleurs Nomades & Télétravail",
@@ -413,7 +417,7 @@ const fr: LandingCopy = {
             lines: ["1 500 FCFA / mois", "15 000 FCFA / an"],
             note: "Boutique — payable Wave ou carte",
             badge: "2 mois offerts",
-            href: "/checkout?plan=vpn-b2c-year",
+            href: "/vpn",
             cta: "Commander le VPN",
           },
           {
@@ -577,7 +581,6 @@ const fr: LandingCopy = {
     panel: {
       title: "Affluence horaire",
       online: "Heure de pointe · 19 h",
-      peak: "24 h",
     },
   },
   tunnels: {
@@ -638,9 +641,8 @@ const fr: LandingCopy = {
         { name: "Hôtel Ébène", version: "7.16.2 → 7.24.3", state: "Mise à jour prête", upToDate: false },
         { name: "Cyber Marché", version: "7.24.3", state: "À jour", upToDate: true },
       ],
-      checkAll: "Vérifier tout le parc",
-      updateAll: "Mettre à jour le parc",
     },
+    guideCta: "Voir le guide du pilotage de parc",
   },
   ispExtension: {
     kicker: "Extension Opérateurs & Fournisseurs d'Accès",
@@ -852,7 +854,7 @@ const fr: LandingCopy = {
         links: [
           { label: "Se connecter", href: "/login" },
           { label: "Mode Vente", href: "/sell" },
-          { label: "Connexion WiFi jetable", href: "/wifi" },
+          { label: "Connexion WiFi jetable", href: "/docs/guides/wifi-jetable" },
           { label: "Guides d'exploitation", href: "/docs/guides" },
         ],
       },
@@ -861,7 +863,6 @@ const fr: LandingCopy = {
         links: [{ label: "Politique de confidentialité", href: "/legal/confidentialite" }],
       },
     ],
-    legal: "Politique de confidentialité",
   },
 
   pages: {
@@ -1030,6 +1031,7 @@ const en: LandingCopy = {
     hotspot: "Hotspot",
     tunnels: "WireGuard tunnels",
     fleet: "Router fleet",
+    isp: "ISP & Carriers",
     pricing: "Pricing",
   },
   header: {
@@ -1043,7 +1045,6 @@ const en: LandingCopy = {
       products: "Products",
       solutions: "Solutions",
       hotspot: "Hotspot",
-      vpn: "VPN",
       tunnels: "WireGuard tunnels",
       pricing: "Pricing",
       docs: "Guides & Docs",
@@ -1062,12 +1063,12 @@ const en: LandingCopy = {
             {
               title: "Cybercafé Management",
               desc: "Automatic screen time allocation, workstations, DHCP import, and session tickets.",
-              href: "/#hotspot",
+              href: "/hotspot",
             },
             {
               title: "ISP PPPoE Manager",
               desc: "Automated subscriber provisioning, access secrets, and live MikroTik reconnection.",
-              href: "/#hotspot",
+              href: "/#isp",
             },
           ],
         },
@@ -1081,8 +1082,13 @@ const en: LandingCopy = {
               badge: "Self-healing",
             },
             {
-              title: "WireGuard Tunnels & VPN",
-              desc: "Dedicated France fixed IP in Marseille, Pro Access for routers, and extended LAN for CCTV/NAS.",
+              title: "VPN — Fixed French IP",
+              desc: "Personal WireGuard tunnel, dedicated Marseille IP, configuration delivered in 30 seconds.",
+              href: "/vpn",
+            },
+            {
+              title: "Pro Access — Routers & LAN",
+              desc: "MikroTik routers, cameras and NAS inside the encrypted tunnel — extended LAN supervised from the console.",
               href: "/tunnels",
             },
             {
@@ -1110,7 +1116,7 @@ const en: LandingCopy = {
             {
               title: "SMEs & ISPs",
               desc: "Multi-site interconnection, fleet supervision, and PPPoE subscriber management.",
-              href: "/tunnels",
+              href: "/#isp",
             },
             {
               title: "Nomads & Remote Workers",
@@ -1143,7 +1149,7 @@ const en: LandingCopy = {
             lines: ["1,500 FCFA / month", "15,000 FCFA / year"],
             note: "Shop — Wave or card payment",
             badge: "2 months free",
-            href: "/checkout?plan=vpn-b2c-year",
+            href: "/vpn",
             cta: "Order the VPN",
           },
           {
@@ -1307,7 +1313,6 @@ const en: LandingCopy = {
     panel: {
       title: "Hourly footfall",
       online: "Peak hour · 7 pm",
-      peak: "24 h",
     },
   },
   tunnels: {
@@ -1368,9 +1373,8 @@ const en: LandingCopy = {
         { name: "Ebony Hotel", version: "7.16.2 → 7.24.3", state: "Update ready", upToDate: false },
         { name: "Market Cyber", version: "7.24.3", state: "Up to date", upToDate: true },
       ],
-      checkAll: "Check the whole fleet",
-      updateAll: "Update the fleet",
     },
+    guideCta: "Open the fleet control guide",
   },
   ispExtension: {
     kicker: "Carrier & ISP Extension",
@@ -1580,7 +1584,7 @@ const en: LandingCopy = {
         links: [
           { label: "Sign in", href: "/login" },
           { label: "Sell Mode", href: "/sell" },
-          { label: "Throwaway WiFi login", href: "/wifi" },
+          { label: "Throwaway WiFi login", href: "/docs/guides/wifi-jetable" },
           { label: "Operations guides", href: "/docs/guides" },
         ],
       },
@@ -1589,7 +1593,6 @@ const en: LandingCopy = {
         links: [{ label: "Privacy policy", href: "/legal/confidentialite" }],
       },
     ],
-    legal: "Privacy policy",
   },
 
   pages: {

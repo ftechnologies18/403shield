@@ -46,13 +46,13 @@ import {
   ArrowRight,
   ShieldCheck,
   Wifi,
-  Waypoints,
   Router,
   Monitor,
   Server,
   Globe,
   Building2,
   Users,
+  Cctv,
 } from "lucide-react";
 import { landingCopy, type Lang } from "./landing-copy";
 
@@ -125,7 +125,10 @@ export function EnterpriseHeader({ lang, toggleLang, onSignIn, onSignUp }: Heade
     if (title.includes("Cybercafé")) return Monitor;
     if (title.includes("PPPoE") || title.includes("ISP")) return Server;
     if (title.includes("Protection") || title.includes("Shield")) return ShieldCheck;
-    if (title.includes("WireGuard") || title.includes("VPN")) return Waypoints;
+    /* N°332-A — scission de l'item fusionné : le VPN personnel et
+       l'Accès Pro deviennent deux promesses distinctes du méga menu. */
+    if (title.includes("VPN")) return Globe;
+    if (title.includes("Accès Pro") || title.includes("Pro Access")) return Cctv;
     if (title.includes("Flotte") || title.includes("MikroTik")) return Router;
     if (title.includes("Hôtellerie") || title.includes("Hospitality")) return Building2;
     if (title.includes("Nomades") || title.includes("Nomads")) return Globe;
