@@ -44,6 +44,26 @@
 
 export type Lang = "fr" | "en";
 
+/* N°332-B — PAGES PRODUITS v2 : chaque feature devient une SECTION
+   deep-linkable (règle d'or du plan N°332 : une ancre = une section
+   vendable, kebab-case ASCII sans accent — la promesse du méga menu
+   atterrit sur un écran entier qui la développe). Le gabarit v2 ajoute
+   trust (badges VÉRIFIABLES sous le hero — doctrine : aucun faux
+   chiffre, aucun témoignage inventé, consigne propriétaire N°332),
+   steps (« comment ça marche » : montrer le parcours avant l'argent),
+   pricing (titres seulement — les plans viennent de pricing.segments,
+   SOURCE UNIQUE via PricingGrid), faq (objections réelles du marché)
+   et guides (maillage bidirectionnel avec /docs/guides). */
+export interface ProductFeatureSection {
+  /** Ancre de section : kebab-case ASCII sans accent (#cybercafe, #acces-pro). */
+  id: string;
+  icon: "palette" | "ticket" | "store" | "chart" | "globe" | "lock" | "card" | "key" | "router" | "cctv" | "console";
+  kicker: string;
+  title: string;
+  body: string;
+  bullets: string[];
+}
+
 export interface ProductPageCopy {
   meta: { title: string; description: string };
   hero: {
@@ -56,13 +76,42 @@ export interface ProductPageCopy {
     ctaPrimaryHref: string;
     ctaSecondary: string;
     ctaSecondaryHref: string;
+    /** Badges de confiance vérifiables (faits produit, pas de métriques d'usage). */
+    trust: string[];
   };
   features: {
     eyebrow: string;
     title: string;
-    cards: { title: string; desc: string }[];
+    sections: ProductFeatureSection[];
   };
   note?: { title: string; body: string };
+  steps: {
+    eyebrow: string;
+    title: string;
+    items: { title: string; desc: string }[];
+  };
+  pricing: {
+    eyebrow: string;
+    /** Libellé court de la sous-nav (ex. « Tarifs »). */
+    navLabel: string;
+    title: string;
+    subtitle: string;
+  };
+  faq: {
+    eyebrow: string;
+    /** Libellé court de la sous-nav (« FAQ » des deux langues). */
+    navLabel: string;
+    title: string;
+    items: { q: string; a: string }[];
+  };
+  guides: {
+    eyebrow: string;
+    title: string;
+    allLabel: string;
+    items: { title: string; desc: string; href: string }[];
+  };
+  /** Partage WhatsApp/Web Share — libellé du bouton (canal n°1 du marché). */
+  share: string;
   cta: {
     kicker: string;
     title: string;
@@ -325,13 +374,13 @@ const fr: LandingCopy = {
             {
               title: "Hotspot WiFi Cloud",
               desc: "Portail captif à votre marque, vouchers en lot, forfaits débits/durée et gestion revendeurs.",
-              href: "/hotspot",
+              href: "/hotspot#portail",
               badge: "Paiement Wave",
             },
             {
               title: "Gestion Cybercafé",
               desc: "Attribution automatique de temps, postes de travail, import DHCP et tickets de session.",
-              href: "/hotspot",
+              href: "/hotspot#cybercafe",
             },
             {
               title: "Gestionnaire PPPoE ISP",
@@ -352,12 +401,12 @@ const fr: LandingCopy = {
             {
               title: "VPN — IP fixe France",
               desc: "Tunnel WireGuard personnel, IP dédiée à Marseille, configuration livrée en 30 secondes.",
-              href: "/vpn",
+              href: "/vpn#ip-fixe",
             },
             {
               title: "Accès Pro — Routeurs & LAN",
               desc: "Routeurs MikroTik, caméras et NAS dans le tunnel chiffré — LAN étendu supervisé depuis la console.",
-              href: "/tunnels",
+              href: "/tunnels#acces-pro",
             },
             {
               title: "Pilotage de Flotte MikroTik",
@@ -374,12 +423,12 @@ const fr: LandingCopy = {
             {
               title: "Hôtellerie & Restauration",
               desc: "WiFi visiteurs élégant, promos intégrées, réseaux sociaux et portail hospitalité.",
-              href: "/hotspot",
+              href: "/hotspot#portail",
             },
             {
               title: "Cybercafés & Salles de Jeu",
               desc: "Gestion automatisée des postes, tickets de temps et coupure automatique.",
-              href: "/hotspot",
+              href: "/hotspot#cybercafe",
             },
             {
               title: "PME & Fournisseurs d'Accès",
@@ -389,7 +438,7 @@ const fr: LandingCopy = {
             {
               title: "Travailleurs Nomades & Télétravail",
               desc: "VPN personnel à IP fixe France, DNS filtrés et accès distant à vos réseaux — où que vous travailliez.",
-              href: "/vpn",
+              href: "/vpn#ip-fixe",
             },
           ],
         },
@@ -417,7 +466,7 @@ const fr: LandingCopy = {
             lines: ["1 500 FCFA / mois", "15 000 FCFA / an"],
             note: "Boutique — payable Wave ou carte",
             badge: "2 mois offerts",
-            href: "/vpn",
+            href: "/vpn#tarifs",
             cta: "Commander le VPN",
           },
           {
@@ -425,7 +474,7 @@ const fr: LandingCopy = {
             desc: "Routeurs MikroTik, caméras et NAS dans le tunnel — LAN étendu.",
             lines: ["3 500 FCFA / mois", "35 000 FCFA / an"],
             note: "Console — supervision distante",
-            href: "/tunnels",
+            href: "/tunnels#tarifs",
             cta: "Voir l'Accès Pro",
           },
         ],
@@ -882,30 +931,155 @@ const fr: LandingCopy = {
         ctaPrimary: "Démarrer l'essai gratuit",
         ctaPrimaryHref: "#signup",
         ctaSecondary: "Voir les tarifs",
-        ctaSecondaryHref: "/#tarifs",
+        ctaSecondaryHref: "#tarifs",
+        trust: [
+          "Essai 60 jours — sans carte bancaire",
+          "Paiement Wave & carte",
+          "Fonctionne derrière CGNAT, Orange ou Starlink",
+          "Portail 100 % à votre marque",
+        ],
       },
       features: {
         eyebrow: "Ce que fait 403Shield Hotspot",
         title: "Le WiFi public et le cybercafé, transformés en business.",
-        cards: [
+        sections: [
           {
-            title: "Portail captif 100 % à votre marque",
-            desc: "Mode commercial avec grille tarifaire et paiement Wave, ou mode hospitalité avec promos et réseaux sociaux. Vos clients ne voient que vous.",
+            id: "portail",
+            icon: "palette",
+            kicker: "Portail captif",
+            title: "Votre portail, votre marque.",
+            body: "Mode commercial avec grille tarifaire et paiement Wave, ou mode hospitalité avec promos et réseaux sociaux. Vos clients ne voient que vous — jamais 403Shield.",
+            bullets: [
+              "Logo, couleurs et promos à votre image",
+              "Connexion par voucher, code ou ticket de temps",
+              "Pages HTTPS légères, rapides sur mobile",
+              "Mode hospitalité : réseaux sociaux et offres du jour",
+            ],
           },
           {
-            title: "Vouchers & forfaits",
-            desc: "Durée, quota de données, débit, 1 à 10 appareils — et à l'épuisement : couper ou brider en douceur. Jusqu'à 500 vouchers par lot.",
+            id: "vouchers",
+            icon: "ticket",
+            kicker: "Vouchers & forfaits",
+            title: "Vendez l'accès, pas du temps perdu.",
+            body: "Durée, quota de données, débit, 1 à 10 appareils par forfait — et à l'épuisement, vous choisissez : couper net ou brider en douceur. Jusqu'à 500 vouchers par lot.",
+            bullets: [
+              "Lots de 500 vouchers prêts à imprimer ou transférer",
+              "Forfaits durée, quota et débit combinables",
+              "Épuisement : coupure ou bridage progressif",
+              "Stock surveillé, alerte avant rupture",
+            ],
           },
           {
-            title: "Module Cybercafé & Postes",
-            desc: "Gestion automatisée des temps d'écran, import automatique DHCP et arrêt à distance des postes de travail.",
+            id: "cybercafe",
+            icon: "store",
+            kicker: "Module Cybercafé",
+            title: "Vos postes, pilotés en un clin d'œil.",
+            body: "Le module Cybercafé gère les temps d'écran poste par poste : attribution directe, import automatique des bails DHCP, libération en un clic et tickets de session.",
+            bullets: [
+              "Temps d'écran attribué au poste ou au client",
+              "Import DHCP automatique des postes",
+              "Libération et arrêt à distance en 1 clic",
+              "Tickets de session et journaux exportables",
+            ],
           },
           {
-            title: "Mode Vente & revendeurs",
-            desc: "Vos revendeurs vendent depuis leur téléphone : PWA protégée par PIN, stock transféré, ventes hors-ligne, rapport de journée.",
+            id: "mode-vente",
+            icon: "chart",
+            kicker: "Mode Vente & revendeurs",
+            title: "Vos revendeurs vendent depuis leur téléphone.",
+            body: "Le Mode Vente transforme vos revendeurs en caisses ambulantes : PWA protégée par PIN, stock transféré, ventes enregistrées hors-ligne puis synchronisées, rapport de journée clair.",
+            bullets: [
+              "PWA hors-ligne, protégée par PIN",
+              "Stock de vouchers transféré aux revendeurs",
+              "Ventes enregistrées sans réseau, synchronisées après",
+              "Rapport de journée et statistiques par revendeur",
+            ],
           },
         ],
       },
+      steps: {
+        eyebrow: "Comment ça marche",
+        title: "Du compte aux premières ventes en trois gestes.",
+        items: [
+          {
+            title: "Créez votre compte",
+            desc: "Essai gratuit 60 jours, sans carte bancaire — la formule Découverte démarre immédiatement.",
+          },
+          {
+            title: "Collez le script agent",
+            desc: "Sur votre routeur MikroTik (un hAP suffit) : deux minutes, aucune IP publique requise.",
+          },
+          {
+            title: "Vendez",
+            desc: "Créez vos forfaits, imprimez vos vouchers, encaissez en Wave — le portail fait le reste.",
+          },
+        ],
+      },
+      pricing: {
+        eyebrow: "Tarifs",
+        navLabel: "Tarifs",
+        title: "Un abonnement, un routeur.",
+        subtitle:
+          "Commencez gratuitement puis grandissez : l'annuel débloque les routeurs illimités. Prix en FCFA, payables Wave ou carte.",
+      },
+      faq: {
+        eyebrow: "Questions fréquentes",
+        navLabel: "FAQ",
+        title: "Tout ce qu'on nous demande avant de signer.",
+        items: [
+          {
+            q: "Quel routeur faut-il pour démarrer ?",
+            a: "Un MikroTik suffit : le hAP lite (environ 25 000 FCFA) fait tourner l'agent 403Shield. Aucun serveur à acheter, rien à héberger chez vous.",
+          },
+          {
+            q: "Ça marche derrière CGNAT, sans IP publique ?",
+            a: "Oui. L'agent installé sur le routeur sort vers le cloud : Orange, Starlink ou 4G — aucun port ouvert, aucune IP fixe nécessaire.",
+          },
+          {
+            q: "Que se passe-t-il à la fin des 60 jours d'essai ?",
+            a: "La formule Découverte prend fin. Vous choisissez alors le mensuel (2 500 FCFA/routeur) ou l'annuel (25 000 FCFA, routeurs illimités). Aucune conversion automatique, aucun prélèvement surprise.",
+          },
+          {
+            q: "Le Mode Vente fonctionne-t-il sans internet ?",
+            a: "Oui — c'est une PWA hors-ligne protégée par PIN. Les ventes sont enregistrées localement puis synchronisées au retour du réseau.",
+          },
+          {
+            q: "Puis-je encaisser en Wave ?",
+            a: "Oui : Wave et carte bancaire sont pris en charge, avec les remises et frais réels affichés avant confirmation.",
+          },
+          {
+            q: "Le portail peut-il porter ma marque ?",
+            a: "Totalement : logo, couleurs, promos et réseaux sociaux. Vos clients ne voient que votre enseigne.",
+          },
+          {
+            q: "Puis-je arrêter le mensuel quand je veux ?",
+            a: "Oui, sans engagement. L'annuel reste la formule la plus avantageuse — routeurs illimités.",
+          },
+        ],
+      },
+      guides: {
+        eyebrow: "Guides liés",
+        title: "Apprenez pas à pas, captures à l'appui.",
+        allLabel: "Tous les guides",
+        items: [
+          {
+            title: "Premiers pas",
+            desc: "Créer le compte, installer l'agent, connecter le premier routeur.",
+            href: "/docs/guides/premiers-pas",
+          },
+          {
+            title: "Vouchers & lots",
+            desc: "Générer, imprimer et suivre vos lots de 500 vouchers.",
+            href: "/docs/guides/vouchers-lots",
+          },
+          {
+            title: "Module Cybercafé",
+            desc: "Postes, temps d'écran et tickets de session.",
+            href: "/docs/guides/cybercafe",
+          },
+        ],
+      },
+      share: "Partager cette page",
       cta: {
         kicker: "Prêt à lancer votre hotspot ou cybercafé ?",
         title: "60 jours d'essai, sans carte bancaire.",
@@ -913,7 +1087,7 @@ const fr: LandingCopy = {
         primary: "Créer mon compte gratuit",
         primaryHref: "#signup",
         secondary: "Voir les tarifs",
-        secondaryHref: "/#tarifs",
+        secondaryHref: "#tarifs",
       },
     },
     vpn: {
@@ -933,26 +1107,68 @@ const fr: LandingCopy = {
         ctaPrimaryHref: "/checkout",
         ctaSecondary: "Découvrir les tunnels",
         ctaSecondaryHref: "/tunnels",
+        trust: [
+          "Configuration livrée par e-mail en 30 s",
+          "Payable Wave ou carte — prix affichés avant paiement",
+          "WireGuard : protocole audité, léger sur batterie",
+          "IP dédiée — jamais partagée, jamais revendue",
+        ],
       },
       features: {
         eyebrow: "Pourquoi 403Shield VPN",
         title: "Le VPN qui ne vous enferme pas.",
-        cards: [
+        sections: [
           {
-            title: "IP fixe dédiée",
-            desc: "Une adresse française rien qu'à vous : banques, services publics et plateformes qui refusent les IP partagées vous reconnaissent enfin.",
+            id: "ip-fixe",
+            icon: "globe",
+            kicker: "IP fixe France",
+            title: "Une adresse française, rien qu'à vous.",
+            body: "Votre trafic sort par notre serveur de Marseille avec une adresse IP dédiée. Banques, services publics et plateformes qui refusent les IP partagées vous reconnaissent enfin — et votre adresse ne change plus jamais au milieu d'une session.",
+            bullets: [
+              "IP dédiée — pas de liste noire partagée",
+              "Sortie unique : Marseille, France",
+              "Services géo-sensibles accessibles et stables",
+              "La même adresse sur tous vos appareils WireGuard",
+            ],
           },
           {
-            title: "WireGuard, audité et léger",
-            desc: "Le protocole moderne, plus rapide et plus léger que les VPN d'ancienne génération. Votre configuration reste votre propriété.",
+            id: "wireguard",
+            icon: "lock",
+            kicker: "Protocole WireGuard",
+            title: "Audité, léger, moderne.",
+            body: "WireGuard est le protocole VPN de référence : un code court et audité publiquement, plus rapide et plus sobre que les suites d'ancienne génération. Votre configuration reste votre propriété, exportable à tout moment.",
+            bullets: [
+              "Code court, audité publiquement",
+              "Reconnexion invisible en changement de réseau",
+              "Sobre sur la batterie du téléphone",
+              "Configuration standard, importable partout",
+            ],
           },
           {
-            title: "Mobile Money & carte",
-            desc: "Payez en Wave ou par carte bancaire, en FCFA. Le provisioning est automatique : la configuration part par e-mail dès l'encaissement confirmé.",
+            id: "paiement",
+            icon: "card",
+            kicker: "Paiement local",
+            title: "Wave ou carte, en FCFA.",
+            body: "Payez comme vous vivez : Wave avec remise mobile money, ou carte bancaire. Le provisioning est automatique — la configuration part par e-mail dès l'encaissement confirmé, sans intervention humaine.",
+            bullets: [
+              "Wave : remise appliquée d'office",
+              "Carte bancaire : frais réels affichés avant paiement",
+              "Prix en FCFA, reçus par e-mail",
+              "Renouvellement en 1 clic depuis votre espace",
+            ],
           },
           {
-            title: "Sans mot de passe",
-            desc: "Un code à 6 chiffres reçu par e-mail suffit : achats, renouvellement 1-clic et récupération de configuration depuis votre espace.",
+            id: "sans-mdp",
+            icon: "key",
+            kicker: "Sans mot de passe",
+            title: "Un code e-mail suffit.",
+            body: "Pas de mot de passe à inventer ni à perdre : un code à 6 chiffres reçu par e-mail vous ouvre l'espace client — achats, portefeuille d'appareils, renouvellement et récupération de configuration.",
+            bullets: [
+              "Code à 6 chiffres reçu par e-mail",
+              "Espace client : achats et renouvellements",
+              "Récupération de configuration self-service",
+              "Aucun mot de passe stocké",
+            ],
           },
         ],
       },
@@ -960,6 +1176,80 @@ const fr: LandingCopy = {
         title: "Un seul tunnel, deux usages.",
         body: "Mensuel sans engagement, ou annuel — 10 mois payés, 2 offerts. Prix en FCFA sur la boutique, remise mobile money incluse. Et quand vos réseaux doivent passer par le même chemin : l'Accès Pro étend ce même tunnel WireGuard à vos routeurs, caméras et NAS — même console, même boutique.",
       },
+      steps: {
+        eyebrow: "Comment ça marche",
+        title: "En ligne en trois gestes.",
+        items: [
+          {
+            title: "Choisissez votre formule",
+            desc: "Mensuel sans engagement ou annuel — 10 mois payés, 2 offerts.",
+          },
+          {
+            title: "Payez Wave ou carte",
+            desc: "Prix en FCFA affichés avant confirmation, remise Wave incluse.",
+          },
+          {
+            title: "Importez la configuration",
+            desc: "Elle arrive par e-mail : un scan QR dans WireGuard et vous êtes en ligne.",
+          },
+        ],
+      },
+      pricing: {
+        eyebrow: "Tarifs",
+        navLabel: "Tarifs",
+        title: "Mensuel ou annuel — à vous de voir.",
+        subtitle:
+          "L'annuel offre 2 mois : 10 payés, 2 offerts. Prix en FCFA, payables Wave ou carte.",
+      },
+      faq: {
+        eyebrow: "Questions fréquentes",
+        navLabel: "FAQ",
+        title: "Ce qu'on demande avant d'acheter.",
+        items: [
+          {
+            q: "C'est quoi une IP fixe, concrètement ?",
+            a: "Votre trafic sort toujours par la même adresse française (Marseille). Les plateformes qui bloquent les IP anonymes ou changeantes vous laissent tranquille, et vos accès distants restent stables.",
+          },
+          {
+            q: "Sur quels appareils ça marche ?",
+            a: "Tout ce qui exécute WireGuard : Android, iPhone, Windows, macOS, Linux — et les routeurs compatibles. Une configuration par appareil, gérée depuis votre espace.",
+          },
+          {
+            q: "Comment je paie ?",
+            a: "Wave (remise mobile money appliquée d'office) ou carte bancaire (frais réels affichés). Tout est confirmé avant paiement, en FCFA.",
+          },
+          {
+            q: "Et si je perds ma configuration ?",
+            a: "La récupération est self-service : depuis la boutique, elle est renvoyée exclusivement à votre adresse e-mail d'achat.",
+          },
+          {
+            q: "Quelle différence avec l'Accès Pro ?",
+            a: "C'est le même tunnel WireGuard. Le VPN protège votre usage personnel avec une IP fixe ; l'Accès Pro y branche vos routeurs, caméras et NAS, avec la supervision console.",
+          },
+          {
+            q: "Combien de temps avant d'être en ligne ?",
+            a: "Environ 30 secondes entre la confirmation du paiement et la réception de la configuration par e-mail.",
+          },
+        ],
+      },
+      guides: {
+        eyebrow: "Guides liés",
+        title: "Le VPN et son espace, pas à pas.",
+        allLabel: "Tous les guides",
+        items: [
+          {
+            title: "Guide VPN WireGuard",
+            desc: "Choisir, acheter et importer sa configuration pas à pas.",
+            href: "/docs/guides/vpn-wireguard",
+          },
+          {
+            title: "Espace client VPN",
+            desc: "Portefeuille d'appareils, renouvellement 1-clic, statuts.",
+            href: "/docs/guides/portail-client",
+          },
+        ],
+      },
+      share: "Partager cette page",
       cta: {
         kicker: "Prêt à chiffrer votre trafic ?",
         title: "Votre configuration part par e-mail en 30 secondes.",
@@ -987,29 +1277,146 @@ const fr: LandingCopy = {
         ctaPrimaryHref: "/checkout",
         ctaSecondary: "Découvrir le VPN",
         ctaSecondaryHref: "/vpn",
+        trust: [
+          "Chiffrement WireGuard de bout en bout",
+          "Aucun port ouvert sur vos routeurs",
+          "Console disponible 24/7 — hébergée UE",
+          "Fonctionne derrière CGNAT, sans IP publique",
+        ],
       },
       features: {
         eyebrow: "Pourquoi 403Shield Tunnels",
         title: "Le pont privé entre vous et vos réseaux.",
-        cards: [
+        sections: [
           {
-            title: "VPN personnel — le même tunnel",
-            desc: "Votre trafic chiffré de bout en bout sort par Marseille avec une IP fixe France dédiée. C'est le même WireGuard, la même console — que vous protégiez vos déplacements ou supervisiez un parc.",
+            id: "vpn-perso",
+            icon: "globe",
+            kicker: "VPN personnel",
+            title: "Le même tunnel, pour vous.",
+            body: "Votre trafic chiffré de bout en bout sort par Marseille avec une IP fixe France dédiée. C'est le même WireGuard, la même console — que vous protégiez vos déplacements ou supervisiez un parc.",
+            bullets: [
+              "IP fixe France dédiée à votre usage",
+              "Téléphone, ordinateur, tablette",
+              "Configuration par e-mail, import immédiat",
+              "Boutique : Wave, carte, renouvellement 1 clic",
+            ],
           },
           {
-            title: "Accès Pro — routeurs",
-            desc: "Supervision distante de vos routeurs MikroTik à travers le tunnel — sans exposer votre interface d'administration sur Internet.",
+            id: "acces-pro",
+            icon: "router",
+            kicker: "Accès Pro",
+            title: "Vos routeurs, joignables partout.",
+            body: "L'Accès Pro supervise vos routeurs MikroTik à travers le tunnel : administration, API et SSH à distance — sans exposer une seule interface sur Internet.",
+            bullets: [
+              "Routeurs MikroTik supervisés en continu",
+              "Admin, API et SSH via le tunnel privé",
+              "Aucune interface exposée, aucun port ouvert",
+              "Alertes hors-ligne et échéances d'abonnement",
+            ],
           },
           {
-            title: "LAN étendu — caméras & NAS",
-            desc: "L'Accès Pro étend le tunnel à votre LAN : caméras, NAS et autres équipements restent joignables en privé, jamais exposés.",
+            id: "lan",
+            icon: "cctv",
+            kicker: "LAN étendu",
+            title: "Caméras et NAS, en privé.",
+            body: "Le tunnel s'étend à votre réseau local : caméras, NAS et imprimantes restent joignables en privé depuis partout — même derrière CGNAT, sans IP publique chez vous.",
+            bullets: [
+              "Accès privé aux caméras et enregistreurs",
+              "NAS et fichiers à distance, chiffrés",
+              "Derrière CGNAT, Orange ou Starlink",
+              "Aucun port ouvert sur la box ni le routeur",
+            ],
           },
           {
-            title: "Une console, une boutique",
-            desc: "Un code e-mail à 6 chiffres suffit : espace client, portefeuille d'appareils, renouvellement 1-clic — VPN et Accès Pro vivent au même endroit.",
+            id: "console",
+            icon: "console",
+            kicker: "Une console",
+            title: "Tout vit au même endroit.",
+            body: "Un code e-mail à 6 chiffres suffit : espace client, portefeuille d'appareils, renouvellement 1-clic — VPN et Accès Pro vivent au même endroit, entre la console et la boutique.",
+            bullets: [
+              "Connexion par code e-mail, sans mot de passe",
+              "Portefeuille d'appareils et statuts en direct",
+              "Renouvellement et échéances en 1 clic",
+              "Boutique intégrée : VPN, Wave et carte",
+            ],
           },
         ],
       },
+      steps: {
+        eyebrow: "Comment ça marche",
+        title: "Votre tunnel ouvert en trois gestes.",
+        items: [
+          {
+            title: "Créez votre tunnel",
+            desc: "Depuis la console ou la boutique — code e-mail, sans mot de passe.",
+          },
+          {
+            title: "Branchez vos équipements",
+            desc: "Agent MikroTik pour le parc, configuration e-mail pour vos appareils personnels.",
+          },
+          {
+            title: "Pilotez à distance",
+            desc: "Console : statuts, alertes, renouvellements — le tunnel reste ouvert tant que vous le voulez.",
+          },
+        ],
+      },
+      pricing: {
+        eyebrow: "Tarifs",
+        navLabel: "Tarifs",
+        title: "VPN personnel ou Accès Pro.",
+        subtitle:
+          "Le même tunnel, deux usages : commencez par le VPN, étendez au parc quand vous voulez.",
+      },
+      faq: {
+        eyebrow: "Questions fréquentes",
+        navLabel: "FAQ",
+        title: "Avant d'ouvrir votre tunnel.",
+        items: [
+          {
+            q: "Mes caméras sont derrière CGNAT : ça marche ?",
+            a: "Oui — c'est le cas d'usage central de l'Accès Pro. Le tunnel sort de votre routeur vers Marseille ; aucun port ni IP publique n'est requis de votre côté.",
+          },
+          {
+            q: "VPN ou Accès Pro : que me faut-il ?",
+            a: "Les deux vivent sur le même tunnel. VPN : votre usage personnel, IP fixe France. Accès Pro : brancher routeurs, caméras et NAS, avec supervision console. On commence souvent par le VPN, on étend ensuite.",
+          },
+          {
+            q: "Faut-il un routeur spécial ?",
+            a: "Pour l'Accès Pro, un MikroTik sous RouterOS 7 (l'agent 403Shield y tourne). Pour le VPN seul, aucun routeur : votre téléphone ou ordinateur suffit.",
+          },
+          {
+            q: "Est-ce que ça remplace mon abonnement internet ?",
+            a: "Non. Le tunnel chiffre et interconnecte vos réseaux existants — il ne fournit pas d'accès à internet en tant que tel.",
+          },
+          {
+            q: "Comment sont renouvelés les abonnements ?",
+            a: "Le VPN se renouvelle depuis la boutique (rappel par e-mail avant échéance) ; l'Accès Pro depuis la console, avec alertes d'échéance configurables.",
+          },
+        ],
+      },
+      guides: {
+        eyebrow: "Guides liés",
+        title: "Le tunnel et le parc, pas à pas.",
+        allLabel: "Tous les guides",
+        items: [
+          {
+            title: "Guide VPN WireGuard",
+            desc: "Le tunnel pas à pas : achat, import, usages.",
+            href: "/docs/guides/vpn-wireguard",
+          },
+          {
+            title: "Parc routeurs",
+            desc: "Supervision de flotte MikroTik à distance.",
+            href: "/docs/guides/parc-routeurs",
+          },
+          {
+            title: "Sites & multi-sites",
+            desc: "Interconnecter plusieurs réseaux par le tunnel.",
+            href: "/docs/guides/sites-multi-sites",
+          },
+        ],
+      },
+      share: "Partager cette page",
       cta: {
         kicker: "Vos réseaux vous attendent",
         title: "Ouvrez votre tunnel en moins de 5 minutes.",
@@ -1057,13 +1464,13 @@ const en: LandingCopy = {
             {
               title: "Hotspot WiFi Cloud",
               desc: "White-label captive portal, batch vouchers, speed/duration plans, and reseller management.",
-              href: "/hotspot",
+              href: "/hotspot#portail",
               badge: "Wave Payment",
             },
             {
               title: "Cybercafé Management",
               desc: "Automatic screen time allocation, workstations, DHCP import, and session tickets.",
-              href: "/hotspot",
+              href: "/hotspot#cybercafe",
             },
             {
               title: "ISP PPPoE Manager",
@@ -1084,12 +1491,12 @@ const en: LandingCopy = {
             {
               title: "VPN — Fixed French IP",
               desc: "Personal WireGuard tunnel, dedicated Marseille IP, configuration delivered in 30 seconds.",
-              href: "/vpn",
+              href: "/vpn#ip-fixe",
             },
             {
               title: "Pro Access — Routers & LAN",
               desc: "MikroTik routers, cameras and NAS inside the encrypted tunnel — extended LAN supervised from the console.",
-              href: "/tunnels",
+              href: "/tunnels#acces-pro",
             },
             {
               title: "MikroTik Fleet Control",
@@ -1106,12 +1513,12 @@ const en: LandingCopy = {
             {
               title: "Hospitality & Restaurants",
               desc: "Elegant visitor WiFi, integrated promos, social links, and hospitality portal.",
-              href: "/hotspot",
+              href: "/hotspot#portail",
             },
             {
               title: "Cybercafés & Gaming Arenas",
               desc: "Automated workstation management, time tickets, and automatic cut-off.",
-              href: "/hotspot",
+              href: "/hotspot#cybercafe",
             },
             {
               title: "SMEs & ISPs",
@@ -1121,7 +1528,7 @@ const en: LandingCopy = {
             {
               title: "Nomads & Remote Workers",
               desc: "Personal fixed French IP VPN, filtered DNS and remote access to your networks — wherever you work.",
-              href: "/vpn",
+              href: "/vpn#ip-fixe",
             },
           ],
         },
@@ -1149,7 +1556,7 @@ const en: LandingCopy = {
             lines: ["1,500 FCFA / month", "15,000 FCFA / year"],
             note: "Shop — Wave or card payment",
             badge: "2 months free",
-            href: "/vpn",
+            href: "/vpn#tarifs",
             cta: "Order the VPN",
           },
           {
@@ -1157,7 +1564,7 @@ const en: LandingCopy = {
             desc: "MikroTik routers, cameras and NAS in the tunnel — extended LAN.",
             lines: ["3,500 FCFA / month", "35,000 FCFA / year"],
             note: "Console — remote supervision",
-            href: "/tunnels",
+            href: "/tunnels#tarifs",
             cta: "See Pro Access",
           },
         ],
@@ -1612,30 +2019,155 @@ const en: LandingCopy = {
         ctaPrimary: "Start the free trial",
         ctaPrimaryHref: "#signup",
         ctaSecondary: "See pricing",
-        ctaSecondaryHref: "/#tarifs",
+        ctaSecondaryHref: "#tarifs",
+        trust: [
+          "60-day trial — no credit card",
+          "Wave & card payments",
+          "Works behind CGNAT, Orange or Starlink",
+          "100% white-label portal",
+        ],
       },
       features: {
         eyebrow: "What 403Shield Hotspot does",
         title: "Public WiFi and Cybercafé, turned into a business.",
-        cards: [
+        sections: [
           {
-            title: "100% white-label captive portal",
-            desc: "Commercial mode with rate card and Wave payments, or hospitality mode with promos and social links. Your customers only see you.",
+            id: "portail",
+            icon: "palette",
+            kicker: "Captive portal",
+            title: "Your portal, your brand.",
+            body: "Commercial mode with rate card and Wave payments, or hospitality mode with promos and social links. Your customers only see you — never 403Shield.",
+            bullets: [
+              "Logo, colors and promos in your image",
+              "Login by voucher, code or time ticket",
+              "Lightweight HTTPS pages, fast on mobile",
+              "Hospitality mode: social links and daily offers",
+            ],
           },
           {
-            title: "Vouchers & plans",
-            desc: "Duration, data quota, bandwidth, 1 to 10 devices — and on depletion: cut off or throttle gently. Up to 500 vouchers per batch.",
+            id: "vouchers",
+            icon: "ticket",
+            kicker: "Vouchers & plans",
+            title: "Sell access, not wasted time.",
+            body: "Duration, data quota, bandwidth, 1 to 10 devices per plan — and on depletion, you choose: hard cut-off or gentle throttling. Up to 500 vouchers per batch.",
+            bullets: [
+              "Batches of 500 vouchers, print or transfer ready",
+              "Combinable duration, quota and bandwidth plans",
+              "Depletion: cut-off or progressive throttling",
+              "Watched stock, alert before it runs out",
+            ],
           },
           {
-            title: "Cybercafé Module & Stations",
-            desc: "Automated screen time management, automatic DHCP import and remote workstation shutoff.",
+            id: "cybercafe",
+            icon: "store",
+            kicker: "Cybercafé module",
+            title: "Your stations, steered at a glance.",
+            body: "The Cybercafé module manages screen time station by station: direct allocation, automatic DHCP lease import, 1-click release and session tickets.",
+            bullets: [
+              "Screen time allocated per station or per client",
+              "Automatic DHCP import of stations",
+              "Remote release and shutdown in 1 click",
+              "Session tickets and exportable logs",
+            ],
           },
           {
-            title: "Sell Mode & resellers",
-            desc: "Your resellers sell from their phone: PIN-protected PWA, transferred stock, offline sales, end-of-day report.",
+            id: "mode-vente",
+            icon: "chart",
+            kicker: "Sell Mode & resellers",
+            title: "Your resellers sell from their phone.",
+            body: "Sell Mode turns your resellers into walking tills: PIN-protected PWA, transferred stock, offline sales synced later, and a clear end-of-day report.",
+            bullets: [
+              "Offline PWA, protected by PIN",
+              "Voucher stock transferred to resellers",
+              "Sales recorded without network, synced after",
+              "End-of-day report and per-reseller stats",
+            ],
           },
         ],
       },
+      steps: {
+        eyebrow: "How it works",
+        title: "From account to first sales in three moves.",
+        items: [
+          {
+            title: "Create your account",
+            desc: "60-day free trial, no credit card — the Discovery plan starts immediately.",
+          },
+          {
+            title: "Paste the agent script",
+            desc: "On your MikroTik router (a hAP is enough): two minutes, no public IP required.",
+          },
+          {
+            title: "Sell",
+            desc: "Create your plans, print your vouchers, collect with Wave — the portal does the rest.",
+          },
+        ],
+      },
+      pricing: {
+        eyebrow: "Pricing",
+        navLabel: "Pricing",
+        title: "One subscription, one router.",
+        subtitle:
+          "Start free, then grow: the yearly plan unlocks unlimited routers. Prices in FCFA, payable with Wave or card.",
+      },
+      faq: {
+        eyebrow: "Frequently asked questions",
+        navLabel: "FAQ",
+        title: "Everything we're asked before signing.",
+        items: [
+          {
+            q: "Which router do I need to start?",
+            a: "A MikroTik is enough: the hAP lite (about 25,000 FCFA) runs the 403Shield agent. No server to buy, nothing to host at home.",
+          },
+          {
+            q: "Does it work behind CGNAT, without a public IP?",
+            a: "Yes. The agent installed on the router dials out to the cloud: Orange, Starlink or 4G — no open port, no fixed IP needed.",
+          },
+          {
+            q: "What happens after the 60-day trial?",
+            a: "The Discovery plan ends. You then choose monthly (2,500 FCFA/router) or yearly (25,000 FCFA, unlimited routers). No automatic conversion, no surprise charge.",
+          },
+          {
+            q: "Does Sell Mode work offline?",
+            a: "Yes — it is a PIN-protected offline PWA. Sales are recorded locally and synced when the network returns.",
+          },
+          {
+            q: "Can I collect payments with Wave?",
+            a: "Yes: Wave and bank card are supported, with real discounts and fees shown before confirmation.",
+          },
+          {
+            q: "Can the portal carry my brand?",
+            a: "Fully: logo, colors, promos and social links. Your customers only see your sign.",
+          },
+          {
+            q: "Can I stop the monthly plan anytime?",
+            a: "Yes, no commitment. The yearly plan remains the best value — unlimited routers.",
+          },
+        ],
+      },
+      guides: {
+        eyebrow: "Related guides",
+        title: "Learn step by step, screenshots included.",
+        allLabel: "All guides",
+        items: [
+          {
+            title: "First steps",
+            desc: "Create the account, install the agent, connect the first router.",
+            href: "/docs/guides/premiers-pas",
+          },
+          {
+            title: "Vouchers & batches",
+            desc: "Generate, print and track your 500-voucher batches.",
+            href: "/docs/guides/vouchers-lots",
+          },
+          {
+            title: "Cybercafé module",
+            desc: "Stations, screen time and session tickets.",
+            href: "/docs/guides/cybercafe",
+          },
+        ],
+      },
+      share: "Share this page",
       cta: {
         kicker: "Ready to launch your hotspot or cybercafé?",
         title: "60 days free, no credit card.",
@@ -1643,7 +2175,7 @@ const en: LandingCopy = {
         primary: "Create my free account",
         primaryHref: "#signup",
         secondary: "See pricing",
-        secondaryHref: "/#tarifs",
+        secondaryHref: "#tarifs",
       },
     },
     vpn: {
@@ -1663,26 +2195,68 @@ const en: LandingCopy = {
         ctaPrimaryHref: "/checkout",
         ctaSecondary: "Explore tunnels",
         ctaSecondaryHref: "/tunnels",
+        trust: [
+          "Configuration emailed within 30 s",
+          "Wave or card — prices shown before payment",
+          "WireGuard: audited protocol, light on battery",
+          "Dedicated IP — never shared, never resold",
+        ],
       },
       features: {
         eyebrow: "Why 403Shield VPN",
         title: "The VPN that doesn't lock you in.",
-        cards: [
+        sections: [
           {
-            title: "Dedicated fixed IP",
-            desc: "A French address just for you: banks, public services and platforms that reject shared IPs finally recognize you.",
+            id: "ip-fixe",
+            icon: "globe",
+            kicker: "Fixed French IP",
+            title: "One French address, yours alone.",
+            body: "Your traffic exits through our Marseille server with a dedicated IP address. Banks, public services and platforms that reject shared IPs finally recognize you — and your address never changes mid-session again.",
+            bullets: [
+              "Dedicated IP — no shared blocklist",
+              "Single exit: Marseille, France",
+              "Geo-sensitive services reachable and stable",
+              "The same address across your WireGuard devices",
+            ],
           },
           {
-            title: "WireGuard, audited & lightweight",
-            desc: "The modern protocol, faster and lighter than legacy VPNs. Your configuration remains your property.",
+            id: "wireguard",
+            icon: "lock",
+            kicker: "WireGuard protocol",
+            title: "Audited, lightweight, modern.",
+            body: "WireGuard is the reference VPN protocol: a short, publicly audited codebase, faster and leaner than legacy suites. Your configuration remains your property, exportable anytime.",
+            bullets: [
+              "Short codebase, publicly audited",
+              "Invisible reconnection on network change",
+              "Easy on your phone's battery",
+              "Standard configuration, importable anywhere",
+            ],
           },
           {
-            title: "Mobile Money & card",
-            desc: "Pay with Wave or bank card, in FCFA. Provisioning is automatic: your configuration is emailed as soon as payment is confirmed.",
+            id: "paiement",
+            icon: "card",
+            kicker: "Local payment",
+            title: "Wave or card, in FCFA.",
+            body: "Pay the way you live: Wave with the mobile-money discount, or bank card. Provisioning is automatic — the configuration is emailed as soon as payment is confirmed, with no human in the loop.",
+            bullets: [
+              "Wave: discount applied automatically",
+              "Bank card: real fees shown before payment",
+              "Prices in FCFA, receipts by email",
+              "1-click renewal from your account",
+            ],
           },
           {
-            title: "No password",
-            desc: "A 6-digit code received by email is enough: purchases, 1-click renewal and configuration recovery from your account.",
+            id: "sans-mdp",
+            icon: "key",
+            kicker: "No password",
+            title: "One email code is enough.",
+            body: "No password to invent or lose: a 6-digit code received by email opens your client area — purchases, device wallet, renewal and configuration recovery.",
+            bullets: [
+              "6-digit code received by email",
+              "Client area: purchases and renewals",
+              "Self-service configuration recovery",
+              "No stored password",
+            ],
           },
         ],
       },
@@ -1690,6 +2264,80 @@ const en: LandingCopy = {
         title: "One tunnel, two uses.",
         body: "Monthly with no commitment, or yearly — pay 10 months, get 2 offered. Prices in FCFA on the shop, mobile-money discount included. And when your networks need the same path: Pro Access extends this very WireGuard tunnel to your routers, cameras and NAS — same console, same shop.",
       },
+      steps: {
+        eyebrow: "How it works",
+        title: "Online in three moves.",
+        items: [
+          {
+            title: "Pick your plan",
+            desc: "Monthly with no commitment, or yearly — pay 10 months, get 2 offered.",
+          },
+          {
+            title: "Pay with Wave or card",
+            desc: "Prices in FCFA shown before confirmation, Wave discount included.",
+          },
+          {
+            title: "Import the configuration",
+            desc: "It arrives by email: one QR scan in WireGuard and you're online.",
+          },
+        ],
+      },
+      pricing: {
+        eyebrow: "Pricing",
+        navLabel: "Pricing",
+        title: "Monthly or yearly — up to you.",
+        subtitle:
+          "The yearly plan gives 2 months: pay 10, get 2 offered. Prices in FCFA, payable with Wave or card.",
+      },
+      faq: {
+        eyebrow: "Frequently asked questions",
+        navLabel: "FAQ",
+        title: "What we're asked before buying.",
+        items: [
+          {
+            q: "What is a fixed IP, concretely?",
+            a: "Your traffic always exits through the same French address (Marseille). Platforms that block anonymous or rotating IPs leave you alone, and your remote accesses stay stable.",
+          },
+          {
+            q: "Which devices does it work on?",
+            a: "Anything that runs WireGuard: Android, iPhone, Windows, macOS, Linux — and compatible routers. One configuration per device, managed from your account.",
+          },
+          {
+            q: "How do I pay?",
+            a: "Wave (mobile-money discount applied automatically) or bank card (real fees shown). Everything is confirmed before payment, in FCFA.",
+          },
+          {
+            q: "What if I lose my configuration?",
+            a: "Recovery is self-service: from the shop, it is resent exclusively to your purchase email address.",
+          },
+          {
+            q: "What's the difference with Pro Access?",
+            a: "It's the same WireGuard tunnel. The VPN shields your personal use with a fixed IP; Pro Access connects your routers, cameras and NAS, with console supervision.",
+          },
+          {
+            q: "How long before I'm online?",
+            a: "About 30 seconds between payment confirmation and receiving the configuration by email.",
+          },
+        ],
+      },
+      guides: {
+        eyebrow: "Related guides",
+        title: "The VPN and its account, step by step.",
+        allLabel: "All guides",
+        items: [
+          {
+            title: "WireGuard VPN guide",
+            desc: "Choose, buy and import your configuration step by step.",
+            href: "/docs/guides/vpn-wireguard",
+          },
+          {
+            title: "VPN client area",
+            desc: "Device wallet, 1-click renewal, statuses.",
+            href: "/docs/guides/portail-client",
+          },
+        ],
+      },
+      share: "Share this page",
       cta: {
         kicker: "Ready to encrypt your traffic?",
         title: "Your configuration is emailed within 30 seconds.",
@@ -1717,29 +2365,146 @@ const en: LandingCopy = {
         ctaPrimaryHref: "/checkout",
         ctaSecondary: "Explore the VPN",
         ctaSecondaryHref: "/vpn",
+        trust: [
+          "End-to-end WireGuard encryption",
+          "No open port on your routers",
+          "Console available 24/7 — EU hosted",
+          "Works behind CGNAT, no public IP",
+        ],
       },
       features: {
         eyebrow: "Why 403Shield Tunnels",
         title: "The private bridge between you and your networks.",
-        cards: [
+        sections: [
           {
-            title: "Personal VPN — the same tunnel",
-            desc: "Your end-to-end encrypted traffic exits through Marseille with a dedicated fixed French IP. It is the same WireGuard, the same console — whether you shield your travels or supervise a fleet.",
+            id: "vpn-perso",
+            icon: "globe",
+            kicker: "Personal VPN",
+            title: "The same tunnel, for you.",
+            body: "Your end-to-end encrypted traffic exits through Marseille with a dedicated fixed French IP. It is the same WireGuard, the same console — whether you shield your travels or supervise a fleet.",
+            bullets: [
+              "Dedicated fixed French IP for your own use",
+              "Phone, computer, tablet",
+              "Configuration by email, immediate import",
+              "Shop: Wave, card, 1-click renewal",
+            ],
           },
           {
-            title: "Pro Access — routers",
-            desc: "Remote supervision of your MikroTik routers through the tunnel — without exposing your admin interface to the Internet.",
+            id: "acces-pro",
+            icon: "router",
+            kicker: "Pro Access",
+            title: "Your routers, reachable anywhere.",
+            body: "Pro Access supervises your MikroTik routers through the tunnel: administration, API and SSH remotely — without exposing a single interface to the Internet.",
+            bullets: [
+              "MikroTik routers supervised continuously",
+              "Admin, API and SSH over the private tunnel",
+              "No exposed interface, no open port",
+              "Offline and subscription-due alerts",
+            ],
           },
           {
-            title: "Extended LAN — cameras & NAS",
-            desc: "Pro Access extends the tunnel to your LAN: cameras, NAS and other equipment stay privately reachable, never exposed.",
+            id: "lan",
+            icon: "cctv",
+            kicker: "Extended LAN",
+            title: "Cameras and NAS, in private.",
+            body: "The tunnel extends to your local network: cameras, NAS and printers stay privately reachable from anywhere — even behind CGNAT, with no public IP at your site.",
+            bullets: [
+              "Private access to cameras and recorders",
+              "NAS and files remotely, encrypted",
+              "Behind CGNAT, Orange or Starlink",
+              "No open port on the box or the router",
+            ],
           },
           {
-            title: "One console, one shop",
-            desc: "A 6-digit email code is enough: client area, device wallet, 1-click renewal — the VPN and Pro Access live in the same place.",
+            id: "console",
+            icon: "console",
+            kicker: "One console",
+            title: "Everything lives in one place.",
+            body: "A 6-digit email code is enough: client area, device wallet, 1-click renewal — the VPN and Pro Access live in the same place, between the console and the shop.",
+            bullets: [
+              "Login by email code, no password",
+              "Device wallet and live statuses",
+              "Renewal and due dates in 1 click",
+              "Integrated shop: VPN, Wave and card",
+            ],
           },
         ],
       },
+      steps: {
+        eyebrow: "How it works",
+        title: "Your tunnel open in three moves.",
+        items: [
+          {
+            title: "Create your tunnel",
+            desc: "From the console or the shop — email code, no password.",
+          },
+          {
+            title: "Connect your equipment",
+            desc: "MikroTik agent for the fleet, emailed configuration for personal devices.",
+          },
+          {
+            title: "Steer remotely",
+            desc: "Console: statuses, alerts, renewals — the tunnel stays open as long as you want.",
+          },
+        ],
+      },
+      pricing: {
+        eyebrow: "Pricing",
+        navLabel: "Pricing",
+        title: "Personal VPN or Pro Access.",
+        subtitle:
+          "The same tunnel, two uses: start with the VPN, extend to the fleet whenever you want.",
+      },
+      faq: {
+        eyebrow: "Frequently asked questions",
+        navLabel: "FAQ",
+        title: "Before opening your tunnel.",
+        items: [
+          {
+            q: "My cameras sit behind CGNAT: does it work?",
+            a: "Yes — it is the core use case of Pro Access. The tunnel dials out from your router to Marseille; no port or public IP is required on your side.",
+          },
+          {
+            q: "VPN or Pro Access: which do I need?",
+            a: "Both live on the same tunnel. VPN: your personal use, fixed French IP. Pro Access: connecting routers, cameras and NAS, with console supervision. Most start with the VPN, then extend.",
+          },
+          {
+            q: "Do I need a special router?",
+            a: "For Pro Access, a MikroTik running RouterOS 7 (the 403Shield agent runs there). For the VPN alone, no router: your phone or computer is enough.",
+          },
+          {
+            q: "Does it replace my internet subscription?",
+            a: "No. The tunnel encrypts and interconnects your existing networks — it does not provide internet access as such.",
+          },
+          {
+            q: "How are subscriptions renewed?",
+            a: "The VPN renews from the shop (email reminder before the due date); Pro Access from the console, with configurable due-date alerts.",
+          },
+        ],
+      },
+      guides: {
+        eyebrow: "Related guides",
+        title: "The tunnel and the fleet, step by step.",
+        allLabel: "All guides",
+        items: [
+          {
+            title: "WireGuard VPN guide",
+            desc: "The tunnel step by step: purchase, import, uses.",
+            href: "/docs/guides/vpn-wireguard",
+          },
+          {
+            title: "Router fleet",
+            desc: "Remote MikroTik fleet supervision.",
+            href: "/docs/guides/parc-routeurs",
+          },
+          {
+            title: "Sites & multi-site",
+            desc: "Interconnecting several networks over the tunnel.",
+            href: "/docs/guides/sites-multi-sites",
+          },
+        ],
+      },
+      share: "Share this page",
       cta: {
         kicker: "Your networks are waiting",
         title: "Open your tunnel in under 5 minutes.",

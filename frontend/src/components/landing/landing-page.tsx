@@ -58,6 +58,7 @@ import { landingCopy, type Lang } from "./landing-copy";
 import { EnterpriseHeader } from "./enterprise-header";
 import { LandingChatWidget } from "./chat-widget";
 import { LandingFooter } from "./landing-footer";
+import { PricingGrid } from "./pricing-grid";
 import { Reveal } from "./reveal";
 import { fraunces, manrope } from "./landing-fonts";
 import "./landing-clay.css";
@@ -772,58 +773,11 @@ export default function LandingPage({ onSignIn, onSignUp }: LandingPageProps) {
                 <AudienceChips key={`audience-${priceMode}`} items={activeSegment.audience} />
               ) : null}
             </Reveal>
-            <div className="mkl-pricing" key={priceMode}>
-              {activeSegment.plans.map((plan, i) => (
-                <Reveal key={`${priceMode}-${plan.name}`} delay={i * 0.08} className="h-full">
-                  <article className={`mkl-price-card mkl-pc${i + 1} h-full`}>
-                    {plan.highlight && plan.badge ? <span className="mkl-pop">{plan.badge}</span> : null}
-                    <h3>{plan.name}</h3>
-                    <p className="mkl-tagline">{plan.tagline}</p>
-                    <div className="mkl-amount">
-                      {plan.price} <small>{plan.period}</small>
-                    </div>
-                    <ul>
-                      {plan.features.map((f) => (
-                        <li key={f}>{f}</li>
-                      ))}
-                    </ul>
-                    {plan.href ? (
-                      plan.href.startsWith("http") ? (
-                        <a
-                          className={`mkl-btn ${plan.highlight ? "mkl-btn-cream" : "mkl-btn-teal"}`}
-                          style={{ justifyContent: "center" }}
-                          href={plan.href}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                        >
-                          {plan.cta}
-                          <span className="sr-only"> — nouvel onglet</span>
-                        </a>
-                      ) : (
-                        <Link
-                          className={`mkl-btn ${plan.highlight ? "mkl-btn-cream" : "mkl-btn-teal"}`}
-                          style={{ justifyContent: "center" }}
-                          href={plan.href}
-                        >
-                          {plan.cta}
-                        </Link>
-                      )
-                    ) : (
-                      <button
-                        className={`mkl-btn ${plan.highlight ? "mkl-btn-cream" : "mkl-btn-teal"}`}
-                        style={{ justifyContent: "center" }}
-                        onClick={onSignUp}
-                      >
-                        {plan.cta}
-                      </button>
-                    )}
-                  </article>
-                </Reveal>
-              ))}
-            </div>
-            <Reveal delay={0.15}>
-              <p className="mkl-currency-note">{copy.pricing.currencyNote}</p>
-            </Reveal>
+            {/* N°332-B — les cartes sont rendues par le composant partagé
+                PricingGrid (source unique avec les pages produits v2) ; le
+                sélecteur de segments + hint + chips restent propres à la
+                home (comparateur complet 2 comptoirs). */}
+            <PricingGrid plans={activeSegment.plans} currencyNote={copy.pricing.currencyNote} onCta={onSignUp} />
           </div>
         </section>
 
