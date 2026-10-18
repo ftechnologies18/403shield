@@ -10,6 +10,42 @@ sous-marque FTech CI) ; l'historique ci-dessous conserve les noms d'époque.
 N°319 : le DÉPÔT GitHub lui-même devient `ftechnologies18/403shield`
 (anciennes URL redirigées en 301 par GitHub — web, git et API).
 
+## 2026-10-18 — N°332-B — **PAGES PRODUITS v2 : LE MATCH PARFAIT MENU ↔ PAGES (volet B du plan N°332)** — gabarit 10 sections avec ancres deep-linkables, tarifs produit, FAQ, badges de confiance, guides maillés, partage WhatsApp — la double source de prix N°331 est morte
+
+### Ce qui change (volet B — 9 fichiers, +1663/−185)
+
+- **Gabarit 10 sections** (`product-page.tsx` réécrit) : hero + badges de
+  confiance VÉRIFIABLES (aucun faux chiffre, **aucun témoignage** — consigne
+  propriétaire) → sous-nav sticky d'ancres → 4 sections features alternées
+  avec ancre chacune → « Comment ça marche » (3 étapes numérotées) → tarifs →
+  FAQ (accordéon natif `<details>`, zéro JS) → guides liés → CTA final +
+  partage WhatsApp (Web Share API + fallback `wa.me`) → footer + **chat
+  widget monté sur les 3 pages**.
+- **Ancres par page** : `/hotspot` → `#portail #vouchers #cybercafe
+  #mode-vente` · `/vpn` → `#ip-fixe #wireguard #paiement #sans-mdp` ·
+  `/tunnels` → `#vpn-perso #acces-pro #lan #console` (+ `#demarrer #tarifs
+  #faq #guides` partout) — chaque item de méga menu atterrit sur SA section
+  (vérifié au navigateur : clic « Gestion Cybercafé » depuis la home →
+  `/hotspot#cybercafe`, section visible à 90 px sous le header).
+- **PricingGrid partagé** (`pricing-grid.tsx`) : la home et les pages
+  produits rendent les mêmes cartes des mêmes données `pricing.segments` —
+  la double source de prix N°331 est morte ; `/vpn` reprend la grille duo
+  existante (2 plans VPN), `/tunnels` le segment complet (VPN + Pro).
+- **JSON-LD Product + FAQPage** dans les 3 layouts (offres XOF extraites de
+  la même copy — SEO long-tail).
+- **Méga menus affinés** : chaque item vers sa section précise (voir
+  commit) ; CTA « Voir les tarifs » des pages → `#tarifs` local.
+- **Copy FR + EN** : ~800 lignes réécrites (features enrichies en sections
+  + bullets, 18 questions FAQ rédigées sur les objections réelles du marché,
+  steps, trust, guides). Miroir strict FR/EN.
+
+### Portes
+
+lint 0 · tsc 0 · `next build` 47/47 · smoke navigateur build :3100 (1280 et
+390, 3 pages, cross-page anchor, 0 débordement, 0 erreur console) · VLM
+PASS desktop pleine page + PASS mobile. Schéma DB : **AUCUN** (frontend
+pur — deploy-oracle non concerné).
+
 ## 2026-10-18 — N°332-A — **RÉPARATIONS DE COHÉRENCE MENU ↔ PAGES (volet A du plan de refonte N°332, GO global du propriétaire)** — chaque promesse du header atterrit sur sa destination : les 4 liens menteurs corrigés, l'item VPN/Accès Pro scindé, l'ancre #isp vivante, le footer sans 404
 
 ### Déclencheur (propriétaire)
