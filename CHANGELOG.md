@@ -10,6 +10,45 @@ sous-marque FTech CI) ; l'historique ci-dessous conserve les noms d'époque.
 N°319 : le DÉPÔT GitHub lui-même devient `ftechnologies18/403shield`
 (anciennes URL redirigées en 301 par GitHub — web, git et API).
 
+## 2026-10-18 — N°332-C + N°332-D — **MARKETING & RÉTENTION SUR LA VITRINE + FINITION PRO CLAY (volets C et D du plan N°332)** — preuve sociale honnête SANS témoignage, FAQ avant le CTA, sommaire cliquable, caisse sous EnterpriseHeader, focus clavier généralisé
+
+### N°332-C (volet C — 4 fichiers, +350/−86)
+
+- **Section `#confiance`** (après le bandeau stats) : 6 badges VÉRIFIABLES
+  (Wave & carte frais affichés · config e-mail 30 s · hébergé UE Marseille ·
+  WireGuard audité · essai 60 j · powered by FTech CI) + **3 captures
+  réelles de la console** servies de `public/docs` (assistant vouchers,
+  rapport de marge, parc routeurs) en next/image lazy — **SANS témoignage**
+  (consigne propriétaire) : ce qui est montré existe.
+- **Section `#faq`** avant le CTA final : 8 questions générales en accordéon
+  natif `<details>` (zéro JS) — le visiteur hésite au moment du prix.
+- **Sommaire cliquable** : les 4 cartes « super-pouvoirs » deviennent des
+  liens vers leur pilier (`#hotspot #protection #isp #tunnels`, pied
+  « Découvrir → »).
+- **Caisse `/checkout` → EnterpriseHeader** : topbar legacy + sous-nav
+  mobile retirées ; câblage prudent — « Se connecter » → console (nouvel
+  onglet), « Essai gratuit » → `/hotspot#tarifs` (formule Découverte,
+  promesse exacte) ; AUCUNE modale d'inscription en pleine transaction.
+- **Perf 3G** : halos `blur(90px)` → 54 px sous 860 px ; observer enrichi
+  (`#confiance`, `#faq`).
+
+### N°332-D (volet D — 5 fichiers, +116/−21)
+
+- **Focus clavier généralisé** : outline teal 3 px sur liens nav, méga menus,
+  sous-nav, footer, cartes, FAQ, partage, rail mobile.
+- **Boutons clay « pressés »** (`:active` s'enfonce au clic) ; hover lift
+  des cartes tarifaires latérales ; typo des splits alignée sur les sec-head.
+- **Rythme en classes** : `.mkl-sec-tight`/`.mkl-sec-flush` remplacent les
+  styles inline.
+- **Icônes du méga menu déclarées** (champ `icon` + table statique — fin du
+  `title.includes` fragile).
+
+### Portes (C et D)
+
+lint 0 · tsc 0 · `next build` 47/47 · smoke navigateur 1280 + 390 (home,
+caisse, interactions) · VLM PASS ×2. Schéma DB : **AUCUN** (frontend pur —
+deploy-oracle non concerné).
+
 ## 2026-10-18 — N°332-B — **PAGES PRODUITS v2 : LE MATCH PARFAIT MENU ↔ PAGES (volet B du plan N°332)** — gabarit 10 sections avec ancres deep-linkables, tarifs produit, FAQ, badges de confiance, guides maillés, partage WhatsApp — la double source de prix N°331 est morte
 
 ### Ce qui change (volet B — 9 fichiers, +1663/−185)
