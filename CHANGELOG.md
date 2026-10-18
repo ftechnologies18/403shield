@@ -10,6 +10,126 @@ sous-marque FTech CI) ; l'historique ci-dessous conserve les noms d'époque.
 N°319 : le DÉPÔT GitHub lui-même devient `ftechnologies18/403shield`
 (anciennes URL redirigées en 301 par GitHub — web, git et API).
 
+## 2026-10-18 — N°325 — **INTÉGRATION DU PR #70 « ENTERPRISE MULTI-PAGE LANDING PAGE REDESIGN » (Jules) : header MegaMenu Produits/Solutions façon Cloudflare + drawer mobile + section « Extension ISP & Opérateurs » — la vitrine montre enfin TOUTE la plateforme (Hotspot & Cybercafé, PPPoE, comptabilité, 2FA), doctrine N°324 maintenue de bout en bout (zéro foyer/HomeNet)**
+
+### Déclencheur (propriétaire)
+« Un PR de refonte Jule est en attente, effectue l'intégration. » — le PR #70
+(`feat/enterprise-landing-redesign-6313619506023410653`, commit 1ed8b94,
+créé automatiquement par Jules pour la task 6313619506023410653) attendait
+sur `ftechnologies18/403shield`, basé sur `bedb8d4` (N°323) — donc ANTÉRIEUR
+à N°324 (suppression du mode HomeNet) : l'intégration devait préserver la
+doctrine mono-mode tout en récupérant la valeur du redesign.
+
+### Ce que le PR apportait (5 fichiers, +844/−579 — frontend seul)
+- **`enterprise-header.tsx` (NOUVEAU)** : header sticky avec MegaMenu
+  « Produits » (2 catégories × 3 items : Hotspot WiFi Cloud, Gestion
+  Cybercafé, Gestionnaire PPPoE ISP, Protection Cloud, Tunnels WireGuard &
+  VPN, Pilotage de Flotte MikroTik) et « Solutions » (4 secteurs :
+  Hôtellerie, Cybercafés, PME & FAI, Nomades) façon Cloudflare/OVHcloud —
+  icônes lucide par item, badges « Paiement Wave »/« Auto-réparation »,
+  drawer mobile hamburger.
+- **`landing-copy.ts`** : bloc `header.megaMenu` FR/EN + `header.nav.products/
+  solutions/docs`, section `ispExtension` (PPPoE Server Auto, reconnexion
+  live, comptabilité multi-sites gelées, 2FA TOTP & rôles Team), hero badge
+  « · PPPoE · Cybercafé », chips marquee +2, piliers retitrés (« Hotspot &
+  Cybercafé », « Pilotage & PPPoE ISP »), feats hotspot + Cybercafé,
+  footer/labels « Hotspot & Cybercafé », page /hotspot étendue au module.
+- **`landing-page.tsx`** : topbar remplacé par `EnterpriseHeader`, section
+  `#isp` (4 cartes extension opérateurs) entre le parc et le bandeau stats,
+  `POWER_ICONS[2]` Router→Server, `HOTSPOT_FEAT_ICONS` +Monitor (4 feats).
+- **`product-page.tsx`** : topbar + sous-nav `.mkl-subnav` remplacés par
+  `EnterpriseHeader` (le drawer mobile couvre < 1024 px).
+- **`reveal.tsx`** : réglage d'animation (y 34→20, viewport margin −60→0 px,
+  durée 0,7→0,5 s) — robustesse anti-« contenu invisible ».
+
+### Conflits résolus (merge --no-ff, doctrine d'abord)
+`landing-copy.ts` + `landing-page.tsx` étaient « changed in both » (N°324
+avait touché les mêmes fichiers) : résolution manuelle en 5 blocs —
+commentaires de doctrine conservés, grilles tarifs reformatées par Jules
+gardées, hero EN de Jules pris. **Résurrection HomeNet du PR neutralisée**
+(il était basé sur l'état N°322) : trialHint « 30 jours HomeNet » → « 60
+jours » seuls (FR/EN) ; item MegaMenu « Travailleurs Nomades & Foyers …
+mode HomeNet » → « Travailleurs Nomades & Télétravail » (VPN IP fixe,
+DNS filtrés, accès distant — sans foyer) ; label segment « Hotspot ·
+Cybercafé · HomeNet » → « Hotspot · Cybercafé » ; hint sans « Un foyer ? » ;
+chips audience sans « Foyers »/« Households » ; 3 lignes « Mode foyer
+(HomeNet) » retirées des cartes FR/EN (seule la ligne « Gestionnaire
+Cybercafé & PPPoE » de Jules est gardée — capacité réelle).
+
+### Renforcements d'intégration (jugement du tuteur, PR revu comme un code review)
+- **Point mort 768-860 px éliminé** : le PR affichait la nav desktop dès
+  `md:` (768) alors que la règle CSS `.mkl-topbar .mkl-link-quiet` masque
+  les liens sous 860 px (héritage N°321) → nav VIDE sans hamburger dans
+  l'intervalle. La nav passe à `lg:` (≥1024) et le hamburger/drawer à
+  `lg:hidden` : le drawer couvre tout < 1024, la règle 860 ne conflite plus.
+- **Panneaux mega clampés** : `w-[720px]`/`w-[480px]` → `w-[min(720px,
+  calc(100vw-3rem))]` (zéro débordement horizontal — `.mkl-page` a
+  `overflow-x: clip`) ; vérifié à 1280 et 1024 (panneau 60→780 / 48→768).
+- **Accessibilité** : `aria-expanded` sur le hamburger, fermeture Escape
+  (écouteur fenêtre) et au changement de route (pattern « ajustement
+  pendant le rendu » — pas de setState dans un effet, règle
+  `react-hooks/set-state-in-effect` satisfaite), `mkl-active` conservé.
+- **Drawer mobile enrichi** : CTA d'inscription (parité desktop —
+  l'inscription ouvre la modale, jamais un lien mort) + lien « Guides &
+  Docs » (route réelle /docs/guides, N°304) ; lien « Guides & Docs »
+  ajouté à la nav desktop (la clé de copie existait sans consommateur).
+- **Section #isp raffinée** : bandeau teinté CONTENU dans `.mkl-wrap`
+  (coins arrondis visibles, pas full-bleed aux bords du viewport) et
+  `mkl-sec-head mkl-center` (max-width 640 + marges auto) au lieu d'un
+  simple `text-center` sur bloc aligné à gauche ; le double padding
+  (`py-16` du PR + `clamp(70px,9vw,130px)` du CSS section) est retiré.
+- Imports morts retirés (`Building2`, `Users` dans landing-page.tsx) ;
+  commentaires de doctrine restaurés dans les 4 fichiers touchés.
+
+### Intacts (vérifiés)
+Parcours d'inscription SaaS et modale (sans question d'usage — N°324),
+caisse /checkout et entonnoir ?plan= (CTA tunnels 3 × `/checkout?plan=…`
++ Accès Pro → console /pro — N°323), prix catalogue réels (console 0/
+25 000/2 500 · tunnels 1 500/15 000/3 500 + 35 000/an — N°321), rail
+vertical 7 entrées + rail tactile mobile, chat + suggestions, footer
+écosystème console.403shield.ftci.fr, pages /vpn et /tunnels (titres,
+badges croisés, note « un tunnel deux usages »), stats 500/4/54/2, FR/EN
+parité structurelle complète.
+
+### Portes
+lint 0 · tsc 0 · build production OK · parité FR/EN programmatique
+**505 chemins = 505 chemins** (0 diff) + **27 assertions métier** vertes
+(zéro homenet/foyer/household dans la copie rendue, trialHint 60 jours
+seuls, 2 segments, labels « Hotspot · Cybercafé », prix réels, 3 href
+/checkout?plan=, megaMenu 2×3+4 items, ispExtension 4 feats, nav docs
+FR/EN, audience sans Foyers/Households, Cybercafé & PPPoE sur la carte
+annuelle, stats tunnels unifiées, badge page hotspot Cybercafé) — script
+`/home/z/scratch325/parity.ts`.
+
+### Vérification locale (navigateur, agent-browser)
+Desktop 1280 : header sticky, 7 entrées nav (Accueil, Produits ▾,
+Solutions ▾, Hotspot, Tunnels WireGuard, Tarifs, Guides & Docs), MegaMenu
+Produits (panneau 720 px, badges, 6 items) et Solutions (4 items dont
+l'item corrigé « Travailleurs Nomades & Télétravail »), Escape ferme,
+section #isp rendue (kicker + 4 feats, bande 1176 px contenue), segments
+tarifs « Hotspot · Cybercafé »/« Tunnels · boutique », cartes tunnels
+1 500/15 000/3 500 · 35 000/an, bascule EN (« 60 days » sans HomeNet),
+modale d'inscription DEPUIS LE HEADER (« Créer mon compte », champs
+compte/identifiant/mot de passe, zéro question d'usage) ; frontières : 1024
+(nav visible, hamburger masqué, panneau 48→768 sans débordement), 900 (nav
+masquée, hamburger + Se connecter visibles — l'ancien point mort est
+couvert), mobile 390 : scrollWidth 390 exact, 0 débordement, drawer (5
+liens + Se connecter + Essai gratuit), navigation drawer → /hotspot OK ;
+/vpn et /tunnels : h1 intacts, 3 liens checkout chacun, 0 erreur
+console/page partout.
+
+### Schéma DB
+AUCUN — la vitrine est du frontend pur (aucune route backend modifiée,
+aucune migration) ; le PR ne touche que `frontend/src/components/landing/`.
+
+### Suites
+- Le merge --no-ff fait du head 1ed8b94 un ancêtre de `main` : le PR #70
+  se marque MERGED automatiquement au push.
+- docs/MARQUE-403SHIELD.md §6-septies (miroir).
+- Non-objectifs : aucun changement de prix, aucune nouvelle route, aucun
+  backend — pur rattrapage de vitrine sur des capacités déjà livrées
+  (Cybercafé N°290, PPPoE N°289, comptabilité, 2FA).
+
 ## 2026-10-18 — N°324 — **SUPPRESSION DU MODE HOMENET DU SYSTÈME : la plateforme devient mono-mode Hotspot (landing vitrine, inscription, console SaaS, catalogue, chatbot, e-mails — migration de retraite au boot)**
 
 ### Déclencheur (propriétaire)

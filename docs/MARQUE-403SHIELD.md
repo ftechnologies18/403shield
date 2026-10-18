@@ -309,6 +309,37 @@ règle) :
 Miroir du CHANGELOG N°324 ; relevé de vérification production consigné par
 le tuteur après déploiement.
 
+## 6-septies. N°325 — intégration du PR #70 « Enterprise Multi-Page Landing Page Redesign » (Jules)
+
+Le site marketing gagne un header digne des références du §6-quinquies :
+MegaMenu « Produits » (2 catégories : Accès & Rentabilité / Sécurité &
+Infra Cloud) et « Solutions » (4 secteurs), drawer mobile, section
+« Extension Opérateurs & FAI » (PPPoE, multi-sites, 2FA/comptabilité).
+La vitrine cesse de vendre seulement Hotspot+Tunnels : elle montre TOUTE
+la plateforme réelle — Cybercafé (N°290), PPPoE ISP, comptabilité gelée,
+2FA TOTP — sans inventer une seule capacité (les items du MegaMenu
+renvoient vers des routes réelles : /hotspot, /tunnels, /vpn, ancres de
+sections, /docs/guides).
+
+Jugement d'intégration (le PR datait d'avant N°324 — conflits résolus à la
+doctrine) :
+- **Zéro résurrection HomeNet** : le PR reposait sur l'état N°322 (tarifs
+  foyer sur les cartes, « Foyers » ciblés) — tout est neutralisé au merge :
+  l'item Solutions devient « Travailleurs Nomades & Télétravail » (le VPN
+  personnel reste la réponse honnête au particulier), segment tarifs
+  « Hotspot · Cybercafé », essai « 60 jours » seuls.
+- **Le point mort 768-860 px** (nav desktop visible mais liens masqués par
+  la règle CSS héritée, hamburger absent) est éliminé : nav à `lg:`
+  (≥1024), drawer partout ailleurs — pattern Cloudflare.
+- **Panneaux clampés au viewport** (aucun débordement horizontal, le rail
+  et la caisse restent intacts), fermeture Escape/route, aria-expanded,
+  CTA d'inscription dans le drawer.
+- Le segment console s'étiquette « Hotspot · Cybercafé » : le module
+  cybercafé est INCLUS dans l'abonnement (N°290) — à ne pas confondre avec
+  un mode (le foyer, lui, n'existe plus — N°324).
+
+Miroir du CHANGELOG N°325 ; le merge --no-ff marque le PR #70 MERGED.
+
 ## 7. Actifs de marque
 
 `docs/brand/` : `403shield-clay.png` (1024², bouclier clay menthe + étoile dorée

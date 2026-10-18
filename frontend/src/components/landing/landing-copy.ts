@@ -13,47 +13,34 @@
 // chiffres mis en avant (500 vouchers/lot, 4 boucliers, 54 pays, 60 jours
 // d'essai Hotspot) sont des constantes produit, pas des métriques d'usage inventées.
 //
-// N°124 — le mode résidentiel est renommé HomeNet (sécurité internet
-// résidentiel) partout où le mode est nommé ; la clientèle cible du mode
-// Hotspot (hôtels, cybercafés, maquis…) est exposée via le champ
-// optionnel audience (rendu en chips clay), revendeurs mis en avant.
-//
-// Positionnement : marché africain pan-continental (UEMOA + CEMAC + Afrique
-// de l'Est + Nigeria + Ghana). Multi mobile-money (Wave, Orange Money, MTN
-// MoMo, Moov, MPesa, Airtel Money), multi-devises (FCFA, NGN, GHS, KES...).
-//
 // N°317 — rebrand : MikCloud & MikTunnel disparaissent au profit de la marque
-// unifiée 403Shield (Option A de l'étude N°316, modèle Cloudflare/OVH : UN
-// site marketing multipage à menu complet + UNE console transactionnelle).
-// La vitrine devient le site unifié : Hotspot · VPN · Tunnels, endossée
-// « powered by FTech CI » (ftci.fr). Nouveau bloc `pages` (copie des pages
-// produit /hotspot, /vpn, /tunnels) et menu complet `header.nav`.
+// unifiée 403Shield (modèle Cloudflare/OVH : UN site marketing multipage à
+// menu complet + UNE console transactionnelle). La vitrine devient le site
+// unifié, endossée « powered by FTech CI » (ftci.fr).
 //
-// N°321 — la vitrine rattrape l'évolution 403Shield : les Tunnels
-// WireGuard deviennent un PILIER de la page d'accueil (4e super-pouvoir,
-// section dédiée, segment tarifs) et le VPN comme l'Accès Pro y sont
-// présentés comme UNE SEULE offre « un tunnel, deux usages » (même
-// WireGuard, même console, même boutique). Les prix catalogue tunnels
-// (1 500 / 15 000 / 3 500 / 35 000 FCFA) recopient les constantes produit
-// réelles du backend (publicvpnorder.go — familles b2c & pro) ; le prix
-// final par moyen de paiement reste calculé sur la boutique.
+// N°321 — les Tunnels WireGuard deviennent un PILIER de la page d'accueil et
+// le VPN comme l'Accès Pro y sont présentés comme UNE SEULE offre « un
+// tunnel, deux usages ». Prix catalogue tunnels (1 500 / 15 000 / 3 500 /
+// 35 000 FCFA) = constantes produit réelles du backend (publicvpnorder.go).
 //
-// N°322 — HomeNet cesse d'être un service indépendant de la vitrine : le
-// segment tarifs « homenet » (grille de 3 cartes parallèles) disparaît au
-// profit du tarif foyer LIÉ à l'offre Hotspot — les cartes de la grille
-// console portent le mode HomeNet en option à prix réduit (1 250 F/mois
-// /routeur · 12 000 F/an · essai 30 j : constantes catalogue tenant.go
-// N°122). Le sélecteur passe de 3 à 2 segments : l'abonnement console
-// (Hotspot · HomeNet) et la boutique tunnels — « un abonnement, un
-// tunnel », dans la lignée du « un tunnel, deux usages » de N°321.
+// N°324 — le mode HomeNet est SUPPRIMÉ du système (décision propriétaire) :
+// plateforme mono-mode Hotspot, la vitrine ne mentionne plus le foyer
+// nulle part. Les protections famille (FamilyGuard, couvre-feu) restent
+// disponibles sur tout routeur géré — seules les formules foyer disparaissent.
 //
-// N°324 — le mode HomeNet est SUPPRIMÉ du système (décision propriétaire,
-// suite et fin de N°322) : la console SaaS devient mono-mode Hotspot, les
-// formules foyer quittent le catalogue backend, la modale d'inscription
-// ne pose plus la question d'usage et la vitrine ne mentionne plus le
-// foyer nulle part (chips, marquee, sous-titres, notes devises, cartes).
-// Les protections famille (FamilyGuard, couvre-feu) restent disponibles
-// sur tout routeur géré — seules les formules/tarifs foyer disparaissent.
+// N°325 — intégration du PR #70 « Enterprise Multi-Page Landing Page
+// Redesign » (Jules, task 6313619506023410653) : header MegaMenu
+// Produits/Solutions façon Cloudflare + drawer mobile, section « Extension
+// ISP & Opérateurs », piliers étendus au Cybercafé/PPPoE. La refonte
+// reflète les capacités RÉELLES du backend Go — Hotspot Cloud & vouchers
+// 1-500 · Mode Vente revendeurs PIN · portail captif à votre marque ·
+// Module Cybercafé (postes, import DHCP, temps, codes de session) ·
+// Serveur PPPoE (provisionnement auto, secrets abonnés, reconnexion live) ·
+// Protection Cloud (4 boucliers) · Tunnels WireGuard (VPN IP fixe Marseille,
+// Accès Pro, LAN étendu) · Flotte & supervision (agent HTTP-poll, RouterOS
+// unitaire + flotte, QoS, Docteur Pool IP) · Sécurité & comptabilité (2FA
+// TOTP, multi-sites, bilans mensuels gelés, alertes Telegram/WhatsApp,
+// paiements Wave & Stripe). Aucune mention foyer — doctrine N°324 maintenue.
 
 export type Lang = "fr" | "en";
 
@@ -66,7 +53,6 @@ export interface ProductPageCopy {
     title2: string;
     subtitle: string;
     ctaPrimary: string;
-    /** "#signup" ouvre la modale d'inscription ; "#signin" va à /login ; chemin interne ("/tunnels") ou URL https externe. */
     ctaPrimaryHref: string;
     ctaSecondary: string;
     ctaSecondaryHref: string;
@@ -88,13 +74,24 @@ export interface ProductPageCopy {
   };
 }
 
+export interface MegaMenuItem {
+  title: string;
+  desc: string;
+  href: string;
+  badge?: string;
+}
+
+export interface MegaMenuCategory {
+  title: string;
+  items: MegaMenuItem[];
+}
+
 export interface LandingCopy {
   rail: {
     home: string;
     powers: string;
     protection: string;
     hotspot: string;
-    /** N°321 — ancre de la nouvelle section Tunnels WireGuard. */
     tunnels: string;
     fleet: string;
     pricing: string;
@@ -105,13 +102,19 @@ export interface LandingCopy {
     signUp: string;
     langLabel: string;
     homeLink: string;
-    /** N°317 — menu complet du site unifié (voie Cloudflare/OVH). */
     nav: {
       home: string;
+      products: string;
+      solutions: string;
       hotspot: string;
       vpn: string;
       tunnels: string;
       pricing: string;
+      docs: string;
+    };
+    megaMenu: {
+      products: MegaMenuCategory[];
+      solutions: MegaMenuCategory[];
     };
   };
   hero: {
@@ -155,7 +158,6 @@ export interface LandingCopy {
     kicker: string;
     title: string;
     body: string;
-    /** N°124 — clientèle cible du mode Hotspot + libellé du bandeau. */
     audience: string[];
     audienceLabel: string;
     feats: { title: string; desc: string }[];
@@ -165,9 +167,6 @@ export interface LandingCopy {
       peak: string;
     };
   };
-  /** N°321 — Tunnels WireGuard : UN service, deux usages (VPN personnel +
-      Accès Pro). La section existe pour rendre visible le lien entre le VPN
-      et les tunnels — même WireGuard, même console, même boutique. */
   tunnels: {
     kicker: string;
     title: string;
@@ -192,6 +191,12 @@ export interface LandingCopy {
       updateAll: string;
     };
   };
+  ispExtension: {
+    kicker: string;
+    title: string;
+    subtitle: string;
+    feats: { title: string; desc: string; tag: string }[];
+  };
   stats: { value: number; label: string }[];
   pricing: {
     eyebrow: string;
@@ -199,7 +204,9 @@ export interface LandingCopy {
     subtitle: string;
     /** N°122 — aria-label du sélecteur de comptoir (console / boutique).
         N°324 — 2 segments : l'abonnement console (Hotspot) et la boutique
-        tunnels. */
+        tunnels. N°325 — le segment console s'étiquette « Hotspot ·
+        Cybercafé » : le module cybercafé est inclus dans l'abonnement
+        (N°290) — le foyer, lui, n'existe plus (N°324). */
     modesLabel: string;
     /** N°122 — tarifs segmentés par mode : chaque mode a ses 3 formules.
         N°321 — 3e segment « tunnels » (boutique dédiée, CTA liens externes).
@@ -210,7 +217,6 @@ export interface LandingCopy {
       id: "hotspot" | "tunnels";
       label: string;
       hint: string;
-      /** N°124 — clientèle cible (chips clay) — uniquement le mode Hotspot. */
       audience?: string[];
       plans: {
         name: string;
@@ -221,8 +227,6 @@ export interface LandingCopy {
         highlight: boolean;
         features: string[];
         badge?: string;
-        /** N°321 — cible externe (boutique/console) : le bouton devient un
-            lien nouvel onglet au lieu d'ouvrir la modale d'inscription. */
         href?: string;
       }[];
     }[];
@@ -232,8 +236,6 @@ export interface LandingCopy {
     fabLabel: string;
     openLabel: string;
     closeLabel: string;
-    /** N°131 — bulle d'invitation flottant à côté du bouton chat
-        (animation « wahou » de découverte). */
     tease: string;
     title: string;
     statusBot: string;
@@ -260,10 +262,8 @@ export interface LandingCopy {
   footer: {
     tagline: string;
     columns: { title: string; links: { label: string; href: string; external?: boolean }[] }[];
-    /** N°70 — libellé du lien vers /legal/confidentialite. */
     legal: string;
   };
-  /** N°317 — pages produit du site unifié (multipage, menu complet). */
   pages: {
     hotspot: ProductPageCopy;
     vpn: ProductPageCopy;
@@ -277,7 +277,6 @@ const fr: LandingCopy = {
     powers: "Super-pouvoirs",
     protection: "Protection",
     hotspot: "Hotspot",
-    // N°321 — le tunnel unifié entre au rail : VPN & Accès Pro, un seul service.
     tunnels: "Tunnels WireGuard",
     fleet: "Parc routeurs",
     pricing: "Tarifs",
@@ -290,22 +289,95 @@ const fr: LandingCopy = {
     homeLink: "Retour à l'accueil",
     nav: {
       home: "Accueil",
+      products: "Produits",
+      solutions: "Solutions",
       hotspot: "Hotspot",
       vpn: "VPN",
-      // N°321 — libellé famille : le nav porte UNE entrée « Tunnels WireGuard »
-      // (→ /tunnels) ; la page /vpn reste liée depuis /tunnels, le footer,
-      // la section tunnels et le segment tarifs.
       tunnels: "Tunnels WireGuard",
       pricing: "Tarifs",
+      docs: "Guides & Docs",
+    },
+    megaMenu: {
+      products: [
+        {
+          title: "Accès & Rentabilité",
+          items: [
+            {
+              title: "Hotspot WiFi Cloud",
+              desc: "Portail captif à votre marque, vouchers en lot, forfaits débits/durée et gestion revendeurs.",
+              href: "/hotspot",
+              badge: "Paiement Wave",
+            },
+            {
+              title: "Gestion Cybercafé",
+              desc: "Attribution automatique de temps, postes de travail, import DHCP et tickets de session.",
+              href: "/#hotspot",
+            },
+            {
+              title: "Gestionnaire PPPoE ISP",
+              desc: "Provisionnement automatique des abonnés, secrets d'accès et reconnexion live MikroTik.",
+              href: "/#hotspot",
+            },
+          ],
+        },
+        {
+          title: "Sécurité & Infra Cloud",
+          items: [
+            {
+              title: "Protection Cloud (4 Boucliers)",
+              desc: "SafeWiFi DNS Quad9, Shield anti-piratage WiFi, FamilyGuard couvre-feu et AntiVPN.",
+              href: "/#protection",
+              badge: "Auto-réparation",
+            },
+            {
+              title: "Tunnels WireGuard & VPN",
+              desc: "IP fixe France dédiée à Marseille, Accès Pro pour routeurs et LAN étendu caméras/NAS.",
+              href: "/tunnels",
+            },
+            {
+              title: "Pilotage de Flotte MikroTik",
+              desc: "Supervision live, QoS Manager, Docteur Pool IP et mise à jour RouterOS en un clic.",
+              href: "/#parc",
+            },
+          ],
+        },
+      ],
+      solutions: [
+        {
+          title: "Secteurs & Usages",
+          items: [
+            {
+              title: "Hôtellerie & Restauration",
+              desc: "WiFi visiteurs élégant, promos intégrées, réseaux sociaux et portail hospitalité.",
+              href: "/hotspot",
+            },
+            {
+              title: "Cybercafés & Salles de Jeu",
+              desc: "Gestion automatisée des postes, tickets de temps et coupure automatique.",
+              href: "/hotspot",
+            },
+            {
+              title: "PME & Fournisseurs d'Accès",
+              desc: "Interconnexion multi-sites, supervision de parc et gestion d'abonnés PPPoE.",
+              href: "/tunnels",
+            },
+            {
+              title: "Travailleurs Nomades & Télétravail",
+              desc: "VPN personnel à IP fixe France, DNS filtrés et accès distant à vos réseaux — où que vous travailliez.",
+              href: "/vpn",
+            },
+          ],
+        },
+      ],
     },
   },
   hero: {
-    badge: "403Shield · Hotspot · VPN · Tunnels",
-    title1: "Votre réseau, sous",
-    titleAccent: "bouclier.",
+    badge: "403Shield · Hotspot · VPN · Tunnels · PPPoE · Cybercafé",
+    title1: "Votre réseau,",
+    titleAccent: "sous bouclier.",
     title2: "",
     subtitle:
-      "L'erreur 403, c'est pour les autres. Hotspot WiFi public rentable, quatre boucliers pare-feu dans le cloud, et un seul tunnel WireGuard pour tous vos usages — VPN personnel à IP fixe France, Accès Pro pour vos routeurs, caméras et NAS : 403Shield réunit une suite complète de sécurité réseau pour les travailleurs nomades, les entreprises et les particuliers — powered by FTech CI.",
+      "L'erreur 403, c'est pour les autres. Hotspot WiFi public rentable, quatre boucliers pare-feu dans le cloud, gestionnaire PPPoE & Cybercafé, et un tunnel WireGuard unifié pour tous vos usages (VPN IP fixe France, Accès Pro routeurs, caméras & NAS) : 403Shield réunit la plateforme réseau cloud de référence — powered by FTech CI.",
     ctaPrimary: "Protéger mon réseau",
     ctaSecondary: "Découvrir la suite",
     trialHint: "Essai gratuit · sans carte bancaire — 60 jours",
@@ -315,6 +387,8 @@ const fr: LandingCopy = {
     "Vouchers & codes d'accès",
     "VPN WireGuard · IP fixe France",
     "Filtrage DNS Quad9",
+    "Gestionnaire PPPoE & Abonnés",
+    "Module Cybercafé & Postes",
     "Un seul tunnel, deux usages",
     "Anti-piratage WiFi",
     "Accès distant Pro — routeurs, caméras, NAS",
@@ -327,21 +401,19 @@ const fr: LandingCopy = {
     "Paiement Wave & Mobile Money",
   ],
   powers: {
-    // N°321 — quatre piliers : les Tunnels WireGuard rejoignent le panthéon
-    // (la vitrine n'est plus figée sur l'ère hotspot).
-    eyebrow: "Une suite, quatre piliers",
+    eyebrow: "Une suite, quatre piliers d'excellence",
     title: "Tout ce qu'il faut pour régner sur votre réseau.",
     subtitle:
-      "Hotspot rentable, protection cloud, pilotage de parc et tunnels WireGuard : 403Shield réunit en une seule suite tout ce que votre infrastructure réclame — sans Winbox, sans serveur à maintenir.",
+      "Hotspot rentable, protection cloud, pilotage de parc, gestion d'abonnés PPPoE/Cybercafé et tunnels WireGuard : 403Shield réunit en une seule suite tout ce que votre infrastructure réclame — sans Winbox obligatoire, sans serveur à maintenir.",
     cards: [
       {
         tag: "Fondation",
-        title: "Gestion Hotspot",
-        desc: "Le pilier fondateur de la suite : portails captifs à votre marque, vouchers par lots, quotas et bridage au forfait, sessions en direct.",
+        title: "Hotspot & Cybercafé",
+        desc: "Le pilier fondateur de la suite : portails captifs à votre marque, vouchers par lots (1-500), gestion des postes cybercafé, quotas et bridage au forfait, sessions en direct.",
         items: [
           "Portail captif 100 % à votre marque",
           "Vouchers par lots jusqu'à 500",
-          "Quota, débit et durée par forfait",
+          "Module Cybercafé & import DHCP auto",
           "Mode Vente & revendeurs avec PIN",
         ],
       },
@@ -357,13 +429,13 @@ const fr: LandingCopy = {
         ],
       },
       {
-        tag: "Parc",
-        title: "Pilotage du parc",
-        desc: "Télémétrie live, mise à jour RouterOS en un clic — routeur par routeur ou tout le parc d'un geste — et qualité de ligne mesurée en continu.",
+        tag: "Parc & ISP",
+        title: "Pilotage & PPPoE ISP",
+        desc: "Télémétrie live, mise à jour RouterOS en un clic, gestion des abonnés PPPoE, QoS Manager et qualité de ligne mesurée en continu.",
         items: [
-          "Mise à jour RouterOS sans Winbox",
+          "Serveur PPPoE & secrets abonnés",
+          "Mise à jour RouterOS de flotte",
           "Télémétrie CPU, mémoire, uptime",
-          "QoS agrégée & forfait FAI",
           "Docteur Pool IP & auto-réparation",
         ],
       },
@@ -421,9 +493,9 @@ const fr: LandingCopy = {
     },
   },
   hotspot: {
-    kicker: "Gestion hotspot",
-    title: "Un portail captif dont vous serez fier.",
-    body: "Offrez à vos clients une connexion fluide et soignée — à votre marque, sans aucune mention 403Shield. Vouchers à durée, quota ou multi-appareils : vous gardez le contrôle total. Vos revendeurs ? Ils vendent depuis leur téléphone : PWA protégée par PIN, stock transféré, ventes hors-ligne, rapport de journée.",
+    kicker: "Gestion hotspot & cybercafé",
+    title: "Un portail captif et un espace de vente dont vous serez fier.",
+    body: "Offrez à vos clients une connexion fluide et soignée — à votre marque, sans aucune mention 403Shield. Vouchers à durée, quota, multi-appareils ou tickets cybercafé : vous gardez le contrôle total. Vos revendeurs vendent depuis leur téléphone : PWA protégée par PIN, stock transféré, ventes hors-ligne, rapport de journée.",
     audience: ["Hôtels", "Cybercafés", "Maquis", "Boutiques", "Campus", "Restaurants"],
     audienceLabel: "Pour qui ?",
     feats: [
@@ -436,8 +508,12 @@ const fr: LandingCopy = {
         desc: "Durée, quota de données, débit, 1 à 10 appareils — et à l'épuisement : couper ou brider en douceur.",
       },
       {
-        title: "Statistiques en direct",
-        desc: "Affluence horaire, revenus, marge par profil, canaux directs et revendeurs.",
+        title: "Espace Cybercafé intégré",
+        desc: "Attribution directe de temps d'écran, import automatique des bails DHCP et libération de poste en 1 clic.",
+      },
+      {
+        title: "Statistiques & Caisse en direct",
+        desc: "Affluence horaire, revenus, marge par profil, journaux de caisse exportables CSV et suivi revendeurs.",
       },
     ],
     panel: {
@@ -446,8 +522,6 @@ const fr: LandingCopy = {
       peak: "24 h",
     },
   },
-  /* N°321 — LE service unifié : VPN personnel et Accès Pro rendus comme
-     deux usages d'un MÊME tunnel WireGuard (même console, même boutique). */
   tunnels: {
     kicker: "Tunnels WireGuard",
     title: "Un seul tunnel chiffré, tous vos réseaux.",
@@ -510,11 +584,37 @@ const fr: LandingCopy = {
       updateAll: "Mettre à jour le parc",
     },
   },
+  ispExtension: {
+    kicker: "Extension Opérateurs & Fournisseurs d'Accès",
+    title: "Gestion d'abonnés PPPoE & Multi-Sites à grande échelle.",
+    subtitle: "Transformez vos routeurs MikroTik en nœuds de distribution ISP professionnels sans complexité d'infrastructure.",
+    feats: [
+      {
+        tag: "PPPoE Server Auto",
+        title: "Provisionnement d'abonnés PPPoE",
+        desc: "Détection automatique des pools LAN et création de profils abonnés sur les serveurs PPPoE MikroTik via agent binaire.",
+      },
+      {
+        tag: "Reconnexion Live",
+        title: "Kick & Renouvellement instantané",
+        desc: "Déconnectez ou renouvelez le forfait d'un abonné PPPoE en un clic depuis le dashboard d'administration.",
+      },
+      {
+        tag: "Comptabilité Multi-Sites",
+        title: "Rapports & Clôtures mensuelles gelées",
+        desc: "Agrégez les revenus de plusieurs établissements ou nœuds réseau avec archivage certifié de journal de caisse.",
+      },
+      {
+        tag: "Sécurité Rapprochée",
+        title: "Authentification 2FA TOTP & Rôles Team",
+        desc: "Accès sécurisé par double facteur TOTP et gestion d'équipe fine (Propriétaire, Gérant, Opérateur).",
+      },
+    ],
+  },
   stats: [
     { value: 500, label: "vouchers par lot" },
     { value: 4, label: "boucliers pare-feu" },
     { value: 54, label: "pays africains visés" },
-    // N°321 — le 4e chiffre porte le message unifié du tunnel.
     { value: 2, label: "usages du tunnel — VPN & Accès Pro" },
   ],
   pricing: {
@@ -526,54 +626,55 @@ const fr: LandingCopy = {
     segments: [
       {
         id: "hotspot",
-        label: "Hotspot",
-        hint: "Hôtels, cybercafés, maquis, boutiques, campus… : vouchers, portail captif et vente d'accès avec vos revendeurs.",
+        label: "Hotspot · Cybercafé",
+        hint: "Hôtels, cybercafés, maquis, boutiques, campus, FAI… : vouchers, portail captif, module cybercafé et vente d'accès avec vos revendeurs — tout sur la même formule.",
         audience: ["Hôtels", "Cybercafés", "Maquis", "Boutiques", "Campus", "Restaurants"],
         plans: [
-      {
-        name: "Découverte",
-        price: "0",
-        period: "FCFA · 60 jours",
-        tagline: "Pour découvrir 403Shield sans risque",
-        cta: "Commencer gratuitement",
-        highlight: false,
-        features: [
-          "1 routeur · toutes les fonctions",
-          "4 protections incluses",
-          "Mode Vente & revendeurs",
-          "Sans carte bancaire",
-        ],
-      },
-      {
-        name: "Hotspot Annuel",
-        price: "25 000",
-        period: "FCFA / an",
-        tagline: "Tous vos routeurs, un seul prix",
-        cta: "Passer à l'annuel",
-        highlight: true,
-        badge: "Le plus choisi",
-        features: [
-          "Routeurs illimités",
-          "4 protections sur tout le parc",
-          "Mises à jour RouterOS de flotte",
-          "Notifications Telegram & WhatsApp",
-          "Support prioritaire",
-        ],
-      },
-      {
-        name: "Hotspot Mensuel",
-        price: "2 500",
-        period: "FCFA / mois / routeur",
-        tagline: "Payez au fil de votre croissance",
-        cta: "Choisir le mensuel",
-        highlight: false,
-        features: [
-          "Par routeur actif",
-          "Sans engagement",
-          "Résiliable à tout moment",
-          "Toutes les fonctions incluses",
-        ],
-      },
+          {
+            name: "Découverte",
+            price: "0",
+            period: "FCFA · 60 jours",
+            tagline: "Pour découvrir 403Shield sans risque",
+            cta: "Commencer gratuitement",
+            highlight: false,
+            features: [
+              "1 routeur · toutes les fonctions",
+              "4 protections incluses",
+              "Mode Vente & revendeurs",
+              "Sans carte bancaire",
+            ],
+          },
+          {
+            name: "Hotspot Annuel",
+            price: "25 000",
+            period: "FCFA / an",
+            tagline: "Tous vos routeurs, un seul prix",
+            cta: "Passer à l'annuel",
+            highlight: true,
+            badge: "Le plus choisi",
+            features: [
+              "Routeurs illimités",
+              "4 protections sur tout le parc",
+              "Gestionnaire Cybercafé & PPPoE",
+              "Mises à jour RouterOS de flotte",
+              "Notifications Telegram & WhatsApp",
+              "Support prioritaire",
+            ],
+          },
+          {
+            name: "Hotspot Mensuel",
+            price: "2 500",
+            period: "FCFA / mois / routeur",
+            tagline: "Payez au fil de votre croissance",
+            cta: "Choisir le mensuel",
+            highlight: false,
+            features: [
+              "Par routeur actif",
+              "Sans engagement",
+              "Résiliable à tout moment",
+              "Toutes les fonctions incluses",
+            ],
+          },
         ],
       },
       /* N°321 — segment boutique : les Tunnels WireGuard. Prix catalogue =
@@ -582,8 +683,8 @@ const fr: LandingCopy = {
          (/checkout, modèle OVH) : les CTA VPN pointent en INTERNE avec la
          formule présélectionnée (?plan= ouvre la caisse), l'Accès Pro reste
          sur la console (/pro) — jamais via la modale SaaS. N°322 — 2e
-         segment du sélecteur, l'abonnement console (Hotspot) étant le
-         premier. */
+         segment du sélecteur, l'abonnement console (Hotspot · Cybercafé
+         depuis N°325) étant le premier. */
       {
         id: "tunnels",
         label: "Tunnels · boutique",
@@ -676,14 +777,12 @@ const fr: LandingCopy = {
   },
   footer: {
     tagline:
-      "La suite sécurité réseau cloud : Hotspot, protection et tunnels WireGuard — VPN & Accès Pro — powered by FTech CI.",
+      "La suite sécurité réseau cloud : Hotspot, protection, cybercafé, PPPoE et tunnels WireGuard — VPN & Accès Pro — powered by FTech CI.",
     columns: [
       {
         title: "Produit",
         links: [
-          { label: "Hotspot", href: "/hotspot" },
-          // N°321 — la famille tunnels est explicite dans les libellés : le VPN
-          // et l'Accès Pro sont les deux usages du MÊME tunnel WireGuard.
+          { label: "Hotspot & Cybercafé", href: "/hotspot" },
           { label: "VPN — Tunnels WireGuard", href: "/vpn" },
           { label: "Accès Pro — Tunnels WireGuard", href: "/tunnels" },
           { label: "Protection cloud", href: "/#protection" },
@@ -696,7 +795,6 @@ const fr: LandingCopy = {
           { label: "Se connecter", href: "/login" },
           { label: "Mode Vente", href: "/sell" },
           { label: "Connexion WiFi jetable", href: "/wifi" },
-          // N°304 — documentation publique d'exploitation.
           { label: "Guides d'exploitation", href: "/docs/guides" },
         ],
       },
@@ -705,12 +803,6 @@ const fr: LandingCopy = {
         links: [{ label: "Politique de confidentialité", href: "/legal/confidentialite" }],
       },
       {
-        // N°317 — écosystème : maison-mère FTech CI, console et boutique VPN.
-        // N°321 — URLs canoniques console.403shield.ftci.fr (tunnel.ftci.fr
-        // répond 301 depuis N°320 — on évite le saut supplémentaire).
-        // N°323 — la console est une PURE application (racine → /login,
-        // pattern dash.cloudflare.com) ; la boutique vit sur le site
-        // (/checkout, lien interne — modèle OVH « commander sur www »).
         title: "Écosystème",
         links: [
           { label: "FTech CI", href: "https://ftci.fr", external: true },
@@ -722,21 +814,20 @@ const fr: LandingCopy = {
     legal: "Politique de confidentialité",
   },
 
-  /* N°317 — pages produit du site unifié (/hotspot, /vpn, /tunnels). */
   pages: {
     hotspot: {
       meta: {
-        title: "403Shield Hotspot — WiFi public rentable et blindé",
+        title: "403Shield Hotspot & Cybercafé — WiFi public rentable et blindé",
         description:
-          "Vouchers par lots de 500, portail captif 100 % à votre marque, Mode Vente et revendeurs, 4 boucliers pare-feu : exploitez un WiFi public rentable, piloté depuis le cloud.",
+          "Vouchers par lots de 500, module Cybercafé, portail captif 100 % à votre marque, Mode Vente et revendeurs, 4 boucliers pare-feu : exploitez un réseau rentable, piloté depuis le cloud.",
       },
       hero: {
-        badge: "403Shield Hotspot",
-        title1: "Votre WiFi public,",
+        badge: "403Shield Hotspot & Cybercafé",
+        title1: "Votre réseau public,",
         titleAccent: "rentable",
         title2: "et blindé.",
         subtitle:
-          "Hôtels, cybercafés, maquis, boutiques, campus : vendez l'accès internet par vouchers, à votre marque, avec vos revendeurs — pendant que quatre boucliers pare-feu veillent sur le réseau. Essai gratuit 60 jours, sans carte bancaire.",
+          "Hôtels, cybercafés, maquis, boutiques, campus, FAI : vendez l'accès internet par vouchers ou tickets de temps, à votre marque, avec vos revendeurs — pendant que quatre boucliers pare-feu veillent sur le réseau. Essai gratuit 60 jours, sans carte bancaire.",
         ctaPrimary: "Démarrer l'essai gratuit",
         ctaPrimaryHref: "#signup",
         ctaSecondary: "Voir les tarifs",
@@ -744,7 +835,7 @@ const fr: LandingCopy = {
       },
       features: {
         eyebrow: "Ce que fait 403Shield Hotspot",
-        title: "Le WiFi public, transformé en business.",
+        title: "Le WiFi public et le cybercafé, transformés en business.",
         cards: [
           {
             title: "Portail captif 100 % à votre marque",
@@ -755,17 +846,17 @@ const fr: LandingCopy = {
             desc: "Durée, quota de données, débit, 1 à 10 appareils — et à l'épuisement : couper ou brider en douceur. Jusqu'à 500 vouchers par lot.",
           },
           {
-            title: "Mode Vente & revendeurs",
-            desc: "Vos revendeurs vendent depuis leur téléphone : PWA protégée par PIN, stock transféré, ventes hors-ligne, rapport de journée.",
+            title: "Module Cybercafé & Postes",
+            desc: "Gestion automatisée des temps d'écran, import automatique DHCP et arrêt à distance des postes de travail.",
           },
           {
-            title: "Statistiques en direct",
-            desc: "Affluence horaire, revenus, marge par profil, canaux directs et revendeurs — tout ce qui se mesure se pilote.",
+            title: "Mode Vente & revendeurs",
+            desc: "Vos revendeurs vendent depuis leur téléphone : PWA protégée par PIN, stock transféré, ventes hors-ligne, rapport de journée.",
           },
         ],
       },
       cta: {
-        kicker: "Prêt à lancer votre hotspot ?",
+        kicker: "Prêt à lancer votre hotspot ou cybercafé ?",
         title: "60 jours d'essai, sans carte bancaire.",
         body: "Créez votre compte, collez le script agent sur votre routeur MikroTik, configurez votre premier forfait. Sans serveur à maintenir, sans Winbox.",
         primary: "Créer mon compte gratuit",
@@ -781,7 +872,6 @@ const fr: LandingCopy = {
           "Un VPN WireGuard qui sort par notre serveur de Marseille avec une IP fixe France dédiée. Activation en 30 secondes, paiement Wave ou carte, géré depuis votre espace sans mot de passe.",
       },
       hero: {
-        // N°321 — badge famille : le VPN est un usage du tunnel WireGuard 403Shield.
         badge: "Tunnels WireGuard · VPN",
         title1: "Une IP fixe France.",
         titleAccent: "À vous seul.",
@@ -816,7 +906,6 @@ const fr: LandingCopy = {
         ],
       },
       note: {
-        // N°321 — la note porte le message unifié : un tunnel, deux usages.
         title: "Un seul tunnel, deux usages.",
         body: "Mensuel sans engagement, ou annuel — 10 mois payés, 2 offerts. Prix en FCFA sur la boutique, remise mobile money incluse. Et quand vos réseaux doivent passer par le même chemin : l'Accès Pro étend ce même tunnel WireGuard à vos routeurs, caméras et NAS — même console, même boutique.",
       },
@@ -832,7 +921,6 @@ const fr: LandingCopy = {
     },
     tunnels: {
       meta: {
-        // N°321 — hub de la famille : le meta couvre les DEUX usages du tunnel.
         title: "403Shield Tunnels WireGuard — VPN IP fixe France & Accès Pro : routeurs, caméras, NAS",
         description:
           "Un seul tunnel WireGuard chiffré, hébergé à Marseille : VPN personnel à IP fixe France et Accès Pro pour superviser routeurs MikroTik, caméras et NAS. Console sans mot de passe, payable en Mobile Money.",
@@ -846,8 +934,6 @@ const fr: LandingCopy = {
           "VPN personnel à IP fixe France, Accès Pro pour vos routeurs, LAN étendu pour caméras et NAS : le même tunnel WireGuard chiffré de bout en bout, hébergé à Marseille — une console, une boutique, un abonnement. Achat, gestion et renouvellement au même endroit.",
         ctaPrimary: "Acheter mon VPN",
         ctaPrimaryHref: "/checkout",
-        // Lien croisé interne : la page VPN (usage personnel) reste à un clic
-        // du hub famille — la console, elle, vit dans le CTA final ci-dessous.
         ctaSecondary: "Découvrir le VPN",
         ctaSecondaryHref: "/vpn",
       },
@@ -856,7 +942,6 @@ const fr: LandingCopy = {
         title: "Le pont privé entre vous et vos réseaux.",
         cards: [
           {
-            // N°321 — carte pivot : le VPN présenté comme le MÊME tunnel.
             title: "VPN personnel — le même tunnel",
             desc: "Votre trafic chiffré de bout en bout sort par Marseille avec une IP fixe France dédiée. C'est le même WireGuard, la même console — que vous protégiez vos déplacements ou supervisiez un parc.",
           },
@@ -893,7 +978,6 @@ const en: LandingCopy = {
     powers: "Superpowers",
     protection: "Protection",
     hotspot: "Hotspot",
-    // N°321 — the unified tunnel joins the rail: VPN & Pro Access, one service.
     tunnels: "WireGuard tunnels",
     fleet: "Router fleet",
     pricing: "Pricing",
@@ -906,22 +990,95 @@ const en: LandingCopy = {
     homeLink: "Back to home",
     nav: {
       home: "Home",
+      products: "Products",
+      solutions: "Solutions",
       hotspot: "Hotspot",
       vpn: "VPN",
-      // N°321 — family label: the nav carries ONE "WireGuard tunnels" entry
-      // (→ /tunnels); the /vpn page stays linked from /tunnels, the footer,
-      // the tunnels section and the pricing segment.
       tunnels: "WireGuard tunnels",
       pricing: "Pricing",
+      docs: "Guides & Docs",
+    },
+    megaMenu: {
+      products: [
+        {
+          title: "Access & Profitability",
+          items: [
+            {
+              title: "Hotspot WiFi Cloud",
+              desc: "White-label captive portal, batch vouchers, speed/duration plans, and reseller management.",
+              href: "/hotspot",
+              badge: "Wave Payment",
+            },
+            {
+              title: "Cybercafé Management",
+              desc: "Automatic screen time allocation, workstations, DHCP import, and session tickets.",
+              href: "/#hotspot",
+            },
+            {
+              title: "ISP PPPoE Manager",
+              desc: "Automated subscriber provisioning, access secrets, and live MikroTik reconnection.",
+              href: "/#hotspot",
+            },
+          ],
+        },
+        {
+          title: "Security & Cloud Infra",
+          items: [
+            {
+              title: "Cloud Protection (4 Shields)",
+              desc: "SafeWiFi Quad9 DNS, Shield WiFi anti-hacking, FamilyGuard curfew, and AntiVPN.",
+              href: "/#protection",
+              badge: "Self-healing",
+            },
+            {
+              title: "WireGuard Tunnels & VPN",
+              desc: "Dedicated France fixed IP in Marseille, Pro Access for routers, and extended LAN for CCTV/NAS.",
+              href: "/tunnels",
+            },
+            {
+              title: "MikroTik Fleet Control",
+              desc: "Live telemetry, QoS Manager, IP Pool Doctor, and one-click RouterOS updates.",
+              href: "/#parc",
+            },
+          ],
+        },
+      ],
+      solutions: [
+        {
+          title: "Sectors & Use Cases",
+          items: [
+            {
+              title: "Hospitality & Restaurants",
+              desc: "Elegant visitor WiFi, integrated promos, social links, and hospitality portal.",
+              href: "/hotspot",
+            },
+            {
+              title: "Cybercafés & Gaming Arenas",
+              desc: "Automated workstation management, time tickets, and automatic cut-off.",
+              href: "/hotspot",
+            },
+            {
+              title: "SMEs & ISPs",
+              desc: "Multi-site interconnection, fleet supervision, and PPPoE subscriber management.",
+              href: "/tunnels",
+            },
+            {
+              title: "Nomads & Remote Workers",
+              desc: "Personal fixed French IP VPN, filtered DNS and remote access to your networks — wherever you work.",
+              href: "/vpn",
+            },
+          ],
+        },
+      ],
     },
   },
   hero: {
-    badge: "403Shield · Hotspot · VPN · Tunnels",
+    badge: "403Shield · Hotspot · VPN · Tunnels · PPPoE · Cybercafé",
     title1: "Your network,",
     titleAccent: "shielded.",
     title2: "",
     subtitle:
-      "Error 403 is for the others. A revenue-ready public Hotspot, four cloud firewall shields, and a single WireGuard tunnel for every use — a personal VPN with a fixed French IP, Pro Access for your routers, cameras and NAS: 403Shield brings together a complete network security suite for nomadic workers and businesses — powered by FTech CI.",
+      "Error 403 is for the others. A revenue-ready public Hotspot, four cloud firewall shields, PPPoE & Cybercafé manager, and a unified WireGuard tunnel for all your uses (fixed French IP VPN, Pro Access for routers, cameras & NAS): 403Shield brings together the reference cloud network platform — powered by FTech CI.",
     ctaPrimary: "Protect my network",
     ctaSecondary: "Explore the suite",
     trialHint: "Free trial · no credit card — 60 days",
@@ -931,6 +1088,8 @@ const en: LandingCopy = {
     "Vouchers & access codes",
     "WireGuard VPN · fixed French IP",
     "Quad9 DNS filtering",
+    "PPPoE & Subscriber Manager",
+    "Cybercafé Module & Stations",
     "One tunnel, two uses",
     "WiFi anti-hacking",
     "Pro remote access — routers, cameras, NAS",
@@ -943,21 +1102,19 @@ const en: LandingCopy = {
     "Wave & Mobile Money payments",
   ],
   powers: {
-    // N°321 — four pillars: WireGuard tunnels join the pantheon (the landing
-    // is no longer frozen on the hotspot era).
-    eyebrow: "One suite, four pillars",
+    eyebrow: "One suite, four pillars of excellence",
     title: "Everything you need to rule your network.",
     subtitle:
-      "A profitable Hotspot, cloud protection, fleet control and WireGuard tunnels: 403Shield gathers in a single suite everything your infrastructure demands — no Winbox, no server to maintain.",
+      "A profitable Hotspot, cloud protection, fleet control, PPPoE/Cybercafé management and WireGuard tunnels: 403Shield gathers in a single suite everything your infrastructure demands — no mandatory Winbox, no server to maintain.",
     cards: [
       {
         tag: "Foundation",
-        title: "Hotspot Management",
-        desc: "The suite's founding pillar: white-label captive portals, batch vouchers, per-plan quotas and throttling, live sessions.",
+        title: "Hotspot & Cybercafé",
+        desc: "The suite's founding pillar: white-label captive portals, batch vouchers (1-500), cybercafé station management, per-plan quotas and throttling, live sessions.",
         items: [
           "100% white-label captive portal",
           "Voucher batches up to 500",
-          "Quota, bandwidth & duration per plan",
+          "Cybercafé module & auto DHCP import",
           "Sell Mode & PIN-protected resellers",
         ],
       },
@@ -973,13 +1130,13 @@ const en: LandingCopy = {
         ],
       },
       {
-        tag: "Fleet",
-        title: "Fleet Control",
-        desc: "Live telemetry, one-click RouterOS updates — router by router or the whole fleet at once — and continuously measured line quality.",
+        tag: "Fleet & ISP",
+        title: "Fleet Control & PPPoE ISP",
+        desc: "Live telemetry, one-click RouterOS updates, PPPoE subscriber management, QoS Manager and continuously measured line quality.",
         items: [
-          "RouterOS updates without Winbox",
+          "PPPoE server & subscriber secrets",
+          "Fleet RouterOS updates",
           "CPU, memory & uptime telemetry",
-          "Aggregate QoS & ISP plan",
           "IP pool doctor & self-healing",
         ],
       },
@@ -1037,23 +1194,27 @@ const en: LandingCopy = {
     },
   },
   hotspot: {
-    kicker: "Hotspot management",
-    title: "A captive portal you'll be proud of.",
-    body: "Give your customers a smooth, polished connection — under your brand, with zero 403Shield mention. Duration, quota or multi-device vouchers: you keep total control. Your resellers? They sell straight from their phone: PIN-protected PWA, transferred stock, offline sales, end-of-day report.",
+    kicker: "Hotspot & Cybercafé management",
+    title: "A captive portal and point of sale you'll be proud of.",
+    body: "Give your customers a smooth, polished connection — under your brand, with zero 403Shield mention. Duration, quota, multi-device vouchers or cybercafé tickets: you keep total control. Your resellers? They sell straight from their phone: PIN-protected PWA, transferred stock, offline sales, end-of-day report.",
     audience: ["Hotels", "Cybercafés", "Bars", "Shops", "Campuses", "Restaurants"],
     audienceLabel: "Who is it for?",
     feats: [
       {
         title: "100% custom branding",
-        desc: "Commercial mode with price grid and Wave payments, or hospitality mode with promos and social links.",
+        desc: "Commercial mode with rate card and Wave payments, or hospitality mode with promos and social links.",
       },
       {
         title: "Vouchers & plans",
-        desc: "Duration, data quota, bandwidth, 1 to 10 devices — and when exhausted: cut off or softly throttle.",
+        desc: "Duration, data quota, bandwidth, 1 to 10 devices — and when exhausted: cut off or throttle gently.",
       },
       {
-        title: "Live statistics",
-        desc: "Hourly footfall, revenue, margin per plan, direct and reseller channels.",
+        title: "Integrated Cybercafé Space",
+        desc: "Direct allocation of screen time, automatic DHCP leases import and 1-click station release.",
+      },
+      {
+        title: "Live Statistics & Cash Control",
+        desc: "Hourly footfall, revenue, margin per plan, CSV exportable cash registers and reseller tracking.",
       },
     ],
     panel: {
@@ -1062,8 +1223,6 @@ const en: LandingCopy = {
       peak: "24 h",
     },
   },
-  /* N°321 — THE unified service: personal VPN and Pro Access rendered as
-     two uses of ONE WireGuard tunnel (same console, same shop). */
   tunnels: {
     kicker: "WireGuard tunnels",
     title: "One encrypted tunnel, every network of yours.",
@@ -1126,11 +1285,37 @@ const en: LandingCopy = {
       updateAll: "Update the fleet",
     },
   },
+  ispExtension: {
+    kicker: "Carrier & ISP Extension",
+    title: "Large Scale PPPoE Subscriber & Multi-Site Management.",
+    subtitle: "Turn your MikroTik routers into professional ISP distribution nodes without infrastructure complexity.",
+    feats: [
+      {
+        tag: "PPPoE Server Auto",
+        title: "PPPoE Subscriber Provisioning",
+        desc: "Automatic detection of LAN pools and creation of subscriber profiles on MikroTik PPPoE servers via binary agent.",
+      },
+      {
+        tag: "Live Reconnect",
+        title: "Instant Kick & Renewal",
+        desc: "Disconnect or renew a PPPoE subscriber's plan in one click directly from the admin dashboard.",
+      },
+      {
+        tag: "Multi-Site Accounting",
+        title: "Reports & Frozen Monthly Closings",
+        desc: "Aggregate revenue across multiple locations or network nodes with certified cash journal archiving.",
+      },
+      {
+        tag: "Close-up Security",
+        title: "2FA TOTP Auth & Team Roles",
+        desc: "Secured access with two-factor TOTP authentication and fine-grained team management (Owner, Manager, Operator).",
+      },
+    ],
+  },
   stats: [
     { value: 500, label: "vouchers per batch" },
     { value: 4, label: "firewall shields" },
     { value: 54, label: "African countries" },
-    // N°321 — the 4th figure carries the unified tunnel message.
     { value: 2, label: "uses of the tunnel — VPN & Pro Access" },
   ],
   pricing: {
@@ -1142,62 +1327,63 @@ const en: LandingCopy = {
     segments: [
       {
         id: "hotspot",
-        label: "Hotspot",
-        hint: "Hotels, cybercafés, bars, shops, campuses…: vouchers, captive portal and access sales through your resellers.",
+        label: "Hotspot · Cybercafé",
+        hint: "Hotels, cybercafés, bars, shops, campuses, ISPs…: vouchers, captive portal, cybercafé module and access sales through your resellers — all on the same plan.",
         audience: ["Hotels", "Cybercafés", "Bars", "Shops", "Campuses", "Restaurants"],
         plans: [
-      {
-        name: "Discovery",
-        price: "0",
-        period: "FCFA · 60 days",
-        tagline: "To discover 403Shield risk-free",
-        cta: "Start for free",
-        highlight: false,
-        features: [
-          "1 router · every feature",
-          "4 protections included",
-          "Sell Mode & resellers",
-          "No credit card",
-        ],
-      },
-      {
-        name: "Hotspot Yearly",
-        price: "25,000",
-        period: "FCFA / year",
-        tagline: "All your routers, one single price",
-        cta: "Go yearly",
-        highlight: true,
-        badge: "Most popular",
-        features: [
-          "Unlimited routers",
-          "4 protections across the fleet",
-          "Fleet RouterOS updates",
-          "Telegram & WhatsApp alerts",
-          "Priority support",
-        ],
-      },
-      {
-        name: "Hotspot Monthly",
-        price: "2,500",
-        period: "FCFA / month / router",
-        tagline: "Pay as you grow",
-        cta: "Choose monthly",
-        highlight: false,
-        features: [
-          "Per active router",
-          "No commitment",
-          "Cancel anytime",
-          "Every feature included",
-        ],
-      },
+          {
+            name: "Discovery",
+            price: "0",
+            period: "FCFA · 60 days",
+            tagline: "To discover 403Shield risk-free",
+            cta: "Start for free",
+            highlight: false,
+            features: [
+              "1 router · every feature",
+              "4 protections included",
+              "Sell Mode & resellers",
+              "No credit card",
+            ],
+          },
+          {
+            name: "Hotspot Yearly",
+            price: "25,000",
+            period: "FCFA / year",
+            tagline: "All your routers, one single price",
+            cta: "Go yearly",
+            highlight: true,
+            badge: "Most popular",
+            features: [
+              "Unlimited routers",
+              "4 protections across the fleet",
+              "Cybercafé & PPPoE manager",
+              "Fleet RouterOS updates",
+              "Telegram & WhatsApp alerts",
+              "Priority support",
+            ],
+          },
+          {
+            name: "Hotspot Monthly",
+            price: "2,500",
+            period: "FCFA / month / router",
+            tagline: "Pay as you grow",
+            cta: "Choose monthly",
+            highlight: false,
+            features: [
+              "Per active router",
+              "No commitment",
+              "Cancel anytime",
+              "Every feature included",
+            ],
+          },
         ],
       },
       /* N°321 — shop segment: WireGuard tunnels. Catalogue prices = real
          backend product constants (publicvpnorder.go: b2c 1500/15000,
          pro 3500/35000 FCFA). CTAs point to the shop/console — the tunnel
          is bought there, not through the SaaS signup modal. N°322 — 2nd
-         selector segment, the console subscription (Hotspot) being the
-         first. */
+         selector segment, the console subscription (Hotspot · Cybercafé
+         since N°325) being the first. */
       {
         id: "tunnels",
         label: "Tunnels · shop",
@@ -1290,14 +1476,12 @@ const en: LandingCopy = {
   },
   footer: {
     tagline:
-      "The cloud network-security suite: Hotspot, protection and WireGuard tunnels — VPN & Pro Access — powered by FTech CI.",
+      "The cloud network-security suite: Hotspot, protection, cybercafé, PPPoE and WireGuard tunnels — VPN & Pro Access — powered by FTech CI.",
     columns: [
       {
         title: "Product",
         links: [
-          { label: "Hotspot", href: "/hotspot" },
-          // N°321 — the tunnels family is explicit in the labels: the VPN and
-          // Pro Access are the two uses of the SAME WireGuard tunnel.
+          { label: "Hotspot & Cybercafé", href: "/hotspot" },
           { label: "VPN — WireGuard tunnels", href: "/vpn" },
           { label: "Pro Access — WireGuard tunnels", href: "/tunnels" },
           { label: "Cloud protection", href: "/#protection" },
@@ -1310,7 +1494,6 @@ const en: LandingCopy = {
           { label: "Sign in", href: "/login" },
           { label: "Sell Mode", href: "/sell" },
           { label: "Throwaway WiFi login", href: "/wifi" },
-          // N°304 — public operations documentation.
           { label: "Operations guides", href: "/docs/guides" },
         ],
       },
@@ -1319,12 +1502,6 @@ const en: LandingCopy = {
         links: [{ label: "Privacy policy", href: "/legal/confidentialite" }],
       },
       {
-        // N°317 — ecosystem: FTech CI parent company, console and VPN shop.
-        // N°321 — canonical URLs console.403shield.ftci.fr (tunnel.ftci.fr
-        // answers 301 since N°320 — we skip the extra hop).
-        // N°323 — the console is a PURE application (root → /login,
-        // dash.cloudflare.com pattern); the shop lives on the site
-        // (/checkout, internal link — OVH "order on www" model).
         title: "Ecosystem",
         links: [
           { label: "FTech CI", href: "https://ftci.fr", external: true },
@@ -1336,21 +1513,20 @@ const en: LandingCopy = {
     legal: "Privacy policy",
   },
 
-  /* N°317 — product pages of the unified site (/hotspot, /vpn, /tunnels). */
   pages: {
     hotspot: {
       meta: {
-        title: "403Shield Hotspot — revenue-ready, hardened public WiFi",
+        title: "403Shield Hotspot & Cybercafé — revenue-ready, hardened public WiFi",
         description:
-          "Batch vouchers up to 500, a 100% white-label captive portal, Sell Mode with resellers and four firewall shields: run a profitable public WiFi, driven from the cloud.",
+          "Batch vouchers up to 500, Cybercafé module, 100% white-label captive portal, Sell Mode with resellers, and 4 firewall shields: run a profitable network, driven from the cloud.",
       },
       hero: {
-        badge: "403Shield Hotspot",
-        title1: "Your public WiFi,",
+        badge: "403Shield Hotspot & Cybercafé",
+        title1: "Your public network,",
         titleAccent: "profitable",
         title2: "and hardened.",
         subtitle:
-          "Hotels, cybercafés, eateries, shops and campuses: sell internet access with vouchers, under your brand, through your resellers — while four firewall shields watch over the network. 60-day free trial, no credit card.",
+          "Hotels, cybercafés, eateries, shops, campuses, ISPs: sell internet access with vouchers or time tickets, under your brand, through your resellers — while four firewall shields watch over the network. 60-day free trial, no credit card.",
         ctaPrimary: "Start the free trial",
         ctaPrimaryHref: "#signup",
         ctaSecondary: "See pricing",
@@ -1358,7 +1534,7 @@ const en: LandingCopy = {
       },
       features: {
         eyebrow: "What 403Shield Hotspot does",
-        title: "Public WiFi, turned into a business.",
+        title: "Public WiFi and Cybercafé, turned into a business.",
         cards: [
           {
             title: "100% white-label captive portal",
@@ -1369,17 +1545,17 @@ const en: LandingCopy = {
             desc: "Duration, data quota, bandwidth, 1 to 10 devices — and on depletion: cut off or throttle gently. Up to 500 vouchers per batch.",
           },
           {
-            title: "Sell Mode & resellers",
-            desc: "Your resellers sell from their phone: PIN-protected PWA, transferred stock, offline sales, end-of-day report.",
+            title: "Cybercafé Module & Stations",
+            desc: "Automated screen time management, automatic DHCP import and remote workstation shutoff.",
           },
           {
-            title: "Live statistics",
-            desc: "Hourly footfall, revenue, margin per profile, direct and reseller channels — what gets measured gets managed.",
+            title: "Sell Mode & resellers",
+            desc: "Your resellers sell from their phone: PIN-protected PWA, transferred stock, offline sales, end-of-day report.",
           },
         ],
       },
       cta: {
-        kicker: "Ready to launch your hotspot?",
+        kicker: "Ready to launch your hotspot or cybercafé?",
         title: "60 days free, no credit card.",
         body: "Create your account, paste the agent script onto your MikroTik router, configure your first plan. No server to maintain, no Winbox.",
         primary: "Create my free account",
@@ -1395,7 +1571,6 @@ const en: LandingCopy = {
           "A WireGuard VPN exiting through our Marseille server with a dedicated fixed French IP. 30-second activation, Wave or card payment, managed from your passwordless account.",
       },
       hero: {
-        // N°321 — family badge: the VPN is one use of the 403Shield WireGuard tunnel.
         badge: "WireGuard tunnels · VPN",
         title1: "A fixed French IP.",
         titleAccent: "Yours alone.",
@@ -1430,7 +1605,6 @@ const en: LandingCopy = {
         ],
       },
       note: {
-        // N°321 — the note carries the unified message: one tunnel, two uses.
         title: "One tunnel, two uses.",
         body: "Monthly with no commitment, or yearly — pay 10 months, get 2 offered. Prices in FCFA on the shop, mobile-money discount included. And when your networks need the same path: Pro Access extends this very WireGuard tunnel to your routers, cameras and NAS — same console, same shop.",
       },
@@ -1446,7 +1620,6 @@ const en: LandingCopy = {
     },
     tunnels: {
       meta: {
-        // N°321 — family hub: the meta covers BOTH uses of the tunnel.
         title: "403Shield WireGuard Tunnels — fixed-IP VPN & Pro Access: routers, cameras, NAS",
         description:
           "One encrypted WireGuard tunnel hosted in Marseille: a personal VPN with a fixed French IP and Pro Access to supervise MikroTik routers, cameras and NAS. Passwordless console, payable with Mobile Money.",
@@ -1460,8 +1633,6 @@ const en: LandingCopy = {
           "A personal VPN with a fixed French IP, Pro Access for your routers, an extended LAN for cameras and NAS: the same end-to-end encrypted WireGuard tunnel, hosted in Marseille — one console, one shop, one subscription. Purchase, management and renewal in one place.",
         ctaPrimary: "Buy my VPN",
         ctaPrimaryHref: "/checkout",
-        // Internal cross-link: the VPN page (personal use) stays one click
-        // from the family hub — the console lives in the final CTA below.
         ctaSecondary: "Explore the VPN",
         ctaSecondaryHref: "/vpn",
       },
@@ -1470,7 +1641,6 @@ const en: LandingCopy = {
         title: "The private bridge between you and your networks.",
         cards: [
           {
-            // N°321 — pivot card: the VPN presented as the SAME tunnel.
             title: "Personal VPN — the same tunnel",
             desc: "Your end-to-end encrypted traffic exits through Marseille with a dedicated fixed French IP. It is the same WireGuard, the same console — whether you shield your travels or supervise a fleet.",
           },
