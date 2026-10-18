@@ -43,7 +43,7 @@ const eslintConfig = retroCompatPlugins([...nextCoreWebVitals, ...nextTypescript
     // PRÉEXISTANTS (dont carousel.tsx et use-mobile.ts générés par shadcn/ui —
     // l'amont n'est pas conforme non plus). Opt-out en « warn » : la dette reste
     // visible à chaque lint sans bloquer les mises à jour de dépendances ;
-    // répertoire exact et suivi consignés au CHANGELOG N°334-B.
+    // répertoire exact et suivi consignés au CHANGELOG N°335-B.
     "react-hooks/set-state-in-effect": "warn",
     "react-hooks/refs": "warn",
     "react-hooks/immutability": "warn",

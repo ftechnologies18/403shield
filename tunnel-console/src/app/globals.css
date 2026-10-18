@@ -1044,3 +1044,29 @@ html:has(.mka-page) {
     transition: none !important;
   }
 }
+
+/* ============================================================
+   N°334-B — ESPACE CLIENT /me : bascule claire « console » (refonte
+   au style de la vue /app/vpn de la console opérateur — consigne
+   propriétaire). /me peint son propre monde (doctrine N°326, miroir
+   du html:has(.mka-page) des parcours d'auth) : fond neutre #F5F6F8,
+   cartes blanches, accents émeraude — le html passe en color-scheme
+   clair PENDANT la visite, retour au sombre à la sortie (/pro).
+   ============================================================ */
+.mkme-page {
+  color-scheme: light;
+}
+
+html:has(.mkme-page) {
+  background: #f5f6f8;
+  color-scheme: light;
+}
+
+/* Wordmark aurora — même dégradé signature que la console opérateur
+   (text-aurora : corail → rouge-orangé, clip texte). */
+.mkme-aurora {
+  background-image: linear-gradient(135deg, oklch(0.66 0.19 44), oklch(0.58 0.21 28));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}

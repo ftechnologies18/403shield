@@ -10,9 +10,16 @@ sous-marque FTech CI) ; l'historique ci-dessous conserve les noms d'époque.
 N°319 : le DÉPÔT GitHub lui-même devient `ftechnologies18/403shield`
 (anciennes URL redirigées en 301 par GitHub — web, git et API).
 
-## 2026-10-18 — N°334 — **HYGIÈNE DU DÉPÔT : README RACINE REMIS À LA VÉRITÉ (le « Render + Neon en prod » décrivait un monde disparu depuis N°266/N°303/N°317) + TRI INTÉGRAL DES 6 PR DEPENDABOT EN ATTENTE — 6/6 FUSIONNÉES derrière les portes locales, dont la PR #69 rouge depuis 5 jours par activation de règles React Compiler**
+## 2026-10-18 — N°335 — **HYGIÈNE DU DÉPÔT : README RACINE REMIS À LA VÉRITÉ (le « Render + Neon en prod » décrivait un monde disparu depuis N°266/N°303/N°317) + TRI INTÉGRAL DES 6 PR DEPENDABOT EN ATTENTE — 6/6 FUSIONNÉES derrière les portes locales, dont la PR #69 rouge depuis 5 jours par activation de règles React Compiler**
 
-### N°334-A — README racine remis à la vérité (docs/README, docs/env)
+> Renuméroté en N°335 par le présent commit de fusion : ce chantier était
+> étiqueté « N°334 » dans les messages git locaux au moment où la livraison
+> concurrente N°334-A/N°334-B (réparation #Pouvoirs + refonte /me) était
+> poussée sur `main` pendant son intégration — la séquence N°XXX devant
+> rester unique, il prend le numéro suivant libre N°335 ; les messages git
+> d'origine (immuables) portent l'ancien label, la présente entrée fait foi.
+
+### N°335-A — README racine remis à la vérité (docs/README, docs/env)
 
 - Le README racine décrivait encore **Render comme backend de production et
   Neon comme base de prod, sous la marque MikCloud et le domaine
@@ -39,7 +46,7 @@ N°319 : le DÉPÔT GitHub lui-même devient `ftechnologies18/403shield`
   N°319 sur le renommage du dépôt GitHub) restaurées à l'identique (constat
   par diff contre le commit N°329).
 
-### N°334-B — tri des 6 PR dependabot en attente (6/6 fusionnées)
+### N°335-B — tri des 6 PR dependabot en attente (6/6 fusionnées)
 
 - **#69 — 40 mises à jour npm mineures/correctives (rouge en CI depuis le
   15/10)** : la cause réelle de la stagnation était l'activation par
@@ -71,7 +78,7 @@ N°319 : le DÉPÔT GitHub lui-même devient `ftechnologies18/403shield`
   portes à chaque étape, puis UNE SEULE poussée `main` (une vague CI, un
   déploiement) — aucune mise en production non vérifiée localement.
 
-### Portes (N°334)
+### Portes (N°335)
 
 - Frontend : lint **0 erreur** (14 warnings = dette de règles React
   Compiler répertoriée, backlog dédié) · tsgo 0 · **next build 61/61** avec
@@ -81,6 +88,79 @@ N°319 : le DÉPÔT GitHub lui-même devient `ftechnologies18/403shield`
 - Workflows : 0 action < v7, YAML 100 % valides.
 - Schéma DB : AUCUN · code métier : AUCUNE ligne touchée (seuls
   eslint.config.mjs, README, .env.example et CHANGELOG modifiés à la main).
+
+## 2026-10-18 — N°334-B — **REFONTE DE L'ESPACE CLIENT /me AU STYLE CONSOLE /app/vpn** — QR WireGuard enfin scannable + fichier .conf + instructions par famille
+
+- **Signalement propriétaire** : « console.403shield.ftci.fr/me est laid,
+  expérience utilisateur brisée, impossible de scanner le QR code de
+  configuration WireGuard ».
+- **Réparation UX n°1 — le QR inexistant** : la modale « Voir la
+  configuration » livrait la conf en TEXTE SEUL pendant que l'aide
+  promettait « importer depuis un fichier ou un QR code ». Désormais :
+  QR scannable (qrcode.react 4.2.0 — même bibliothèque/version que la
+  console opérateur, 204 px, niveau L, marge de silence marginSize 2,
+  fond blanc encadré) + téléchargement `.conf` (Blob + a[download],
+  `403shield-<ref>.conf`) + copie.
+- **Instructions adaptées à la famille** (miroir N°315) — b2c : scan
+  caméra depuis l'app WireGuard ; pro : import fichier sous RouterOS 7
+  (WireGuard → Peers) + lien page Accès Pro.
+- **Style /app/vpn appliqué au client** : thème clair « console »
+  (`.mkme-page` + `html:has(.mkme-page)` — miroir exact du
+  `html:has(.mka-page)` des parcours d'auth N°326), wordmark aurora,
+  KPI stat cards (accès actifs · appareils · expire bientôt ≤ 7 j ·
+  prochaine échéance — dérivés exclusivement du contrat /api/tunnel/me,
+  doctrine aucun faux chiffre), badges famille B2C/B2B, échéances
+  colorées, modales bottom-sheet mobile avec Escape + focus gestion,
+  cibles tactiles min-h-11.
+- **Contrat backend inchangé** (GET /me, POST reveal, POST renew) ;
+  /pro et /shop conservent le thème sombre (doctrine N°326).
+- **Portes** (tunnel-console hors CI — manuelles) : lint 0 · tsc 0 ·
+  next build 9/9 · smoke E2E sur VRAI BACKEND (cmd/smokeseed éphémère,
+  jamais commité : client + 3 commandes réelles + JWT tunnel) — KPIs
+  réels rendus, reveal b2c et pro vérifiés (QR 204×204 mesuré au DOM,
+  centré x=93 en mobile), Copier + Fichier .conf, Renouveler pro
+  (formules famille + validation Wave), 390=390, 0 erreur console ;
+  VLM PASS ×4 (page + modale, 1280 + 390).
+- **Schéma DB : AUCUN** (frontend pur tunnel-console — deploy-oracle
+  non concerné).
+
+## 2026-10-18 — N°334-A — **RÉPARATION DE LA SECTION #POUVOIRS (cartes super-pouvoirs illisibles)** — régression inline du N°332-A corrigée par `display: block`
+
+> Renuméroté en N°334-A par commit de suivi : la livraison était étiquetée
+> « N°333-A » au moment de son push, en collision avec le plan N°333
+> (centre de guides, volets A-D poussés concurremment 19:08-20:10 UTC) —
+> la séquence N°XXX devant rester unique, cette livraison prend le numéro
+> suivant libre ; les messages git d'origine (immuables) portent l'ancien
+> label. Ce même commit de suivi RÉPARE l'en-tête du présent CHANGELOG :
+> les -bis du plan N°333 (poussés concurremment) avaient tronqué les lignes
+> « sous-marque FTech CI… (anciennes URL…) » du bloc d'introduction — le
+> fragment errant, retrouvé orphelin au milieu du fichier, est remis à sa
+> place d'origine, et la présente entrée prend le sommet (convention :
+> dernière livraison en tête).
+
+- **Symptôme (signalement propriétaire)** : la section « Une suite, quatre
+  piliers d'excellence » présente des problèmes d'affichage — « rend la
+  section illisible ».
+- **Diagnostic mesuré en production** (403shield.ftci.fr, DOM + styles
+  calculés + VLM) : depuis N°332-A les cartes sont des `<a>` **sans règle
+  `display`** → l'ancre reste `inline` (défaut navigateur) et casse la
+  boite : strut fantôme ~24,6 px au-dessus de l'icône (line-height de
+  l'ancre), enfants collés au bord gauche (padding 30 px ignoré des blocs
+  anonymes d'un inline), tag absolu résolu contre un conteneur inline
+  (`left:-8,5 px` HORS carte, largeur contrainte → « 4 boucliers » sur
+  deux lignes), `h-full` inopérant (hauteurs 463/438 inégales en 2×2).
+  `.mkl-power` était le SEUL composant lien de la vitrine sans `display`
+  (`.mkl-btn` inline-flex, `.mkl-guide` flex, `.mkl-share` inline-flex).
+- **Fix — une ligne** : `display: block` sur `.mkl-power`
+  (landing-clay.css) + commentaire de registre ; `h-full` déjà posé
+  redevient opérant (la grille étire chaque rangée, 4 cartes alignées).
+- **Portes** : lint 0 · tsc 0 · next build 47/47 · smoke navigateur
+  build :3100 — 1280 : tag `right:24` respecté UNE ligne (left calculé
+  390,97 = 511-24-96), icône x=198/y=535 (paddings 30/36 rétablis), hauteurs
+  [441,441,441,441], 1280=1280 ; 390 : h3/p/li à x=50 largeur 290,
+  390=390, 0 erreur console ; VLM PASS desktop + mobile (cartes entièrement
+  rendues, aucune coupure).
+- **Schéma DB : AUCUN** (frontend pur — deploy-oracle non concerné).
 
 ## 2026-10-18 — N°333-D — **SEO & RÉTENTION SANS INFRASTRUCTURE (volet D du plan N°333)** — sitemap, JSON-LD @graph, og:image par guide, CTA, feedback, print, thème, teaser privé
 
@@ -239,10 +319,6 @@ N°319 : le DÉPÔT GitHub lui-même devient `ftechnologies18/403shield`
   `updated: 2026-10-18` — fin du plateau factice 36/36 daté 2026-10-12.
 - **PORTES** : lint 0 · tsgo 0 · next build 47/47 · schéma DB AUCUN
   (contenu pur — deploy-oracle non concerné).
-
-sous-marque FTech CI) ; l'historique ci-dessous conserve les noms d'époque.
-N°319 : le DÉPÔT GitHub lui-même devient `ftechnologies18/403shield`
-(anciennes URL redirigées en 301 par GitHub — web, git et API).
 
 ## 2026-10-18 — N°332-C + N°332-D — **MARKETING & RÉTENTION SUR LA VITRINE + FINITION PRO CLAY (volets C et D du plan N°332)** — preuve sociale honnête SANS témoignage, FAQ avant le CTA, sommaire cliquable, caisse sous EnterpriseHeader, focus clavier généralisé
 
