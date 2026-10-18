@@ -10,6 +10,50 @@ sous-marque FTech CI) ; l'historique ci-dessous conserve les noms d'époque.
 N°319 : le DÉPÔT GitHub lui-même devient `ftechnologies18/403shield`
 (anciennes URL redirigées en 301 par GitHub — web, git et API).
 
+## 2026-10-18 — N°330 — **LE FOOTER DE LA VITRINE PERD SA COLONNE « ÉCOSYSTÈME » (FTech CI ↗ · Console 403Shield ↗ · Boutique VPN) — la grille desktop retrouve sa ligne pleine et le footer se concentre sur ses trois colonnes propres**
+
+### Déclencheur (propriétaire)
+« Supprimer du footer : Écosystème / FTech CI ↗ / Console 403Shield ↗ /
+Boutique VPN. » — la colonne « Écosystème » posée par N°317 (marque
+unifiée) doublonnait des issues déjà vivantes ailleurs ; le propriétaire
+l'allège.
+
+### Ce qui change (vitrine, 2 fichiers — frontend pur, zéro backend)
+- **`landing-copy.ts` (−16 lignes)** : retrait de la 4e colonne de
+  `copy.footer.columns` dans les DEUX langues — FR (« Écosystème » :
+  FTech CI, Console 403Shield, Boutique VPN) et EN (« Ecosystem » :
+  FTech CI, 403Shield Console, VPN shop). Le composant
+  `landing-footer.tsx` rendant le tableau dynamiquement, les deux langues
+  tombent d'un seul geste.
+- **`landing-footer.tsx` (commentaire seulement)** : la branche
+  `href.startsWith("http")` ne sert plus aucune colonne (plus aucun lien
+  externe dans le footer) — elle reste la défense générique des liens
+  externes futurs, son commentaire est actualisé.
+
+### Gain géométrique inattendu
+La grille desktop `.mkl-foot-grid` (`1.4fr 1fr 1fr 1fr` — 4 pistes)
+comptait 5 enfants depuis N°317 : la colonne Écosystème débordait
+orpheline sur une 2e ligne en piste 1.4fr. Le retrait rend exactement
+4 enfants (bloc de marque + Produit + Console + Légal) = une seule ligne
+pleine ; le point de rupture ≤ 1020 px retombe en 2×2 juste.
+
+### Analyse d'impact (aucune issue ne devient orpheline)
+`/checkout` reste joignable (topbar caisse `checkout-page.tsx`, finalCta,
+entonnoir `?plan=`) · ftci.fr reste vivant via le crédit `FtciCredit` du
+`mkl-foot-bottom` · la console reste atteignable par le lien
+« Se connecter » `/login` de la colonne Console · aucun test E2E
+(`frontend/e2e/`) ne référençait la colonne · tagline, crédit FTech et
+pages produit partageant le footer (`/hotspot`, `/vpn`, `/tunnels`,
+`/legal/confidentialite`) intacts.
+
+### Portes
+lint 0 · tsc 0 · next build ✓ 47/47 pages · HTML prérendu vérifié :
+0 occurrence Écosystème/Ecosystem/Boutique VPN/VPN shop/« FTech CI ↗ »/
+« Console 403Shield ↗ » sur `/`, `/hotspot`, `/vpn`, `/tunnels`,
+`/legal/confidentialite` — les 3 colonnes restantes confirmées au
+comptage `<h5>` (Produit · Console · Légal) ; schéma DB : AUCUN
+(frontend pur — deploy-oracle non concerné).
+
 ## 2026-10-18 — N°329 — **LA PORTE DE LA CONSOLE PASSE AU SPLIT INVERSÉ DEMANDÉ (formulaire ivoire À GAUCHE + panneau de marque ANIMÉ À DROITE) + CONNEXION SOCIALE Google/Apple/Facebook À NOTICE HONNÊTE + FAVICON PARTAGÉ AVEC LA VITRINE — le parcours passwordless ne bouge pas d'une ligne de logique**
 
 ### Déclencheur (propriétaire)
