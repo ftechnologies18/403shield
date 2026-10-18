@@ -10,6 +10,86 @@ sous-marque FTech CI) ; l'historique ci-dessous conserve les noms d'époque.
 N°319 : le DÉPÔT GitHub lui-même devient `ftechnologies18/403shield`
 (anciennes URL redirigées en 301 par GitHub — web, git et API).
 
+## 2026-10-18 — N°326 — **LA CONNEXION DE LA CONSOLE PASSE AU GABARIT dash.cloudflare.com/login, HABILLÉE DANS LES COULEURS CLAY DE LA VITRINE — split « panneau de marque sarcelle + colonne formulaire ivoire », parallaxe, chips flottantes, carte claymorphe ; le parcours passwordless ne bouge pas d'une ligne de logique**
+
+### Déclencheur (propriétaire)
+« Je voudrais que la https://console.403shield.ftci.fr/login soit comme cette
+page https://dash.cloudflare.com/login. Garder les couleurs du landing page
+en mieux avec effet wahou. » — la porte d'entrée de la console (N°323 : la
+racine 308 → /login) restait habillée dans le thème sombre ardoise de
+l'intérieur (/me, /pro) : elle contredisait la vitrine clay devenue la
+référence visuelle de la marque (N°317/321-325).
+
+### Ce qui a changé (tunnel-console — 7 fichiers, frontend seul)
+- **`src/app/globals.css`** — ajout du design system « Clay auth »
+  (préfixe `mka-`, palette FreeTech de la vitrine : ivoire `#FDF9EE`, crème
+  `#F5E3A8`/`#EFCE62`, sarcelle `#0E7C7B`/`#0A5C5B`, menthe `#BFE8D5`, encre
+  `#123B3A`) : grain points 26 px, blobs menthe/crème en dérive lente
+  (26 s/32 s), parallaxe pilotée par le pointeur (`--mka-px/--mka-py`),
+  chips flottantes (≥1280 px, calées à droite — jamais sur le texte),
+  carte clay (ombre dure 10×12 + double inset, rayon 1,8 rem), boutons clay
+  avec reflet crème qui balaie le CTA au survol, champ e-mail à icône de
+  tête + cochet teal dès que l'adresse est valide (`:valid ~`), séparateur
+  « ou », pied légal façon CF (marque · liens externes), entrées en scène
+  décalées (`mka-rise`, 0,65 s, courbe douce), `prefers-reduced-motion`
+  TOUT COUPÉ ; `html:has(.mka-page)` peint le canvas en ivoire et bascule
+  le color-scheme PENDANT l'auth — `/me` et `/pro` conservent le thème
+  sombre (`hero-glow` intact) ; `.code-input` (consommateur unique :
+  l'ancien /verify) remplacé par `.mka-code`.
+- **`src/lib/fonts.ts` (NOUVEAU)** — mêmes instances que la vitrine
+  (`landing-fonts.ts`) : Manrope (texte) + Fraunces serif display (axes
+  opsz), variables `--font-manrope`/`--font-fraunces`.
+- **`src/components/auth/auth-shell.tsx` (NOUVEAU)** — le gabarit partagé
+  des parcours d'auth au modèle dash.cloudflare.com/login : panneau de
+  marque (desktop ≥1024 — dégradé sarcelle 165°, blobs, chips « VPN
+  WireGuard / IP fixe France / Mobile Money » flottantes, kicker « Connexion
+  sécurisée » à point pulsant, titre Fraunces « Vos tunnels, à *un e-mail*
+  d'ici. » avec trait crème qui se dessine, 3 feats réelles, pied « powered
+  by FTech CI · Wave & carte acceptés ») + colonne formulaire ivoire (halos
+  discrets, en-tête mobile compact < 1024, carte, pied légal) ; parallaxe
+  rAF amortie, coupée en mouvement réduit ; décorations `aria-hidden`.
+- **`src/app/login/page.tsx`** — refonte visuelle complète dans
+  `AuthShell` : titre « Connexion », lede passwordless (copie N°313
+  conservée), champ e-mail clay, CTA teal « Recevoir mon code », séparateur
+  « ou », bouton crème « Commander un VPN » → caisse du site
+  (`403shield.ftci.fr/checkout`, nouvel onglet — l'équivalent CF « Sign
+  up » : modèle OVH, commander sur www, gérer ici), note « Déjà client VPN
+  sans compte ? » intacte. **Logique inchangée** : honeypot `website`,
+  `POST /api/tunnel/auth/request-code`, redirection `/verify?email=…`,
+  rebond session (token → /me).
+- **`src/app/verify/page.tsx`** — même peau (AuthShell) : le parcours
+  login → verify → me garde UNE seule identité visuelle ; champ code
+  `.mka-code` (monospace 1,7 rem, équidistant, centré par
+  `text-indent` compensant le `letter-spacing`), CTA « Me connecter »,
+  lien « Renvoyer un code ». **Logique inchangée** (Suspense + useSearchParams,
+  `POST /api/tunnel/auth/verify`, `setToken`, `/me`).
+- **`src/app/login/layout.tsx` + `src/app/verify/layout.tsx`** — posent les
+  variables de polices Clay pour CES parcours uniquement (feuilles chargées
+  seulement sur /login et /verify) ; metadata noindex conservées.
+
+### Intacts (par construction)
+Contrat backend (`request-code`/`verify`, TTL 10 min, honeypot, JWT 24 h),
+clé localStorage `miktunnel_token`, gardes session N°323 (racine 308 →
+/login, connecté → /me, rebond sans boucle), robots noindex des routes
+privées, `/me` et `/pro` (thème sombre + `hero-glow` intacts), 308 `/shop`
+→ caisse du site, aucun fichier backend touché (deploy-oracle non
+déclenché), CORS inchangé (l'origine console est whitelistée depuis N°319).
+
+### Portes
+lint 0 · tsc 0 (tunnel-console) · smoke navigateur local (next dev) :
+1280 (split, chips sans chevauchement après correction — texte max 24 rem,
+chips ≥1280 calées à droite), 1024 (panneau sans chips, scrollWidth exact),
+900 (en-tête mobile), 390 (scrollWidth 390 exact, 0 débordement, VLM « NO
+DEFECTS »), cochet teal vivant, honeypot présent/caché, fonts
+Fraunces/Manrope chargées, canvas html ivoire pendant l'auth, `/me` sans
+token rebondit vers /login (N°323) ; production vérifiée après déploiement
+(couleur, split, parcours jusqu'au code — voir relevé).
+
+### Suites
+- Vérification production console.403shield.ftci.fr/login (déploiement
+  Vercel auto) — screenshot + parcours request-code ;
+- aucune suite backend : la refonte est purement présentationnelle.
+
 ## 2026-10-18 — N°325 — **INTÉGRATION DU PR #70 « ENTERPRISE MULTI-PAGE LANDING PAGE REDESIGN » (Jules) : header MegaMenu Produits/Solutions façon Cloudflare + drawer mobile + section « Extension ISP & Opérateurs » — la vitrine montre enfin TOUTE la plateforme (Hotspot & Cybercafé, PPPoE, comptabilité, 2FA), doctrine N°324 maintenue de bout en bout (zéro foyer/HomeNet)**
 
 ### Déclencheur (propriétaire)

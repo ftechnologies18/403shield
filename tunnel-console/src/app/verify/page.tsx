@@ -4,12 +4,15 @@
 // POST /api/tunnel/auth/verify {email, code} → {token, client} → le token
 // (JWT rôle « tunnel », 24 h) part en localStorage → /me.
 // N°317 — rebrand « 403Shield Console » (ex MikTunnel N°313-316).
+// N°326 — même refonte Clay que /login (AuthShell partagé) : le parcours
+// login → verify → me garde UNE seule peau, celle de la vitrine — la
+// logique (Suspense, verify, setToken, /me) est inchangée.
 
-import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
 import { ShieldCheck } from "lucide-react";
 import { apiFetch, setToken, type VerifyResponse } from "@/lib/api";
+import { AuthShell } from "@/components/auth/auth-shell";
 
 function VerifyForm() {
   const router = useRouter();
@@ -39,79 +42,63 @@ function VerifyForm() {
   }
 
   return (
-    <div className="w-full max-w-md">
-      <div className="mb-6 flex items-center gap-2.5">
-        <Image src="/logo.png" alt="403Shield" width={36} height={36} className="h-9 w-9 rounded-lg" />
-        <div className="flex flex-wrap items-center gap-2 leading-tight">
-          <p className="font-semibold tracking-tight text-slate-100">403Shield</p>
-          <span className="rounded-full border border-emerald-500/40 px-1.5 py-0.5 text-[9px] font-medium text-emerald-300">Console</span>
-          <p className="text-[11px] text-slate-500">powered by FTech CI</p>
+    <div className="mka-card mka-in mka-in-2">
+      <span className="mka-tile">
+        <ShieldCheck className="h-5 w-5" aria-hidden="true" />
+      </span>
+      <h1 className="mka-title">Votre code de connexion</h1>
+      <p className="mka-lede">
+        Code envoyé à <strong>{email || "votre adresse"}</strong> — saisissez
+        les 6 chiffres reçus (valables 10 minutes, un seul usage).
+      </p>
+
+      <form onSubmit={submit} className="mka-form">
+        <div>
+          <label htmlFor="code" className="sr-only">
+            Code à 6 chiffres
+          </label>
+          <input
+            id="code"
+            inputMode="numeric"
+            autoComplete="one-time-code"
+            autoFocus
+            maxLength={6}
+            value={code}
+            onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+            placeholder="••••••"
+            className="mka-code"
+          />
         </div>
-      </div>
 
-      <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-6 sm:p-8">
-        <span className="mb-4 flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-400">
-          <ShieldCheck className="h-5 w-5" aria-hidden />
-        </span>
-        <h1 className="text-xl font-semibold text-slate-100">Votre code de connexion</h1>
-        <p className="mt-2 text-sm leading-relaxed text-slate-400">
-          Code envoyé à{" "}
-          <span className="font-medium text-slate-200">{email || "votre adresse"}</span> —
-          saisissez les 6 chiffres reçus (valables 10 minutes, un seul usage).
-        </p>
+        {error && (
+          <p role="alert" className="mka-alert">
+            {error}
+          </p>
+        )}
 
-        <form onSubmit={submit} className="mt-6 space-y-4">
-          <div>
-            <label htmlFor="code" className="sr-only">
-              Code à 6 chiffres
-            </label>
-            <input
-              id="code"
-              inputMode="numeric"
-              autoComplete="one-time-code"
-              autoFocus
-              maxLength={6}
-              value={code}
-              onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
-              placeholder="••••••"
-              className="code-input w-full rounded-lg border border-slate-700 bg-slate-950 px-3.5 py-3 text-center text-xl font-semibold text-slate-100 placeholder:text-slate-700 outline-none transition focus:border-emerald-500/60 focus:ring-2 focus:ring-emerald-500/20"
-            />
-          </div>
+        <button type="submit" disabled={busy || code.length !== 6} className="mka-btn mka-btn-teal">
+          {busy ? "Vérification…" : "Me connecter"}
+        </button>
+      </form>
 
-          {error && (
-            <p role="alert" className="rounded-lg border border-red-500/30 bg-red-500/10 px-3.5 py-2.5 text-sm text-red-300">
-              {error}
-            </p>
-          )}
-
-          <button
-            type="submit"
-            disabled={busy || code.length !== 6}
-            className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-emerald-500 px-4 py-2.5 text-sm font-semibold text-slate-950 transition hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {busy ? "Vérification…" : "Me connecter"}
-          </button>
-        </form>
-
-        <p className="mt-4 text-center text-xs text-slate-500">
-          Code non reçu ?{" "}
-          <a href="/login" className="text-emerald-400 hover:text-emerald-300">
-            Renvoyer un code
-          </a>
-        </p>
-      </div>
+      <p className="mka-note">
+        Code non reçu&nbsp;?{" "}
+        <a href="/login" className="mka-link">
+          Renvoyer un code
+        </a>
+      </p>
     </div>
   );
 }
 
 export default function VerifyPage() {
   return (
-    <main className="hero-glow flex flex-1 flex-col items-center justify-center px-4 py-16">
+    <AuthShell>
       <Suspense
-        fallback={<p className="text-sm text-slate-500">Chargement du formulaire…</p>}
+        fallback={<p className="mka-note">Chargement du formulaire…</p>}
       >
         <VerifyForm />
       </Suspense>
-    </main>
+    </AuthShell>
   );
 }

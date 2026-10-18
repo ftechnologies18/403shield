@@ -1,7 +1,11 @@
 @import "tailwindcss";
 
 /* tunnel-console — N°313 — thème sombre émeraude/ardoise (N°317 : console
-   « 403Shield » powered by FTech CI — aucun bleu/indigo, discipline repo). */
+   « 403Shield » powered by FTech CI — aucun bleu/indigo, discipline repo).
+   N°326 — les parcours d'AUTHENTIFICATION (/login, /verify) passent au
+   design system « Clay » de la vitrine (palette FreeTech de
+   landing-clay.css, préfixe mka- propre à cette app) : /me et /pro
+   conservent le thème sombre — chaque page peint son propre monde. */
 
 :root {
   --background: #020617;
@@ -19,15 +23,791 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* Halo émeraude discret derrière le hero. */
+/* Halo émeraude discret derrière le hero (console /me, /pro). */
 .hero-glow {
   background:
     radial-gradient(600px 300px at 70% -10%, rgba(16, 185, 129, 0.18), transparent 70%),
     radial-gradient(400px 200px at 10% 110%, rgba(13, 148, 136, 0.12), transparent 70%);
 }
 
-/* Code à 6 chiffres : chiffres équidistants, monospace. */
-.code-input {
-  letter-spacing: 0.6em;
+/* ============================================================
+   N°326 — DESIGN SYSTEM « CLAY » DES PARCOURS D'AUTHENTIFICATION
+   Gabarit dash.cloudflare.com/login (split panneau de marque +
+   colonne formulaire), palette FreeTech de la vitrine :
+   Ivoire #FDF9EE · Crème #F5E3A8 / #EFCE62 · Sarcelle #0E7C7B /
+   Menthe #BFE8D5 · Encre #123B3A. Préfixe mka- (mik-auth) : zéro
+   collision avec le thème sombre ci-dessus.
+   Z-index : blobs 0 · grain 1 · contenu 2.
+   ============================================================ */
+
+.mka-page {
+  --mka-ivory: #fdf9ee;
+  --mka-cream: #f5e3a8;
+  --mka-cream-deep: #efce62;
+  --mka-teal: #0e7c7b;
+  --mka-teal-dark: #0a5c5b;
+  --mka-mint: #bfe8d5;
+  --mka-mint-soft: #ddf3e9;
+  --mka-ink: #123b3a;
+  --mka-ink-70: rgba(18, 59, 58, 0.72);
+  --mka-ink-60: rgba(18, 59, 58, 0.6);
+
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+  background: var(--mka-ivory);
+  color: var(--mka-ink);
+  color-scheme: light;
+  font-family: var(--font-manrope), ui-sans-serif, system-ui, sans-serif;
+  line-height: 1.6;
+  overflow-x: clip;
+}
+
+/* Le canvas html passe en ivoir pendant l'auth (overscroll mobile), le
+   color-scheme avec — le reste de l'app reste sombre sans :has. */
+html:has(.mka-page) {
+  background: #fdf9ee;
+  color-scheme: light;
+}
+
+.mka-page ::selection {
+  background: var(--mka-cream);
+  color: var(--mka-teal-dark);
+}
+
+.mka-page h1,
+.mka-page .mka-serif {
+  font-family: var(--font-fraunces), Georgia, serif;
+  font-weight: 600;
+  line-height: 1.14;
+  letter-spacing: -0.01em;
+}
+
+/* ── Grain façon vitrine (points encre 26 px) ── */
+.mka-grain {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  opacity: 0.5;
+  background-image: radial-gradient(rgba(18, 59, 58, 0.05) 1px, transparent 1px);
+  background-size: 26px 26px;
+}
+
+/* ── Grille split : 1 colonne mobile, brand|form dès 1024 ── */
+.mka-grid {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  grid-template-columns: 1fr;
+  flex: 1;
+}
+
+@media (min-width: 1024px) {
+  .mka-grid {
+    grid-template-columns: 1.05fr 1fr;
+  }
+}
+
+/* ══════════════════ PANNEAU DE MARQUE (desktop ≥1024) ══════════════════ */
+
+.mka-brand {
+  position: relative;
+  display: none;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 2rem;
+  overflow: hidden;
+  padding: clamp(2rem, 3vw, 3rem);
+  background: linear-gradient(165deg, #0e7c7b 0%, #0a5c5b 52%, #123b3a 100%);
+  color: var(--mka-ivory);
+}
+
+@media (min-width: 1024px) {
+  .mka-brand {
+    display: flex;
+  }
+}
+
+/* Grain clair sur le fond sarcelle (l'encre n'y serait pas visible). */
+.mka-brand::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image: radial-gradient(rgba(253, 249, 238, 0.09) 1px, transparent 1px);
+  background-size: 26px 26px;
+}
+
+/* Blobs menthe/crème en dérive lente (le parallaxe vit sur le conteneur). */
+.mka-blobs {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.mka-blobs > div {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+}
+
+.mka-blob-a {
+  width: 480px;
+  height: 480px;
+  background: rgba(191, 232, 213, 0.32);
+  top: -140px;
+  right: -120px;
+  animation: mka-drift-a 26s ease-in-out infinite alternate;
+}
+
+.mka-blob-b {
+  width: 420px;
+  height: 420px;
+  background: rgba(245, 227, 168, 0.22);
+  bottom: -150px;
+  left: -110px;
+  animation: mka-drift-b 32s ease-in-out infinite alternate;
+}
+
+@keyframes mka-drift-a {
+  from { transform: translate3d(0, 0, 0) scale(1); }
+  to { transform: translate3d(46px, 34px, 0) scale(1.07); }
+}
+
+@keyframes mka-drift-b {
+  from { transform: translate3d(0, 0, 0) scale(1.05); }
+  to { transform: translate3d(-40px, -30px, 0) scale(1); }
+}
+
+/* Parallaxe douce pilotée par le pointeur (--mka-px/--mka-py ∈ −0.5..0.5). */
+.mka-px {
+  transform: translate3d(calc(var(--mka-px, 0) * 16px), calc(var(--mka-py, 0) * 12px), 0);
+  transition: transform 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.mka-px-soft {
+  transform: translate3d(calc(var(--mka-px, 0) * -9px), calc(var(--mka-py, 0) * -7px), 0);
+  transition: transform 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* En-tête du panneau : logo + marque + badge. */
+.mka-brand-head {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.mka-brand-name {
+  font-weight: 800;
+  font-size: 1.05rem;
+  letter-spacing: -0.01em;
+  color: var(--mka-ivory);
+}
+
+.mka-brand-badge {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid rgba(253, 249, 238, 0.35);
+  background: rgba(253, 249, 238, 0.14);
+  color: var(--mka-mint);
+  border-radius: 999px;
+  padding: 0.18rem 0.7rem;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.mka-logo {
+  border-radius: 12px;
+  box-shadow: 4px 5px 0 rgba(9, 41, 40, 0.4);
+}
+
+.mka-mid {
+  position: relative;
+  z-index: 2;
+  margin: auto 0;
+  max-width: 24rem;
+}
+
+.mka-kick {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  border: 1px solid rgba(253, 249, 238, 0.28);
+  background: rgba(253, 249, 238, 0.12);
+  color: var(--mka-mint);
+  border-radius: 999px;
+  padding: 0.5rem 1.05rem;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.mka-kick-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--mka-cream-deep);
+  animation: mka-pulse 2.6s ease-out infinite;
+}
+
+@keyframes mka-pulse {
+  0% { box-shadow: 0 0 0 0 rgba(239, 206, 98, 0.55); }
+  70% { box-shadow: 0 0 0 12px rgba(239, 206, 98, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(239, 206, 98, 0); }
+}
+
+.mka-brand-title {
+  margin: 1.4rem 0 1.1rem;
+  font-size: clamp(2.05rem, 2.5vw, 2.8rem);
+  color: var(--mka-ivory);
+}
+
+/* Mot accent : crème + trait crème qui se dessine au chargement. */
+.mka-accent {
+  color: var(--mka-cream);
+  padding: 0 0.08em;
+  border-radius: 0.15em;
+  background-image: linear-gradient(90deg, rgba(239, 206, 98, 0.6), rgba(245, 227, 168, 0.28));
+  background-repeat: no-repeat;
+  background-position: 0 92%;
+  background-size: 100% 0.26em;
+  animation: mka-sweep 1.1s cubic-bezier(0.22, 1, 0.36, 1) 0.9s both;
+}
+
+@keyframes mka-sweep {
+  from { background-size: 0% 0.26em; }
+  to { background-size: 100% 0.26em; }
+}
+
+.mka-brand-lede {
+  color: rgba(223, 243, 233, 0.85);
+  font-size: 1.02rem;
+}
+
+.mka-feats {
+  margin-top: 1.8rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  padding: 0;
+  list-style: none;
+}
+
+.mka-feat {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  color: rgba(223, 243, 233, 0.9);
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.mka-feat-dot {
+  flex: none;
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  border-radius: 13px;
+  background: rgba(253, 249, 238, 0.12);
+  color: var(--mka-mint);
+  border: 1px solid rgba(253, 249, 238, 0.22);
+  box-shadow: inset 2px 3px 6px rgba(255, 255, 255, 0.18),
+    inset -3px -4px 8px rgba(0, 0, 0, 0.22);
+}
+
+/* Chips flottantes décoratives (real capabilities, aria-hidden) —
+   affichées dès 1280 px et calées sur le bord droit : jamais sur le texte
+   (max-width 24rem du bloc .mka-mid). */
+.mka-chips {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  display: none;
+}
+
+@media (min-width: 1280px) {
+  .mka-chips {
+    display: block;
+  }
+}
+
+.mka-chip {
+  position: absolute;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: var(--mka-ivory);
+  color: var(--mka-ink);
+  font-weight: 800;
+  font-size: 0.8rem;
+  border-radius: 1rem;
+  padding: 0.55rem 0.95rem;
+  box-shadow: 5px 6px 0 rgba(9, 41, 40, 0.35),
+    inset 2px 3px 6px rgba(255, 255, 255, 0.8),
+    inset -3px -4px 8px rgba(18, 59, 58, 0.1);
+  animation: mka-float 7s ease-in-out infinite;
+}
+
+.mka-chip svg {
+  color: var(--mka-teal);
+}
+
+.mka-chip-1 { top: 20%; right: 7%; --mka-rot: 2deg; }
+.mka-chip-2 { top: 45%; right: 4%; animation-delay: 1.4s; --mka-rot: -2deg; }
+.mka-chip-3 { top: 69%; right: 9%; animation-delay: 2.6s; --mka-rot: 1.5deg; }
+
+@keyframes mka-float {
+  0%, 100% { transform: translateY(0) rotate(var(--mka-rot, 0deg)); }
+  50% { transform: translateY(-11px) rotate(var(--mka-rot, 0deg)); }
+}
+
+.mka-brand-foot {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  color: rgba(223, 243, 233, 0.62);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+/* ══════════════════ COLONNE FORMULAIRE ══════════════════ */
+
+.mka-formcol {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Halos statiques menthe/crème derrière la carte (côté ivoire). */
+.mka-halo {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.mka-halo::before {
+  content: "";
+  position: absolute;
+  width: 420px;
+  height: 420px;
+  border-radius: 50%;
+  background: var(--mka-mint);
+  filter: blur(90px);
+  opacity: 0.4;
+  top: -130px;
+  right: -110px;
+}
+
+.mka-halo::after {
+  content: "";
+  position: absolute;
+  width: 380px;
+  height: 380px;
+  border-radius: 50%;
+  background: var(--mka-cream);
+  filter: blur(90px);
+  opacity: 0.42;
+  bottom: -140px;
+  left: -100px;
+}
+
+/* En-tête mobile (le panneau de marque est masqué < 1024). */
+.mka-mobile-head {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.7rem;
+  padding: 1.75rem 1.25rem 0;
+}
+
+@media (min-width: 1024px) {
+  .mka-mobile-head {
+    display: none;
+  }
+}
+
+.mka-mobile-head .mka-brand-name {
+  color: var(--mka-ink);
+}
+
+.mka-mobile-head .mka-brand-badge {
+  color: var(--mka-teal-dark);
+  border-color: rgba(14, 124, 123, 0.35);
+  background: var(--mka-mint-soft);
+}
+
+.mka-mobile-head .mka-logo {
+  box-shadow: 4px 5px 0 rgba(18, 59, 58, 0.14);
+}
+
+.mka-center {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2.75rem 1.25rem;
+}
+
+@media (min-width: 640px) {
+  .mka-center {
+    padding: 3.5rem 2rem;
+  }
+}
+
+/* Carte clay : ombre dure décalée + double inset (vitrine). */
+.mka-card {
+  width: 100%;
+  max-width: 26.5rem;
+  background: #fffdf4;
+  border: 1.5px solid rgba(18, 59, 58, 0.12);
+  border-radius: 1.8rem;
+  padding: 2rem;
+  box-shadow: 10px 12px 0 rgba(18, 59, 58, 0.1),
+    inset 6px 8px 14px rgba(255, 255, 255, 0.75),
+    inset -8px -10px 18px rgba(18, 59, 58, 0.06);
+}
+
+@media (min-width: 640px) {
+  .mka-card {
+    padding: 2.4rem;
+  }
+}
+
+.mka-tile {
+  display: grid;
+  place-items: center;
+  width: 3.25rem;
+  height: 3.25rem;
+  border-radius: 1.1rem;
+  background: var(--mka-teal);
+  color: var(--mka-ivory);
+  box-shadow: 5px 6px 0 rgba(18, 59, 58, 0.18),
+    inset 2px 3px 6px rgba(255, 255, 255, 0.25),
+    inset -3px -4px 8px rgba(0, 0, 0, 0.25);
+  margin-bottom: 1.15rem;
+}
+
+.mka-title {
+  font-size: 1.65rem;
+}
+
+.mka-lede {
+  margin-top: 0.6rem;
+  color: var(--mka-ink-70);
+  font-size: 0.93rem;
+}
+
+.mka-lede strong {
+  color: var(--mka-ink);
+  font-weight: 800;
+}
+
+.mka-form {
+  margin-top: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.05rem;
+}
+
+.mka-label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-size: 0.86rem;
+  font-weight: 800;
+  color: var(--mka-ink);
+}
+
+/* Champ avec icône de tête + validation vivante (cochet teal). */
+.mka-field {
+  position: relative;
+}
+
+.mka-lead {
+  position: absolute;
+  left: 1.05rem;
+  top: 50%;
+  translate: 0 -50%;
+  width: 1.1rem;
+  height: 1.1rem;
+  color: var(--mka-ink-60);
+  transition: color 0.2s;
+  pointer-events: none;
+}
+
+.mka-input {
+  width: 100%;
+  font: inherit;
+  font-weight: 600;
+  color: var(--mka-ink);
+  background: var(--mka-ivory);
+  border: 1.5px solid rgba(18, 59, 58, 0.2);
+  border-radius: 1.15rem;
+  padding: 0.95rem 2.9rem;
+  box-shadow: inset 3px 4px 8px rgba(18, 59, 58, 0.05),
+    inset -3px -4px 8px rgba(255, 255, 255, 0.7);
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.mka-input::placeholder {
+  color: rgba(18, 59, 58, 0.35);
+  font-weight: 500;
+}
+
+.mka-field:focus-within .mka-lead {
+  color: var(--mka-teal);
+}
+
+.mka-input:focus-visible {
+  outline: 3px solid rgba(14, 124, 123, 0.45);
+  outline-offset: 2px;
+  border-color: var(--mka-teal);
+}
+
+.mka-tick {
+  position: absolute;
+  right: 1.05rem;
+  top: 50%;
+  translate: 0 -50%;
+  width: 1.15rem;
+  height: 1.15rem;
+  color: var(--mka-teal);
+  opacity: 0;
+  scale: 0.6;
+  transition: opacity 0.25s, scale 0.25s;
+  pointer-events: none;
+}
+
+.mka-input:valid ~ .mka-tick {
+  opacity: 1;
+  scale: 1;
+}
+
+/* Alerte (erreur d'envoi) — rouge sémantique sur ivoire. */
+.mka-alert {
+  border: 1.5px solid rgba(159, 18, 57, 0.35);
+  background: rgba(159, 18, 57, 0.07);
+  color: #8f1236;
+  border-radius: 1rem;
+  padding: 0.8rem 1rem;
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+/* Boutons clay (vitrine) + reflet crème qui balaie le CTA au survol. */
+.mka-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  width: 100%;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  font-weight: 800;
+  font-size: 0.98rem;
+  padding: 0.98rem 1.5rem;
+  border-radius: 1.35rem;
+  text-decoration: none;
+  overflow: hidden;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.mka-btn:focus-visible {
+  outline: 3px solid var(--mka-teal-dark);
+  outline-offset: 3px;
+}
+
+.mka-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.62;
+}
+
+.mka-btn svg {
+  flex: none;
+}
+
+.mka-btn-teal {
+  background: var(--mka-teal);
+  color: var(--mka-ivory);
+  box-shadow: 6px 8px 0 rgba(18, 59, 58, 0.18),
+    inset 3px 4px 8px rgba(255, 255, 255, 0.25),
+    inset -4px -6px 12px rgba(0, 0, 0, 0.25);
+}
+
+.mka-btn-teal::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(105deg, transparent 32%, rgba(245, 227, 168, 0.32) 50%, transparent 68%);
+  transform: translateX(-130%);
+  transition: transform 0.7s ease;
+  pointer-events: none;
+}
+
+.mka-btn-teal:hover:not(:disabled) {
+  transform: translate(-2px, -2px);
+  box-shadow: 9px 11px 0 rgba(18, 59, 58, 0.18),
+    inset 3px 4px 8px rgba(255, 255, 255, 0.25),
+    inset -4px -6px 12px rgba(0, 0, 0, 0.25);
+}
+
+.mka-btn-teal:hover:not(:disabled)::after {
+  transform: translateX(130%);
+}
+
+.mka-btn-cream {
+  background: var(--mka-cream-deep);
+  color: var(--mka-ink);
+  box-shadow: 6px 8px 0 rgba(18, 59, 58, 0.14),
+    inset 3px 4px 8px rgba(255, 255, 255, 0.5),
+    inset -4px -6px 12px rgba(18, 59, 58, 0.12);
+}
+
+.mka-btn-cream:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 9px 11px 0 rgba(18, 59, 58, 0.14),
+    inset 3px 4px 8px rgba(255, 255, 255, 0.5),
+    inset -4px -6px 12px rgba(18, 59, 58, 0.12);
+}
+
+/* Séparateur « ou ». */
+.mka-sep {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  color: var(--mka-ink-60);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.mka-sep::before,
+.mka-sep::after {
+  content: "";
+  flex: 1;
+  height: 1.5px;
+  border-radius: 2px;
+  background: rgba(18, 59, 58, 0.14);
+}
+
+.mka-note {
+  margin-top: 1.1rem;
+  text-align: center;
+  font-size: 0.78rem;
+  color: var(--mka-ink-60);
+  line-height: 1.55;
+}
+
+.mka-link {
+  color: var(--mka-teal-dark);
+  font-weight: 800;
+  text-decoration: none;
+  border-bottom: 2px solid rgba(14, 124, 123, 0.25);
+  transition: color 0.2s, border-color 0.2s;
+}
+
+.mka-link:hover {
+  color: var(--mka-teal);
+  border-color: var(--mka-teal);
+}
+
+/* Pied de la colonne formulaire (façon CF : marque + liens légaux). */
+.mka-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem 1.25rem;
+  padding: 1.25rem 1.5rem 1.75rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--mka-ink-60);
+}
+
+.mka-foot a {
+  color: var(--mka-ink-70);
+  text-decoration: none;
+  font-weight: 800;
+  transition: color 0.2s;
+}
+
+.mka-foot a:hover,
+.mka-foot a:focus-visible {
+  color: var(--mka-teal);
+}
+
+.mka-foot-sep {
+  color: rgba(18, 59, 58, 0.3);
+}
+
+/* Code à 6 chiffres (verify) : monospace équidistant, centré visuellement
+   (text-indent compense le letter-spacing final). */
+.mka-code {
+  width: 100%;
+  text-align: center;
+  letter-spacing: 0.5em;
+  text-indent: 0.5em;
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 1.7rem;
+  font-weight: 700;
+  color: var(--mka-ink);
+  background: var(--mka-ivory);
+  border: 1.5px solid rgba(18, 59, 58, 0.2);
+  border-radius: 1.15rem;
+  padding: 1.05rem 0.75rem;
+  box-shadow: inset 3px 4px 8px rgba(18, 59, 58, 0.05),
+    inset -3px -4px 8px rgba(255, 255, 255, 0.7);
+  transition: border-color 0.2s;
+}
+
+.mka-code::placeholder {
+  color: rgba(18, 59, 58, 0.25);
+}
+
+.mka-code:focus-visible {
+  outline: 3px solid rgba(14, 124, 123, 0.45);
+  outline-offset: 2px;
+  border-color: var(--mka-teal);
+}
+
+/* ── Entrées en scène : montée douce, décalée élément par élément ── */
+@keyframes mka-rise {
+  from { opacity: 0; transform: translateY(18px); }
+  to { opacity: 1; transform: none; }
+}
+
+.mka-in {
+  animation: mka-rise 0.65s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.mka-in-1 { animation-delay: 0.05s; }
+.mka-in-2 { animation-delay: 0.12s; }
+.mka-in-3 { animation-delay: 0.2s; }
+.mka-in-4 { animation-delay: 0.3s; }
+.mka-in-5 { animation-delay: 0.42s; }
+
+/* ── Accessibilité : mouvement réduit = tout figé, zéro parallaxe ── */
+@media (prefers-reduced-motion: reduce) {
+  .mka-page *,
+  .mka-page *::before,
+  .mka-page *::after {
+    animation: none !important;
+    transition: none !important;
+  }
 }

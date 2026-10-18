@@ -340,6 +340,38 @@ doctrine) :
 
 Miroir du CHANGELOG N°325 ; le merge --no-ff marque le PR #70 MERGED.
 
+## 6-octies. N°326 — la porte d'entrée de la console s'habille Clay (gabarit dash.cloudflare.com/login)
+
+Décision propriétaire : « je voudrais que console.403shield.ftci.fr/login
+soit comme dash.cloudflare.com/login, garder les couleurs du landing page en
+mieux avec effet wahou ». Depuis N°323 la racine de la console 308 → /login
+(pattern CF) — mais la page portait encore l'ardoise de l'intérieur
+(N°313) : la porte d'entrée contredisait la vitrine Clay (N°317, §6-septies).
+
+Ce que la refonte établit (jugement de marque) :
+- **La marque a UNE peau de porte** : split « panneau de marque sarcelle
+  (dégradé 165°, blobs menthe/crème, chips flottantes VPN/IP fixe/Mobile
+  Money, titre Fraunces au trait crème qui se dessine) + colonne formulaire
+  ivoire (carte claymorphe, CTA teal à reflet crème) » — palette FreeTech
+  de la vitrine reprise à l'identique (ivoire/crème/sarcelle/menthe/encre),
+  polices Manrope + Fraunces partagées. L'« effet wahou » est mesuré :
+  parallaxe au pointeur, dérive des blobs, entrées décalées — et TOUT se
+  coupe sur `prefers-reduced-motion` (le calme est un signe de confiance,
+  le mouvement un condiment, jamais un plat).
+- **L'intérieur reste nuit** : /me et /pro conservent le thème sombre
+  console (dash.cloudflare.com fait pareil — login clair, manager clair,
+  mais notre identité intérieure est émeraude/slate depuis N°313 et elle
+  reste) ; le canvas html bascule en ivoire PENDANT l'auth puis rend
+  l'ardoise (`html:has(.mka-page)`), jamais de flash.
+- **Le parcours ne bouge pas** : passwordless (code 6 chiffres/10 min),
+  honeypot, JWT 24 h, rebond session N°323 — la refonte est
+  présentationnelle de bout en bout, zéro fichier backend.
+- **L'équivalent CF « Sign up »** est le bouton crème « Commander un VPN »
+  → caisse du site (modèle OVH N°323 : commander sur www, gérer ici).
+
+Miroir du CHANGELOG N°326 ; relevé de vérification production consigné par
+le tuteur après déploiement.
+
 ## 7. Actifs de marque
 
 `docs/brand/` : `403shield-clay.png` (1024², bouclier clay menthe + étoile dorée

@@ -46,7 +46,13 @@ rebrand + boutique (N°316), rebrand 403Shield (N°317) :
 - **Connexion sans mot de passe** (`/login` → `/verify`) — code à 6 chiffres
   par e-mail (10 min, un seul usage) contre le module backend
   `POST /api/tunnel/auth/request-code` + `POST /api/tunnel/auth/verify`
-  (N°313, `backend/internal/api/handlers_tunnel.go`) ;
+  (N°313, `backend/internal/api/handlers_tunnel.go`). N°326 : ces deux pages
+  portent le gabarit **dash.cloudflare.com/login** habillé dans le design
+  system **Clay de la vitrine** (palette FreeTech — ivoire/crème/sarcelle/
+  menthe/encre, polices Manrope + Fraunces, `AuthShell` partagé :
+  panneau de marque desktop + colonne formulaire, parallaxe, chips
+  flottantes — `src/components/auth/` + `mka-*` dans globals.css) ;
+  parcours et contrats backend strictement inchangés ;
 - **Espace client complet** (`/me`, N°314) — portefeuille de commandes et
   d'appareils (migration douce : tout achat vitrine avec cet e-mail apparaît
   ici), re-livraison de la configuration dans l'espace (reveal + copie),

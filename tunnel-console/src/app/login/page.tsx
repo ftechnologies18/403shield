@@ -7,14 +7,18 @@
 // N°323 — pattern dash.cloudflare.com : la racine de la console redirige
 // ici ; un visiteur DÉJÀ connecté (token en localStorage) est renvoyé
 // vers /me — le clic « Console » atterrit dans l'espace, pas sur le
-// formulaire. Token expiré ? /me le purge (clearToken sur 401) et
-// ramène ici : un rebond, jamais de boucle.
+// formulaire. Token expiré ? /me le purge (clearToken sur 401) et ramène
+// ici : un rebond, jamais de boucle.
+// N°326 — refonte visuelle au gabarit dash.cloudflare.com/login, design
+// system Clay de la vitrine (palette FreeTech, AuthShell partagé avec
+// /verify) : le PARCOURS ne bouge pas d'une ligne de logique (honeypot,
+// request-code, redirection /verify) — seul l'habillage change.
 
-import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { MailCheck, Send } from "lucide-react";
+import { Check, Mail, MailCheck, Send, ShoppingBag } from "lucide-react";
 import { apiFetch, getToken } from "@/lib/api";
+import { AuthShell } from "@/components/auth/auth-shell";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -47,44 +51,36 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="hero-glow flex flex-1 flex-col items-center justify-center px-4 py-16">
-      <div className="w-full max-w-md">
-        <div className="mb-6 flex items-center gap-2.5">
-          <Image src="/logo.png" alt="403Shield" width={36} height={36} className="h-9 w-9 rounded-lg" />
-          <div className="flex flex-wrap items-center gap-2 leading-tight">
-            <p className="font-semibold tracking-tight text-slate-100">403Shield</p>
-            <span className="rounded-full border border-emerald-500/40 px-1.5 py-0.5 text-[9px] font-medium text-emerald-300">Console</span>
-            <p className="text-[11px] text-slate-500">powered by FTech CI</p>
-          </div>
-        </div>
+    <AuthShell>
+      <div className="mka-card mka-in mka-in-2">
+        <span className="mka-tile">
+          <MailCheck className="h-5 w-5" aria-hidden="true" />
+        </span>
+        <h1 className="mka-title">Connexion</h1>
+        <p className="mka-lede">
+          Entrez votre adresse e-mail&nbsp;: nous vous envoyons un code à 6
+          chiffres, valable 10 minutes. Aucun mot de passe à retenir — votre
+          adresse e-mail est votre identité 403Shield.
+        </p>
 
-        <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-6 sm:p-8">
-          <span className="mb-4 flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-400">
-            <MailCheck className="h-5 w-5" aria-hidden />
-          </span>
-          <h1 className="text-xl font-semibold text-slate-100">Connexion sans mot de passe</h1>
-          <p className="mt-2 text-sm leading-relaxed text-slate-400">
-            Entrez votre e-mail : nous vous envoyons un code à 6 chiffres,
-            valable 10 minutes. Aucun mot de passe à retenir — votre adresse
-            e-mail est votre identité 403Shield.
-          </p>
-
-          <form onSubmit={submit} className="mt-6 space-y-4">
-            {/* Honeypot : invisible pour les humains, rempli par les robots. */}
-            <input
-              type="text"
-              name="website"
-              tabIndex={-1}
-              autoComplete="off"
-              aria-hidden="true"
-              value={website}
-              onChange={(e) => setWebsite(e.target.value)}
-              className="hidden"
-            />
-            <div>
-              <label htmlFor="email" className="mb-1.5 block text-sm font-medium text-slate-300">
-                Adresse e-mail
-              </label>
+        <form onSubmit={submit} className="mka-form">
+          {/* Honeypot : invisible pour les humains, rempli par les robots. */}
+          <input
+            type="text"
+            name="website"
+            tabIndex={-1}
+            autoComplete="off"
+            aria-hidden="true"
+            value={website}
+            onChange={(e) => setWebsite(e.target.value)}
+            className="hidden"
+          />
+          <div>
+            <label htmlFor="email" className="mka-label">
+              Adresse e-mail
+            </label>
+            <div className="mka-field">
+              <Mail className="mka-lead" aria-hidden="true" />
               <input
                 id="email"
                 type="email"
@@ -94,32 +90,47 @@ export default function LoginPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="vous@exemple.com"
-                className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3.5 py-2.5 text-sm text-slate-100 placeholder:text-slate-600 outline-none transition focus:border-emerald-500/60 focus:ring-2 focus:ring-emerald-500/20"
+                className="mka-input"
               />
+              {/* Cochet teal dès que l'adresse est syntaxiquement valide. */}
+              <Check className="mka-tick" aria-hidden="true" />
             </div>
+          </div>
 
-            {error && (
-              <p role="alert" className="rounded-lg border border-red-500/30 bg-red-500/10 px-3.5 py-2.5 text-sm text-red-300">
-                {error}
-              </p>
-            )}
+          {error && (
+            <p role="alert" className="mka-alert">
+              {error}
+            </p>
+          )}
 
-            <button
-              type="submit"
-              disabled={busy}
-              className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-emerald-500 px-4 py-2.5 text-sm font-semibold text-slate-950 transition hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              <Send className="h-4 w-4" aria-hidden />
-              {busy ? "Envoi en cours…" : "Recevoir mon code"}
-            </button>
-          </form>
-        </div>
+          <button type="submit" disabled={busy} className="mka-btn mka-btn-teal">
+            <Send className="h-4 w-4" aria-hidden="true" />
+            {busy ? "Envoi en cours…" : "Recevoir mon code"}
+          </button>
 
-        <p className="mt-6 text-center text-xs text-slate-500">
-          Déjà client 403Shield VPN sans compte ? Utilisez l'e-mail de vos
-          commandes : vos achats apparaîtront dans votre espace.
-        </p>
+          <div className="mka-sep" aria-hidden="true">
+            ou
+          </div>
+
+          {/* Équivalent CF « Sign up » : l'entrée B2C de la marque est la
+              caisse du site (modèle OVH : commander sur www, gérer ici). */}
+          <a
+            className="mka-btn mka-btn-cream"
+            href="https://403shield.ftci.fr/checkout"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <ShoppingBag className="h-4 w-4" aria-hidden="true" />
+            Commander un VPN
+            <span className="sr-only"> (nouvel onglet — caisse du site 403Shield)</span>
+          </a>
+
+          <p className="mka-note">
+            Déjà client 403Shield VPN sans compte&nbsp;? Utilisez l&apos;e-mail
+            de vos commandes&nbsp;: vos achats apparaîtront dans votre espace.
+          </p>
+        </form>
       </div>
-    </main>
+    </AuthShell>
   );
 }
