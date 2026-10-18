@@ -86,6 +86,22 @@ export interface MegaMenuCategory {
   items: MegaMenuItem[];
 }
 
+/* N°331 — carte tarifaire du mega menu « Tarifs » : chaque service affiche
+   ses prix réels au survol du header (modèle Plans & Pricing cloudflare). */
+export interface PricingCard {
+  title: string;
+  desc: string;
+  /** Lignes de prix (entrée mensuelle puis annuel) — valeurs catalogue
+      réelles, synchronisées sur pricing.segments et les constantes produit
+      publiques de la boutique (publicvpnorder.go : b2c 1500/15000,
+      pro 3500/35000 FCFA). */
+  lines: string[];
+  note: string;
+  badge?: string;
+  href: string;
+  cta: string;
+}
+
 export interface LandingCopy {
   rail: {
     home: string;
@@ -115,6 +131,11 @@ export interface LandingCopy {
     megaMenu: {
       products: MegaMenuCategory[];
       solutions: MegaMenuCategory[];
+      /** N°331 — mega menu Tarifs : chaque service affiche ses prix. */
+      pricing: {
+        cards: PricingCard[];
+        compare: string;
+      };
     };
   };
   hero: {
@@ -369,6 +390,43 @@ const fr: LandingCopy = {
           ],
         },
       ],
+      /* N°331 — mega menu Tarifs : chaque service affiche ses prix réels
+         (source : pricing.segments FR + constantes produit publiques de la
+         boutique — la section /#tarifs reste la référence complète). */
+      pricing: {
+        cards: [
+          {
+            title: "Hotspot & Cybercafé",
+            desc: "Abonnement console : vouchers, portail captif, module cybercafé et 4 protections.",
+            lines: [
+              "Dès 2 500 FCFA / mois / routeur",
+              "25 000 FCFA / an · routeurs illimités",
+            ],
+            note: "Essai gratuit 60 jours, sans carte",
+            badge: "Le plus choisi",
+            href: "/#tarifs",
+            cta: "Voir les formules",
+          },
+          {
+            title: "VPN — IP fixe France",
+            desc: "Tunnel WireGuard personnel, configuration livrée en 30 secondes.",
+            lines: ["1 500 FCFA / mois", "15 000 FCFA / an"],
+            note: "Boutique — payable Wave ou carte",
+            badge: "2 mois offerts",
+            href: "/checkout?plan=vpn-b2c-year",
+            cta: "Commander le VPN",
+          },
+          {
+            title: "Accès Pro",
+            desc: "Routeurs MikroTik, caméras et NAS dans le tunnel — LAN étendu.",
+            lines: ["3 500 FCFA / mois", "35 000 FCFA / an"],
+            note: "Console — supervision distante",
+            href: "/tunnels",
+            cta: "Voir l'Accès Pro",
+          },
+        ],
+        compare: "Comparer toutes les formules",
+      },
     },
   },
   hero: {
@@ -1062,6 +1120,43 @@ const en: LandingCopy = {
           ],
         },
       ],
+      /* N°331 — Tarifs mega menu: every service shows its real prices
+         (source: EN pricing.segments + public shop product constants — the
+         /#tarifs section stays the complete reference). */
+      pricing: {
+        cards: [
+          {
+            title: "Hotspot & Cybercafé",
+            desc: "Console subscription: vouchers, captive portal, cybercafé module and 4 protections.",
+            lines: [
+              "From 2,500 FCFA / month / router",
+              "25,000 FCFA / year · unlimited routers",
+            ],
+            note: "60-day free trial, no card",
+            badge: "Most popular",
+            href: "/#tarifs",
+            cta: "See the plans",
+          },
+          {
+            title: "VPN — Fixed French IP",
+            desc: "Personal WireGuard tunnel, configuration delivered in 30 seconds.",
+            lines: ["1,500 FCFA / month", "15,000 FCFA / year"],
+            note: "Shop — Wave or card payment",
+            badge: "2 months free",
+            href: "/checkout?plan=vpn-b2c-year",
+            cta: "Order the VPN",
+          },
+          {
+            title: "Pro Access",
+            desc: "MikroTik routers, cameras and NAS in the tunnel — extended LAN.",
+            lines: ["3,500 FCFA / month", "35,000 FCFA / year"],
+            note: "Console — remote supervision",
+            href: "/tunnels",
+            cta: "See Pro Access",
+          },
+        ],
+        compare: "Compare all plans",
+      },
     },
   },
   hero: {

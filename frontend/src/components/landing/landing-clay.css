@@ -218,6 +218,23 @@
   transform: rotate(-4deg) scale(1.06);
 }
 
+/* N°331 — DENSITÉ topbar : la rangée doit respirer malgré l'inset de
+    104 px du rail latéral (.mkl-main padding-left, ≥ 1024) — à 1280
+    l'empreinte réelle (marque + nav 5 liens + lang + connexion + CTA)
+    sature les 1048 px de contenu. Règle SCOPÉE à la rangée du topbar
+    (> .mkl-wrap, jamais le drawer ni les sections) : liens quiet
+    14 → 11 px latéral / 10 → 8 px vertical, police 0.92 → 0.875 rem
+    (14,7 → 14 px — invisible à l'œil), CTA 20 → 16 px latéral.
+    NB : les classes Tailwind px-* sur ces éléments étaient des no-op —
+    .mkl-link-quiet / .mkl-btn-sm (CSS non-layeré) gagnent la cascade. */
+.mkl-topbar > .mkl-wrap .mkl-link-quiet {
+  padding: 8px 11px;
+  font-size: 0.875rem;
+}
+.mkl-topbar > .mkl-wrap .mkl-btn-sm {
+  padding: 9px 16px;
+}
+
 /* N°317 — lien actif du menu complet du site unifié (topbar des pages
    produit + sous-nav mobile) : souligné sarcelle, la classe mkl-active
    marque la page courante (usePathname côté product-page.tsx). */
@@ -324,8 +341,12 @@
 .mkl-page section[id] {
   scroll-margin-top: 90px;
 }
+/* N°331 — wrap élargi 1180 → 1216 (parité cloudflare.com) : la rangée
+   du header gagne enfin de l'air au-delà de 1366 px. Toutes les sections
+   partagent .mkl-wrap — l'alignement vertical logo/contenu reste
+   cohérent, les grilles internes sont responsives. */
 .mkl-wrap {
-  max-width: 1180px;
+  max-width: 1216px;
   margin: 0 auto;
   padding: 0 clamp(20px, 5vw, 64px);
 }
@@ -1950,9 +1971,10 @@
   .mkl-topbar .mkl-link-quiet {
     display: none;
   }
-  /* N°317 — la sous-nav mobile (.mkl-subnav) des pages produit garde ses
-     liens visibles : la règle ci-dessus ne vise que la rangée haute du
-     topbar, dont la nav est déjà repliée sous sm. */
+  /* N°331 — la nav desktop vit désormais ≥ 1280 (xl) : cette règle
+     historique (< 860) reste une ceinture de sûreté générique (le
+     hamburger + drawer couvrent tout l'intervalle < 1280). La sous-nav
+     mobile (.mkl-subnav) des pages produit garde ses liens visibles. */
   .mkl-topbar .mkl-subnav a.mkl-link-quiet {
     display: inline-flex;
   }
