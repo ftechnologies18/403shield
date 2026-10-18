@@ -466,7 +466,7 @@ export const HOTSPOT_GUIDES: Guide[] = [
         a: "Régénérez-lui (ancienne config invalide, nouvelle à rescaner) — c'est aussi la procédure en cas de soupçon de partage.",
       },
     ],
-    related: ["vitrine-vpn", "abonnement-facturation"],
+    related: ["vitrine-vpn", "acces-pro", "abonnement-facturation"],
   },
 
   {

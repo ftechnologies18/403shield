@@ -121,7 +121,7 @@ export const INFRASTRUCTURE_GUIDES: Guide[] = [
         a: "Oui, le nom est cosmétique (l'identifiant agent est stable) — Modifier → nom, l'affichage suit partout.",
       },
     ],
-    related: ["connecter-routeur-agent", "outils-routeur", "protection"],
+    related: ["connecter-routeur-agent", "outils-routeur", "protection", "console-tunnels"],
   },
 
   {
@@ -328,8 +328,16 @@ export const INFRASTRUCTURE_GUIDES: Guide[] = [
         q: "Puis-je déplacer un routeur d'un site à l'autre ?",
         a: "Le rattachement se reprend par la modification du routeur — prévoyez la re-génération des lots (les codes restent liés à leur cible d'origine).",
       },
+      {
+        q: "Le portail change-t-il d'un site à l'autre ?",
+        a: "Oui — la personnalisation descend par la chaîne compte → site → routeur (guide Portail & marque) : chaque établissement porte sa marque, ses couleurs et ses offres, sur le même compte.",
+      },
+      {
+        q: "Les rapports distinguent-ils les sites ?",
+        a: "Chaque caisse se lit séparément, la marge se consolide en un coup d'œil (guide Rapports & comptabilité) — et le même tunnel Accès Pro peut rejoindre les réseaux des deux sites à distance.",
+      },
     ],
-    related: ["parc-routeurs", "portail-captif", "rapports-comptabilite"],
+    related: ["parc-routeurs", "portail-captif", "rapports-comptabilite", "acces-pro"],
   },
 
   {

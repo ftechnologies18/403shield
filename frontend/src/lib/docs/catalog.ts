@@ -1,14 +1,16 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// /docs/guides — catalogue des sections & agrégation (N°304).
+// /docs/guides — catalogue des sections & agrégation (N°304, N°333-B).
 //
-// 30 guides console PUBLICS (statiques, /public/docs/<module>/) + le volet
-// plateforme PRIVÉ (6 guides : métadonnées ici, contenu chargé à la demande
-// par la route gated — voir platform-meta.ts).
+// 32 guides console PUBLICS (statiques, /public/docs/<module>/ — dont la
+// section Tunnels & Accès Pro) + le volet plateforme PRIVÉ (6 guides :
+// métadonnées ici, contenu chargé à la demande par la route gated — voir
+// platform-meta.ts).
 // ─────────────────────────────────────────────────────────────────────────────
 import type { DocSection, Guide } from "./types";
 import { DEMARRER_GUIDES } from "./content/demarrer";
 import { SUPERVISION_GUIDES } from "./content/supervision";
 import { HOTSPOT_GUIDES } from "./content/hotspot";
+import { TUNNELS_GUIDES } from "./content/tunnels";
 import { PERSONNES_GUIDES } from "./content/personnes";
 import { INFRASTRUCTURE_GUIDES } from "./content/infrastructure";
 import { ANALYSE_GUIDES } from "./content/analyse";
@@ -36,6 +38,13 @@ export const DOC_SECTIONS: DocSection[] = [
     description:
       "Le moteur commercial : vouchers, profils, modules Cybercafé / VPN / PPPoE et WiFi offert.",
     icon: "ticket",
+  },
+  {
+    id: "tunnels",
+    title: "Tunnels & Accès Pro",
+    description:
+      "Le pont privé WireGuard : VPN personnel à IP fixe France, Accès Pro pour routeurs, caméras et NAS — et l'espace client sans mot de passe.",
+    icon: "shield",
   },
   {
     id: "personnes",
@@ -74,11 +83,12 @@ export const DOC_SECTIONS: DocSection[] = [
   },
 ];
 
-/** Guides publics (30) — servables en statique, jamais de contenu plateforme ici. */
+/** Guides publics (32) — servables en statique, jamais de contenu plateforme ici. */
 export const PUBLIC_GUIDES: Guide[] = [
   ...DEMARRER_GUIDES,
   ...SUPERVISION_GUIDES,
   ...HOTSPOT_GUIDES,
+  ...TUNNELS_GUIDES,
   ...PERSONNES_GUIDES,
   ...INFRASTRUCTURE_GUIDES,
   ...ANALYSE_GUIDES,

@@ -6,6 +6,43 @@ aux dates de livraison — le déploiement est continu : chaque push `main` pass
 la CI puis se déploie automatiquement (frontend Vercel, backend Oracle E5
 depuis le T2 N°266 — Render suspendu N°303). N°317 : le projet change de nom
 de marque — MikCloud et MikTunnel deviennent **403Shield** (marque unifiée,
+## 2026-10-18 — N°333-B — **COUVERTURE : LE PILIER TUNNELS DOCUMENTÉ (volet B du plan N°333)** — 9e section « Tunnels & Accès Pro », 2 guides neufs qualité V1, vitrine-vpn déménagée
+
+### N°333-B (volet B — 6 fichiers, +560/−20)
+
+- **9e SECTION « Tunnels & Accès Pro »** dans le catalogue (icon shield,
+  placée après Hotspot) : le 3e pilier produit du méga menu — 3 500/35 000
+  FCFA, landing deep-linkable, console dédiée — a enfin ses guides, et la
+  règle « ≥3 guides par section » est tenue d'entrée.
+- **GUIDE ACCES-PRO (neuf, V1)** — « Accès Pro — routeurs, caméras et NAS
+  dans le tunnel » : 6 étapes (prérequis RouterOS 7 → souscription console
+  /pro → raccordement sortant → admin/API/SSH → LAN étendu → alertes),
+  3 differences (vs VPN perso, vs module VPN revendeur, vs port
+  forwarding), 3 usages (CGNAT, multi-sites, itinérant), 2 pièges
+  (routeur éteint = LAN injoignable…), FAQ ×3 — contenu calé sur les
+  capacités réelles (pricing.segments, copy N°321/332) ; NOTE DE CAPTURE
+  honnête (jamais de faux écran).
+- **GUIDE CONSOLE-TUNNELS (neuf, V1)** — « Console tunnels & espace client
+  (sans mot de passe) » : code e-mail 6 chiffres, portefeuille
+  d'appareils, échéances et renouvellement 1 clic, alertes hors-ligne —
+  5 étapes, 3 differences (vs console hotspot, vs boutique, vs appli
+  WireGuard), FAQ ×3.
+- **VITRINE-VPN DÉMÉNAGE des annexes vers la section tunnels** (le guide
+  réécrit en N°333-A documente le pilier /vpn) — annexes repasse à 3
+  guides.
+- **ENRICHISSEMENTS CIBLÉS** : plateforme-facturation 1 → 4 étapes
+  (lire la file · traiter · traçabilité · passage quotidien) ;
+  sites-multi-sites FAQ 1 → 3 (portail par site, rapports par site,
+  + tunnel Accès Pro) ; related entrants vers les guides neufs depuis
+  vpn-wireguard, sites-multi-sites, parc-routeurs.
+- **MAILLAGE VITRINE** : la page /tunnels « Guides liés » pointe
+  désormais Accès Pro · Console tunnels · Vitrine VPN B2C (FR + EN
+  miroir) — fin des guides hotspot en rabat pour le pilier tunnels.
+- **CATALOGUE** : 32 guides publics · 9 sections · 0 related cassé
+  (vérifié par script) · 0 doublon.
+- **PORTES** : lint 0 · tsgo 0 · next build 49/49 (47 + 2 guides) ·
+  schéma DB AUCUN (contenu pur).
+
 ## 2026-10-18 — N°333-A — **VÉRITÉ & FRAÎCHEUR DU CONTENU (volet A du plan N°333 — réorganisation du centre de guides)** — purge du mode foyer, vitrine-vpn réécrit sur le socle /vpn, 21 dates réelles
 
 ### N°333-A (volet A — 9 fichiers de contenu, zéro composant)

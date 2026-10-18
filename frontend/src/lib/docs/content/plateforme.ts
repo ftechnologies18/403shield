@@ -430,9 +430,9 @@ export const PLATEFORME_GUIDES: Guide[] = [
     ],
     etapes: [
       {
-        title: "Traitez la file",
+        title: "Lisez la file",
         body:
-          "Chaque demande se lit avec son contexte (compte, formule actuelle, cible, motif) : Validez (l'ajustement s'applique, le compte est notifié) ou refusez (motif conservé — le compte peut déposer une nouvelle demande ajustée). La file vide sur la capture — une demande en attente s'y affiche avec ses actions.",
+          "Chaque demande arrive avec son contexte : compte, type (montée / descente / renouvellement), formule actuelle et cible, motif éventuel, date. La file vide sur la capture — une demande en attente s'y affiche avec ses actions.",
         capture: cap(
           "plateforme/demandes.png",
           1440,
@@ -440,7 +440,22 @@ export const PLATEFORME_GUIDES: Guide[] = [
           "Vue Demandes de renouvellement : la file des demandes de facturation",
           "La file des demandes déposées par les comptes (montée/descente/renouvellement) — vide quand tout est traité.",
         ),
-        tip: "La montée au prorata se vérifie d'un clic d'œil (l'échéance reste, le delta se calcule) — la descente en milieu de période se refuse poliment avec date de prise d'effet.",
+      },
+      {
+        title: "Traitez une demande",
+        body:
+          "Validez (l'ajustement s'applique, le compte est notifié) ou refusez (motif conservé — le compte peut déposer une nouvelle demande ajustée). La décision se prend avec le contexte sous les yeux : montée au prorata, échéance décalée, paiement hors-ligne.",
+        tip: "La montée au prorata se vérifie d'un coup d'œil (l'échéance reste, le delta se calcule) — la descente en milieu de période se refuse poliment avec date de prise d'effet.",
+      },
+      {
+        title: "Vérifiez la traçabilité",
+        body:
+          "Chaque traitement s'inscrit dans l'historique : demandes traitées, en attente, refus motivés. Le badge de la sidebar cliente signale la réponse à l'exploitant — la boucle est fermée des deux côtés.",
+      },
+      {
+        title: "Passez la file chaque jour",
+        body:
+          "Un passage quotidien suffit à garder la file vide : les échéances approchent par vagues (fin de mois, fins d'essai) — traitez AVANT que l'expiration ne mette un compte en lecture seule.",
       },
     ],
     usages: [
