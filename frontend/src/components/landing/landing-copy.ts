@@ -44,6 +44,19 @@
 
 export type Lang = "fr" | "en";
 
+/* N°332-D — icône explicite du méga menu (fin du title.includes
+   fragile : un rename de copy ne casse plus l'icône). */
+export type MegaIconKey =
+  | "wifi"
+  | "monitor"
+  | "server"
+  | "shield"
+  | "globe"
+  | "cctv"
+  | "router"
+  | "building"
+  | "users";
+
 /* N°332-B — PAGES PRODUITS v2 : chaque feature devient une SECTION
    deep-linkable (règle d'or du plan N°332 : une ancre = une section
    vendable, kebab-case ASCII sans accent — la promesse du méga menu
@@ -128,6 +141,8 @@ export interface MegaMenuItem {
   desc: string;
   href: string;
   badge?: string;
+  /** N°332-D — icône déclarée (table statique côté header). */
+  icon?: MegaIconKey;
 }
 
 export interface MegaMenuCategory {
@@ -395,16 +410,19 @@ const fr: LandingCopy = {
               desc: "Portail captif à votre marque, vouchers en lot, forfaits débits/durée et gestion revendeurs.",
               href: "/hotspot#portail",
               badge: "Paiement Wave",
+              icon: "wifi",
             },
             {
               title: "Gestion Cybercafé",
               desc: "Attribution automatique de temps, postes de travail, import DHCP et tickets de session.",
               href: "/hotspot#cybercafe",
+              icon: "monitor",
             },
             {
               title: "Gestionnaire PPPoE ISP",
               desc: "Provisionnement automatique des abonnés, secrets d'accès et reconnexion live MikroTik.",
               href: "/#isp",
+              icon: "server",
             },
           ],
         },
@@ -416,21 +434,25 @@ const fr: LandingCopy = {
               desc: "SafeWiFi DNS Quad9, Shield anti-piratage WiFi, FamilyGuard couvre-feu et AntiVPN.",
               href: "/#protection",
               badge: "Auto-réparation",
+              icon: "shield",
             },
             {
               title: "VPN — IP fixe France",
               desc: "Tunnel WireGuard personnel, IP dédiée à Marseille, configuration livrée en 30 secondes.",
               href: "/vpn#ip-fixe",
+              icon: "globe",
             },
             {
               title: "Accès Pro — Routeurs & LAN",
               desc: "Routeurs MikroTik, caméras et NAS dans le tunnel chiffré — LAN étendu supervisé depuis la console.",
               href: "/tunnels#acces-pro",
+              icon: "cctv",
             },
             {
               title: "Pilotage de Flotte MikroTik",
               desc: "Supervision live, QoS Manager, Docteur Pool IP et mise à jour RouterOS en un clic.",
               href: "/#parc",
+              icon: "router",
             },
           ],
         },
@@ -443,21 +465,25 @@ const fr: LandingCopy = {
               title: "Hôtellerie & Restauration",
               desc: "WiFi visiteurs élégant, promos intégrées, réseaux sociaux et portail hospitalité.",
               href: "/hotspot#portail",
+              icon: "building",
             },
             {
               title: "Cybercafés & Salles de Jeu",
               desc: "Gestion automatisée des postes, tickets de temps et coupure automatique.",
               href: "/hotspot#cybercafe",
+              icon: "monitor",
             },
             {
               title: "PME & Fournisseurs d'Accès",
               desc: "Interconnexion multi-sites, supervision de parc et gestion d'abonnés PPPoE.",
               href: "/#isp",
+              icon: "server",
             },
             {
               title: "Travailleurs Nomades & Télétravail",
               desc: "VPN personnel à IP fixe France, DNS filtrés et accès distant à vos réseaux — où que vous travailliez.",
               href: "/vpn#ip-fixe",
+              icon: "globe",
             },
           ],
         },
@@ -1555,16 +1581,19 @@ const en: LandingCopy = {
               desc: "White-label captive portal, batch vouchers, speed/duration plans, and reseller management.",
               href: "/hotspot#portail",
               badge: "Wave Payment",
+              icon: "wifi",
             },
             {
               title: "Cybercafé Management",
               desc: "Automatic screen time allocation, workstations, DHCP import, and session tickets.",
               href: "/hotspot#cybercafe",
+              icon: "monitor",
             },
             {
               title: "ISP PPPoE Manager",
               desc: "Automated subscriber provisioning, access secrets, and live MikroTik reconnection.",
               href: "/#isp",
+              icon: "server",
             },
           ],
         },
@@ -1576,21 +1605,25 @@ const en: LandingCopy = {
               desc: "SafeWiFi Quad9 DNS, Shield WiFi anti-hacking, FamilyGuard curfew, and AntiVPN.",
               href: "/#protection",
               badge: "Self-healing",
+              icon: "shield",
             },
             {
               title: "VPN — Fixed French IP",
               desc: "Personal WireGuard tunnel, dedicated Marseille IP, configuration delivered in 30 seconds.",
               href: "/vpn#ip-fixe",
+              icon: "globe",
             },
             {
               title: "Pro Access — Routers & LAN",
               desc: "MikroTik routers, cameras and NAS inside the encrypted tunnel — extended LAN supervised from the console.",
               href: "/tunnels#acces-pro",
+              icon: "cctv",
             },
             {
               title: "MikroTik Fleet Control",
               desc: "Live telemetry, QoS Manager, IP Pool Doctor, and one-click RouterOS updates.",
               href: "/#parc",
+              icon: "router",
             },
           ],
         },
@@ -1603,21 +1636,25 @@ const en: LandingCopy = {
               title: "Hospitality & Restaurants",
               desc: "Elegant visitor WiFi, integrated promos, social links, and hospitality portal.",
               href: "/hotspot#portail",
+              icon: "building",
             },
             {
               title: "Cybercafés & Gaming Arenas",
               desc: "Automated workstation management, time tickets, and automatic cut-off.",
               href: "/hotspot#cybercafe",
+              icon: "monitor",
             },
             {
               title: "SMEs & ISPs",
               desc: "Multi-site interconnection, fleet supervision, and PPPoE subscriber management.",
               href: "/#isp",
+              icon: "server",
             },
             {
               title: "Nomads & Remote Workers",
               desc: "Personal fixed French IP VPN, filtered DNS and remote access to your networks — wherever you work.",
               href: "/vpn#ip-fixe",
+              icon: "globe",
             },
           ],
         },

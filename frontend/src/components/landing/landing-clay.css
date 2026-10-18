@@ -2452,3 +2452,57 @@ a.mkl-power:focus-visible .mkl-power-more {
     filter: blur(54px);
   }
 }
+
+/* ============================================================
+   N°332-D — FINITION PRO : focus clavier généralisé, boutons
+   « pressés » clay, hover des cartes, rythme en classes, typo
+   des splits. Montée en gamme sans révolution (tokens inchangés).
+   ============================================================ */
+
+/* ---- Focus clavier généralisé (prestige + accessibilité) ---- */
+.mkl-link-quiet:focus-visible,
+.mkl-topbar a:focus-visible,
+.mkl-pagenav a:focus-visible,
+.mkl-foot-grid a:focus-visible,
+.mkl-foot-grid button:focus-visible,
+a.mkl-power:focus-visible,
+.mkl-guide:focus-visible,
+.mkl-faq-item summary:focus-visible,
+.mkl-share:focus-visible,
+.mkl-rail-mobile a:focus-visible {
+  outline: 3px solid var(--mkl-teal-dark, #135e56);
+  outline-offset: 3px;
+  border-radius: 12px;
+}
+
+/* ---- Boutons clay « pressés » : le bouton S'ENFONCE au clic
+        au lieu de flotter (feedback tactile fort sur mobile) ---- */
+.mkl-btn:active {
+  transform: translate(2px, 3px);
+  box-shadow:
+    2px 3px 0 rgba(18, 59, 58, 0.16),
+    inset 2px 3px 6px rgba(255, 255, 255, 0.14),
+    inset -3px -4px 8px rgba(0, 0, 0, 0.22);
+}
+
+/* ---- Hover lift des cartes latérales (la centrale a le sien) ---- */
+.mkl-price-card.mkl-pc1:hover,
+.mkl-price-card.mkl-pc3:hover {
+  transform: translate(-2px, -2px);
+}
+
+/* ---- Typo : les titres de split s'alignent sur les sec-head
+        (letter-spacing Fraunces resserré, cohérence h2) ---- */
+.mkl-split h2 {
+  letter-spacing: -0.01em;
+}
+
+/* ---- Rythme vertical en classes (fin des style inline
+        paddingTop: 0 épars dans les composants) ---- */
+.mkl-sec-tight {
+  padding-top: 0;
+}
+.mkl-sec-flush {
+  padding-top: 0;
+  padding-bottom: 0;
+}

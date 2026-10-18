@@ -54,7 +54,21 @@ import {
   Users,
   Cctv,
 } from "lucide-react";
-import { landingCopy, type Lang } from "./landing-copy";
+import { landingCopy, type Lang, type MegaIconKey } from "./landing-copy";
+
+/* N°332-D — table statique des icônes du méga menu (le champ icon
+   est déclaré dans la copy ; Users = repli). */
+const MEGA_ICONS: Record<MegaIconKey, typeof Users> = {
+  wifi: Wifi,
+  monitor: Monitor,
+  server: Server,
+  shield: ShieldCheck,
+  globe: Globe,
+  cctv: Cctv,
+  router: Router,
+  building: Building2,
+  users: Users,
+};
 
 export interface HeaderProps {
   lang: Lang;
@@ -120,20 +134,10 @@ export function EnterpriseHeader({ lang, toggleLang, onSignIn, onSignUp }: Heade
     setMobileSection(mobileSection === section ? null : section);
   };
 
-  const getItemIcon = (title: string) => {
-    if (title.includes("Hotspot") || title.includes("WiFi")) return Wifi;
-    if (title.includes("Cybercafé")) return Monitor;
-    if (title.includes("PPPoE") || title.includes("ISP")) return Server;
-    if (title.includes("Protection") || title.includes("Shield")) return ShieldCheck;
-    /* N°332-A — scission de l'item fusionné : le VPN personnel et
-       l'Accès Pro deviennent deux promesses distinctes du méga menu. */
-    if (title.includes("VPN")) return Globe;
-    if (title.includes("Accès Pro") || title.includes("Pro Access")) return Cctv;
-    if (title.includes("Flotte") || title.includes("MikroTik")) return Router;
-    if (title.includes("Hôtellerie") || title.includes("Hospitality")) return Building2;
-    if (title.includes("Nomades") || title.includes("Nomads")) return Globe;
-    return Users;
-  };
+  /* N°332-D — table statique : l'icône est DÉCLARÉE dans la copy
+     (champ icon de MegaMenuItem) — un rename de titre ne casse plus
+     l'icône (fin du title.includes fragile). */
+  const megaIcon = (key?: MegaIconKey) => MEGA_ICONS[key ?? "users"] ?? Users;
 
   /* N°331 — icônes des cartes tarifaires du mega menu Tarifs. */
   const getPricingIcon = (title: string) => {
@@ -211,7 +215,7 @@ export function EnterpriseHeader({ lang, toggleLang, onSignIn, onSignUp }: Heade
                     </span>
                     <div className="flex flex-col gap-1">
                       {cat.items.map((item) => {
-                        const Icon = getItemIcon(item.title);
+                        const Icon = megaIcon(item.icon);
                         return (
                           <Link
                             key={item.title}
@@ -275,7 +279,7 @@ export function EnterpriseHeader({ lang, toggleLang, onSignIn, onSignUp }: Heade
                     </span>
                     <div className="flex flex-col gap-1">
                       {cat.items.map((item) => {
-                        const Icon = getItemIcon(item.title);
+                        const Icon = megaIcon(item.icon);
                         return (
                           <Link
                             key={item.title}

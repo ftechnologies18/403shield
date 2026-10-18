@@ -717,7 +717,7 @@ export default function LandingPage({ onSignIn, onSignUp }: LandingPageProps) {
         </section>
 
         {/* BANDEAU STATS */}
-        <section style={{ paddingTop: 0, paddingBottom: 0 }}>
+        <section className="mkl-sec-flush">
           <Reveal>
             <div className="mkl-band">
               <div className="mkl-wrap mkl-band-grid">
@@ -854,7 +854,7 @@ export default function LandingPage({ onSignIn, onSignUp }: LandingPageProps) {
         </section>
 
         {/* CTA FINAL */}
-        <section id="cta" style={{ paddingTop: 0 }}>
+        <section id="cta" className="mkl-sec-tight">
           <Reveal>
             <div className="mkl-cta">
               <Cloud className="mkl-mini-cloud mkl-mc1 size-10" aria-hidden="true" />

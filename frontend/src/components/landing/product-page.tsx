@@ -361,7 +361,7 @@ export default function ProductPage({ page, onSignIn, onSignUp }: ProductPagePro
 
         {/* NOTE (VPN) — conservée de la v1 */}
         {pageCopy.note ? (
-          <section style={{ paddingTop: 0 }}>
+          <section className="mkl-sec-tight">
             <div className="mkl-wrap">
               <Reveal>
                 <div className="mkl-panel">
@@ -469,7 +469,7 @@ export default function ProductPage({ page, onSignIn, onSignUp }: ProductPagePro
         </section>
 
         {/* CTA FINAL + partage */}
-        <section id="cta" style={{ paddingTop: 0 }}>
+        <section id="cta" className="mkl-sec-tight">
           <Reveal>
             <div className="mkl-cta">
               <Cloud className="mkl-mini-cloud mkl-mc1 size-10" aria-hidden="true" />
