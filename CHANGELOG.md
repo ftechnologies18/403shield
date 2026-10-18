@@ -10,6 +10,73 @@ sous-marque FTech CI) ; l'historique ci-dessous conserve les noms d'époque.
 N°319 : le DÉPÔT GitHub lui-même devient `ftechnologies18/403shield`
 (anciennes URL redirigées en 301 par GitHub — web, git et API).
 
+## 2026-10-18 — N°331 — **RÉORGANISATION DU HEADER : LA RANGÉE RESPIRE ENFIN (nav ≥ 1280, hamburger + drawer accordéon complet en dessous) ET « TARIFS » DEVIENT UN MEGA MENU OÙ CHAQUE SERVICE AFFICHE SES PRIX RÉELS — le modèle Plans & Pricing de cloudflare.com appliqué à la vitrine**
+
+### Déclencheur (propriétaire)
+« 1-réorganisation du header : le logo et le nom du site semblent collés
+au menu. 2-organise le Tarif en mega menu où chaque service affiche ses
+tarifs. » — diagnostic mesuré en production : écart marque→nav de
+**0 px à 1024** (saturation) et **14 px à 1280** ; « Tarifs » n'était
+qu'un lien plat vers /#tarifs, aucun prix visible depuis le header.
+
+### Ce qui change (vitrine, 3 fichiers — frontend pur, zéro backend)
+- **Respirations garanties** (`enterprise-header.tsx` +
+  `landing-clay.css`) : la cause racine est géométrique — le rail
+  latéral fixe réserve 104 px (`.mkl-main` padding-left dès 1024),
+  l'empreinte marque + nav + actions ≈ 1010 px contre 1048 px de
+  contenu à 1280. La nav desktop passe de lg (1024) à **xl (1280)** :
+  hamburger + drawer complet couvrent 1024-1279 où la rangée ne peut
+  pas respirer ; « Se connecter » vit ≥ 1280 (`hidden
+  xl:inline-flex`) — **aucune zone morte**, le drawer porte le bouton.
+  Plancher de gap `xl:gap-[clamp(12px,1.5vw,24px)]` sur la rangée
+  (jamais < xl — le mobile 390 garde son rangement mesuré au plus
+  juste). Densité scopée `.mkl-topbar > .mkl-wrap` : liens quiet
+  14 → 11 px latéral, police 0.92 → 0.875 rem, CTA 20 → 16 px
+  (découverte en route : les classes Tailwind `px-*` sur ces éléments
+  étaient des no-op — `.mkl-link-quiet` / `.mkl-btn-sm`, CSS
+  non-layeré, gagnent la cascade). Wrap **1180 → 1216 px** (parité
+  cloudflare.com, toutes sections alignées). Résultats mesurés :
+  1280 → 36 px (FR) / 70 px (EN), 1440 → 56 px, 1536 → 56 px,
+  0 débordement partout.
+- **Mega menu Tarifs** (`enterprise-header.tsx` + `landing-copy.ts`) :
+  le lien plat devient bouton + chevron (mécanique N°325 éprouvée :
+  hover 150 ms, clic, Escape, fermeture au changement de route,
+  `aria-expanded`, panneau clampé `min(780px, 100vw-3rem)`). Trois
+  cartes de service aux **prix réels** : Hotspot & Cybercafé (dès
+  2 500 FCFA/mois · 25 000/an, badge « Le plus choisi ») · VPN — IP
+  fixe France (1 500/mois · 15 000/an, badge « 2 mois offerts », CTA
+  → `/checkout?plan=vpn-b2c-year`) · Accès Pro (3 500/mois ·
+  35 000/an, CTA → `/tunnels`). Pied « Comparer toutes les formules »
+  → `/#tarifs` (la section complète reste la référence). Copy
+  `header.megaMenu.pricing` FR/EN + interface `PricingCard` — valeurs
+  synchronisées sur `pricing.segments` et les constantes produit
+  publiques de la boutique.
+- **Drawer accordéon < 1280** : Accueil · Produits ▾ (6 items par
+  catégories) · Solutions ▾ (4 items) · Tarifs ▾ (3 services avec prix
+  d'entrée + comparer) · Guides & Docs + boutons auth — **parité
+  complète** avec la nav desktop (l'ancien drawer n'avait ni Produits
+  ni Solutions : à 1024-1279, intervalle désormais couvert par le
+  hamburger, ils seraient devenus inaccessibles).
+
+### Intacts par construction
+MegaMenus Produits/Solutions N°325 · section /#tarifs complète (le
+mega menu renvoie vers elle) · parcours d'inscription et CTA · pages
+produit partageant le header (vérifié sur /hotspot, panneau Pricing
+fonctionnel) · caisse `?plan=` · footer N°330 · rail 7 entrées ·
+bascule FR/EN (panneau « Compare all plans » vérifié).
+
+### Portes
+lint 0 · tsc 0 · next build ✓ 47/47 · smoke navigateur sur le build de
+production : 1280 gaps 36 px (FR)/70 (EN) mesurés, panneau 780 px dans
+le viewport (305→1085), 3 cartes prix vérifiées, Escape ferme
+(aria-expanded=false), carte VPN → `/checkout?plan=vpn-b2c-year`,
+comparer → #tarifs (scroll top 90), fermeture au changement de route ;
+1440/1536 gaps 56 px ; 1024 nav masquée + burger + drawer accordéon ;
+390 accordéon avec prix, 390=390, 0 débordement ; /hotspot header
+partagé fonctionnel ; 0 erreur console ; audit VLM desktop+mobile =
+PASS (« aération réussie, mega menu lisible, aucun chevauchement,
+palette clay cohérente ») ; schéma DB : AUCUN.
+
 ## 2026-10-18 — N°330 — **LE FOOTER DE LA VITRINE PERD SA COLONNE « ÉCOSYSTÈME » (FTech CI ↗ · Console 403Shield ↗ · Boutique VPN) — la grille desktop retrouve sa ligne pleine et le footer se concentre sur ses trois colonnes propres**
 
 ### Déclencheur (propriétaire)
