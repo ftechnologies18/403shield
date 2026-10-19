@@ -11,13 +11,13 @@
 //  3. RÈGLE BLOQUER ou CATÉGORIE DU NIVEAU → BLOCK ;
 //  4. sinon ALLOW.
 //
-// CATÉGORIES : le niveau « family » bloque adulte + jeux d'argent (graines
-// CI-DESSOUS — domaines réels, célèbres, vérifiables publiquement) ; le
-// niveau « threats » (malwares/phishing) reste vide en phase 1 : ces
-// listes vivent quelques heures — elles exigent l'agrégation automatique
-// URLhaus/OpenPhish du N°339, PAS une liste figée mensongère (doctrine :
-// aucun faux chiffre — un niveau qui ne bloque rien est documenté tel
-// quel côté console, jamais maquillé).
+// CATÉGORIES : le niveau « family » bloque menaces + adulte + jeux d'argent
+// (graines CI-DESSOUS — domaines réels, célèbres, vérifiables publiquement) ;
+// le niveau « threats » (malwares/phishing) consulte l'agrégat URLhaus/
+// OpenPhish du N°343 (threats.go — set atomique reconstruit des flux au
+// démarrage puis toutes les 6 h, fail-open : un flux injoignable ne vide
+// JAMAIS la liste précédente). Les deux niveaux partagent le MÊME agrégat :
+// family = threats + catégories, exactement le vocabulaire SafeWiFi N°80.
 //
 // Le couvre-feu réutilise FamilyGuardConfig.ActiveAt TEL QUEL (N°82) :
 // même spec, même sémantique des jours de DÉBUT de fenêtre, même décision
@@ -95,8 +95,16 @@ func Decide(p *model.DnsProfile, qname string, now time.Time) Verdict {
 		}
 	}
 
-	// 4. Catégories du niveau (family = adulte + jeux d'argent ;
-	// threats = rien en phase 1 — listes automatiques N°339).
+	// 4. Catégories du niveau. L'agrégat de menaces est partagé par les
+	// deux niveaux de filtrage (family = threats + adulte + jeux
+	// d'argent — vocabulaire SafeWiFi N°80) ; il est consulté APRÈS les
+	// règles perso : l'exception « devoirs » de l'allowlist dépasse
+	// toujours TOUT (ordre figé en tête de fichier).
+	if p.Level == model.DnsLevelThreats || p.Level == model.DnsLevelFamily {
+		if ThreatListed(qname) {
+			return VerdictBlock
+		}
+	}
 	if p.Level == model.DnsLevelFamily {
 		for _, r := range categoryAdult {
 			if model.DnsRuleMatches(r, qname) {

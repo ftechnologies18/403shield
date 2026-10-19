@@ -87,9 +87,19 @@ func (a *API) handleDnsShieldMe(w http.ResponseWriter, r *http.Request) {
 	}
 	a.store.Unlock()
 	base := agentBaseURL(r)
+	// N°343 — l'état RÉEL de l'agrégat de menaces (URLhaus/OpenPhish,
+	// balayage 6 h) : la console affiche le compte servi par le
+	// résolveur — 0 tant que le premier passage n'a pas réussi, JAMAIS
+	// un chiffre fabriqué (doctrine). Lu HORS verrou : l'état vit dans
+	// le package dnsshield (atomic), pas dans le store.
+	threatCount, threatAt := dnsshield.ThreatStats()
 	writeJSON(w, http.StatusOK, map[string]any{
 		"email":    client.Email,
 		"profiles": rows,
+		"threats": map[string]any{
+			"domains":   threatCount,
+			"updatedAt": threatAt.Format(time.RFC3339),
+		},
 		"limits": map[string]any{
 			"maxProfiles": model.MaxDnsProfilesPerEmail,
 			"maxRules":    model.MaxDnsRulesPerList,

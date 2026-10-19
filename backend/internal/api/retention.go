@@ -32,6 +32,7 @@ import (
 	"runtime/debug"
 	"time"
 
+	"mikcloud/hotspot-api/internal/model"
 	"mikcloud/hotspot-api/internal/store"
 )
 
@@ -76,9 +77,18 @@ func (a *API) RunRetentionSweep() {
 	// attendre une visite console perdrait des données — un compte dormant,
 	// jamais consulté, est couvert aussi (même argument que N°64).
 	journals := a.ensureMonthlyJournals(db, now)
+	// N°343 — purge du journal de blocage du bouclier DNS (30 j + borne
+	// 1000/profil) : la promesse « journalisation minimale » du produit se
+	// tient par la purge périodique, pas par l'intention — même argument que
+	// la rétention UserLogs de ce même passage. La suppression se propage à
+	// PostgreSQL par le Save() complet ci-dessous (syncTable).
+	dnsPurged := model.PurgeDnsEvents(db, now)
 	a.store.Save()
 	if purged > 0 {
 		log.Printf("rétention (30/60/90 j par compte) : %d entrée(s) du journal utilisateurs purgée(s)", purged)
+	}
+	if dnsPurged > 0 {
+		log.Printf("bouclier DNS : %d événement(s) de blocage purgé(s) (30 j / borne profil)", dnsPurged)
 	}
 	if journals > 0 {
 		log.Printf("journaux mensuels : %d clôture(s) automatique(s) au bascule de mois", journals)

@@ -140,6 +140,13 @@ func main() {
 	// défaut 50 Go — 0 = illimité). Peers B2C uniquement, les routeurs de
 	// gestion ne sont jamais touchés.
 	go engine.RunVpnQuotaSweepForever()
+	// N°343 — balayage 6 h des listes de menaces du bouclier DNS : agrégation
+	// URLhaus/OpenPhish (hôtes des flux publics, dédup, set atomique sans
+	// verrou sur le chemin des requêtes). Rattrapage au démarrage — le niveau
+	// « threats » des profils devient OPÉRATIONNEL dès le boot ; fail-open :
+	// un flux injoignable ne vide jamais l'agrégat précédent. Aucune écriture
+	// store (état rebuildable, jamais persisté).
+	go engine.RunDnsThreatsSweepForever()
 	// N°150 — bootstrap Telegram plateforme : getMe (cache du @username
 	// pour le lien magique) + setWebhook (URL publique RENDER_EXTERNAL_URL
 	// ou PUBLIC_BASE_URL + secret d'env). Best-effort : un échec réseau au
