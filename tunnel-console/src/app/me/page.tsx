@@ -9,8 +9,9 @@
 //
 //   - THÈME CLAIR « console » (fond neutre #F5F6F8, cartes blanches,
 //     accents émeraude, wordmark aurora) — /me peint son propre monde
-//     (doctrine N°326), le html bascule en clair pendant la visite,
-//     retour au sombre pour /pro à la sortie ;
+//     (doctrine N°326), le html bascule en clair pendant la visite
+//     (depuis N°337, /pro est clair à son tour ; les autres pages
+//     restent sombres) ;
 //   - KPI STAT CARDS (miroir /app/vpn) : accès actifs · appareils ·
 //     échéances ≤ 7 j · prochaine échéance — données RÉELLES du contrat
 //     /api/tunnel/me uniquement (doctrine : aucun faux chiffre) ;

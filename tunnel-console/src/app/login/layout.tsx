@@ -1,8 +1,9 @@
 // login/layout.tsx — N°317 — route privée : JAMAIS indexée (noindex posé dès
 // N°316, conservé ; titre rebrandé « 403Shield Console »).
 // N°326 — pose les polices du design system Clay (Manrope + Fraunces,
-// mêmes instances que la vitrine) pour CE parcours uniquement : /me et /pro
-// gardent la police système du thème sombre.
+// mêmes instances que la vitrine) pour CE parcours uniquement : /me
+// (N°334-B) et /pro (N°337), mondes clairs « console », gardent la
+// police système.
 import type { Metadata } from "next";
 import { fraunces, manrope } from "@/lib/fonts";
 

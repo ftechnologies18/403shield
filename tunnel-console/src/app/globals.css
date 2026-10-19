@@ -4,8 +4,9 @@
    « 403Shield » powered by FTech CI — aucun bleu/indigo, discipline repo).
    N°326 — les parcours d'AUTHENTIFICATION (/login, /verify) passent au
    design system « Clay » de la vitrine (palette FreeTech de
-   landing-clay.css, préfixe mka- propre à cette app) : /me et /pro
-   conservent le thème sombre — chaque page peint son propre monde. */
+   landing-clay.css, préfixe mka- propre à cette app). N°334-B puis N°337 :
+   /me et /pro peignent désormais leur PROPRE monde clair « console » —
+   chaque page peint son propre monde. */
 
 :root {
   --background: #020617;
@@ -23,7 +24,9 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* Halo émeraude discret derrière le hero (console /me, /pro). */
+/* Halo émeraude discret derrière le hero sombre (N°313). Plus utilisé
+   depuis les mondes clairs /me N°334-B et /pro N°337 — conservé pour
+   mémoire (doctrine : chaque page peint son propre monde). */
 .hero-glow {
   background:
     radial-gradient(600px 300px at 70% -10%, rgba(16, 185, 129, 0.18), transparent 70%),
@@ -1051,7 +1054,8 @@ html:has(.mka-page) {
    propriétaire). /me peint son propre monde (doctrine N°326, miroir
    du html:has(.mka-page) des parcours d'auth) : fond neutre #F5F6F8,
    cartes blanches, accents émeraude — le html passe en color-scheme
-   clair PENDANT la visite, retour au sombre à la sortie (/pro).
+   clair PENDANT la visite, retour au sombre vers les pages sombres
+   (depuis N°337, /pro est clair à son tour).
    ============================================================ */
 .mkme-page {
   color-scheme: light;
@@ -1065,6 +1069,33 @@ html:has(.mkme-page) {
 /* Wordmark aurora — même dégradé signature que la console opérateur
    (text-aurora : corail → rouge-orangé, clip texte). */
 .mkme-aurora {
+  background-image: linear-gradient(135deg, oklch(0.66 0.19 44), oklch(0.58 0.21 28));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* ============================================================
+   N°337 — ACCÈS PRO /pro : bascule claire « console » (refonte au
+   style de la vue /app/vpn — miroir du /me N°334-B, consigne
+   propriétaire « la refonte de /pro »). /pro peint son propre monde
+   (doctrine N°326) : fond neutre #F5F6F8, cartes blanches, accents
+   émeraude — le html passe en color-scheme clair PENDANT la visite,
+   retour au sombre vers les pages sombres. La classe hero-glow du
+   thème sombre n'y est plus utilisée.
+   ============================================================ */
+.mkpro-page {
+  color-scheme: light;
+}
+
+html:has(.mkpro-page) {
+  background: #f5f6f8;
+  color-scheme: light;
+}
+
+/* Wordmark aurora — même dégradé signature que la console opérateur
+   et que /me (text-aurora : corail → rouge-orangé, clip texte). */
+.mkpro-aurora {
   background-image: linear-gradient(135deg, oklch(0.66 0.19 44), oklch(0.58 0.21 28));
   -webkit-background-clip: text;
   background-clip: text;
