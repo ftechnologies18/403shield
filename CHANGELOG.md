@@ -10,6 +10,100 @@ sous-marque FTech CI) ; l'historique ci-dessous conserve les noms d'époque.
 N°319 : le DÉPÔT GitHub lui-même devient `ftechnologies18/403shield`
 (anciennes URL redirigées en 301 par GitHub — web, git et API).
 
+## 2026-10-19 — N°341 — **L'ACCÈS PRO SUR TOUS LES APPAREILS, EN GUIDES ET EN VITRINE** (consigne propriétaire : documenter les appareils non-MikroTik + l'argument pair-à-pair)
+
+- **Contexte** : consultation propriétaire « le tunnel /pro B2B est-il
+  limité aux routeurs MikroTik ? » — diagnostic : l'impression vient du
+  COPY (héros et éligibilité axés « routeurs supervisés »), pas de la
+  technique. La conf Pro est du WireGuard standard (AllowedIPs 10.8.0.0/24,
+  10.8.2.0/24 [, LAN étendu]) : tout appareil capable de WireGuard la porte
+  — le MikroTik n'est requis que côté SITE rejoint (passerelle agentée :
+  détection LAN via API RouterOS dans le tunnel, wg_lan/set-lan
+  RouterOS-only). Et le hairpin du segment remote (FORWARD -s/-d
+  10.8.2.0/24 sans MASQUERADE, adresses tunnel préservées — wg-peer.sh v5)
+  rend déjà possible le PAIR-À-PAIR PRIVÉ entre appareils Pro du même
+  compte (PC ↔ NAS, PC ↔ PC, sans routeur dans le chemin) — un argument
+  de vente enterré dans la technique. Consigne de livraison : documenter
+  OpenWRT / pfSense / OPNsense / GL.iNet (compatibles, adaptation
+  manuelle) et NAS Synology/QNAP (pas de client officiel — voies
+  praticables), mettre à jour la vitrine /pro avec l'argument pair-à-pair,
+  puis N°342 (Accès Invité) sur GO séparé.
+- **2 NOUVEAUX GUIDES PUBLICS** (section Tunnels & Accès Pro 4 → 6,
+  catalogue public 33 → 35) :
+  - `acces-pro-multi-appareils` — « Installer l'Accès Pro sur PC, NAS et
+    routeurs tiers » : la conf révélée est un fichier WireGuard standard ;
+    deux voies OFFICIELLES (appli WireGuard QR/.conf, import RouterOS 7) ;
+    voies PRATICABLES documentées champ par champ — OpenWRT (LuCI/uci),
+    pfSense/OPNsense (paquet WireGuard, interface + peer), GL.iNet
+    (client natif, import du .conf), NAS Synology/QNAP (pas de client
+    officiel : conteneur Docker / paquet tiers, adaptation manuelle) ;
+    frontière honnête du support (« la conf, oui ; le firmware tiers,
+    non ») ; pièges : hors périmètre support (info) · « s'attendre à ce
+    que la navigation change » (la conf Pro route le périmètre, pas
+    Internet — info) · copie de conf sur un 2e appareil (warn, doctrine
+    1 conf = 1 appareil) ; FAQ ×4 dont « mon routeur non-MikroTik peut-il
+    servir de passerelle ? » (non — l'agent vit sur RouterOS 7) ;
+    zéro capture (interfaces tiers = doctrine : jamais de faux écran).
+  - `acces-pro-pair-a-pair` — « Le pair-à-pair privé : vos appareils Pro
+    se rejoignent via Marseille » : mécanisme honnête (adresses tunnel
+    dédiées 10.8.2.x, relais hairpin SANS NAT — les vraies adresses sont
+    préservées, chiffrement PAR BRAS appareil↔Marseille↔appareil : jamais
+    promis « de bout en bout », c'est le modèle de tout relais VPN) ;
+    recettes concrètes (ping/http/SMB/rsync/RDP/VNC à l'adresse tunnel,
+    serveur de jeu ou démo web entre SES propres machines) ; limites
+    assumées (l'appareil distant doit être allumé — warn ; le débit
+    transite par Marseille — info, sur place le LAN direct reste la bonne
+    réponse ; les invités tiers = chantier Accès Invité PAS ENCORE livré,
+    jamais de conf partagée en contournement) ; différenciation LAN étendu
+    vs pair-à-pair (derrière la passerelle vs porte-la-conf) ; FAQ ×4.
+- **GUIDE acces-pro MIS À JOUR** : summary + paragraphe quoi (conf
+  standard multi-appareils + MikroTik « requis d'un seul côté : celui du
+  site rejoint » + renvois vers les 2 nouveaux guides) · étape prérequis
+  (précision côté SITE vs côté APPAREIL) · usage « Le pair-à-pair privé »
+  · FAQ « Faut-il un MikroTik de chaque côté ? » (non) · related
+  réordonnés vers les nouveaux guides ; FAQ vitrine-vpn (« Faut-il un
+  routeur particulier ? ») et étape d'installation console-tunnels
+  nuancées de la même façon ; compteur de section Tunnels & Accès Pro et
+  description de section (« pair-à-pair entre vos appareils »).
+- **VITRINE /pro (tunnel-console) MISE À JOUR** : le héros dit désormais
+  « la configuration est du WireGuard standard : elle s'installe sur tout
+  appareil — PC, téléphone, NAS, autre routeur — le MikroTik restant la
+  passerelle du site rejoint » ; NOUVELLE grille « Comment ça marche »
+  (2 cartes, visible avant l'éligibilité) : « S'installe sur tout appareil
+  WireGuard » (Laptop) + « Pair-à-pair privé via Marseille »
+  (ArrowLeftRight — PC ↔ NAS, PC ↔ PC, sans routeur dans le chemin, sans
+  port publié), chacune avec lien vers son guide public ; rappel
+  pair-à-pair au portefeuille dès 2 commandes Pro (compteur réel
+  proOrders.length) ; instructions du reveal étendues (PC : « Importer un
+  tunnel depuis un fichier » · NAS/routeurs tiers : adaptation manuelle,
+  guide) et AllowedIPs reformulés « vos routeurs, vos autres appareils
+  Pro + votre LAN étendu ». Zéro appel API nouveau, zéro champ nouveau :
+  de la copie sur des données déjà servies par le contrat N°315.
+- **Branchement automatique dérivé du catalogue** : pages SSG + 301 URL
+  plates (next.config), index ⌘K plein texte (search-index.json reconstruit
+  au build), sitemap 49 → 51 URLs (lastmod réel 2026-10-19), og:image
+  1200×630, JSON-LD @graph, related croisés depuis acces-pro et
+  console-tunnels (les nouveaux guides en tête des 3 cartes visibles),
+  compteur 33 → 35 (commentaires ×5 — catalogue, hub, route index, page
+  SSG, PUBLIC_GUIDES — + métadonnée description du hub).
+- **Portes** : frontend lint 0 erreur · typecheck (tsgo) 0 · next build
+  64/64 (62 + les 2 pages de guides) · catalogue vérifié par script
+  (35 guides · 9 sections · 0 doublon · 0 related cassé) · 301 curl
+  vérifiés ×2 · tunnel-console lint 0 · tsc 0 · next build 9/9 ·
+  vérification navigateur des 2 nouvelles pages (desktop + mobile 390,
+  0 erreur console, palette ⌘K) et de la vitrine /pro (grille
+  d'arguments rendue).
+- **Intacts** : contrat backend N°315 INCHANGÉ (aucun fichier Go touché),
+  vitrines /vpn et /me inchangées, SafeWiFi/FamilyGuard/Shield/dnsshield
+  inchangés, aucun schéma DB (verdict DB : AUCUN — documentation et copie
+  de vitrine pures, ensureSchema rejoué au démarrage backend comme à
+  l'habitude, répliques nocturnes inchangées).
+- **Non-objectifs** : N°342 « Accès Invité » (confs invité expirables
+  pour tiers — serveur de jeu avec amis, démo web à un client) attend un
+  GO séparé avec cadrage (cloisonnement inter-comptes du hairpin à
+  considérer) ; l'éditeur de formules et le plafond par formule restent
+  au backlog (doctrine 1 conf = 1 appareil actée N°338).
+
 ## 2026-10-19 — N°339-A — **BOUCLIER DNS « 403SHIELD DNS » PHASE 1 : moteur de filtrage + profils + résolveur DoH** (le prochain service — appareil protégé SANS routeur 403Shield)
 
 - **Contexte** : consigne propriétaire « passons à la mise en place du

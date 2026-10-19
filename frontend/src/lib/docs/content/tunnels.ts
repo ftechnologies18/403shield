@@ -1,9 +1,14 @@
 // Section « Tunnels & Accès Pro » — le pont privé WireGuard (N°333-B).
 //
-// 4 guides : la vitrine /vpn (déplacée des annexes — le guide documente
+// 6 guides : la vitrine /vpn (déplacée des annexes — le guide documente
 // désormais le socle unifié N°332-B), l'Accès Pro (routeurs, caméras, NAS),
-// la console tunnels (espace client sans mot de passe) et le guide
-// transparence IP (N°338 : IP localisable = comportement attendu, vérification
+// son installation multi-appareils (N°341 : la conf est du WireGuard
+// standard — PC, NAS Synology/QNAP, OpenWRT, pfSense/OPNsense, GL.iNet —
+// le MikroTik requis côté site rejoint uniquement), le pair-à-pair privé
+// (N°341 : vos appareils Pro se rejoignent via Marseille, PC ↔ NAS,
+// PC ↔ PC, sans routeur dans le chemin), la console tunnels (espace
+// client sans mot de passe) et le guide transparence IP (N°338 : IP
+// localisable = comportement attendu, vérification
 // zéro-fuite, kill switch, doctrine 1 conf = 1 appareil). Contenu calé
 // sur les capacités réelles : pricing.segments (1 500 / 15 000 / 3 500 /
 // 35 000 FCFA — constantes backend publicvpnorder.go), copy produit
@@ -92,7 +97,7 @@ export const TUNNELS_GUIDES: Guide[] = [
       },
       {
         q: "Faut-il un routeur particulier ?",
-        a: "Pour le VPN seul, aucun routeur : le téléphone ou l'ordinateur suffit. L'Accès Pro demande un MikroTik sous RouterOS 7 (l'agent 403Shield y tourne).",
+        a: "Pour le VPN seul, aucun routeur : le téléphone ou l'ordinateur suffit. L'Accès Pro s'appuie sur un MikroTik sous RouterOS 7 comme passerelle de site — les appareils qui se connectent, eux, peuvent être n'importe quels appareils WireGuard.",
       },
       {
         q: "Comment se renouvelle l'abonnement ?",
@@ -106,14 +111,14 @@ export const TUNNELS_GUIDES: Guide[] = [
     id: "acces-pro",
     title: "Accès Pro — routeurs, caméras et NAS dans le tunnel",
     summary:
-      "L'abonnement qui étend le tunnel WireGuard à vos équipements : routeurs MikroTik supervisés en continu, admin/API/SSH à distance, LAN derrière CGNAT — sans un seul port ouvert.",
+      "L'abonnement qui étend le tunnel WireGuard à vos équipements : routeurs MikroTik supervisés en continu, admin/API/SSH à distance, LAN derrière CGNAT, pair-à-pair privé entre vos appareils — sans un seul port ouvert.",
     roles: "Propriétaire · Équipe technique",
     minutes: 6,
-    updated: "2026-10-18",
+    updated: "2026-10-19",
     sectionId: "tunnels",
     vague: "V1",
     quoi:
-      "L'Accès Pro (3 500 FCFA/mois · 35 000 FCFA/an) branche vos équipements dans le même tunnel WireGuard que le VPN personnel : les routeurs MikroTik s'y raccordent par l'agent 403Shield, et le LAN derrière eux devient joignable en privé — caméras, enregistreurs, NAS, imprimantes. Tout le trafic sort chiffré par Marseille, derrière une IP fixe France.\n\nAucun port à ouvrir, aucune interface exposée sur Internet : le routeur APPELLE le tunnel en sortant — ça marche derrière CGNAT (Orange CI) comme en Starlink, sans IP publique. La souscription se fait depuis la console (console.403shield.ftci.fr/pro).\n\nNOTE DE CAPTURE : les vues de la console tunnels (portefeuille d'appareils, statuts Accès Pro) s'illustreront lors d'une session terrain — aucune capture de substitution.",
+      "L'Accès Pro (3 500 FCFA/mois · 35 000 FCFA/an) branche vos équipements dans le même tunnel WireGuard que le VPN personnel : les routeurs MikroTik s'y raccordent par l'agent 403Shield, et le LAN derrière eux devient joignable en privé — caméras, enregistreurs, NAS, imprimantes. Tout le trafic sort chiffré par Marseille, derrière une IP fixe France.\n\nLa configuration est du WireGuard standard : elle s'installe sur tout appareil capable de WireGuard — PC, téléphone, NAS, autre routeur (guide Installer l'Accès Pro sur PC, NAS et routeurs tiers). Le MikroTik n'est requis que d'un côté : celui du site rejoint, comme passerelle agentée. Et vos appareils Pro se rejoignent en privé via Marseille — PC ↔ NAS, PC ↔ PC — sans routeur dans le chemin (guide Le pair-à-pair privé).\n\nAucun port à ouvrir, aucune interface exposée sur Internet : le routeur APPELLE le tunnel en sortant — ça marche derrière CGNAT (Orange CI) comme en Starlink, sans IP publique. La souscription se fait depuis la console (console.403shield.ftci.fr/pro).\n\nNOTE DE CAPTURE : les vues de la console tunnels (portefeuille d'appareils, statuts Accès Pro) s'illustreront lors d'une session terrain — aucune capture de substitution.",
     difference: [
       {
         with: "Le VPN personnel",
@@ -141,7 +146,7 @@ export const TUNNELS_GUIDES: Guide[] = [
       {
         title: "Vérifiez le prérequis routeur",
         body:
-          "L'Accès Pro se raccorde par l'agent 403Shield : il tourne sur les MikroTik sous RouterOS 7 (guide Connecter votre routeur). Pas encore de routeur agenté ? Le VPN personnel couvre déjà vos appareils nomades en attendant.",
+          "L'Accès Pro se raccorde par l'agent 403Shield : il tourne sur les MikroTik sous RouterOS 7 (guide Connecter votre routeur). Pas encore de routeur agenté ? Le VPN personnel couvre déjà vos appareils nomades en attendant. Précision utile : le MikroTik est la passerelle du SITE rejoint — l'appareil qui se connecte, lui, peut être n'importe quel appareil WireGuard (PC, NAS, routeur tiers — guide dédié).",
       },
       {
         title: "Souscrivez l'Accès Pro",
@@ -186,6 +191,11 @@ export const TUNNELS_GUIDES: Guide[] = [
         body:
           "Piloter un routeur à distance sans Winbox publiée : admin, API et SSH via le tunnel, depuis le téléphone comme depuis l'atelier.",
       },
+      {
+        title: "Le pair-à-pair privé",
+        body:
+          "PC ↔ NAS, PC ↔ PC : vos appareils Pro se rejoignent en privé via Marseille, sans routeur dans le chemin — le guide Pair-à-pair privé donne les recettes (fichiers, prise de main, serveur entre vos machines).",
+      },
     ],
     pieges: [
       {
@@ -214,8 +224,248 @@ export const TUNNELS_GUIDES: Guide[] = [
         q: "Comment se renouvelle l'Accès Pro ?",
         a: "Depuis la console, avec des alertes d'échéance configurables — à la différence du VPN personnel qui se renouvelle depuis la boutique (rappel e-mail).",
       },
+      {
+        q: "Faut-il un MikroTik de chaque côté ?",
+        a: "Non. Le MikroTik est requis côté SITE rejoint — la passerelle agentée qui porte le LAN étendu et la supervision. L'appareil qui se connecte est n'importe quel appareil WireGuard : PC, téléphone, NAS, routeur tiers (guide dédié).",
+      },
     ],
-    related: ["console-tunnels", "vitrine-vpn", "sites-multi-sites", "connecter-routeur-agent"],
+    related: ["acces-pro-multi-appareils", "acces-pro-pair-a-pair", "console-tunnels", "connecter-routeur-agent"],
+  },
+
+  {
+    id: "acces-pro-multi-appareils",
+    title: "Installer l'Accès Pro sur PC, NAS et routeurs tiers",
+    summary:
+      "La configuration Pro est du WireGuard standard : PC Windows/macOS/Linux, NAS Synology/QNAP, routeurs OpenWRT, pfSense, OPNsense, GL.iNet — le MikroTik n'est requis que côté site rejoint, comme passerelle.",
+    roles: "Accès Pro · Équipe technique",
+    minutes: 7,
+    updated: "2026-10-19",
+    sectionId: "tunnels",
+    vague: "V1",
+    quoi:
+      "La configuration révélée par la console (« Voir la configuration ») est un fichier WireGuard standard : une clé privée, l'adresse tunnel de l'appareil, et le peer 403Shield de Marseille avec son périmètre (AllowedIPs = les segments de supervision, plus votre LAN étendu le cas échéant). Tout appareil capable de WireGuard peut la porter — le MikroTik n'a jamais été requis de ce côté-là.\n\nDeux voies sont OFFICIELLES et documentées : l'application WireGuard (téléphone, ordinateur — QR ou fichier .conf) et l'import RouterOS 7 sur MikroTik. Tout le reste — OpenWRT, pfSense, OPNsense, GL.iNet, NAS Synology ou QNAP — est PRATICABLE : le même fichier s'y adapte à la main, hors périmètre support. Le MikroTik reste la passerelle du SITE rejoint : c'est lui qui porte l'agent 403Shield, la détection LAN et les règles du LAN étendu.\n\nNOTE DE CAPTURE : les interfaces de ces firmwares et paquets tiers ne seront pas capturées — chaque écran d'import appartient à son éditeur, une capture de substitution n'apprendrait rien.",
+    difference: [
+      {
+        with: "Les voies officielles (appli WireGuard, RouterOS 7)",
+        body:
+          "Appli WireGuard et import RouterOS 7 sont documentés pas à pas : le support 403Shield peut dépanner l'import. Les firmwares tiers et NAS sont praticables — mêmes champs à recopier, mais l'adaptation est à vous.",
+      },
+      {
+        with: "Le VPN personnel (tunnel complet)",
+        body:
+          "La conf VPN route TOUT (AllowedIPs 0.0.0.0/0 — navigation et DNS par Marseille) ; la conf Pro route un périmètre ciblé : vos routeurs, vos pairs, votre LAN étendu. Votre navigation Internet reste directe — c'est voulu.",
+      },
+      {
+        with: "La passerelle MikroTik du site",
+        body:
+          "Deux rôles, deux exigences : côté APPAREIL, n'importe quel WireGuard (PC, NAS, routeur tiers) ; côté SITE rejoint, la passerelle reste un MikroTik sous RouterOS 7 — l'agent y pose la détection LAN et les règles d'extension.",
+      },
+    ],
+    recoit: [
+      "La même configuration (QR + fichier .conf + copie) utilisable sur tout appareil WireGuard — un seul livrable, plusieurs destinations.",
+      "Les voies d'import praticables par famille d'appareil : PC, OpenWRT, pfSense/OPNsense, GL.iNet, NAS.",
+      "La frontière honnête du support : conf et voies officielles dépannées ; firmwares tiers et paquets NAS adaptés par vous.",
+      "Le rappel de la règle du portefeuille : une configuration = un appareil (guide L'IP du VPN est localisable).",
+    ],
+    etapes: [
+      {
+        title: "Récupérez la configuration",
+        body:
+          "Console → Accès Pro → « Voir la configuration » : le QR (téléphone), le fichier .conf (import partout) et la copie brute. L'adresse tunnel de l'appareil (10.8.2.x) s'affiche au portefeuille — notez-la : c'est elle que les autres appareils joindront. Un renouvellement ne change jamais la conf.",
+      },
+      {
+        title: "Sur PC (Windows, macOS, Linux)",
+        body:
+          "Application WireGuard officielle → « Importer un tunnel depuis un fichier » → le .conf téléchargé. Activez le tunnel : le périmètre Pro est routé (segments 10.8.x, LAN étendu éventuel), le reste du trafic reste direct. C'est la voie la plus simple — et elle est officielle.",
+      },
+      {
+        title: "Sur routeur tiers (OpenWRT, pfSense, OPNsense, GL.iNet)",
+        body:
+          "Le même fichier se recopie champ par champ : clé privée et adresse (Interface), clé publique du serveur, endpoint Marseille, AllowedIPs, PersistentKeepalive (Peer). OpenWRT : protocole WireGuard dans LuCI (ou uci) ; pfSense/OPNsense : le paquet WireGuard, interface + peer ; GL.iNet : le client WireGuard natif, qui importe souvent le .conf tel quel. Voies praticables — le support fournit la conf, pas la main-d'œuvre du firmware.",
+        tip: "Le champ à ne jamais tronquer : AllowedIPs. C'est le périmètre — le copier partiellement rétrécit l'accès au lieu de l'élargir.",
+      },
+      {
+        title: "Sur NAS (Synology, QNAP)",
+        body:
+          "Ni Synology ni QNAP ne livrent de client WireGuard officiel dans leur système. La voie praticable passe par un conteneur Docker (images communautaires éprouvées, pile réseau en mode hôte ou NET_ADMIN) — ou un paquet tiers selon les modèles. Le NAS devient alors un pair comme un autre, joignable à son adresse tunnel (guide Le pair-à-pair privé).",
+      },
+      {
+        title: "Vérifiez, et gardez la règle d'or",
+        body:
+          "Tunnel actif : joignez un routeur supervisé (Winbox sur son adresse 10.8.0.x) ou un autre appareil Pro (son adresse 10.8.2.x) — si l'un répond, l'import est bon. Et n'installez JAMAIS la même conf deux fois : un nouvel appareil = une nouvelle commande Pro, une nouvelle conf, sa propre clé (le partage se punit tout seul — sessions volées par roaming).",
+      },
+    ],
+    usages: [
+      {
+        title: "Le poste d'administration",
+        body:
+          "Le PC de l'atelier porte la conf Pro : Winbox, API et SSH des routeurs passent par le tunnel — et le LAN étendu devient joignable depuis le même poste, sans interface publiée.",
+      },
+      {
+        title: "Le NAS dans le tunnel",
+        body:
+          "Un NAS avec sa propre conf devient un pair : vos autres appareils Pro le joignent à son adresse tunnel — fichiers et sauvegardes en privé (guide Pair-à-pair privé).",
+      },
+      {
+        title: "Le routeur tiers comme appareil",
+        body:
+          "Un OpenWRT ou un GL.iNet peut porter la conf là où un PC serait démesuré. Attention : il rejoint le tunnel comme APPAREIL — l'extension de SON LAN reste du ressort d'une passerelle MikroTik agentée.",
+      },
+    ],
+    pieges: [
+      {
+        title: "Hors périmètre support",
+        body:
+          "Le support 403Shield dépanne la conf et les deux voies officielles (appli WireGuard, RouterOS 7). Sur un firmware tiers ou un paquet NAS, il fournit le fichier — l'adaptation et la maintenance sont à vous.",
+        severity: "info",
+      },
+      {
+        title: "S'attendre à ce que la navigation change",
+        body:
+          "La conf Pro ne route ni votre navigation ni votre DNS : un test de géolocalisation affichera votre IP FAI — normal, ce n'est pas le VPN personnel. Seul le périmètre Pro voyage dans le tunnel.",
+        severity: "info",
+      },
+      {
+        title: "Copier la conf sur un deuxième appareil",
+        body:
+          "Même clé sur deux machines = sessions volées par roaming, connexion qui tombe. Une configuration = un appareil — c'est la règle du portefeuille (guide L'IP du VPN est localisable).",
+        severity: "warn",
+      },
+    ],
+    faq: [
+      {
+        q: "Le support dépanne-t-il OpenWRT ou mon NAS ?",
+        a: "La configuration, oui — et les deux voies officielles (appli WireGuard, import RouterOS 7) pas à pas. Le firmware tiers et le paquet NAS restent à votre main : mêmes champs à recopier, adaptation manuelle.",
+      },
+      {
+        q: "Pourquoi mon IP ne change-t-elle pas avec la conf Pro ?",
+        a: "Parce que le périmètre est ciblé : le tunnel Pro route vos équipements (segments 10.8.x, LAN étendu), pas votre navigation. L'IP de sortie change avec le VPN personnel, lui en tunnel complet.",
+      },
+      {
+        q: "Mon routeur non-MikroTik peut-il servir de passerelle de site ?",
+        a: "Pas aujourd'hui : la détection LAN et les règles d'extension sont posées par l'agent 403Shield, qui vit sur RouterOS 7. Un routeur tiers se raccorde comme appareil — la passerelle reste MikroTik.",
+      },
+      {
+        q: "Combien d'appareils puis-je raccorder ?",
+        a: "Chaque commande Pro couvre UN appareil (sa conf, sa clé) — un appareil de plus, une commande de plus. Le portefeuille de la console suit chaque appareil et son échéance.",
+      },
+    ],
+    related: ["acces-pro", "acces-pro-pair-a-pair", "console-tunnels", "ip-vpn-localisable"],
+  },
+
+  {
+    id: "acces-pro-pair-a-pair",
+    title: "Le pair-à-pair privé : vos appareils Pro se rejoignent via Marseille",
+    summary:
+      "PC ↔ NAS, PC ↔ PC : deux appareils Pro du même compte se joignent en privé à travers le tunnel — le routeur n'est pas dans le chemin, aucun port n'est publié.",
+    roles: "Client VPN · Accès Pro",
+    minutes: 5,
+    updated: "2026-10-19",
+    sectionId: "tunnels",
+    vague: "V1",
+    quoi:
+      "Chaque appareil raccordé en Accès Pro reçoit sa propre adresse tunnel (10.8.2.x pour les confs actuelles) — et la conf porte l'ensemble du périmètre Pro. Résultat peu connu : vos appareils Pro se joignent ENTRE EUX à travers le tunnel. Votre portable joint le NAS du bureau, votre PC fixe répond à votre portable — le serveur de Marseille relaie d'un pair vers l'autre, et personne d'autre n'est invité.\n\nLe mécanisme est simple : votre conf sait que tout le périmètre Pro vit dans le tunnel (AllowedIPs 10.8.0.0/24 et 10.8.2.0/24), la VM relaie les paquets d'un pair vers l'autre sans les réécrire — les vraies adresses tunnel sont préservées. Le trajet est chiffré sur chaque bras (votre appareil ↔ Marseille, puis Marseille ↔ l'autre appareil) : c'est le modèle de tout relais VPN, le serveur voit transiter le trafic comme n'importe quel serveur de tunnel.\n\nLe MikroTik n'est PAS dans ce chemin : il reste la passerelle des sites à rejoindre (LAN étendu, supervision). Le pair-à-pair, ce sont vos appareils qui portent la conf — et rien d'autre.\n\nNOTE DE CAPTURE : aucune capture dans ce guide — il décrit un mécanisme réseau, pas un écran de la console.",
+    difference: [
+      {
+        with: "Le LAN étendu (via routeur)",
+        body:
+          "Le LAN étendu joint les équipements DERRIÈRE une passerelle MikroTik (caméras, imprimantes — les machines qui ne portent pas WireGuard) ; le pair-à-pair relie les appareils qui PORTENT la conf, sans aucun routeur dans le chemin. Les deux se complètent.",
+      },
+      {
+        with: "Le cloud de partage de fichiers",
+        body:
+          "Le cloud relit vos fichiers chez un tiers, avec son abonnement ; le pair-à-pair relie vos machines entre elles — les données voyagent dans le tunnel, sans intermédiaire de stockage.",
+      },
+      {
+        with: "Le port forwarding classique",
+        body:
+          "Publier RDP ou SMB sur Internet, c'est offrir un service aux scanners du monde entier ; le pair-à-pair ne publie rien — vos services n'écoutent que dans le tunnel, joignables uniquement par vos appareils.",
+      },
+    ],
+    recoit: [
+      "Le mécanisme en une phrase : adresses tunnel dédiées (10.8.2.x), relais par Marseille, adresses préservées, aucun port publié.",
+      "Les recettes concrètes : joindre un NAS (fichiers, sauvegardes), prendre la main sur un poste (RDP, VNC), héberger un service pour vos propres appareils.",
+      "Les limites honnêtes : l'appareil distant doit être allumé, le trajet passe par Marseille, et les invités tiers ne sont pas (encore) au programme.",
+    ],
+    etapes: [
+      {
+        title: "Donnez à chaque appareil sa configuration",
+        body:
+          "Deux appareils = deux commandes Pro = deux confs (règle d'or : une configuration = un appareil). Chaque conf se révèle depuis la console (« Voir la configuration ») et s'installe sur son appareil — l'adresse tunnel de chacun s'affiche au portefeuille : c'est votre annuaire.",
+      },
+      {
+        title: "Joignez l'autre appareil par son adresse tunnel",
+        body:
+          "Tout ce qui écoute sur l'appareil distant est joignable à son adresse : ping 10.8.2.y pour vérifier, puis http://10.8.2.y (interface web), smb:// ou rsync vers le NAS, RDP/VNC vers le poste. Rien à ouvrir, rien à publier — le tunnel est déjà la route.",
+        tip: "L'adresse tunnel de chaque appareil est visible au portefeuille de la console — notez les vôtres une fois pour toutes.",
+      },
+      {
+        title: "Hébergez un service pour vos propres appareils",
+        body:
+          "Un serveur de jeu sur le PC fixe, une démo web sur le portable de développement : le service écoute sur l'adresse tunnel de sa machine, et vos AUTRES appareils Pro le joignent en privé — même derrière CGNAT. Faire entrer un tiers extérieur au compte, c'est le chantier Accès Invité — pas encore livré.",
+      },
+      {
+        title: "Comptez le trajet, honnêtement",
+        body:
+          "Deux appareils à Abidjan qui se parlent via Marseille : les paquets font l'aller-retour vers la France. Parfait pour des fichiers, une prise de main, une démo — moins pour du jeu compétitif entre deux machines du même bureau : sur place, le réseau local direct reste la bonne réponse. Le tunnel est fait pour la distance.",
+      },
+    ],
+    usages: [
+      {
+        title: "Le NAS joignable en déplacement",
+        body:
+          "Fichiers, sauvegardes rsync, partages SMB : le NAS du bureau porte sa conf, le portable le joint à son adresse tunnel — sans cloud, sans port ouvert.",
+      },
+      {
+        title: "Le poste à distance",
+        body:
+          "RDP ou VNC sur votre PC fixe depuis l'extérieur : l'un des usages les plus demandés — et la réponse n'est JAMAIS de publier RDP sur Internet, mais de le faire écouter dans le tunnel.",
+      },
+      {
+        title: "Le serveur entre vos machines",
+        body:
+          "Un serveur de jeu ou une démo web écoutant sur l'adresse tunnel du PC qui l'héberge : vos autres appareils Pro le rejoignent en privé — même derrière CGNAT.",
+      },
+    ],
+    pieges: [
+      {
+        title: "L'appareil distant éteint est injoignable",
+        body:
+          "Pas de pair, pas de relais : un PC en veille ne répond pas. Prévoyez le réveil local (Wake-on-LAN sur le réseau du site) ou laissez la machine allumée quand vous comptez vous y connecter.",
+        severity: "warn",
+      },
+      {
+        title: "Le débit transite par Marseille",
+        body:
+          "L'aller-retour par la France entre deux appareils du même pays : très bien pour des fichiers et une prise de main, moins pour du trafic local à latence serrée. Sur place, préférez le réseau local.",
+        severity: "info",
+      },
+      {
+        title: "Les invités ne sont pas (encore) dedans",
+        body:
+          "Le pair-à-pair relie les appareils de VOTRE compte. Faire entrer un ami ou un client exige un accès dédié (chantier Accès Invité, à l'étude) — ne « solutionnez » jamais ça en partageant une conf : la règle une conf = un appareil la rendrait inutilisable de toute façon.",
+        severity: "info",
+      },
+    ],
+    faq: [
+      {
+        q: "Pourquoi passer par Marseille plutôt qu'en direct ?",
+        a: "Le direct exige une IP publique joignable des deux côtés — rare derrière le CGNAT d'Orange. Le relais fixe de Marseille marche partout, tout le temps, et reste chiffré sur chaque bras du trajet.",
+      },
+      {
+        q: "Mes deux appareils peuvent-ils partager une même conf ?",
+        a: "Non — deux appareils avec la même clé se volent leur session (roaming) : connexion instable, zéro gain. Deux appareils = deux commandes Pro, chacune au portefeuille avec son adresse.",
+      },
+      {
+        q: "Mon ami peut-il rejoindre mon serveur de jeu ?",
+        a: "Pas encore : le tunnel relie les appareils de votre compte. L'Accès Invité — une conf expirable pour un tiers — est à l'étude ; en attendant, ne partagez jamais votre propre conf.",
+      },
+      {
+        q: "Le pair-à-pair remplace-t-il le LAN étendu ?",
+        a: "Non, ils se complètent : le LAN étendu joint les équipements derrière votre routeur (les caméras qui ne portent pas WireGuard), le pair-à-pair relie les appareils qui portent la conf.",
+      },
+    ],
+    related: ["acces-pro", "acces-pro-multi-appareils", "console-tunnels", "connecter-routeur-agent"],
   },
 
   {
@@ -267,7 +517,7 @@ export const TUNNELS_GUIDES: Guide[] = [
       {
         title: "Installez une configuration",
         body:
-          "L'e-mail de livraison contient la configuration : import direct dans l'appli WireGuard (téléphone, ordinateur, tablette). Pour un routeur, c'est l'agent 403Shield qui porte la configuration (guide Accès Pro).",
+          "L'e-mail de livraison contient la configuration : import direct dans l'appli WireGuard (téléphone, ordinateur, tablette). Pour un routeur, c'est l'agent 403Shield qui porte la configuration (guide Accès Pro). Et la conf Pro vit sur tout appareil WireGuard — PC, NAS, routeur tiers (guide Installer l'Accès Pro sur PC, NAS et routeurs tiers).",
       },
       {
         title: "Suivez les échéances",
@@ -320,7 +570,7 @@ export const TUNNELS_GUIDES: Guide[] = [
         a: "Installez la configuration sur le nouvel appareil (l'e-mail de livraison la contient) ; si l'ancien reste entre de mauvaises mains, le support 403Shield coupe l'accès depuis la console.",
       },
     ],
-    related: ["acces-pro", "vitrine-vpn", "ip-vpn-localisable", "vpn-wireguard"],
+    related: ["acces-pro", "acces-pro-multi-appareils", "ip-vpn-localisable", "vitrine-vpn"],
   },
 
   {

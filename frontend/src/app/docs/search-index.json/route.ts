@@ -7,7 +7,7 @@
 // compilation et servie telle quelle.
 //
 // Construction depuis les modules de contenu EXISTANTS (aucun catalog modifié)
-// : PUBLIC_GUIDES (33 guides publics — le volet privé « plateforme » n'y
+// : PUBLIC_GUIDES (35 guides publics — le volet privé « plateforme » n'y
 // figure pas et n'y figurera jamais) + GUIDE_ANCHORS (les 7 blocs Q&A du
 // gabarit, ancre et intitulé exacts rendus par GuideView).
 //

@@ -26,6 +26,18 @@
 //     GeniusPay (canal manuel en repli) et le bandeau de retour de
 //     paiement sont conservés à l'identique.
 //
+// N°341 — LES DEUX ARGUMENTS EN VITRINE (consigne propriétaire) : le hero
+//   dit désormais que la conf s'installe sur TOUT appareil WireGuard (le
+//   MikroTik reste la passerelle du site rejoint) ; une grille « Comment ça
+//   marche » pose les deux arguments — installation partout (PC, NAS,
+//   routeurs tiers) · pair-à-pair privé via Marseille (PC ↔ NAS, PC ↔ PC,
+//   sans routeur dans le chemin — hairpin du segment remote, adresses
+//   préservées, aucun MASQUERADE) ; le portefeuille rappelle le pair-à-pair
+//   dès 2 appareils couverts ; les instructions du reveal couvrent
+//   PC/NAS/routeurs tiers avec lien vers les 2 guides publics N°341.
+//   Contrat backend N°315 TOUJOURS inchangé — zéro appel nouveau, zéro
+//   champ nouveau : de la copie sur des données déjà servies.
+//
 // Contrat backend (handlers_tunnel_pro.go, N°315 — INCHANGÉ) :
 //   GET  /api/tunnel/pro                    → éligibilité + routeurs + LAN + portefeuille
 //   POST /api/tunnel/pro/detect             → enfile la détection (lecture pure)
@@ -43,12 +55,15 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
 import {
+  ArrowLeftRight,
+  ArrowUpRight,
   CalendarClock,
   Camera,
   Check,
   Copy,
   CreditCard,
   Download,
+  Laptop,
   Lightbulb,
   Loader2,
   LogOut,
@@ -508,11 +523,64 @@ export default function ProPage() {
                   API, SSH, web){" "}
                   <strong className="font-semibold text-slate-800">et extension vers votre réseau local</strong>{" "}
                   — caméras, NAS, imprimantes — où que vous soyez, même derrière le CGNAT.
+                  La configuration est du WireGuard standard : elle s&apos;installe sur tout
+                  appareil — PC, téléphone, NAS, autre routeur — le MikroTik restant la
+                  passerelle du site rejoint.
                 </p>
                 <p className="mt-2 text-xs text-slate-500">
                   Périmètre honnête : le tunnel ne route NI votre navigation Internet, NI votre
                   DNS — uniquement vos équipements, rien de plus.
                 </p>
+              </section>
+
+              {/* N°341 — LES DEUX ARGUMENTS en vitrine : la conf s'installe sur
+                  tout appareil WireGuard (le MikroTik = passerelle du site
+                  rejoint), et le pair-à-pair privé relie vos appareils Pro via
+                  Marseille (hairpin du segment remote — PC ↔ NAS, PC ↔ PC,
+                  sans routeur dans le chemin). Données réelles du contrat
+                  N°315 (AllowedIPs 10.8.0.0/24 + 10.8.2.0/24), aucun chiffre
+                  inventé — liens vers les guides publics N°341. */}
+              <section aria-label="Comment ça marche" className="mt-4 grid gap-3 sm:grid-cols-2">
+                <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                  <p className="flex items-center gap-2 text-sm font-bold text-slate-900">
+                    <Laptop className="h-4 w-4 text-emerald-600" aria-hidden />
+                    S&apos;installe sur tout appareil WireGuard
+                  </p>
+                  <p className="mt-2 text-sm leading-relaxed text-slate-600">
+                    PC, téléphone (QR), NAS, autre routeur — un seul fichier de configuration.
+                    Le MikroTik reste la passerelle du site rejoint : détection LAN,
+                    supervision, règles du LAN étendu.
+                  </p>
+                  <a
+                    href="https://403shield.ftci.fr/docs/guides/acces-pro-multi-appareils"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-emerald-700 underline underline-offset-2 hover:text-emerald-800"
+                  >
+                    Le guide d&apos;installation
+                    <ArrowUpRight className="h-3.5 w-3.5" aria-hidden />
+                  </a>
+                </div>
+                <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                  <p className="flex items-center gap-2 text-sm font-bold text-slate-900">
+                    <ArrowLeftRight className="h-4 w-4 text-emerald-600" aria-hidden />
+                    Pair-à-pair privé via Marseille
+                  </p>
+                  <p className="mt-2 text-sm leading-relaxed text-slate-600">
+                    Vos appareils Pro se rejoignent en privé — PC ↔ NAS, PC ↔ PC — sans
+                    routeur dans le chemin et sans port publié : chacun joint l&apos;autre à son
+                    adresse tunnel.
+                  </p>
+                  <a
+                    href="https://403shield.ftci.fr/docs/guides/acces-pro-pair-a-pair"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-emerald-700 underline underline-offset-2 hover:text-emerald-800"
+                  >
+                    Le guide pair-à-pair
+                    <ArrowUpRight className="h-3.5 w-3.5" aria-hidden />
+                  </a>
+                </div>
               </section>
 
               {!status.eligible ? (
@@ -875,6 +943,19 @@ export default function ProPage() {
                         </p>
                       </div>
                     )}
+
+                    {/* N°341 — rappel pair-à-pair dès 2 appareils couverts :
+                        chacun joint les autres à son adresse tunnel (hairpin
+                        Marseille, adresses préservées) — données du contrat
+                        N°315, aucun chiffre inventé. */}
+                    {status.anyActive && status.proOrders.length > 1 && (
+                      <p className="mt-3 flex items-start gap-2 rounded-xl border border-emerald-600/30 bg-emerald-500/10 p-3 text-xs leading-relaxed text-emerald-800">
+                        <ArrowLeftRight className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />
+                        Pair-à-pair privé : ces {status.proOrders.length} appareils se joignent
+                        entre eux par leurs adresses tunnel — fichiers, prise de main, serveur
+                        entre vos machines (guide dans «&nbsp;Comment ça marche&nbsp;» ci-dessus).
+                      </p>
+                    )}
                   </section>
                 </>
               )}
@@ -1034,10 +1115,13 @@ export default function ProPage() {
                     <span className="font-mono">.conf</span> téléchargé, ou collez la configuration
                     copiée dans un tunnel existant (un renouvellement ne change jamais la conf).
                     Sur téléphone de secours : app WireGuard → «&nbsp;+&nbsp;» →
-                    «&nbsp;Créer à partir d&apos;un QR code&nbsp;». Les entrées{" "}
+                    «&nbsp;Créer à partir d&apos;un QR code&nbsp;». Sur PC : app WireGuard →
+                    «&nbsp;Importer un tunnel depuis un fichier&nbsp;». Sur NAS (Synology, QNAP)
+                    ou routeur tiers (OpenWRT, pfSense, GL.iNet) : adaptation manuelle — le
+                    guide d&apos;installation détaille chaque voie. Les entrées{" "}
                     <span className="font-mono">AllowedIPs</span> portent le périmètre Pro : vos
-                    routeurs + votre LAN étendu le cas échéant — la configuration ne quitte
-                    jamais le coffre sans votre action.
+                    routeurs, vos autres appareils Pro + votre LAN étendu le cas échéant — la
+                    configuration ne quitte jamais le coffre sans votre action.
                   </p>
                 </div>
               </>

@@ -1,4 +1,4 @@
-// Hub public /docs/guides (N°304, N°333-C/D) — 33 guides d'exploitation
+// Hub public /docs/guides (N°304, N°333-C/D) — 35 guides d'exploitation
 // console gérant/propriétaire en 9 sections. Le volet plateforme (6 guides)
 // n'est PAS référencé ici : privé, accessible uniquement via le menu profil
 // de la sidebar.
@@ -13,7 +13,7 @@ export const metadata: Metadata = {
   alternates: { canonical: "/docs/guides" },
   title: "Guides 403Shield — documentation d'exploitation",
   description:
-    "33 guides illustrés pour exploiter 403Shield : compte, routeurs MikroTik (mode Agent), vouchers & ventes, sessions, revendeurs, tunnels & Accès Pro, rapports, protections — chaque fonction expliquée pas à pas avec captures d'écran réelles.",
+    "35 guides illustrés pour exploiter 403Shield : compte, routeurs MikroTik (mode Agent), vouchers & ventes, sessions, revendeurs, tunnels & Accès Pro, rapports, protections — chaque fonction expliquée pas à pas avec captures d'écran réelles.",
   keywords: [
     "403Shield",
     "guide MikroTik",
