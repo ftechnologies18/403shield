@@ -1,7 +1,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // /docs/guides — catalogue des sections & agrégation (N°304, N°333-B).
 //
-// 32 guides console PUBLICS (statiques, /public/docs/<module>/ — dont la
+// 33 guides console PUBLICS (statiques, /public/docs/<module>/ — dont la
 // section Tunnels & Accès Pro) + le volet plateforme PRIVÉ (6 guides :
 // métadonnées ici, contenu chargé à la demande par la route gated — voir
 // platform-meta.ts).

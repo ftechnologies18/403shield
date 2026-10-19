@@ -1,5 +1,5 @@
 // Page de guide public /docs/guides/[section]/[slug] (N°304, URLs
-// hiérarchiques N°333-C) — SSG sur les 32 guides console. Le volet
+// hiérarchiques N°333-C) — SSG sur les 33 guides console. Le volet
 // plateforme vit sous /docs/guides/plateforme/* (privé).
 
 import type { Metadata } from "next";

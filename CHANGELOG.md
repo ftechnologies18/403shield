@@ -10,6 +10,46 @@ sous-marque FTech CI) ; l'historique ci-dessous conserve les noms d'époque.
 N°319 : le DÉPÔT GitHub lui-même devient `ftechnologies18/403shield`
 (anciennes URL redirigées en 301 par GitHub — web, git et API).
 
+## 2026-10-19 — N°338 — **GUIDE « L'IP DU VPN EST LOCALISABLE : FUITE OU NORMAL ? » (4e guide de la section Tunnels & Accès Pro) — la transparence IP retournée en argument, la vérification zéro-fuite en 5 minutes, et la doctrine 1 CONF = 1 APPAREIL actée par l'exploitant**
+
+> Origine : deux consultations sandbox (« les IP fournies par WireGuard sont
+> localisables par les sites de géolocalisation — est-ce normal ? » puis
+> « peut-on limiter le nombre d'appareils par client ? »), étiquetées
+> « N°336 / N°337 » en proposition. Renuméroté N°338 : la livraison
+> concurrente N°337-A (refonte /pro au style console) a été poussée sur
+> `main` pendant l'intégration locale de ce chantier — la séquence N°XXX
+> devant rester unique, il prend le numéro suivant libre N°338 (même règle
+> que la renumérotation N°334→N°335). GO exploitant avec préférence
+> explicite « 1 conf = 1 appareil » : le plafond multi-appareils par
+> formule reste au backlog (avec l'éditeur de formules — doctrine déjà
+> écrite dans `model/vpnpeer.go`), la règle est documentée au client.
+
+- **Nouveau guide public** `ip-vpn-localisable` (33e guide public, section
+  Tunnels & Accès Pro — `/docs/guides/tunnels/ip-vpn-localisable`) : pourquoi
+  l'IP visible est celle du serveur (Marseille) et jamais celle du client —
+  comportement ATTENDU du full-tunnel (MASQUERADE sortie partagée), pas une
+  fuite ; ce qui est réellement garanti (IP réelle / pays / FAI invisibles,
+  sortie partagée = non-lierabilité, les adresses 10.8.x.x privées ne sortent
+  jamais sur Internet) ; la vérification zéro-fuite en 5 minutes (ipleak.net :
+  IPv4/IPv6/WebRTC/DNS — tout doit montrer le serveur, l'unique signal
+  d'alerte = l'IP FAI qui réapparaît = tunnel tombé) ; le kill switch mobile
+  (Android « Bloquer les connexions sans VPN », iOS « On-Demand ») — LA seule
+  fuite possible côté client ; les corrections de bases de géolocalisation
+  (MaxMind/IPinfo — gratuites, 1 à 4 semaines, le support dépose) ; et la
+  règle **1 configuration = 1 appareil** (le partage d'une même conf = deux
+  sessions qui se volent mutuellement par roaming — inutilisable, jamais
+  promis d'anti-copie : impossible).
+- **Zéro capture, honnête** : la vérification vit sur des sites tiers — note
+  de capture explicite dans le guide (doctrine : jamais de faux écran).
+- **Branchement automatique** (tout est dérivé du catalogue, zéro route à
+  créer) : page SSG + 301 de l'URL plate (`next.config.ts` map dérivée),
+  index ⌘K plein texte, sitemap.xml (48 → 49 URLs, lastmod = date réelle du
+  guide 2026-10-19), og:image 1200×630 dédié, JSON-LD @graph, related
+  croisés depuis vitrine-vpn et console-tunnels, compteur de guides 32 → 33
+  (commentaires des 4 fichiers concernés + métadonnée description du hub).
+- **Intact** : aucun guide existant modifié au-delà des related et des
+  comptages ; aucun code applicatif, aucun schéma DB, aucune dépendance.
+
 ## 2026-10-18 — N°336-A — **STABILISATION DU FLAKE CI `TestStatsOverviewDayWindows`** — tolérance ±1 s sur `window.prevEnd`
 
 - **Symptôme** : run CI main en rouge (job Backend Go, étape `go test`) —

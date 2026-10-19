@@ -1,14 +1,17 @@
 // Section « Tunnels & Accès Pro » — le pont privé WireGuard (N°333-B).
 //
-// 3 guides : la vitrine /vpn (déplacée des annexes — le guide documente
-// désormais le socle unifié N°332-B), l'Accès Pro (routeurs, caméras, NAS)
-// et la console tunnels (espace client sans mot de passe). Contenu calé
+// 4 guides : la vitrine /vpn (déplacée des annexes — le guide documente
+// désormais le socle unifié N°332-B), l'Accès Pro (routeurs, caméras, NAS),
+// la console tunnels (espace client sans mot de passe) et le guide
+// transparence IP (N°338 : IP localisable = comportement attendu, vérification
+// zéro-fuite, kill switch, doctrine 1 conf = 1 appareil). Contenu calé
 // sur les capacités réelles : pricing.segments (1 500 / 15 000 / 3 500 /
 // 35 000 FCFA — constantes backend publicvpnorder.go), copy produit
 // N°321/332 (IP fixe France sortie Marseille, code e-mail 6 chiffres,
 // portefeuille d'appareils, renouvellement 1 clic, frais carte +6 % /
 // Wave −3 %). Aucune capture tant que la session terrain n'a pas eu lieu
-// (doctrine : jamais de faux écran).
+// (doctrine : jamais de faux écran) — le guide IP n'en aura JAMAIS : la
+// vérification vit sur des sites tiers, une capture n'apprendrait rien.
 import type { Guide } from "../types";
 import { cap } from "../cap";
 
@@ -96,7 +99,7 @@ export const TUNNELS_GUIDES: Guide[] = [
         a: "Depuis la boutique, avec un rappel par e-mail avant l'échéance — le renouvellement tient en 1 clic depuis l'espace client.",
       },
     ],
-    related: ["acces-pro", "console-tunnels", "vpn-wireguard"],
+    related: ["acces-pro", "console-tunnels", "ip-vpn-localisable", "vpn-wireguard"],
   },
 
   {
@@ -317,6 +320,128 @@ export const TUNNELS_GUIDES: Guide[] = [
         a: "Installez la configuration sur le nouvel appareil (l'e-mail de livraison la contient) ; si l'ancien reste entre de mauvaises mains, le support 403Shield coupe l'accès depuis la console.",
       },
     ],
-    related: ["acces-pro", "vitrine-vpn", "vpn-wireguard"],
+    related: ["acces-pro", "vitrine-vpn", "ip-vpn-localisable", "vpn-wireguard"],
+  },
+
+  {
+    id: "ip-vpn-localisable",
+    title: "L'IP du VPN est localisable : fuite ou normal ?",
+    summary:
+      "Pourquoi les sites de géolocalisation affichent l'IP du serveur (et jamais la vôtre), la vérification zéro-fuite en cinq minutes, le kill switch mobile — et la règle d'or : une configuration = un appareil.",
+    roles: "Client VPN · Gérant (conseil)",
+    minutes: 5,
+    updated: "2026-10-19",
+    sectionId: "tunnels",
+    vague: "V1",
+    quoi:
+      "Tunnel monté, un site de géolocalisation (ipleak.net, browserleaks.com) affiche une IP française qui sort de Marseille pendant que vous êtes à Abidjan : c'est le comportement ATTENDU, pas une fuite. En tunnel complet, tout votre trafic sort par le serveur 403Shield — les sites voient l'IP de ce serveur, qui est précisément l'adresse de retour de vos paquets. Votre IP réelle, votre pays et votre FAI restent invisibles.\n\nLes adresses en 10.8.x.x qui figurent dans votre configuration WireGuard sont privées : elles servent au routage DANS le tunnel et n'apparaissent jamais sur Internet. Et l'IP de sortie est partagée par les clients du même serveur : un observateur ne peut pas attribuer une activité à un appareil précis.\n\nUne IP de sortie « invisible » n'existe pas — un site doit savoir à qui répondre. Ce guide fait le tri : ce qui est normal, ce qui serait une vraie fuite, comment le vérifier en cinq minutes — et la règle du portefeuille : une configuration = un appareil.\n\nNOTE DE CAPTURE : aucune capture dans ce guide — la vérification vit sur des sites tiers (ipleak.net), une capture de substitution n'apprendrait rien.",
+    difference: [
+      {
+        with: "Une vraie fuite (DNS, IPv6 ou WebRTC)",
+        body:
+          "Normal : les sites voient l'IP du serveur 403Shield, la même pour tous vos usages. Fuite : votre IP Orange/Starlink apparaît quelque part, ou vos requêtes DNS sortent du tunnel. La configuration livrée couvre IPv4 ET IPv6 (AllowedIPs 0.0.0.0/0 et ::/0) et pousse les DNS dans le tunnel : les fuites classiques sont fermées par conception — la vérification ci-dessous le prouve en cinq minutes.",
+      },
+      {
+        with: "Tor (l'anonymat réseau)",
+        body:
+          "Tor enchaîne trois relais et fait quand même SORTIR le trafic par une IP visible : son anonymat vient de l'impossibilité de relier la sortie à une personne, pas de l'invisibilité. Même logique ici — l'IP de sortie est visible, vous ne l'êtes pas : la sortie partagée complique encore le lien.",
+      },
+      {
+        with: "Les VPN qui changent d'IP à chaque connexion",
+        body:
+          "L'IP 403Shield est FIXE : la même hier, aujourd'hui, demain. C'est un choix — sessions cohérentes, aucune alerte « nouvelle localisation » à chaque connexion — et la contrepartie est assumée : une seule IP pour tous vos usages.",
+      },
+    ],
+    recoit: [
+      "La lecture claire de ce que les sites voient (l'IP du serveur) et de ce qu'ils ne verront jamais : votre IP réelle, votre pays, votre FAI.",
+      "La vérification zéro-fuite en cinq minutes : IPv4, IPv6, WebRTC et DNS contrôlés depuis un seul site de test.",
+      "Le réglage kill switch de l'appli WireGuard mobile — le seul vrai point de vigilance côté client.",
+      "La règle d'or du portefeuille : une configuration = un appareil, et pourquoi le partage d'une même conf se punit tout seul.",
+    ],
+    etapes: [
+      {
+        title: "Comprenez ce que les sites voient",
+        body:
+          "Tunnel monté, ipleak.net affiche l'IP du serveur 403Shield — France, Marseille — avec un type « hosting » ou « datacenter » : normal, c'est un serveur. C'est l'IP de sortie, l'adresse de retour de vos paquets ; votre IP FAI n'apparaît nulle part.\n\nL'adresse en 10.8.x.x de votre configuration est privée : elle vit dans le tunnel et ne sort jamais sur Internet — personne ne peut la « localiser ».",
+        tip: "« Hosting » comme type d'IP sur un site de test n'est pas une fuite : c'est la nature d'une IP de serveur. Aucun VPN n'affiche « résidentiel ».",
+      },
+      {
+        title: "Contrôlez l'absence de fuite (cinq minutes)",
+        body:
+          "Tunnel monté, ouvrez ipleak.net : l'IPv4 affichée est celle du serveur — comparez avec le même site SANS tunnel, il montrait alors votre IP FAI. L'IPv6 est absente ou celle du serveur ; le test DNS ne montre que des résolveurs joints VIA le serveur ; sur browserleaks.com/webrtc, l'IP WebRTC est celle du serveur, sans autre adresse à côté.\n\nLe seul signal d'alerte : une IP différente de celle du serveur apparaît — en pratique, celle que le test montrait sans tunnel. Le tunnel est alors tombé ou la configuration mal importée : rebranchez, retestez.",
+      },
+      {
+        title: "Activez le kill switch mobile",
+        body:
+          "WireGuard n'a pas de kill switch intégré : si le tunnel tombe (changement de réseau, veille de l'appareil), le trafic repart en clair jusqu'à la reconnexion. Sur Android, l'appli WireGuard propose « Bloquer les connexions sans VPN » (menu ⋮) ; sur iOS, le réglage « On-Demand » de la configuration bloque le hors-tunnel. Dans les deux cas, l'IP réelle ne fuit plus — même pendant une coupure.",
+        tip: "C'est LE réglage à faire dès l'installation : la seule « fuite » possible chez un client 403Shield bien configuré, c'est le trafic hors tunnel.",
+      },
+      {
+        title: "Si le pays affiché semble faux",
+        body:
+          "Les bases de géolocalisation (MaxMind, IPinfo et consœurs) étiquettent parfois les plages de datacenter au pays d'enregistrement plutôt qu'à la région réelle — un site peut afficher un pays approximatif pour l'IP du serveur. Le support 403Shield peut déposer les demandes de correction (gratuites, effet en une à quatre semaines selon la base).\n\nLe fait qui fait foi : la sortie vit en France (Marseille). Si un site affiche autre chose, c'est la base de données qui a tort, pas le tunnel.",
+      },
+      {
+        title: "Respectez la règle : une configuration = un appareil",
+        body:
+          "Chaque configuration WireGuard porte SA clé : elle désigne UN appareil du portefeuille. La copier sur un deuxième appareil est techniquement possible mais pratiquement inutilisable — deux appareils avec la même clé se volent mutuellement leur session (chaque handshake déloge l'autre) : la connexion alterne et tombe.\n\nUn nouvel appareil = une nouvelle configuration (achat sur le site pour le VPN personnel, création par le gérant pour le module revendu) — l'espace client suit le portefeuille appareil par appareil (guide Console tunnels).",
+      },
+    ],
+    usages: [
+      {
+        title: "L'objection du prospect",
+        body:
+          "« Votre VPN est localisable » au comptoir : la réponse tient en deux phrases — l'IP visible est celle du serveur, l'IP du client est invisible — et ce guide approfondit pour qui veut vérifier. Guide Vitrine VPN B2C pour la vente elle-même.",
+      },
+      {
+        title: "Le contrôle de routine",
+        body:
+          "Un passage de cinq minutes sur ipleak.net, tunnel monté : IPv4, IPv6, WebRTC et DNS au vert — l'hygiène mensuelle du client VPN qui veut dormir tranquille.",
+      },
+      {
+        title: "Le changement d'appareil",
+        body:
+          "Nouveau téléphone : nouvelle configuration depuis l'espace client, l'ancienne restée sur l'appareil ancien coupée au besoin — jamais de copie de fichier entre les deux.",
+      },
+    ],
+    pieges: [
+      {
+        title: "Le kill switch laissé désactivé",
+        body:
+          "Tunnel coupé = trafic en clair sous l'IP réelle jusqu'à la reconnexion : c'est la seule fuite possible côté client. « Bloquer les connexions sans VPN » (Android) ou « On-Demand » (iOS) se règlent dès l'installation.",
+        severity: "warn",
+      },
+      {
+        title: "Le partage d'une configuration",
+        body:
+          "Une même configuration sur deux appareils = deux sessions qui se volent mutuellement : connexion instable, zéro gain. Une configuration = un appareil — le portefeuille de l'espace client est fait pour ça.",
+        severity: "warn",
+      },
+      {
+        title: "« IP invisible » n'existe pas",
+        body:
+          "Quiconque promet une IP de sortie invisible ment : un site doit connaître l'adresse à qui répondre. La garantie réelle : votre IP, votre pays et votre FAI invisibles — avec une sortie partagée qui complique tout lien.",
+        severity: "info",
+      },
+    ],
+    faq: [
+      {
+        q: "ipleak.net montre Marseille alors que je suis à Abidjan : normal ?",
+        a: "Oui — c'est l'IP du serveur de sortie, celle que les sites doivent voir pour vous répondre. Votre IP réelle n'apparaît nulle part tant que le tunnel est monté.",
+      },
+      {
+        q: "Mon IP de sortie change-t-elle ?",
+        a: "Non — elle est fixe : la même hier, aujourd'hui, demain. C'est voulu (sessions cohérentes, pas d'alerte « nouvelle localisation ») et c'est ce que les tests affichent.",
+      },
+      {
+        q: "Peut-on rendre l'IP de sortie invisible ?",
+        a: "Non — impossible pour tout le monde, Tor compris : l'anonymat vient de l'impossibilité de relier l'IP de sortie à vous, pas de l'invisibilité. Ici, la sortie est de plus partagée entre les clients du serveur.",
+      },
+      {
+        q: "Puis-je mettre la même configuration sur mon téléphone et mon ordinateur ?",
+        a: "Non — une configuration = un appareil (clé dédiée). Deux appareils avec la même clé se volent leur session et la connexion devient instable. Prenez une configuration par appareil : chacune vit dans le portefeuille de l'espace client.",
+      },
+    ],
+    related: ["vitrine-vpn", "console-tunnels", "acces-pro"],
   },
 ];
