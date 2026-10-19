@@ -10,6 +10,106 @@ sous-marque FTech CI) ; l'historique ci-dessous conserve les noms d'époque.
 N°319 : le DÉPÔT GitHub lui-même devient `ftechnologies18/403shield`
 (anciennes URL redirigées en 301 par GitHub — web, git et API).
 
+## 2026-10-19 — N°343 — **BOUCLIER DNS : LES LISTES DE MENACES VIVANTES (URLhaus + OpenPhish) ET LA PURGE DU JOURNAL** (phase 2 du produit — le niveau « threats » devient opérationnel)
+
+- **Contexte** : la phase 1 (N°339) avait livré le moteur, les profils et le
+  résolveur DoH RFC 8484 avec un niveau « threats » VOLONTAIREMENT vide —
+  verrouillé par test dédié (`TestEngineThreatsEmptyPhase1`) : ces listes de
+  malwares/phishing vivent quelques heures, une liste figée en source aurait
+  été mensongère (doctrine : aucun faux chiffre). La phase 2 branche
+  l'agrégation automatique promise et tient la promesse de journalisation
+  minimale par la purge. RENUMÉROTÉ N°343 en intégration : annoncé N°340
+  dans la feuille de route de l'entrée N°339, mais N°341 (guides Accès Pro
+  multi-appareils + pair-à-pair) a été livré entre-temps et N°342 est
+  réservé par son entrée pour l'« Accès Invité » sur GO séparé — la séquence
+  N°XXX devant rester unique (même règle que N°334→N°335 et N°338→N°339).
+- **NOUVEAU `internal/dnsshield/threats.go`** — l'agrégat de menaces :
+  parsing des flux texte bruts (une URL/ligne, commentaires `#` tolérés),
+  extraction du HOST (schéma défiguré `hxxp://` toléré, userinfo et port
+  retirés, **IP nues ignorées** — une IP n'est pas une question DNS de nom,
+  et 75 % des lignes URLhaus sont des URLs à IP), alphabet validé comme les
+  règles perso, dédup. Le **DOMAINE COMPLET** de la source est conservé :
+  `attaquant.github.io` est listé tel quel — la sémantique suffixe bloque
+  lui et ses sous-domaines, JAMAIS les frères (`autre.github.io` reste
+  libre — précision exigée par les hébergeurs partagés qui peuplent ces
+  flux). ÉTAT : un set immuable publié par `atomic.Pointer` — la lecture
+  (chemin chaud `Decide`, des milliers de requêtes DNS) ne prend AUCUN
+  verrou ; le balayage substitue un set neuf d'un seul geste. Rien n'est
+  persisté : l'état est RECONSTRUIT des flux au démarrage (même doctrine
+  que l'état wg — pas de table pour un dérivé rebuildable). Plafond
+  mémoire 200 000 hôtes (les deux flux gratuits agrégés en font ~2 400).
+  **FAIL-OPEN** : un flux injoignable ne vide JAMAIS le set — l'ancien
+  reste servi ; le set démarre vide et honnête.
+- **MOTEUR** (`engine.go`) : les niveaux `threats` ET `family` consultent le
+  set partagé (family = threats + adulte + jeux d'argent, exactement le
+  vocabulaire SafeWiFi N°80) — APRÈS les règles perso : l'exception
+  « devoirs » de l'allowlist dépasse toujours tout, ordre figé inchangé.
+  Le test-verrou N°339 a été MIS À JOUR CONSCIENTEMENT en
+  `TestEngineThreatsLiveSet` (c'était son contrat : « il échouera le jour
+  où les listes arrivent, forçant sa mise à jour consciente ») : set vide →
+  le niveau ne bloque rien (fail-open), set peuplé → le listé est bloqué et
+  le frère reste libre.
+- **BALAYAGE 6 H** (`api/dns_threats_sweep.go`, goroutine `main.go`) :
+  rattrapage au démarrage (le niveau est opérationnel dès le boot) puis
+  toutes les 6 h — le rythme des flux gratuits + la politesse demandée par
+  abuse.ch. Sources par défaut URLhaus
+  (`urlhaus.abuse.ch/downloads/text/`) + OpenPhish édition communautaire
+  (`openphish.com/feed.txt`, qui redirige vers le miroir GitHub public —
+  le client Go suit, l'édition payante temps réel est un simple changement
+  d'URL via l'env `DNS_SHIELD_THREAT_FEEDS`). UA honnête exigé par les
+  éditeurs (jamais un UA de navigateur maquillé), GET borné 30 s / 64 Mo,
+  lignes bornées 2 048 o. **Fail-open à géométrie honnête** : tous les flux
+  OK → remplacement frais (les délistages s'appliquent) ; échec PARTIEL →
+  UNION avec le dernier agrégat publié (la couverture ne régresse jamais
+  parce qu'un éditeur a été indisponible un cycle) ; tous en échec →
+  l'ancien reste servi, échec tracé. Aucune écriture store, aucun verrou
+  (l'état vit dans le package dnsshield).
+- **PURGE DU JOURNAL** (`model.PurgeDnsEvents`, appelée par le balayage
+  horaire de rétention N°64 sous verrou avant Save) : la promesse
+  « journalisation minimale » se tient par la purge, pas par l'intention —
+  rétention 30 jours (comparaison lexicographique RFC3339, ordre
+  d'insertion) + borne 1 000 événements par profil (les plus RÉCENTS
+  survivent ; la dédup 10 min du résolveur limite déjà le rythme à
+  144/jour/domaine). La suppression se propage à PostgreSQL par syncTable,
+  comme la suppression d'un profil. Tracée au log service si non vide
+  (preuve d'audit, même format que la rétention UserLogs).
+- **CONSOLE** : `GET /api/dnsshield/me` expose désormais l'état RÉEL de
+  l'agrégat (`threats.domains` + `threats.updatedAt` RFC3339) lu hors
+  verrou — 0 tant que le premier passage n'a pas réussi, JAMAIS un chiffre
+  fabriqué (le front pourra afficher « X domaines de menaces actifs »).
+- **Tests** (zéro réseau en CI — `dnsThreatFetchFn` stubbé, discipline
+  maison des indirections) : parsing (URL complète, hôte nu, port, userinfo,
+  IP ignorées, casse, défiguré `hxxp`, doublons, lignes avariées tolérées),
+  sémantique du domaine complet (frère jamais bloqué, FQDN point final),
+  plafond mémoire, normalisation ; moteur (set vide/peuplé, allowlist
+  dépasse l'agrégat, family partage le set, off insensible) ; balayage
+  (frais complet, UNION en échec partiel puis remplacement frais au retour,
+  échec total garde l'ancien, env override) ; purge (rétention 30 j au jour
+  près, borne par profil, ordre conservé, vide) ; console (`threats` à 0
+  puis au compte réel).
+- **PORTES** : gofmt 0 · go vet 0 · go build OK · go test ./... 12/12
+  packages · -race dnsshield + api DNS + model purge · **SMOKE RÉEL sur
+  binaire :4100 avec les flux VIVANTS** (boot → 2 415 domaines publiés en
+  1,6 s) : domaine réellement listé OpenPhish → sinkhole 0.0.0.0 +
+  Cache-Control 60 s · domaine réellement listé URLhaus → sinkhole ·
+  sous-domaine du listé → bloqué (suffixe) · domaine sain (iana.org) →
+  forward RÉEL 1.1.1.1 (A 192.0.43.8) · le même listé sur un profil « off »
+  → forward (frontière de niveau) · graine adulte family intacte · profil
+  inconnu → 404. Anecdote de smoke : `example.com` était RÉELLEMENT listé
+  dans le flux URLhaus du jour (`/test_drop_check` — un URL de test de
+  dépôt malware) : le « contrôlé » bloqué était le COMPORTEMENT CORRECT, le
+  domaine de contrôle a été changé pour iana.org. Journal vérifié : 5
+  blocages consignés, les requêtes autorisées ABSENTES (promesse tenue).
+- **Schéma DB : AUCUN** — l'agrégat est un état en mémoire rebuildable des
+  flux publics (jamais persisté, même doctrine que l'état wg) ; la purge
+  travaille les tables dns_events existantes (N°339) par syncTable ;
+  ensureSchema rejoué au démarrage backend, répliques nocturnes suivent.
+- **Intacts** : wire.go/wire_test.go (le wire-format N°339 n'est pas
+  touché), le résolveur DoH et sa discipline fail-open, les routes console
+  et leurs quotas, les graines family, SafeWiFi/FamilyGuard/AntiVPN, le
+  périmètre routeurs/wg-mini — le bouclier DNS reste le DEUXIÈME canal
+  (l'appareil sans routeur 403Shield).
+
 ## 2026-10-19 — N°341 — **L'ACCÈS PRO SUR TOUS LES APPAREILS, EN GUIDES ET EN VITRINE** (consigne propriétaire : documenter les appareils non-MikroTik + l'argument pair-à-pair)
 
 - **Contexte** : consultation propriétaire « le tunnel /pro B2B est-il
