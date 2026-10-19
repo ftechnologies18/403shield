@@ -10,6 +10,63 @@ sous-marque FTech CI) ; l'historique ci-dessous conserve les noms d'époque.
 N°319 : le DÉPÔT GitHub lui-même devient `ftechnologies18/403shield`
 (anciennes URL redirigées en 301 par GitHub — web, git et API).
 
+## 2026-10-19 — N°339-A — **BOUCLIER DNS « 403SHIELD DNS » PHASE 1 : moteur de filtrage + profils + résolveur DoH** (le prochain service — appareil protégé SANS routeur 403Shield)
+
+- **Contexte** : consigne propriétaire « passons à la mise en place du
+  prochain service » (cadrage produit issu d'une conversation d'analyse :
+  filtrage DNS à la NextDNS + contrôle parental + supervision, cible grand
+  public et PME que les grandes suites laissent de côté). Ce commit pose la
+  FONDATION GO du produit dans le monorepo existant — aucun nouveau projet.
+- **Nouveau package `internal/dnsshield`** (stdlib pure — doctrine zéro
+  dépendance du backend) :
+  - `wire.go` — parseur wire-format DNS minimal (en-tête + question) et
+    réponses de filtrage : blocage A → `0.0.0.0` / AAAA → `::` (TTL 60 s),
+    type HTTPS (65) → NXDOMAIN, couvre-feu → REFUSED ;
+    **fail-open** : message incompréhensible → forward tel quel, jamais
+    400 — un filtre en panne ne coupe pas Internet, il s'efface.
+  - `engine.go` — moteur de décision pur (ordre figé : allowlist dépasse
+    TOUT y compris le couvre-feu — exception « devoirs » ; couvre-feu ;
+    règle bloquer ; niveau family = graines adulte + jeux d'argent
+    réelles et vérifiables ; niveau **threats VIDE en phase 1**,
+    verrouillé par un test dédié — les listes de menaces vivent quelques
+    heures, leur agrégation automatique (URLhaus/OpenPhish) est le N°340).
+  - `upstream.go` — forward UDP 2 s vers les anycast publics
+    (1.1.1.1 / 8.8.8.8 / 9.9.9.9, env `DNS_SHIELD_UPSTREAM`),
+    injectable pour la CI (zéro réseau réel en test).
+- **Modèle + tables** : `DnsProfile` (PublicID 16 hex = identifiant
+  d'acheminement DoH pattern NextDNS ; OwnerEmail = e-mail du client
+  console tunnel — même frontière d'identité que l'Accès Pro N°315 ;
+  niveaux off/threats/family miroir SafeWiFi N°80 ; couvre-feu =
+  FamilyGuardConfig N°82 réutilisé TEL QUEL — spec, ActiveAt, jours de
+  début, UTC == Abidjan) et `DnsEvent` (**journal minimal** : blocages et
+  couvre-feux seulement — les requêtes autorisées ne sont JAMAIS
+  consignées ; dédup 10 min par profil+domaine). Tables `dns_profiles` +
+  `dns_events` intégrées partout (schema/registry/specs/load/sync/
+  liveTableRows/mergeRecovered — la parité boot/recovery est verrouillée
+  par `TestMergeRecoveredParitePgLoad`, qui a attrapé la régression
+  avant push).
+- **API console** (JWT rôle tunnel, whitelist `/api/dnsshield/*`) :
+  profils CRUD + rapport d'événements ; quota 10 profils/e-mail,
+  validation stricte, anti-énumération 404, suppression = purge du
+  journal du profil uniquement.
+- **Résolveur public** : `POST/GET /dns-query/{publicId}` (RFC 8484) hors
+  `/api/` — profil inconnu/bloqué → 404 (l'appareil retombe sur son DNS
+  système) ; limiteur 240/6000 par IP.
+- **Intacts** : le WiFi public (SafeWiFi/FamilyGuard/Shield/AntiVPN) ne
+  bouge pas — le bouclier DNS est le DEUXIÈME canal de distribution
+  (l'appareil sans routeur) ; routes tunnel N°313-315 inchangées.
+- **Portes** : gofmt 0 · vet 0 · build OK · `go test ./...` OK (suite
+  complète, store à 45 tables) · `-race` Dns OK · **smoke réel** sur le
+  binaire :4100 : `www.pornhub.com` → 0.0.0.0, `jeux.example` (règle
+  perso) → 0.0.0.0, `example.com` → forward réel 1.1.1.1 (rcode 0,
+  IP 104.20.23.154), inconnu → 404, journal : 2 blocages consignés,
+  l'autorisé absent.
+- **Suivra (feuille de route)** : N°339 listes de menaces automatiques +
+  purge du journal ; onboarding Android « DNS privé » + profil
+  `.mobileconfig` iOS généré à la volée ; vitrine `/dns` (Clay mkl-*,
+  i18n FR/EN) ; vue console + intégration GeniusPay ; supervision de
+  posture (score A-F) et scoring IA asynchrone.
+
 ## 2026-10-19 — N°338 — **GUIDE « L'IP DU VPN EST LOCALISABLE : FUITE OU NORMAL ? » (4e guide de la section Tunnels & Accès Pro) — la transparence IP retournée en argument, la vérification zéro-fuite en 5 minutes, et la doctrine 1 CONF = 1 APPAREIL actée par l'exploitant**
 
 > Origine : deux consultations sandbox (« les IP fournies par WireGuard sont
