@@ -885,6 +885,38 @@ func (p *PG) ensureSchema() error {
                         updated_at  TEXT NOT NULL
                 )`,
 		`CREATE UNIQUE INDEX IF NOT EXISTS idx_tunnel_clients_email ON tunnel_clients (email)`,
+		// N°339 — PROFILS DU BOUCLIER DNS « 403Shield DNS » : un profil par
+		// appareil/famille, possédé par l'e-mail d'un client console tunnel
+		// (TunnelClient.Email — même frontière que l'Accès Pro N°315).
+		// AUCUN secret : le PublicID est un identifiant d'acheminement DoH
+		// (pattern NextDNS), pas une clé. Le couvre-feu réutilise le spec
+		// FamilyGuard N°82 tel quel ("1|22:00|06:00|1111111").
+		`CREATE TABLE IF NOT EXISTS dns_profiles (
+                        id          TEXT PRIMARY KEY,
+                        public_id   TEXT NOT NULL,
+                        owner_email TEXT NOT NULL,
+                        name        TEXT NOT NULL,
+                        level       TEXT NOT NULL DEFAULT 'family',
+                        block_rules TEXT NOT NULL DEFAULT '',
+                        allow_rules TEXT NOT NULL DEFAULT '',
+                        curfew_spec TEXT NOT NULL DEFAULT '',
+                        status      TEXT NOT NULL DEFAULT 'active',
+                        created_at  TEXT NOT NULL,
+                        updated_at  TEXT NOT NULL
+                )`,
+		`CREATE UNIQUE INDEX IF NOT EXISTS idx_dns_profiles_public ON dns_profiles (public_id)`,
+		`CREATE INDEX IF NOT EXISTS idx_dns_profiles_owner ON dns_profiles (owner_email)`,
+		// N°339 — journal de blocage DNS (blocages/couve-feux SEULEMENT —
+		// journalisation minimale, promesse produit ; purge par rétention
+		// existante à venir avec le sweep N°339).
+		`CREATE TABLE IF NOT EXISTS dns_events (
+                        id          TEXT PRIMARY KEY,
+                        profile_id  TEXT NOT NULL,
+                        domain      TEXT NOT NULL,
+                        action      TEXT NOT NULL,
+                        created_at  TEXT NOT NULL
+                )`,
+		`CREATE INDEX IF NOT EXISTS idx_dns_events_profile ON dns_events (profile_id, created_at)`,
 		// N°294 — cycle de vie complet de l'abonné : suspension auto
 		// (ExpMode→disable, gabarit hotspot F1), réactivation F4,
 		// IP statique (phase B), récurrent + rappels (phase C).

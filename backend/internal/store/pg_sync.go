@@ -190,6 +190,13 @@ func syncSteps(db *model.DB) []syncStep {
 		{tunnelClientSpec.table, func(hashes, pending map[string]map[string]uint64) tableApplier {
 			return diffTable(hashes, pending, tunnelClientSpec, db.TunnelClients)
 		}},
+		// N°339 — bouclier DNS : profils + journal de blocage.
+		{dnsProfileSpec.table, func(hashes, pending map[string]map[string]uint64) tableApplier {
+			return diffTable(hashes, pending, dnsProfileSpec, db.DnsProfiles)
+		}},
+		{dnsEventSpec.table, func(hashes, pending map[string]map[string]uint64) tableApplier {
+			return diffTable(hashes, pending, dnsEventSpec, db.DnsEvents)
+		}},
 		{transactionSpec.table, func(hashes, pending map[string]map[string]uint64) tableApplier {
 			return diffTable(hashes, pending, transactionSpec, db.Transactions)
 		}},
@@ -856,6 +863,8 @@ func (p *PG) rebuildHashes(db *model.DB) {
 		vpnPeerSpec.table:          hashRows(db.VpnPeers, vpnPeerSpec),
 		publicVpnOrderSpec.table:   hashRows(db.PublicVpnOrders, publicVpnOrderSpec),
 		tunnelClientSpec.table:     hashRows(db.TunnelClients, tunnelClientSpec),
+		dnsProfileSpec.table:       hashRows(db.DnsProfiles, dnsProfileSpec),
+		dnsEventSpec.table:         hashRows(db.DnsEvents, dnsEventSpec),
 		pppSecretSpec.table:        hashRows(db.PppSecrets, pppSecretSpec),
 	}
 	notifRows := make([]model.NotificationSettings, 0, len(db.NotifSettings))

@@ -56,6 +56,7 @@ type API struct {
 	tunnelCode   *signupLimiter
 	tunnelVerify *signupLimiter
 	tunnelAction *signupLimiter // N°314 — reveal conf + renouvellement (routes authentifiées console)
+	dnsQuery     *signupLimiter // N°339 — résolveur DoH public (routes /dns-query/{publicId})
 	tunnelCodes  map[string]*tunnelCodeEntry
 	tunnelMu     sync.Mutex
 	vitals       *telemetry.Collector // B2 — Core Web Vitals (nil = collecte désactivée)
@@ -164,7 +165,7 @@ func New(s *store.Store, jwtSecret string) *API {
 	// groupe serial rejoue l'inscription déjà passée — cf. signup_abuse.go.
 	// Les autres limiteurs S3 (join, reset) gardent les constantes : aucune
 	// suite E2E ne les traverse.
-	return &API{store: s, secret: jwtSecret, gws: map[string]routeros.Gateway{}, pinLock: newPinLimiter(), signup: signupLimiterFromEnv(os.Getenv), join: newSignupLimiter(), wifiClaim: newSignupLimiterLimits(20, 100), portalTrack: newSignupLimiterLimits(300, 3000), reset: newSignupLimiter(), chat: newSignupLimiterLimits(30, 400), vpnOrder: newSignupLimiterLimits(10, 40), vpnStatus: newSignupLimiterLimits(120, 3000), vpnRecover: newSignupLimiterLimits(5, 20), tunnelCode: newSignupLimiterLimits(6, 30), tunnelVerify: newSignupLimiterLimits(12, 120), tunnelAction: newSignupLimiterLimits(8, 40), tunnelCodes: map[string]*tunnelCodeEntry{}, egress: newEgressStats(), readStateDone: map[string]time.Time{}, readAcc: map[string]*readStateAccum{}, readStateChunks: map[string]int{}, readStateFreshAt: map[string]time.Time{}, readStateFreshPending: map[string]bool{}, devicesDone: map[string]time.Time{}, attn: map[string]time.Time{}, watcherFailN: map[string]int{}, watcherFailAt: map[string]time.Time{}, tgPairings: map[string]telegramPairing{}, tgAccountCode: map[string]string{}}
+	return &API{store: s, secret: jwtSecret, gws: map[string]routeros.Gateway{}, pinLock: newPinLimiter(), signup: signupLimiterFromEnv(os.Getenv), join: newSignupLimiter(), wifiClaim: newSignupLimiterLimits(20, 100), portalTrack: newSignupLimiterLimits(300, 3000), reset: newSignupLimiter(), chat: newSignupLimiterLimits(30, 400), vpnOrder: newSignupLimiterLimits(10, 40), vpnStatus: newSignupLimiterLimits(120, 3000), vpnRecover: newSignupLimiterLimits(5, 20), tunnelCode: newSignupLimiterLimits(6, 30), tunnelVerify: newSignupLimiterLimits(12, 120), tunnelAction: newSignupLimiterLimits(8, 40), dnsQuery: newSignupLimiterLimits(240, 6000), tunnelCodes: map[string]*tunnelCodeEntry{}, egress: newEgressStats(), readStateDone: map[string]time.Time{}, readAcc: map[string]*readStateAccum{}, readStateChunks: map[string]int{}, readStateFreshAt: map[string]time.Time{}, readStateFreshPending: map[string]bool{}, devicesDone: map[string]time.Time{}, attn: map[string]time.Time{}, watcherFailN: map[string]int{}, watcherFailAt: map[string]time.Time{}, tgPairings: map[string]telegramPairing{}, tgAccountCode: map[string]string{}}
 }
 
 // Handler — mux complet, protégé par le middleware d'authentification.
@@ -175,6 +176,7 @@ func (a *API) Handler() http.Handler {
 
 	// Agent 403Shield (routeur -> cloud, HTTP-poll sortant) + provisionning console
 	a.registerAgentRoutes(mux)
+	a.registerDnsShieldRoutes(mux) // N°339 — résolveur DoH public
 
 	// Notifications (réglages canaux, test, historique)
 	a.registerNotifRoutes(mux)
@@ -362,6 +364,16 @@ func (a *API) Handler() http.Handler {
 	mux.HandleFunc("GET /api/tunnel/pro/lan/{routerId}", a.handleTunnelProLanPoll)
 	mux.HandleFunc("POST /api/tunnel/pro/lan/{routerId}", a.handleTunnelProLan)
 	mux.HandleFunc("POST /api/tunnel/pro/order", a.handleTunnelProOrder)
+
+	// N°339 — BOUCLIER DNS « 403Shield DNS » : profils du client (JWT rôle
+	// tunnel — même frontière que l'Accès Pro : l'e-mail EST l'identité
+	// propriétaire). Le résolveur public /dns-query/{publicId} vit hors
+	// /api/ (registerDnsShieldRoutes, pattern registerAgentRoutes).
+	mux.HandleFunc("GET /api/dnsshield/me", a.handleDnsShieldMe)
+	mux.HandleFunc("POST /api/dnsshield/profiles", a.handleDnsShieldProfileCreate)
+	mux.HandleFunc("PUT /api/dnsshield/profiles/{id}", a.handleDnsShieldProfileUpdate)
+	mux.HandleFunc("DELETE /api/dnsshield/profiles/{id}", a.handleDnsShieldProfileDelete)
+	mux.HandleFunc("GET /api/dnsshield/profiles/{id}/events", a.handleDnsShieldProfileEvents)
 	// N°293 — PPPoE Phase A (chantier ⑥ de N°289, Option V lot 3) :
 	// abonnés PPPoE d'un pppoe-server EXISTANT (D2) pilotés par l'agent
 	// (D1 — commandes ppp_*, zéro cred, zéro port). Segment ISP TRANSVERSE

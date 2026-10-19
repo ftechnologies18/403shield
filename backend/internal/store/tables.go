@@ -81,6 +81,8 @@ const (
 	TablePppSecrets = "ppp_secrets"
 	// N°313 — clients légers de la console tunnel (Programme Tunnel, D-T2).
 	TableTunnelClients = "tunnel_clients"
+	TableDnsProfiles   = "dns_profiles"
+	TableDnsEvents     = "dns_events"
 	TableSettings      = "settings" // hors diff d'empreintes (syncSettings)
 )
 
@@ -130,6 +132,8 @@ var syncKnownTables = map[string]bool{
 	TablePublicVpnOrders:      true,
 	TablePppSecrets:           true,
 	TableTunnelClients:        true,
+	TableDnsProfiles:          true,
+	TableDnsEvents:            true,
 	TableSettings:             true,
 }
 

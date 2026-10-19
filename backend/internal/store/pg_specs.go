@@ -298,6 +298,39 @@ var tunnelClientSpec = entitySpec[model.TunnelClient]{
 	hashOf: hashEntity[model.TunnelClient],
 }
 
+// dnsProfileSpec — N°339 : profils du bouclier DNS (ordre cols/scan/args
+// strictement aligné — discipline tunnelClientSpec).
+var dnsProfileSpec = entitySpec[model.DnsProfile]{
+	table: "dns_profiles",
+	cols:  []string{"id", "public_id", "owner_email", "name", "level", "block_rules", "allow_rules", "curfew_spec", "status", "created_at", "updated_at"},
+	idOf:  func(x *model.DnsProfile) string { return x.ID },
+	scan: func(r *sql.Rows) (model.DnsProfile, error) {
+		var x model.DnsProfile
+		err := r.Scan(&x.ID, &x.PublicID, &x.OwnerEmail, &x.Name, &x.Level, &x.BlockRules, &x.AllowRules, &x.CurfewSpec, &x.Status, &x.CreatedAt, &x.UpdatedAt)
+		return x, err
+	},
+	args: func(x *model.DnsProfile) []any {
+		return []any{x.ID, x.PublicID, x.OwnerEmail, x.Name, x.Level, x.BlockRules, x.AllowRules, x.CurfewSpec, x.Status, x.CreatedAt, x.UpdatedAt}
+	},
+	hashOf: hashEntity[model.DnsProfile],
+}
+
+// dnsEventSpec — N°339 : journal de blocage DNS (append-only produit).
+var dnsEventSpec = entitySpec[model.DnsEvent]{
+	table: "dns_events",
+	cols:  []string{"id", "profile_id", "domain", "action", "created_at"},
+	idOf:  func(x *model.DnsEvent) string { return x.ID },
+	scan: func(r *sql.Rows) (model.DnsEvent, error) {
+		var x model.DnsEvent
+		err := r.Scan(&x.ID, &x.ProfileID, &x.Domain, &x.Action, &x.CreatedAt)
+		return x, err
+	},
+	args: func(x *model.DnsEvent) []any {
+		return []any{x.ID, x.ProfileID, x.Domain, x.Action, x.CreatedAt}
+	},
+	hashOf: hashEntity[model.DnsEvent],
+}
+
 var profileSpec = entitySpec[model.Profile]{
 	table: "profiles",
 	cols:  []string{"id", "name", "rate_limit", "session_timeout_min", "shared_users", "validity_days", "price", "data_quota_mb", "created_at", "account_id", "exp_mode", "grace_period_min", "lock_user", "selling_price", "lock_first_device", "address_pool", "parent_queue", "validity_min", "quota_mode", "throttle_rate"},

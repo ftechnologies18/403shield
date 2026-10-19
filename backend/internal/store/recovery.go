@@ -334,6 +334,8 @@ func mergeRecovered(dst, src *model.DB) int {
 	n += mergeSlice(&dst.PublicVpnOrders, src.PublicVpnOrders, publicVpnOrderSpec.idOf)
 	n += mergeSlice(&dst.PppSecrets, src.PppSecrets, pppSecretSpec.idOf)
 	n += mergeSlice(&dst.TunnelClients, src.TunnelClients, tunnelClientSpec.idOf)
+	n += mergeSlice(&dst.DnsProfiles, src.DnsProfiles, dnsProfileSpec.idOf) // N°339 — bouclier DNS
+	n += mergeSlice(&dst.DnsEvents, src.DnsEvents, dnsEventSpec.idOf)       // N°339 — journal de blocage
 
 	// Cartes par compte : complétées, jamais écrasées (la mémoire — réglages
 	// modifiés pendant la fenêtre — garde la main).

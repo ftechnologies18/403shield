@@ -195,7 +195,10 @@ func (a *API) authMiddleware(next http.Handler) http.Handler {
 		// N°313 — liste blanche du rôle « tunnel » (clients légers de la
 		// console tunnel) : le token n'atteint QUE /api/tunnel/* — AUCUNE
 		// route console SaaS, miroir exact du garde reseller ci-dessus.
-		if claims.Role == "tunnel" && !strings.HasPrefix(path, "/api/tunnel/") {
+		// N°339 — le bouclier DNS vit sous /api/dnsshield/* (même frontière
+		// d'identité : l'e-mail du client tunnel EST le propriétaire des
+		// profils — miroir de l'Accès Pro N°315).
+		if claims.Role == "tunnel" && !strings.HasPrefix(path, "/api/tunnel/") && !strings.HasPrefix(path, "/api/dnsshield/") {
 			writeErr(w, http.StatusForbidden, "Accès réservé à la console tunnel")
 			return
 		}

@@ -96,6 +96,15 @@ type DB struct {
 	// D-T2 : jamais dans admin_users). Aucun secret : les codes à usage
 	// unique vivent en mémoire API. Cf. tunnelclient.go.
 	TunnelClients []TunnelClient `json:"tunnelClients"`
+	// N°339 — PROFILS DU BOUCLIER DNS « 403Shield DNS » (phase 1 :
+	// filtrage par résolveur DoH, appareils SANS routeur 403Shield —
+	// miroir consommable de SafeWiFi N°80 qui filtre le WiFi public via
+	// routeurs). Cf. dnsprofile.go.
+	DnsProfiles []DnsProfile `json:"dnsProfiles"`
+	// N°339 — journal de blocage DNS (MINIMAL : blocages et couvre-feux
+	// uniquement — les requêtes autorisées ne sont JAMAIS consignées,
+	// la journalisation minimale est une promesse produit).
+	DnsEvents []DnsEvent `json:"dnsEvents"`
 	// N°68 — demandes de réinitialisation de mot de passe (« Mot de passe
 	// oublié ? ») : token hashé, expiration 60 min, usage unique — voir
 	// PasswordReset. Borné par prunePasswordResetsLocked.
