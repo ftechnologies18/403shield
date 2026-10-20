@@ -106,5 +106,22 @@ jobs:
           echo "═══ 6. Fenêtre de l'incident 03:01 + timers de réplication ═══"
           sudo journalctl -u mikcloud --since "2026-10-20 02:56" --until "2026-10-20 03:08" --no-pager 2>/dev/null | tail -40 || true
           systemctl list-timers --no-pager 2>/dev/null | head -12 || true
+
+          echo "═══ 7. RÉSULTATS wg_setup du heal (fw echo — preuve de la règle posée) ═══"
+          DBURL2=$(sudo grep -E '^DATABASE_URL=' /etc/mikcloud/mikcloud.env | head -1 | cut -d= -f2-)
+          psql "$DBURL2" -Atc "SELECT id||' peers='||coalesce(result->>'peers','?')||' fw='||coalesce(result->>'fw','?')||' addr='||coalesce(result->>'addr','?') FROM commands WHERE kind='wg_setup' AND created_at>'2026-10-20T08:21' ORDER BY created_at" 2>&1 | head -8
+          echo "═══ 8. PING tunnel (règle tout-protocole : si OK → règle POSÉE et ACTIVE) ═══"
+          for IP in 10.8.0.2 10.8.0.3 10.8.0.4 10.8.0.5 10.8.0.6; do
+            if ping -c 2 -W 2 $IP >/dev/null 2>&1; then
+              echo "ping $IP → RÉPOND ✓ (règle active)"
+            else
+              echo "ping $IP → MUET (règle absente/inactive)"
+            fi
+          done
+          echo "═══ 9. Dial DISTINGUÉ (refused ≠ timeout) ═══"
+          for IPP in 10.8.0.6:8728 10.8.0.6:8291 10.8.0.2:8291; do
+            ERR=$(curl -s -m 4 -o /dev/null telnet://$IPP 2>&1 || true)
+            echo "$IPP → ${ERR:-silence}"
+          done
           echo "═══ DIAG TERMINÉ (lecture seule — aucun geste) ═══"
           REMOTE
