@@ -56,10 +56,20 @@ jobs:
           free -m | head -2
           df -h / | tail -1
           systemctl --failed --no-legend || true
-          echo "═══ 1. Conteneur backend ═══"
-          sudo docker ps --filter name=mikcloud-server --format '{{.Status}}'
-          echo "--- logs (150 dernières lignes — la vérité de la persistance) ---"
-          sudo docker logs --tail 150 mikcloud-server 2>&1 | tail -150
+          echo "═══ 1. Backend : transport + logs applicatifs ═══"
+          echo "--- docker ps (conteneur mikcloud-server ?) ---"
+          sudo docker ps --filter name=mikcloud-server --format '{{.Status}}' || true
+          echo "--- systemd mikcloud : état ---"
+          systemctl is-active mikcloud 2>/dev/null || echo "mikcloud (systemd) : inactif/absent"
+          systemctl show mikcloud -p ActiveEnterTimestamp -p ExecMainPID 2>/dev/null || true
+          echo "--- journal mikcloud : lignes applicatives (sans le bruit des requêtes) ---"
+          sudo journalctl -u mikcloud --since "-4h" --no-pager 2>/dev/null \
+            | grep -vE "GET /agent|POST /agent|GET /api|POST /api|GET / |PUT /|DELETE /" \
+            | tail -80 || echo "(journal vide)"
+          echo "--- journal mikcloud : erreurs/syncs des 4 dernières heures ---"
+          sudo journalctl -u mikcloud --since "-4h" --no-pager 2>/dev/null \
+            | grep -iE "store:|sync|degrad|recuper|panic|fatal|erreur|failed" \
+            | tail -40 || echo "(rien)"
           echo "═══ 2. Postgres DEPUIS la VM ═══"
           for P in 5432 6543; do
             HOSTP=aws-1-eu-west-1.pooler.supabase.com
