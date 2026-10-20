@@ -83,5 +83,28 @@ jobs:
           done
           echo "═══ 3. wg-mini (systemd) ═══"
           systemctl is-active wg-mini 2>/dev/null || echo "wg-mini : inactif/absent"
+          echo "═══ 4. Base LOCALE (primaire — lecture seule, sans écho des secrets) ═══"
+          DBURL=$(sudo grep -E '^DATABASE_URL=' /etc/mikcloud/mikcloud.env | head -1 | cut -d= -f2-)
+          if command -v psql >/dev/null 2>&1 && [ -n "$DBURL" ]; then
+            psql "$DBURL" -Atc "SELECT 'checkpoint: '||attempts||' essais, dernier succès '||last_success_at FROM health_checkpoint" 2>&1 | head -2
+            psql "$DBURL" -Atc "SELECT 'wg_setup: '||id||' '||status||' '||created_at FROM commands WHERE kind='wg_setup' ORDER BY created_at DESC LIMIT 6" 2>&1 | head -8
+            psql "$DBURL" -Atc "SELECT 'routeur: '||name||' wg_applied='||wg_applied_at||' last_seen='||last_seen FROM routers ORDER BY wg_applied_at DESC LIMIT 5" 2>&1 | head -8
+            psql "$DBURL" -Atc "SELECT 'activité: '||at||' '||substr(message,1,90) FROM activity WHERE at>'2026-10-20T08:21' ORDER BY at DESC LIMIT 8" 2>&1 | head -10
+          else
+            echo "(psql absent ou DATABASE_URL introuvable)"
+          fi
+          echo "═══ 5. SONDE PILOTAGE DIRECT — dial 8728/8291 des IP tunnels (le geste exact du wg-test) ═══"
+          for IP in 10.8.0.2 10.8.0.3 10.8.0.4 10.8.0.5 10.8.0.6; do
+            for PORT in 8728 8291; do
+              if timeout 4 bash -c "</dev/tcp/$IP/$PORT" 2>/dev/null; then
+                echo "$IP:$PORT → OUVERT ✓"
+              else
+                echo "$IP:$PORT → fermé/timeout"
+              fi
+            done
+          done
+          echo "═══ 6. Fenêtre de l'incident 03:01 + timers de réplication ═══"
+          sudo journalctl -u mikcloud --since "2026-10-20 02:56" --until "2026-10-20 03:08" --no-pager 2>/dev/null | tail -40 || true
+          systemctl list-timers --no-pager 2>/dev/null | head -12 || true
           echo "═══ DIAG TERMINÉ (lecture seule — aucun geste) ═══"
           REMOTE
