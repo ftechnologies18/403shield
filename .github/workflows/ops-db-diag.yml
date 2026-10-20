@@ -1,0 +1,77 @@
+name: ops-db-diag
+
+# ═══ DIAGNOSTIC PERSISTANCE POSTGRES DEPUIS LA VM (lecture seule) ═══
+#
+# N°344 — créé pendant l'incident du 20/10 (~08:30 UTC) : après un
+# redéploiement, le backend répondait (health 200, store chargé) mais
+# AUCUNE écriture n'atteignait Supabase (checkpoint figé, ni succès ni
+# échec enregistrés). Les logs du conteneur portent la vérité
+# (« synchro PostgreSQL différée échouée », MODE DÉGRADÉ, recovery…) :
+# ce workflow les rapporte SANS intervention (aucun restart, aucune
+# écriture base).
+#
+# Sonde :
+#   1. docker ps + logs mikcloud-server (150 dernières lignes — jamais les
+#      secrets : les messages maison n'en contiennent pas par convention) ;
+#   2. joignabilité Postgres DEPUIS la VM : résolution DNS + TCP 5432/6543
+#      du pooler (bash /dev/tcp, timeout borné) ;
+#   3. posture hôte : load, mémoire, disque (un disque plein ou un OOM
+#      explique des syncs muets), unités systemd failed ;
+#   4. wg-mini (systemd) — le client du même loopback.
+#
+# PIÈGE consigné (ops-vm-diag run 22) : chaque `oci` reçoit </dev/null —
+# hors sujet ici : ce workflow n'utilise QUE SSH.
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: ops-db-diag
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  diag:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      SSH_KEY: ${{ secrets.ORACLE_SSH_KEY }}
+      VM_HOST: ${{ secrets.ORACLE_HOST }}
+      DEPLOY_USER: ${{ secrets.ORACLE_USER }}
+    steps:
+      - name: Clé SSH du coffre + sonde lecture seule
+        run: |
+          set -euo pipefail
+          for v in SSH_KEY VM_HOST DEPLOY_USER; do
+            [ -n "${!v}" ] || { echo "❌ secret/env $v absent"; exit 1; }
+          done
+          printf '%s\n' "$SSH_KEY" > /tmp/oracle_key && chmod 600 /tmp/oracle_key
+          SSH_OPTS="-i /tmp/oracle_key -o StrictHostKeyChecking=accept-new -o ConnectTimeout=20 -o ServerAliveInterval=15 -o ServerAliveCountMax=8"
+          ssh $SSH_OPTS "$DEPLOY_USER@$VM_HOST" bash -s <<'REMOTE'
+          set -uo pipefail
+          echo "═══ 0. Hôte ═══"
+          uptime
+          free -m | head -2
+          df -h / | tail -1
+          systemctl --failed --no-legend || true
+          echo "═══ 1. Conteneur backend ═══"
+          sudo docker ps --filter name=mikcloud-server --format '{{.Status}}'
+          echo "--- logs (150 dernières lignes — la vérité de la persistance) ---"
+          sudo docker logs --tail 150 mikcloud-server 2>&1 | tail -150
+          echo "═══ 2. Postgres DEPUIS la VM ═══"
+          for P in 5432 6543; do
+            HOSTP=aws-1-eu-west-1.pooler.supabase.com
+            IP=$(getent hosts $HOSTP | awk '{print $1; exit}')
+            echo "DNS $HOSTP → ${IP:-ÉCHEC}"
+            if timeout 8 bash -c "</dev/tcp/$HOSTP/$P" 2>/dev/null; then
+              echo "TCP $HOSTP:$P → OUVERT"
+            else
+              echo "TCP $HOSTP:$P → FERMÉ/ TIMEOUT"
+            fi
+          done
+          echo "═══ 3. wg-mini (systemd) ═══"
+          systemctl is-active wg-mini 2>/dev/null || echo "wg-mini : inactif/absent"
+          echo "═══ DIAG TERMINÉ (lecture seule — aucun geste) ═══"
+          REMOTE
