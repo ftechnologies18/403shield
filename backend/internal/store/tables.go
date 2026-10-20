@@ -75,6 +75,8 @@ const (
 	TableCyberPostes = "cyber_postes"
 	// N°291 — peers VPN vendus (produit WireGuard client final, wg0 VM).
 	TableVpnPeers = "vpn_peers"
+	// N°342 — invités WireGuard expirables (Accès Invité, segment 10.8.3).
+	TableVpnGuests = "vpn_guests"
 	// N°301 — commandes VPN B2C « vente directe plateforme » (vitrine /vpn).
 	TablePublicVpnOrders = "public_vpn_orders"
 	// N°293 — abonnés PPPoE (chantier ⑥, unicité PAR ROUTEUR).
@@ -129,6 +131,7 @@ var syncKnownTables = map[string]bool{
 	TableSites:                true,
 	TableCyberPostes:          true,
 	TableVpnPeers:             true,
+	TableVpnGuests:            true,
 	TablePublicVpnOrders:      true,
 	TablePppSecrets:           true,
 	TableTunnelClients:        true,

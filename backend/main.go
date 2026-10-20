@@ -140,6 +140,11 @@ func main() {
 	// défaut 50 Go — 0 = illimité). Peers B2C uniquement, les routeurs de
 	// gestion ne sont jamais touchés.
 	go engine.RunVpnQuotaSweepForever()
+	// N°342 — balayage 5 min des INVITÉS de l'Accès Pro : échéances
+	// naturelles (TTL 1-72 h — la promesse « se referme seul ») et
+	// reprises des retraits wg-mini manqués (révocations en erreur) :
+	// jamais de peer invité fantôme sur la VM à vie.
+	go engine.RunVpnGuestSweepForever()
 	// N°150 — bootstrap Telegram plateforme : getMe (cache du @username
 	// pour le lien magique) + setWebhook (URL publique RENDER_EXTERNAL_URL
 	// ou PUBLIC_BASE_URL + secret d'env). Best-effort : un échec réseau au

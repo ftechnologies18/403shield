@@ -82,6 +82,10 @@ type DB struct {
 	// comptes hotspot ayant activé le module (settings.Tenant.WgVpnEnabled)
 	// — cf. vpnpeer.go.
 	VpnPeers []VpnPeer `json:"vpnPeers"`
+	// N°342 — invités WireGuard expirables (Accès Invité : tiers sur le
+	// segment dédié 10.8.3.0/24, périmètre = hôte/32 + pin-holes). Créés
+	// sous le compte gérant propriétaire de l'HÔTE Pro. Cf. vpnguest.go.
+	VpnGuests []VpnGuest `json:"vpnGuests"`
 	// N°301 — commandes VPN B2C « vente directe plateforme » (vitrine
 	// publique /vpn, cf. publicvpnorder.go) : le peer lié vit dans VpnPeers
 	// au nom du compte principal (AccountID = AccountMainID), cette table ne
@@ -384,6 +388,7 @@ func (db *DB) CloneDeep() *DB {
 	clone.Devices = append([]Device(nil), db.Devices...)
 	clone.CyberPostes = append([]CyberPoste(nil), db.CyberPostes...)
 	clone.VpnPeers = append([]VpnPeer(nil), db.VpnPeers...)
+	clone.VpnGuests = append([]VpnGuest(nil), db.VpnGuests...)
 	clone.PublicVpnOrders = append([]PublicVpnOrder(nil), db.PublicVpnOrders...)
 	clone.PppSecrets = append([]PppSecret(nil), db.PppSecrets...)
 	clone.TunnelClients = append([]TunnelClient(nil), db.TunnelClients...)

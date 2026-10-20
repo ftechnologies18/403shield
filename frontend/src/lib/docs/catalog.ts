@@ -1,9 +1,9 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // /docs/guides — catalogue des sections & agrégation (N°304, N°333-B).
 //
-// 35 guides console PUBLICS (statiques, /public/docs/<module>/ — dont la
-// section Tunnels & Accès Pro et ses deux guides N°341 multi-appareils +
-// pair-à-pair) + le volet plateforme PRIVÉ (6 guides :
+// 36 guides console PUBLICS (statiques, /public/docs/<module>/ — dont la
+// section Tunnels & Accès Pro et ses guides N°341 multi-appareils +
+// pair-à-pair, et N°342 Accès Invité) + le volet plateforme PRIVÉ (6 guides :
 // métadonnées ici, contenu chargé à la demande par la route gated — voir
 // platform-meta.ts).
 // ─────────────────────────────────────────────────────────────────────────────
@@ -44,7 +44,7 @@ export const DOC_SECTIONS: DocSection[] = [
     id: "tunnels",
     title: "Tunnels & Accès Pro",
     description:
-      "Le pont privé WireGuard : VPN personnel à IP fixe France, Accès Pro pour routeurs, caméras et NAS, pair-à-pair entre vos appareils — et l'espace client sans mot de passe.",
+      "Le pont privé WireGuard : VPN personnel à IP fixe France, Accès Pro pour routeurs, caméras et NAS, pair-à-pair entre vos appareils, invités expirables pour un tiers — et l'espace client sans mot de passe.",
     icon: "shield",
   },
   {
@@ -84,7 +84,7 @@ export const DOC_SECTIONS: DocSection[] = [
   },
 ];
 
-/** Guides publics (35) — servables en statique, jamais de contenu plateforme ici. */
+/** Guides publics (36) — servables en statique, jamais de contenu plateforme ici. */
 export const PUBLIC_GUIDES: Guide[] = [
   ...DEMARRER_GUIDES,
   ...SUPERVISION_GUIDES,

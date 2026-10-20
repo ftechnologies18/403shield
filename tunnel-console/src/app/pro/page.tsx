@@ -38,6 +38,16 @@
 //   Contrat backend N°315 TOUJOURS inchangé — zéro appel nouveau, zéro
 //   champ nouveau : de la copie sur des données déjà servies.
 //
+// N°342 — ACCÈS INVITÉ : nouvelle section « Invités » (contrat
+//   /api/tunnel/pro/guests — handlers_tunnel_guests.go) : confs invité
+//   EXPIRABLES à périmètre minimal (AllowedIPs = hôte/32 + pin-holes sur
+//   les ports déclarés — jamais Internet, jamais un autre appareil), TTL
+//   1-72 h choisi à la création, plafond 10 actifs, révocation immédiate,
+//   expiration automatique par le balayage backend (5 min). La conf invité
+//   se livre par une MODALE DÉDIÉE (QR + copie + .conf — miroir du reveal
+//   Pro) et le formulaire ne propose que les appareils Pro ACTIFS du
+//   portefeuille comme hôte (source : la liste des hôtes du backend).
+//
 // Contrat backend (handlers_tunnel_pro.go, N°315 — INCHANGÉ) :
 //   GET  /api/tunnel/pro                    → éligibilité + routeurs + LAN + portefeuille
 //   POST /api/tunnel/pro/detect             → enfile la détection (lecture pure)
@@ -57,12 +67,14 @@ import { QRCodeSVG } from "qrcode.react";
 import {
   ArrowLeftRight,
   ArrowUpRight,
+  Ban,
   CalendarClock,
   Camera,
   Check,
   Copy,
   CreditCard,
   Download,
+  Hourglass,
   Laptop,
   Lightbulb,
   Loader2,
@@ -73,11 +85,17 @@ import {
   Router as RouterIcon,
   ShieldCheck,
   Smartphone,
+  UserPlus,
+  Users,
   X,
 } from "lucide-react";
 import {
   clearToken,
   getToken,
+  tunnelGuestCreate,
+  tunnelGuestReveal,
+  tunnelGuestRevoke,
+  tunnelGuests,
   tunnelProDetect,
   tunnelProLanApply,
   tunnelProLanPoll,
@@ -88,6 +106,9 @@ import {
   type ProRouter,
   type ProStatusResponse,
   type RevealResponse,
+  type TunnelGuest,
+  type TunnelGuestRevealResponse,
+  type TunnelGuestsResponse,
 } from "@/lib/api";
 
 function formatDate(iso: string): string {
@@ -105,6 +126,19 @@ function daysLeft(iso: string): number | null {
     const ms = new Date(iso).getTime() - Date.now();
     if (Number.isNaN(ms)) return null;
     return Math.ceil(ms / 86_400_000);
+  } catch {
+    return null;
+  }
+}
+
+// N°342 — compte à rebours HORAIRE d'un invité (TTL 1-72 h : le « jours
+// restants » du portefeuille serait illisible — l'invité vit en heures).
+function hoursLeft(iso: string): number | null {
+  if (!iso) return null;
+  try {
+    const ms = new Date(iso).getTime() - Date.now();
+    if (Number.isNaN(ms)) return null;
+    return Math.round(ms / 3_600_000);
   } catch {
     return null;
   }
@@ -184,6 +218,29 @@ export default function ProPage() {
   const confRef = useRef<HTMLDivElement | null>(null);
   const revealHeadRef = useRef<HTMLHeadingElement | null>(null);
 
+  // N°342 — ACCÈS INVITÉ : liste + jauge + hôtes (contrat /guests), création,
+  // révocation et reveal dédié (jamais mélangé au reveal d'un appareil Pro —
+  // un invité n'est pas un appareil du compte).
+  const [guestsData, setGuestsData] = useState<TunnelGuestsResponse | null>(null);
+  const [guestsError, setGuestsError] = useState("");
+  const [guestsLoading, setGuestsLoading] = useState(false);
+  const [guestBusy, setGuestBusy] = useState("");
+  const [guestFormOpen, setGuestFormOpen] = useState(false);
+  const [gLabel, setGLabel] = useState("");
+  const [gHost, setGHost] = useState("");
+  const [gPorts, setGPorts] = useState("");
+  const [gTtl, setGTtl] = useState(4);
+  const [gLoading, setGLoading] = useState(false);
+  const [gError, setGError] = useState("");
+  const [guestRevealFor, setGuestRevealFor] = useState<TunnelGuest | null>(null);
+  const [guestReveal, setGuestReveal] = useState<TunnelGuestRevealResponse | null>(null);
+  const [guestRevealLoading, setGuestRevealLoading] = useState(false);
+  const [guestRevealError, setGuestRevealError] = useState("");
+  const [gCopied, setGCopied] = useState(false);
+  const [gDownloaded, setGDownloaded] = useState(false);
+  const gConfRef = useRef<HTMLDivElement | null>(null);
+  const guestRevealHeadRef = useRef<HTMLHeadingElement | null>(null);
+
   const load = useCallback(async () => {
     const token = getToken();
     if (!token) {
@@ -237,6 +294,48 @@ export default function ProPage() {
       requestAnimationFrame(() => revealHeadRef.current?.focus());
     }
   }, [revealFor]);
+
+  // N°342 — Invités : chargement quand un Accès Pro est actif (la section
+  // ne s'affiche que dans ce cas — l'hôte d'un invité EST un appareil Pro).
+  const loadGuests = useCallback(async () => {
+    const token = getToken();
+    if (!token) return;
+    setGuestsLoading(true);
+    try {
+      setGuestsData(await tunnelGuests(token));
+      setGuestsError("");
+    } catch (err) {
+      const code = (err as { status?: number }).status;
+      if (code === 401) {
+        clearToken();
+        router.replace("/login");
+        return;
+      }
+      setGuestsError(err instanceof Error ? err.message : "Invités indisponibles — réessayez");
+    } finally {
+      setGuestsLoading(false);
+    }
+  }, [router]);
+
+  useEffect(() => {
+    if (status?.anyActive) void loadGuests();
+  }, [status, loadGuests]);
+
+  // N°342 — Escape + focus de la modale invité (même confort que le reveal Pro).
+  useEffect(() => {
+    if (!guestRevealFor) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setGuestRevealFor(null);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [guestRevealFor]);
+
+  useEffect(() => {
+    if (guestRevealFor) {
+      requestAnimationFrame(() => guestRevealHeadRef.current?.focus());
+    }
+  }, [guestRevealFor]);
 
   function logout() {
     clearToken();
@@ -408,6 +507,135 @@ export default function ProPage() {
     setTimeout(() => setDownloaded(false), 2000);
   }
 
+  // ---- N°342 — Accès Invité : création, reveal, révocation ----
+
+  // TTL proposés (tous dans les bornes backend 1-72 h) : du partage d'une
+  // soirée au long week-end LAN.
+  const guestTtlChoices = [1, 2, 4, 8, 12, 24, 48, 72];
+
+  async function submitGuest() {
+    const token = getToken();
+    if (!token) {
+      router.replace("/login");
+      return;
+    }
+    const host = gHost || guestsData?.hosts[0]?.peerId || "";
+    if (!host) {
+      setGError("Choisissez l'appareil Pro qui accueillera l'invité.");
+      return;
+    }
+    const ports = gPorts.replace(/\s/g, "");
+    if (!/^\d{1,5}(,\d{1,5}){0,5}$/.test(ports)) {
+      setGError("Ports invalides : 1 à 6 ports séparés par des virgules (ex. 25565 ou 3000,80,443).");
+      return;
+    }
+    setGLoading(true);
+    setGError("");
+    try {
+      const out = await tunnelGuestCreate(token, {
+        label: gLabel || undefined,
+        hostPeerId: host,
+        ports,
+        ttlHours: gTtl,
+      });
+      if (!out.guest) {
+        // Honeypot backend : succès factice — rien à afficher.
+        setGuestFormOpen(false);
+        return;
+      }
+      setGuestFormOpen(false);
+      setGLabel("");
+      setGPorts("");
+      setGTtl(4);
+      setNotice(
+        "Invité « " + out.guest.label + " » créé — remettez-lui la configuration " +
+          "(bouton « Voir la conf ») : elle joint uniquement " + out.guest.hostIp +
+          " sur les ports " + out.guest.ports + ", jusqu'à expiration.",
+      );
+      void loadGuests();
+    } catch (err) {
+      setGError(err instanceof Error ? err.message : "Création impossible — réessayez");
+    } finally {
+      setGLoading(false);
+    }
+  }
+
+  async function openGuestReveal(g: TunnelGuest) {
+    const token = getToken();
+    if (!token) {
+      router.replace("/login");
+      return;
+    }
+    setGuestRevealFor(g);
+    setGuestReveal(null);
+    setGuestRevealError("");
+    setGCopied(false);
+    setGDownloaded(false);
+    setGuestRevealLoading(true);
+    try {
+      setGuestReveal(await tunnelGuestReveal(g.id, token));
+    } catch (err) {
+      setGuestRevealError(err instanceof Error ? err.message : "Configuration indisponible — réessayez");
+    } finally {
+      setGuestRevealLoading(false);
+    }
+  }
+
+  async function revokeGuest(g: TunnelGuest) {
+    const token = getToken();
+    if (!token) {
+      router.replace("/login");
+      return;
+    }
+    if (!window.confirm("Révoquer l'invité « " + g.label + " » ? Sa configuration cessera de fonctionner immédiatement.")) {
+      return;
+    }
+    setGuestBusy(g.id);
+    setGError("");
+    try {
+      await tunnelGuestRevoke(g.id, token);
+      setNotice("Invité « " + g.label + " » révoqué — sa conf est morte.");
+      void loadGuests();
+    } catch (err) {
+      setGError(err instanceof Error ? err.message : "Révocation impossible — réessayez");
+    } finally {
+      setGuestBusy("");
+    }
+  }
+
+  async function copyGuestConf() {
+    if (!guestReveal?.conf) return;
+    try {
+      await navigator.clipboard.writeText(guestReveal.conf);
+      setGCopied(true);
+      setTimeout(() => setGCopied(false), 2000);
+    } catch {
+      const range = document.createRange();
+      if (gConfRef.current) {
+        range.selectNodeContents(gConfRef.current);
+        const sel = window.getSelection();
+        sel?.removeAllRanges();
+        sel?.addRange(range);
+      }
+    }
+  }
+
+  function downloadGuestConf() {
+    if (!guestReveal?.conf) return;
+    const name = `403shield-invite-${guestReveal.ipv4 || "acces"}.conf`;
+    const blob = new Blob([guestReveal.conf], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = name;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 4000);
+    setGDownloaded(true);
+    setTimeout(() => setGDownloaded(false), 2000);
+  }
+
   // — KPI dérivés du SEUL contrat /api/tunnel/pro (doctrine : aucun faux
   // chiffre — rien n'est inventé, tout se relit sur le statut) —
   const routersTotal = status?.routers.length ?? 0;
@@ -537,10 +765,12 @@ export default function ProPage() {
                   tout appareil WireGuard (le MikroTik = passerelle du site
                   rejoint), et le pair-à-pair privé relie vos appareils Pro via
                   Marseille (hairpin du segment remote — PC ↔ NAS, PC ↔ PC,
-                  sans routeur dans le chemin). Données réelles du contrat
-                  N°315 (AllowedIPs 10.8.0.0/24 + 10.8.2.0/24), aucun chiffre
-                  inventé — liens vers les guides publics N°341. */}
-              <section aria-label="Comment ça marche" className="mt-4 grid gap-3 sm:grid-cols-2">
+                  sans routeur dans le chemin). N°342 — TROISIÈME argument :
+                  l'Accès Invité partage un accès expirable à périmètre minimal
+                  (un hôte, des ports, un terme). Données réelles du contrat
+                  N°315/N°342, aucun chiffre inventé — liens vers les guides
+                  publics. */}
+              <section aria-label="Comment ça marche" className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
                   <p className="flex items-center gap-2 text-sm font-bold text-slate-900">
                     <Laptop className="h-4 w-4 text-emerald-600" aria-hidden />
@@ -578,6 +808,27 @@ export default function ProPage() {
                     className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-emerald-700 underline underline-offset-2 hover:text-emerald-800"
                   >
                     Le guide pair-à-pair
+                    <ArrowUpRight className="h-3.5 w-3.5" aria-hidden />
+                  </a>
+                </div>
+                {/* N°342 — le partage sans exposer : invités expirables. */}
+                <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                  <p className="flex items-center gap-2 text-sm font-bold text-slate-900">
+                    <Users className="h-4 w-4 text-emerald-600" aria-hidden />
+                    Invités expirables — partagez sans exposer
+                  </p>
+                  <p className="mt-2 text-sm leading-relaxed text-slate-600">
+                    Un serveur de jeu avec des amis, une démo web à un client : l&apos;invité
+                    reçoit sa propre conf — un seul appareil, des ports déclarés, un terme
+                    qui arrive seul. Jamais la vôtre, jamais Internet.
+                  </p>
+                  <a
+                    href="https://403shield.ftci.fr/docs/guides/acces-invite"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-emerald-700 underline underline-offset-2 hover:text-emerald-800"
+                  >
+                    Le guide Accès Invité
                     <ArrowUpRight className="h-3.5 w-3.5" aria-hidden />
                   </a>
                 </div>
@@ -957,6 +1208,263 @@ export default function ProPage() {
                       </p>
                     )}
                   </section>
+
+                  {/* ---- N°342 — INVITÉS (Accès Invité) : confs expirables à
+                      périmètre minimal pour UN tiers — serveur de jeu avec
+                      des amis, démo web à un client. Données réelles du
+                      contrat /api/tunnel/pro/guests uniquement. ---- */}
+                  {status.anyActive && (
+                    <section className="mt-8" aria-label="Invités">
+                      <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+                        <h2 className="flex flex-wrap items-center gap-2 text-base font-bold tracking-tight text-slate-900">
+                          <Users className="h-4 w-4 text-emerald-600" aria-hidden />
+                          Invités
+                          {guestsData && (
+                            <span className="text-xs font-normal text-slate-500">
+                              {guestsData.activeCount}/{guestsData.maxPerAccount} actif{guestsData.activeCount > 1 ? "s" : ""}
+                            </span>
+                          )}
+                        </h2>
+                        <button
+                          onClick={() => setGuestFormOpen((v) => !v)}
+                          aria-expanded={guestFormOpen}
+                          className="inline-flex min-h-11 items-center gap-1.5 rounded-xl bg-emerald-600 px-4 text-xs font-semibold text-white shadow-sm transition hover:bg-emerald-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600"
+                        >
+                          <UserPlus className="h-3.5 w-3.5" aria-hidden />
+                          {guestFormOpen ? "Fermer le formulaire" : "Inviter quelqu'un"}
+                        </button>
+                      </div>
+
+                      <p className="mb-4 text-sm leading-relaxed text-slate-600">
+                        Offrez à un tiers un accès <strong className="font-semibold text-slate-800">expirable</strong>{" "}
+                        à <strong className="font-semibold text-slate-800">un seul</strong> de vos appareils Pro : un
+                        serveur de jeu avec des amis, une démo web à un client. L&apos;invité ne voit
+                        NI Internet, NI vos autres appareils — uniquement l&apos;hôte choisi, sur les
+                        ports déclarés — et l&apos;accès meurt seul au terme (1 à 72 h).
+                      </p>
+
+                      {guestsError && (
+                        <div className="mb-4 rounded-2xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-700">
+                          {guestsError}{" "}
+                          <button onClick={() => void loadGuests()} className="font-semibold underline underline-offset-2">
+                            Réessayer
+                          </button>
+                        </div>
+                      )}
+                      {guestsLoading && !guestsData && (
+                        <div className="h-32 animate-pulse rounded-2xl border border-slate-200 bg-white" aria-busy="true" />
+                      )}
+
+                      {guestsData && (
+                        <>
+                          {guestFormOpen && (
+                            <div className="mb-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                              <fieldset>
+                                <legend className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                                  Nouvel invité
+                                </legend>
+                                <div className="mt-2">
+                                  <label htmlFor="guest-label" className="text-xs font-medium text-slate-600">
+                                    Nom de l&apos;invité (optionnel — pour vous repérer)
+                                  </label>
+                                  <input
+                                    id="guest-label"
+                                    type="text"
+                                    value={gLabel}
+                                    onChange={(e) => setGLabel(e.target.value)}
+                                    placeholder="Ami du samedi, client Alpha…"
+                                    maxLength={48}
+                                    className="mt-1 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-emerald-600 focus:outline-2 focus:outline-offset-1 focus:outline-emerald-600/40"
+                                  />
+                                </div>
+                                <div className="mt-3">
+                                  <label htmlFor="guest-host" className="text-xs font-medium text-slate-600">
+                                    Appareil hôte (ce que l&apos;invité pourra joindre)
+                                  </label>
+                                  <select
+                                    id="guest-host"
+                                    value={gHost || guestsData.hosts[0]?.peerId || ""}
+                                    onChange={(e) => setGHost(e.target.value)}
+                                    className="mt-1 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 focus:border-emerald-600 focus:outline-2 focus:outline-offset-1 focus:outline-emerald-600/40"
+                                  >
+                                    {guestsData.hosts.length === 0 && (
+                                      <option value="">Aucun appareil Pro actif</option>
+                                    )}
+                                    {guestsData.hosts.map((h) => (
+                                      <option key={h.peerId} value={h.peerId}>
+                                        {h.label} · {h.ipv4}
+                                      </option>
+                                    ))}
+                                  </select>
+                                </div>
+                                <div className="mt-3">
+                                  <label htmlFor="guest-ports" className="text-xs font-medium text-slate-600">
+                                    Ports ouverts vers l&apos;hôte (TCP + UDP, 1 à 6)
+                                  </label>
+                                  <input
+                                    id="guest-ports"
+                                    type="text"
+                                    inputMode="numeric"
+                                    value={gPorts}
+                                    onChange={(e) => setGPorts(e.target.value)}
+                                    placeholder="25565 (Minecraft) · 3000,80,443 (démo web)"
+                                    className="mt-1 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 font-mono text-sm text-slate-900 placeholder:font-sans placeholder:text-slate-400 focus:border-emerald-600 focus:outline-2 focus:outline-offset-1 focus:outline-emerald-600/40"
+                                  />
+                                  <p className="mt-1 text-[11px] text-slate-500">
+                                    Séparez par des virgules — ex. 25565 ou 3000,80,443.
+                                  </p>
+                                </div>
+                                <div className="mt-3">
+                                  <label htmlFor="guest-ttl" className="text-xs font-medium text-slate-600">
+                                    Durée de vie de l&apos;accès
+                                  </label>
+                                  <select
+                                    id="guest-ttl"
+                                    value={gTtl}
+                                    onChange={(e) => setGTtl(Number(e.target.value))}
+                                    className="mt-1 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 focus:border-emerald-600 focus:outline-2 focus:outline-offset-1 focus:outline-emerald-600/40"
+                                  >
+                                    {guestTtlChoices.map((h) => (
+                                      <option key={h} value={h}>
+                                        {h} heure{h > 1 ? "s" : ""}
+                                      </option>
+                                    ))}
+                                  </select>
+                                  <p className="mt-1 text-[11px] text-slate-500">
+                                    À l&apos;échéance, la conf de l&apos;invité cesse de fonctionner — sans geste de personne.
+                                  </p>
+                                </div>
+                              </fieldset>
+
+                              {gError && (
+                                <div className="mt-4 rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-700">
+                                  {gError}
+                                </div>
+                              )}
+
+                              <button
+                                onClick={() => void submitGuest()}
+                                disabled={gLoading || guestsData.hosts.length === 0}
+                                className="mt-4 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-5 text-sm font-bold text-white shadow-sm transition hover:bg-emerald-700 disabled:opacity-60 sm:w-auto"
+                              >
+                                {gLoading ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : <UserPlus className="h-4 w-4" aria-hidden />}
+                                {gLoading ? "Création de l'invité…" : "Créer l'invité"}
+                              </button>
+                            </div>
+                          )}
+
+                          {guestsData.guests.length === 0 ? (
+                            <p className="rounded-2xl border border-dashed border-slate-300 bg-white/60 p-5 text-sm text-slate-500">
+                              Aucun invité pour l&apos;instant — « Inviter quelqu&apos;un » crée un accès
+                              temporaire à périmètre minimal (jamais votre propre conf : un invité
+                              a la sienne, qui meurt au terme).
+                            </p>
+                          ) : (
+                            <ul className="max-h-[28rem] space-y-3 overflow-y-auto pr-1">
+                              {guestsData.guests.map((g) => {
+                                const left = hoursLeft(g.expiresAt);
+                                const alive = g.state === "active";
+                                return (
+                                  <li key={g.id} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+                                    <div className="flex flex-wrap items-start justify-between gap-3">
+                                      <div className="min-w-0">
+                                        <p className="flex flex-wrap items-center gap-2 text-sm font-semibold text-slate-900">
+                                          {g.label}
+                                          <span
+                                            className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold ${
+                                              g.state === "active"
+                                                ? "border-emerald-600/40 bg-emerald-500/10 text-emerald-700"
+                                                : g.state === "expired"
+                                                  ? "border-amber-500/40 bg-amber-500/10 text-amber-700"
+                                                  : g.state === "error"
+                                                    ? "border-red-500/40 bg-red-500/10 text-red-700"
+                                                    : "border-slate-300 bg-slate-400/10 text-slate-500"
+                                            }`}
+                                          >
+                                            {g.state === "active"
+                                              ? "actif"
+                                              : g.state === "expired"
+                                                ? "échu"
+                                                : g.state === "error"
+                                                  ? "erreur"
+                                                  : "révoqué"}
+                                          </span>
+                                        </p>
+                                        <p className="mt-0.5 text-xs text-slate-500">
+                                          hôte {g.hostLabel || g.hostIp} · ports {g.ports}
+                                        </p>
+                                        {g.expiresAt && (
+                                          <p
+                                            className={`mt-1 flex items-center gap-1.5 text-xs font-medium ${
+                                              alive && left !== null && left <= 1
+                                                ? "text-amber-600"
+                                                : alive
+                                                  ? "text-slate-500"
+                                                  : "text-slate-400"
+                                            }`}
+                                          >
+                                            <Hourglass className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                                            {alive
+                                              ? left !== null && left >= 0
+                                                ? `expire dans ${left} h (${formatDate(g.expiresAt)})`
+                                                : "à terme — fermeture automatique en cours"
+                                              : "accès clos"}
+                                          </p>
+                                        )}
+                                        {g.errorMsg && (
+                                          <p className="mt-1 text-xs text-red-600">{g.errorMsg}</p>
+                                        )}
+                                      </div>
+                                      <div className="flex flex-wrap items-center gap-2">
+                                        {alive && (
+                                          <button
+                                            onClick={() => void openGuestReveal(g)}
+                                            className="inline-flex min-h-11 items-center gap-1.5 rounded-xl bg-emerald-600 px-4 text-xs font-semibold text-white shadow-sm transition hover:bg-emerald-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600"
+                                          >
+                                            <QrCode className="h-3.5 w-3.5" aria-hidden />
+                                            Voir la conf
+                                          </button>
+                                        )}
+                                        {(alive || g.state === "error") && (
+                                          <button
+                                            onClick={() => void revokeGuest(g)}
+                                            disabled={guestBusy === g.id}
+                                            className="inline-flex min-h-11 items-center gap-1.5 rounded-xl border border-red-500/40 bg-red-500/10 px-3 text-xs font-semibold text-red-700 transition hover:border-red-500 disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-600"
+                                          >
+                                            {guestBusy === g.id ? (
+                                              <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
+                                            ) : (
+                                              <Ban className="h-3.5 w-3.5" aria-hidden />
+                                            )}
+                                            Révoquer
+                                          </button>
+                                        )}
+                                      </div>
+                                    </div>
+                                  </li>
+                                );
+                              })}
+                            </ul>
+                          )}
+
+                          <p className="mt-3 text-xs leading-relaxed text-slate-500">
+                            Doctrine 1 conf = 1 appareil : ne partagez JAMAIS votre propre conf
+                            Pro — créez un invité (clés dédiées, périmètre minimal, expiration).
+                           {" "}
+                            <a
+                              href="https://403shield.ftci.fr/docs/guides/acces-invite"
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="font-semibold text-emerald-700 underline underline-offset-2 hover:text-emerald-800"
+                            >
+                              Le guide « Accès Invité »
+                            </a>{" "}
+                            détaille le fonctionnement.
+                          </p>
+                        </>
+                      )}
+                    </section>
+                  )}
                 </>
               )}
             </>
@@ -1122,6 +1630,142 @@ export default function ProPage() {
                     <span className="font-mono">AllowedIPs</span> portent le périmètre Pro : vos
                     routeurs, vos autres appareils Pro + votre LAN étendu le cas échéant — la
                     configuration ne quitte jamais le coffre sans votre action.
+                  </p>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ---- Modal reveal INVITÉ (N°342) — la conf d'un tiers : périmètre
+          minimal + expiration annoncés DANS la modale (l'hôte sait ce qu'il
+          remet). Même confort que le reveal Pro : bottom-sheet mobile,
+          Escape, focus au titre, QR + copie + .conf. ---- */}
+      {guestRevealFor && (
+        <div
+          className="fixed inset-0 z-50 flex items-end justify-center bg-slate-900/50 p-4 backdrop-blur-sm sm:items-center"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Configuration invité"
+          onClick={() => setGuestRevealFor(null)}
+        >
+          <div
+            className="max-h-[92dvh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-slate-200 bg-white p-5 shadow-xl sm:p-6"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h2
+                  ref={guestRevealHeadRef}
+                  tabIndex={-1}
+                  className="text-base font-bold tracking-tight text-slate-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600"
+                >
+                  Configuration invité — {guestRevealFor.label}
+                </h2>
+                <p className="mt-0.5 text-xs text-slate-500">
+                  hôte {guestRevealFor.hostLabel || guestRevealFor.hostIp} · ports {guestRevealFor.ports}
+                  {guestReveal?.expiresAt ? ` · jusqu'au ${formatDate(guestReveal.expiresAt)}` : ""}
+                </p>
+              </div>
+              <button
+                onClick={() => setGuestRevealFor(null)}
+                aria-label="Fermer"
+                className="rounded-xl border border-slate-300 bg-white p-2 text-slate-500 transition hover:bg-slate-50 hover:text-slate-800"
+              >
+                <X className="h-4 w-4" aria-hidden />
+              </button>
+            </div>
+
+            {guestRevealLoading && (
+              <div className="mt-4 h-64 animate-pulse rounded-xl border border-slate-200 bg-slate-100/70" aria-busy="true" />
+            )}
+            {guestRevealError && (
+              <div className="mt-4 rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-700">
+                {guestRevealError}
+              </div>
+            )}
+            {guestReveal && (
+              <>
+                <div className="mt-4 flex flex-col gap-4 sm:flex-row sm:items-start">
+                  <div className="mx-auto shrink-0 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:mx-0">
+                    <div
+                      role="img"
+                      aria-label="QR code de la configuration invité — scannez-le depuis l'application WireGuard"
+                      className="rounded-lg bg-white"
+                    >
+                      <QRCodeSVG
+                        value={guestReveal.conf}
+                        size={204}
+                        level="L"
+                        marginSize={2}
+                        bgColor="#ffffff"
+                        fgColor="#0f172a"
+                        className="h-[204px] w-[204px]"
+                      />
+                    </div>
+                    <p className="mt-2 text-center text-[11px] font-medium text-slate-500">
+                      Scan depuis l&apos;app WireGuard
+                    </p>
+                  </div>
+                  <div className="min-w-0 flex-1 space-y-2">
+                    <div
+                      ref={gConfRef}
+                      className="max-h-56 overflow-y-auto rounded-xl border border-slate-200 bg-slate-50 p-3 font-mono text-[11px] leading-relaxed whitespace-pre-wrap break-all text-slate-700"
+                    >
+                      {guestReveal.conf}
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        onClick={() => void copyGuestConf()}
+                        className="inline-flex min-h-11 items-center gap-1.5 rounded-xl bg-emerald-600 px-4 text-xs font-semibold text-white shadow-sm transition hover:bg-emerald-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600"
+                      >
+                        {gCopied ? (
+                          <>
+                            <Check className="h-3.5 w-3.5" aria-hidden />
+                            Copiée
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="h-3.5 w-3.5" aria-hidden />
+                            Copier
+                          </>
+                        )}
+                      </button>
+                      <button
+                        onClick={downloadGuestConf}
+                        className="inline-flex min-h-11 items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-4 text-xs font-semibold text-slate-700 transition hover:border-slate-400 hover:bg-slate-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600"
+                      >
+                        {gDownloaded ? (
+                          <>
+                            <Check className="h-3.5 w-3.5" aria-hidden />
+                            Téléchargé
+                          </>
+                        ) : (
+                          <>
+                            <Download className="h-3.5 w-3.5" aria-hidden />
+                            Fichier .conf
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Instructions INVITÉ — le périmètre minimal et l'expiration
+                    sont annoncés À L'HÔTE au moment de remettre la conf. */}
+                <div className="mt-4 rounded-xl border border-amber-500/30 bg-amber-500/5 p-4 text-xs leading-relaxed text-slate-600">
+                  <p className="font-semibold text-slate-800">À remettre à l&apos;invité (QR ou fichier)</p>
+                  <p className="mt-1">
+                    Sur son appareil : app WireGuard → «&nbsp;+&nbsp;» → «&nbsp;Créer à partir
+                    d&apos;un QR code&nbsp;» (ou importer le fichier{" "}
+                    <span className="font-mono">.conf</span> sur PC). Son accès joint{" "}
+                    <strong className="font-semibold text-slate-800">uniquement</strong>{" "}
+                    <span className="font-mono">{guestRevealFor.hostIp}</span> sur les ports{" "}
+                    <span className="font-mono">{guestRevealFor.ports}</span> — pas d&apos;Internet,
+                    pas d&apos;autres appareils — et il cessera de fonctionner au terme
+                    (ou dès que vous le révoquez). Doctrine 1 conf = 1 appareil : cette conf
+                    est la SIENNE, ne lui donnez jamais la vôtre.
                   </p>
                 </div>
               </>

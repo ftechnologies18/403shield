@@ -10,6 +10,149 @@ sous-marque FTech CI) ; l'historique ci-dessous conserve les noms d'époque.
 N°319 : le DÉPÔT GitHub lui-même devient `ftechnologies18/403shield`
 (anciennes URL redirigées en 301 par GitHub — web, git et API).
 
+## 2026-10-20 — N°342 — **L'ACCÈS INVITÉ : UN TIERS DANS VOTRE TUNNEL, POUR QUELQUES HEURES** (confs invité expirables à périmètre minimal — serveur de jeu avec des amis, démo web à un client)
+
+- **Contexte** : GO propriétaire « lance N°342 Accès Invité avec ta
+  meilleure recommandation d'expert ». Le chantier ferme la promesse
+  « partagez SANS exposer » dessinée en consultation N°341 (serveur de jeu
+  avec amis + démo web client — la version publique/port ouvert étant
+  déconseillée : promesse « aucun port publié », quota OCI, responsabilité
+  d'hébergement). Note sécurité du dossier N°341 traitée AU PASSAGE : le
+  hairpin remote↔remote n'est pas cloisonné par compte au niveau iptables,
+  mais les invités n'y ont JAMAIS accès par construction (voir VM).
+- **Recommandation d'expert livrée** : un invité = un peer WireGuard
+  DÉDIÉ sur un SEGMENT SPÉCIFIQUE (10.8.3.0/24, 4e segment du pool wg0),
+  au périmètre minimal PAR CONSTRUCTION des trois couches —
+  (1) conf cliente : AllowedIPs = l'adresse de l'hôte /32 SEULEMENT
+  (jamais 0.0.0.0/0, jamais un segment, jamais le LAN) ; (2) VM : chaîne
+  iptables dédiée « mikcloud-guests » à DROP terminal insérée EN TÊTE du
+  FORWARD (avant les ACCEPT génériques des segments) — les seules
+  ouvertures sont les PIN-HOLES invité→hôte /32→/32 sur les ports
+  déclarés (1-6, TCP+UDP, multiport), fail-closed MÊME AVEC UNE CONF
+  TRAFIQUÉE, AUCUN MASQUERADE (jamais de sortie Internet pour un invité),
+  fermetures entrantes B2C (10.8.1.0/24) et routeurs (10.8.0.0/24) vers le
+  segment ; (3) validations aux TROIS frontières (cloud, wg-mini,
+  wg-peer.sh) + PREUVE PAR LA CONF : la conf relue doit porter
+  AllowedIPs = hôte/32 EXACTEMENT — un périmètre élargi est refusé à
+  chacune des frontières, jamais un produit en trompe-l'œil. Doctrine
+  « 1 conf = 1 appareil » (N°338) CONSERVÉE : l'invité a SA conf, ses
+  clés — jamais celle de l'hôte ; TTL court borné 1-72 h (expiration qui
+  arrive SEULE — personne n'a à se souvenir de révoquer), plafond 10
+  invités actifs par compte, révocation immédiate. HÔTE = un appareil Pro
+  VIVANT du compte uniquement (jamais un routeur, jamais le LAN : la
+  supervision reste l'affaire du gérant).
+- **VM — wg-peer.sh v6** : nouveau verbe `add-guest <nom> <ip-hôte>
+  <ports>` (hôte vérifié = peer remote 10.8.2.x EXISTANT dans wg0.conf,
+  ports csv 1-6 validés, allocation segment 10.8.3, conf cliente
+  AllowedIPs = hôte/32, sidecar `.guest` ip/host/ports = LA mémoire des
+  pin-holes) + verbe `guest-restore` (chaîne + saut + fermetures +
+  pin-holes relus des sidecars — idempotent, APPELÉ AU BOOT par le bloc
+  PostUp marqué « # mikcloud-guests » indépendant du bloc segments : une
+  VM v5 reçoit l'upgrade IN PLACE au premier add-guest) + `remove` étendu
+  (un invité emporte son pin-hole : sidecar supprimé + chaîne
+  reconstruite, DROP terminal toujours en place) ; pool wg0 253 → 1012
+  adresses (4 × /24), IPv6 fd00:8:3::N allouée mais hors AllowedIPs (le
+  cryptokey routing WireGuard bloque tout v6 invité de lui-même).
+- **VM — wg-mini v6** : nouveau endpoint `POST /v1/guest-add`
+  {"name","host","ports"} (guestHostRe/guestPortsRe + validGuestPorts
+  bornes 1-65535, miroir exact du script et du cloud — trois frontières)
+  + PREUVE PAR LA CONF côté service (la ligne AllowedIPs relue doit être
+  EXACTEMENT host/32) ; version v6, 404 sur une VM v5 → consigne
+  exploitant explicite (ops-wg-mini-install).
+- **BACKEND** : modèle `VpnGuest` (model/vpnguest.go — ID vg-, compte
+  propriétaire de l'hôte, HostPeerID+HostIP+Ports figés à la création,
+  Conf chiffrée secretbox pattern VpnPeer, ExpiresAt RFC3339, états
+  active/revoked/error + « expired » DÉRIVÉ d'ExpiresAt à l'affichage —
+  jamais persisté avec retard : la vérité est la comparaison à
+  maintenant) + bornes produit (MinGuestTTLHours 1, MaxGuestTTLHours 72,
+  MaxVpnGuestsPerAccount 10, MaxGuestPorts 6) ; table `vpn_guests` aux
+  CINQ listes concordantes (specs/load/sync/recovery/syncstats — leçon
+  N°302, tests statiques mis à jour 44→45 différentielles, 45→46 avec
+  settings) ; conf scellée au repos (scan déscelle / args scelle /
+  sealedSnapshot+unsealSecrets du mode JSON — miroir VpnPeer) ;
+  `wgMiniGuestAdd` avec preuve par la conf 3e frontière + détection VM v5
+  (404 → consigne ops) ; QUATRE routes JWT tunnel sous quota tunnelAction
+  (GET/POST /api/tunnel/pro/guests, POST /{id}/reveal, POST /{id}/revoke
+  — handlers_tunnel_guests.go) : liste antichronologique + jauge + hôtes
+  possibles (appareils Pro vivants, tunnelProPeersLocked), création en 3
+  phases (réservation sous verrou → wg-mini HORS verrou → finalisation ;
+  échec = état error explicite + remove best-effort, jamais un invité
+  fantôme actif), reveal avec self-healing wg-mini (pattern D5-a N°314)
+  et 410 honnête sur révoqué/échu, révocation idempotente (état posé sous
+  verrou = vérité immédiate pour l'API, conf vidée — pas de coffre
+  fantôme, retrait wg0 HORS verrou avec reprise par balayage) ;
+  anti-énumération 404 uniforme, anti-robots honeypot, la conf ne sort
+  QUE du reveal (jamais dans la liste, jamais dans un journal) ;
+  **balayage vpnguest_sweep.go** (5 min, patron N°311) : échéances
+  naturelles (retrait wg0 + état revoked + trace) ET reprises des
+  retraits manqués (révocations en erreur) — jamais de peer invité
+  fantôme à vie ; VpnPeerNameTaken/VpnPeerSlotsUsed étendus aux invités
+  (même namespace vpn-*, même jauge de pool).
+- **CONSOLE /pro** : section « Invités » (contrat /guests) dès qu'un
+  Accès Pro est actif — intro honnête (NI Internet NI vos autres
+  appareils), formulaire accessible en fieldsets (nom optionnel, hôte
+  = select des appareils Pro actifs servis par le backend, ports csv,
+  TTL 1-72 h en select, bouton 44 px), liste antichronologique (max-h
+  scrollable, badges actif/échu/révoqué/erreur, compte à rebours HORAIRE
+  — un invité vit en heures, pas en jours, alerte ambre ≤ 1 h), boutons
+  Voir la conf (actifs) / Révoquer (actifs + erreurs, confirm) ; MODALE
+  reveal invité DÉDIÉE (jamais mélangée au reveal Pro) : QR scannable
+  204 px + copie + .conf (403shield-invite-IP.conf) + instructions « à
+  remettre à l'invité » annonçant le périmètre ET le terme à l'hôte au
+  moment de remettre ; grille « Comment ça marche » 2 → 3 cartes
+  (S'installe partout · Pair-à-pair · **Invités expirables — partagez
+  sans exposer** avec lien guide) ; lib/api.ts +4 fonctions typées.
+- **DOCS** : 36e guide public « L'Accès Invité : un tiers dans votre
+  tunnel, pour quelques heures » (acces-invite — gabarit complet : le
+  périmètre minimal démontré couches par couches, 4 étapes, usages
+  serveur de jeu/démo web/collaborateur ponctuel, pièges dont « jamais
+  votre propre conf » (warn) et le trajet Marseille, FAQ ×4 — que voit
+  l'invité, l'échéance, routeurs/LAN refusés, 10 invités inclus) ;
+  branchement AUTO dérivé du catalogue (page SSG + 301 URL plate +
+  sitemap 52 URLs + index ⌘K 36 entrées) ; guide pair-à-pair MIS À JOUR
+  (les mentions « chantier pas encore livré » → livré avec renvois
+  croisés : piège, FAQ « mon ami peut-il rejoindre mon serveur de jeu ? »
+  → oui, related réordonnés ×4) ; compteurs 35→36 (hub, SSG, index,
+  description de section « invités expirables pour un tiers »).
+- **PORTES** : gofmt 0 (1.25 vs 1.27 : la note gofmt sur la méthode
+  générique handlers_ppp.go est un artefact de toolchain local — la CI
+  1.27 est verte sur HEAD) · go vet 0 · go build OK · go test ./... 12/12
+  (dont 10 fonctions de test invités : liste/jauge/hôtes, validations
+  create ×7 + honeypot + plafond + non-éligible, succès 3 phases avec
+  preuve par la conf et échéance ~TTL, échec VM 502 + état error, reveal
+  self-healing + 410 révoqué/échu + anti-énumération + 401 fantôme,
+  révocation idempotente + échec retrait 502 + ErrorMsg, sweep échéance +
+  reprise + vivant intact + échec retrait vérité non mensongère, routes
+  401 sans JWT ×4 sur le mux réel) · -race invités OK (stub VM
+  mutex-protégé : le remove best-effort part en goroutine) · console
+  lint 0 · tsc 0 · next build 9/9 · frontend lint 0 erreur · tsgo 0 ·
+  next build 64/64 · catalogue script (36 guides · 9 sections · 0 doublon
+  · 0 related cassé) · SMOKE NAVIGATEUR sur VRAI backend amorcé
+  (cmd/smokeseed éphémère jamais commité, pattern N°334-B/337-A/341 —
+  seed + FAKE wg-mini v6 HMAC réel :4020 dans le MÊME process, exercising
+  le VRAI client wgMiniGuestAdd) : /pro avec JWT de dev — hero + 3 cartes
+  + KPI réels (1 routeur dont 1 en ligne · Café Rio Démo · 2/2 cmd · 19
+  novembre +30 j) + section Invités (3 invités : actif 8 h, révoqué,
+  actif 2 h — états, hosts, ports, countdowns) + création UI end-to-end
+  (formulaire → wg-mini → notice + liste + jauge 3/10) + révocation UI
+  (confirm → notice + badge révoqué + jauge 2/10 + remove VM loggé) +
+  reveal modal (conf AllowedIPs = 10.8.2.8/32, QR mesuré 204×204, Copier
+  → « Copiée », instructions périmètre + terme, Escape ferme) + mobile
+  390 zéro overflow + footer poussé naturellement (page longue) · 0
+  erreur console · 0 erreur page.
+- **Schéma DB** : +1 table `vpn_guests` (14 colonnes — id, account_id,
+  name UNIQUE, label, host_peer_id, host_ip, ports, ipv4, state,
+  error_msg, conf chiffrée secretbox, expires_at, created_at, updated_at ;
+  index account_id + expires_at) — 45 différentielles + settings = 46,
+  ensureSchema rejoué au démarrage backend, répliques nocturnes suivent.
+- **Non-objectifs** : cloisonnement inter-comptes du hairpin
+  remote↔remote (10.8.2.0/24) — hors périmètre invités (qui n'y touchent
+  jamais) mais toujours au dossier pour un futur chantier ; notification
+  e-mail d'expiration invité (l'état se lit dans la console — pas de
+  bruit pour un accès de 72 h max) ; invité vers routeur/LAN (refusé par
+  conception) ; plafond/TTL par formule (éditeur de formules au backlog) ;
+  N°340 reste réservé à l'agrégation URLhaus/OpenPhish du bouclier DNS.
+
 ## 2026-10-19 — N°341 — **L'ACCÈS PRO SUR TOUS LES APPAREILS, EN GUIDES ET EN VITRINE** (consigne propriétaire : documenter les appareils non-MikroTik + l'argument pair-à-pair)
 
 - **Contexte** : consultation propriétaire « le tunnel /pro B2B est-il

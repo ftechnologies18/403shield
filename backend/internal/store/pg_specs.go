@@ -226,6 +226,28 @@ var vpnPeerSpec = entitySpec[model.VpnPeer]{
 	hashOf: hashEntity[model.VpnPeer],
 }
 
+// vpnGuestSpec — N°342 : invités WireGuard expirables (Accès Invité,
+// segment 10.8.3.0/24, hôte/32 + pin-holes). Même discipline que vpnPeerSpec :
+// l'ordre cols/scan/args reste strictement aligné ; la conf cliente (colonne
+// conf) voyage CHIFFRÉE — scan déscelle (secretbox.Decrypt), args scelle
+// (secretbox.Encrypt) — en mémoire la valeur est TOUJOURS claire.
+var vpnGuestSpec = entitySpec[model.VpnGuest]{
+	table: "vpn_guests",
+	cols:  []string{"id", "account_id", "name", "label", "host_peer_id", "host_ip", "ports", "ipv4", "state", "error_msg", "conf", "expires_at", "created_at", "updated_at"},
+	idOf:  func(x *model.VpnGuest) string { return x.ID },
+	scan: func(r *sql.Rows) (model.VpnGuest, error) {
+		var x model.VpnGuest
+		var confSealed string
+		err := r.Scan(&x.ID, &x.AccountID, &x.Name, &x.Label, &x.HostPeerID, &x.HostIP, &x.Ports, &x.IPv4, &x.State, &x.ErrorMsg, &confSealed, &x.ExpiresAt, &x.CreatedAt, &x.UpdatedAt)
+		x.Conf = secretbox.Decrypt(confSealed)
+		return x, err
+	},
+	args: func(x *model.VpnGuest) []any {
+		return []any{x.ID, x.AccountID, x.Name, x.Label, x.HostPeerID, x.HostIP, x.Ports, x.IPv4, x.State, x.ErrorMsg, secretbox.Encrypt(x.Conf), x.ExpiresAt, x.CreatedAt, x.UpdatedAt}
+	},
+	hashOf: hashEntity[model.VpnGuest],
+}
+
 // publicVpnOrderSpec — N°301 : commandes VPN B2C « vente directe plateforme »
 // (vitrine publique /vpn). Même discipline que vpnPeerSpec : l'ordre
 // cols/scan/args reste strictement aligné. Aucun secret ici (la conf vit sur

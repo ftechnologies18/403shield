@@ -276,6 +276,95 @@ export async function tunnelProOrder(
 }
 
 // ---------------------------------------------------------------------------
+// N°342 — ACCÈS INVITÉ (contrat handlers_tunnel_guests.go) : confs invité
+// expirables à périmètre minimal (AllowedIPs = hôte/32 + pin-holes ports),
+// TTL 1-72 h, révocation immédiate, balayage 5 min côté backend.
+// ---------------------------------------------------------------------------
+
+export interface TunnelGuest {
+  id: string;
+  label: string;
+  hostPeerId: string;
+  hostLabel: string;
+  hostIp: string;
+  ports: string;
+  ipv4: string;
+  /** État DÉRIVÉ côté backend : "active" | "expired" | "revoked" | "error". */
+  state: string;
+  expiresAt: string;
+  createdAt: string;
+  errorMsg?: string;
+}
+
+export interface TunnelGuestHost {
+  peerId: string;
+  label: string;
+  ipv4: string;
+}
+
+export interface TunnelGuestsResponse {
+  guests: TunnelGuest[];
+  activeCount: number;
+  maxPerAccount: number;
+  hosts: TunnelGuestHost[];
+  ttlMinHours: number;
+  ttlMaxHours: number;
+}
+
+export interface TunnelGuestCreateResponse {
+  guest?: TunnelGuest;
+}
+
+export interface TunnelGuestRevealResponse {
+  id: string;
+  label: string;
+  conf: string;
+  ipv4: string;
+  hostIp: string;
+  ports: string;
+  expiresAt: string;
+}
+
+/** N°342 — liste des invités + jauge du plafond + hôtes possibles. */
+export async function tunnelGuests(token: string): Promise<TunnelGuestsResponse> {
+  return apiFetch<TunnelGuestsResponse>("/api/tunnel/pro/guests", { token });
+}
+
+/** N°342 — création d'un invité (hôte = appareil Pro actif, ports, TTL). */
+export async function tunnelGuestCreate(
+  token: string,
+  body: { label?: string; hostPeerId: string; ports: string; ttlHours: number },
+): Promise<TunnelGuestCreateResponse> {
+  return apiFetch<TunnelGuestCreateResponse>("/api/tunnel/pro/guests", {
+    method: "POST",
+    token,
+    body,
+  });
+}
+
+/** N°342 — re-livraison de la conf invité (QR/copie côté console). */
+export async function tunnelGuestReveal(
+  id: string,
+  token: string,
+): Promise<TunnelGuestRevealResponse> {
+  return apiFetch<TunnelGuestRevealResponse>(
+    `/api/tunnel/pro/guests/${encodeURIComponent(id)}/reveal`,
+    { method: "POST", token },
+  );
+}
+
+/** N°342 — révocation immédiate (le retrait VM suit, balayage en repli). */
+export async function tunnelGuestRevoke(
+  id: string,
+  token: string,
+): Promise<{ ok: boolean; state: string }> {
+  return apiFetch<{ ok: boolean; state: string }>(
+    `/api/tunnel/pro/guests/${encodeURIComponent(id)}/revoke`,
+    { method: "POST", token },
+  );
+}
+
+// ---------------------------------------------------------------------------
 // N°316 — VENTE DIRECTE B2C déménagée dans CE foyer (ex mikcloud.ftci.fr/vpn,
 // 301 permanent) : contrat /api/public/vpn/* (handlers_public_vpn.go — SANS
 // auth, CORS ouvert). Doctrine N°301 préservée : UN seul canal B2C — il

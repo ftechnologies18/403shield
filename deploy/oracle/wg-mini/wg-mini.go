@@ -1,4 +1,4 @@
-// wg-mini — N°291 (v2 : N°307, v3 : N°312, v4 : N°313, v5 : N°315) —
+// wg-mini — N°291 (v2 : N°307, v3 : N°312, v4 : N°313, v5 : N°315, v6 : N°342) —
 // passerelle locale WireGuard pour MikCloud (chantier ⑦, décision D3-a de
 // N°289).
 //
@@ -8,13 +8,17 @@
 // wg-peer.sh au backend, en boucle locale exclusivement :
 //
 //      POST /v1/add         {"name":"vpn-…","kind":"fulltunnel|remote"} → wg-peer.sh add <nom> [forme] → {"ok":true,"conf":"…","ip":"10.8.0.N"}
+//      POST /v1/guest-add   {"name":"vpn-…","host":"10.8.2.N","ports":"25565"} → wg-peer.sh add-guest → {"ok":true,"conf":"…","ip":"10.8.3.N"}
+//                            (N°342 Accès Invité : peer expirable du segment 10.8.3.0/24,
+//                            conf AllowedIPs = host/32 SEUL + pin-holes invité→hôte sur les
+//                            ports déclarés — 1 à 6, TCP+UDP, validés aux DEUX frontières)
 //      POST /v1/add-router  {"name":"r-…","pub":"44car="} → wg-peer.sh add-router  → {"ok":true,"address":"…","serverPub":"…","psk":"…","endpoint":"…"}
 //      POST /v1/remove      {"name":"vpn-…|r-…"}          → wg-peer.sh remove      → {"ok":true}
 //      POST /v1/set-lan     {"name":"r-…","lan":"192.168.88.0/24"} → wg-peer.sh set-lan → {"ok":true,"allowed":"10.8.0.N/32, 192.168.88.0/24"}
 //      POST /v1/lan-extend  {"name":"vpn-…","lan":"192.168.88.0/24"} → wg-peer.sh lan-extend → {"ok":true,"conf":"…","ip":"10.8.2.N"}
 //      GET  /v1/conf?name=vpn-…                             → lecture conf           → {"ok":true,"conf":"…"}
 //      GET  /v1/list                                          → wg-peer.sh list        → {"ok":true,"peers":[…]}
-//      GET  /v1/ping                                          → {"ok":true,"service":"wg-mini","version":"v5"}
+//      GET  /v1/ping                                          → {"ok":true,"service":"wg-mini","version":"v6"}
 //
 // v2 (N°307) : /v1/add-router ouvre le provisionnement AUTOMATIQUE du
 // renfort WireGuard des routeurs (la clé publique vient du routeur — générée
@@ -87,7 +91,7 @@ import (
         "time"
 )
 
-const version = "v5"
+const version = "v6"
 
 var (
         addr       = envOr("WG_MINI_ADDR", "127.0.0.1:4020")
@@ -123,6 +127,32 @@ var peerAnyRe = regexp.MustCompile(`^[a-z0-9][a-z0-9-]{0,31}$`)
 // est portée par validLanCIDR : même règle que agent.ValidWgLanCIDR côté
 // cloud et valid_lan dans wg-peer.sh — défense aux TROIS frontières.
 var lanRe = regexp.MustCompile(`^(10\.(\d{1,2}|1\d{2}|2[0-4]\d|25[0-5])|172\.(1[6-9]|2\d|3[01])|192\.168)\.(\d{1,2}|1\d{2}|2[0-4]\d|25[0-5])\.0/24$`)
+
+// guestHostRe — N°342 — l'IP TUNNEL de l'hôte d'un invité : un appareil Pro
+// du segment remote (10.8.2.N, N ≥ 2 — le .1 est la gateway). Même borne que
+// wg-peer.sh add-guest côté VM et model.ValidGuestHostIP côté cloud — défense
+// aux TROIS frontières. Un hôte B2C (10.8.1.x) ou routeur (10.8.0.x) est
+// REFUSÉ : un invité ne partage JAMAIS autre chose qu'un appareil Pro.
+var guestHostRe = regexp.MustCompile(`^10\.8\.2\.([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])$`)
+
+// guestPortsRe — N°342 — 1 à 6 ports, csv sans espace (ex. « 25565 » ou
+// « 3000,80,443 »). La borne 1-65535 par port et le décompte ≤ 6 sont
+// revérifiés champ par champ (validGuestPorts) : même règle que
+// model.ValidGuestPorts côté cloud et wg-peer.sh côté VM.
+var guestPortsRe = regexp.MustCompile(`^[0-9]{1,5}(,[0-9]{1,5}){0,5}$`)
+
+// validGuestPorts — chaque port dans [1, 65535] (le format csv est déjà
+// garanti par guestPortsRe ; ici la BORNE numérique, car « 99999 » matche
+// la regex mais n'est pas un port).
+func validGuestPorts(s string) bool {
+        for _, p := range strings.Split(s, ",") {
+                n, err := strconv.Atoi(p)
+                if err != nil || n < 1 || n > 65535 {
+                        return false
+                }
+        }
+        return true
+}
 
 // validLanCIDR — la règle complète (RFC1918 /24 ET hors 10.8.0.0/16).
 func validLanCIDR(s string) bool {
@@ -293,6 +323,81 @@ func handleAdd(w http.ResponseWriter, r *http.Request) {
                 "ip":   parseIPFromConf(conf),
                 "conf": conf,
                 "_":    strings.TrimSpace(out), // trace wg-peer.sh (sans la conf)
+        })
+}
+
+// handleGuestAdd — N°342 (v6) — POST /v1/guest-add
+// {"name":"vpn-…","host":"10.8.2.N","ports":"25565"} : wg-peer.sh add-guest
+// pose le peer INVITÉ sur le segment 10.8.3.0/24 (clés générées côté VM,
+// conf AllowedIPs = host/32 SEUL, pin-holes invité→hôte sur les ports
+// déclarés dans la chaîne dédiée mikcloud-guests — fail-closed). PREUVE PAR
+// LA CONF (défense en profondeur, jamais de confiance aveugle à l'exit code
+// du script) : la conf relue doit porter AllowedIPs = <host>/32 EXACTEMENT —
+// ni 0.0.0.0/0, ni un segment entier (10.8.0.0/24, 10.8.2.0/24), ni un autre
+// hôte : un wg-peer.sh avarié qui rendrait une conf élargie est REFUSÉ ici
+// (et revérifié ENCORE côté backend — trois frontières).
+func handleGuestAdd(w http.ResponseWriter, r *http.Request) {
+        var req struct {
+                Name  string `json:"name"`
+                Host  string `json:"host"`
+                Ports string `json:"ports"`
+        }
+        if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+                fail(w, http.StatusBadRequest, "corps invalide")
+                return
+        }
+        name := strings.TrimSpace(req.Name)
+        host := strings.TrimSpace(req.Host)
+        ports := strings.TrimSpace(req.Ports)
+        if !nameRe.MatchString(name) {
+                fail(w, http.StatusBadRequest, "nom de peer invalide (attendu vpn-… minuscules/tirets)")
+                return
+        }
+        if !guestHostRe.MatchString(host) {
+                fail(w, http.StatusBadRequest, "IP hôte invalide (attendu : l'adresse tunnel 10.8.2.x d'un appareil Pro)")
+                return
+        }
+        if !guestPortsRe.MatchString(ports) || !validGuestPorts(ports) {
+                fail(w, http.StatusBadRequest, "ports invalides (attendu : 1 à 6 ports en csv, ex. 25565 ou 3000,80,443)")
+                return
+        }
+        start := time.Now()
+        out, err := runScript(r.Context(), "add-guest", name, host, ports)
+        if err != nil {
+                log.Printf("[guest-add] %s échec (%s) : %v", name, time.Since(start).Round(time.Millisecond), err)
+                fail(w, http.StatusBadGateway, err.Error())
+                return
+        }
+        raw, err := os.ReadFile(confPath(name))
+        if err != nil {
+                log.Printf("[guest-add] %s créé mais conf illisible : %v", name, err)
+                fail(w, http.StatusInternalServerError, "invité créé sur wg0 mais conf illisible — vérifiez "+peersDir)
+                return
+        }
+        conf := string(raw)
+        // Preuve par la conf : la ligne AllowedIPs doit être EXACTEMENT host/32.
+        allowed := ""
+        for _, line := range strings.Split(conf, "\n") {
+                if strings.HasPrefix(strings.TrimSpace(line), "AllowedIPs = ") {
+                        allowed = strings.TrimSpace(strings.TrimPrefix(strings.TrimSpace(line), "AllowedIPs = "))
+                        break
+                }
+        }
+        want := host + "/32"
+        if allowed != want {
+                log.Printf("[guest-add] %s conf relue non conforme (AllowedIPs = %q, attendu %q) — wg-peer.sh avarié ?", name, allowed, want)
+                fail(w, http.StatusInternalServerError, "conf invité sans le périmètre attendu (AllowedIPs = "+want+") — vérifiez wg-peer.sh sur la VM")
+                return
+        }
+        log.Printf("[guest-add] %s ok (hôte %s, ports %s, %s)", name, host, ports, time.Since(start).Round(time.Millisecond))
+        writeJSON(w, http.StatusOK, map[string]any{
+                "ok":    true,
+                "name":  name,
+                "host":  host,
+                "ports": ports,
+                "ip":    parseIPFromConf(conf),
+                "conf":  conf,
+                "_":     lastLine(string(out)), // trace wg-peer.sh (sans la conf)
         })
 }
 
@@ -612,6 +717,7 @@ func main() {
         }
         mux := http.NewServeMux()
         mux.HandleFunc("POST /v1/add", signed(handleAdd))
+        mux.HandleFunc("POST /v1/guest-add", signed(handleGuestAdd))
         mux.HandleFunc("POST /v1/add-router", signed(handleAddRouter))
         mux.HandleFunc("POST /v1/remove", signed(handleRemove))
         mux.HandleFunc("POST /v1/set-lan", signed(handleSetLan))

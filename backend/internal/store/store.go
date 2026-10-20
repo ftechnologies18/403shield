@@ -1098,6 +1098,12 @@ func sealedSnapshot(db *model.DB) *model.DB {
 		vp.Conf = secretbox.Encrypt(vp.Conf)
 		clone.VpnPeers[i] = vp
 	}
+	// N°342 — la conf des invités suit la MÊME discipline (pattern VpnPeer).
+	clone.VpnGuests = make([]model.VpnGuest, len(db.VpnGuests))
+	for i, vg := range db.VpnGuests {
+		vg.Conf = secretbox.Encrypt(vg.Conf)
+		clone.VpnGuests[i] = vg
+	}
 	if db.NotifSettings != nil {
 		clone.NotifSettings = make(map[string]model.NotificationSettings, len(db.NotifSettings))
 		for k, v := range db.NotifSettings {
@@ -1122,6 +1128,10 @@ func unsealSecrets(db *model.DB) {
 	// N°291 — conf client des peers VPN (passthrough si en clair).
 	for i := range db.VpnPeers {
 		db.VpnPeers[i].Conf = secretbox.Decrypt(db.VpnPeers[i].Conf)
+	}
+	// N°342 — conf des invités (passthrough si en clair, pattern VpnPeer).
+	for i := range db.VpnGuests {
+		db.VpnGuests[i].Conf = secretbox.Decrypt(db.VpnGuests[i].Conf)
 	}
 	for k, v := range db.NotifSettings {
 		v.TelegramBotToken = secretbox.Decrypt(v.TelegramBotToken)

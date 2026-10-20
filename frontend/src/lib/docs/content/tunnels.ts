@@ -1,14 +1,16 @@
 // Section « Tunnels & Accès Pro » — le pont privé WireGuard (N°333-B).
 //
-// 6 guides : la vitrine /vpn (déplacée des annexes — le guide documente
+// 7 guides : la vitrine /vpn (déplacée des annexes — le guide documente
 // désormais le socle unifié N°332-B), l'Accès Pro (routeurs, caméras, NAS),
 // son installation multi-appareils (N°341 : la conf est du WireGuard
 // standard — PC, NAS Synology/QNAP, OpenWRT, pfSense/OPNsense, GL.iNet —
 // le MikroTik requis côté site rejoint uniquement), le pair-à-pair privé
 // (N°341 : vos appareils Pro se rejoignent via Marseille, PC ↔ NAS,
-// PC ↔ PC, sans routeur dans le chemin), la console tunnels (espace
-// client sans mot de passe) et le guide transparence IP (N°338 : IP
-// localisable = comportement attendu, vérification
+// PC ↔ PC, sans routeur dans le chemin), l'Accès Invité (N°342 : confs
+// expirables pour un tiers — périmètre minimal hôte/32 + pin-holes, TTL
+// 1-72 h, révocation immédiate, expiration automatique), la console
+// tunnels (espace client sans mot de passe) et le guide transparence IP
+// (N°338 : IP localisable = comportement attendu, vérification
 // zéro-fuite, kill switch, doctrine 1 conf = 1 appareil). Contenu calé
 // sur les capacités réelles : pricing.segments (1 500 / 15 000 / 3 500 /
 // 35 000 FCFA — constantes backend publicvpnorder.go), copy produit
@@ -229,7 +231,7 @@ export const TUNNELS_GUIDES: Guide[] = [
         a: "Non. Le MikroTik est requis côté SITE rejoint — la passerelle agentée qui porte le LAN étendu et la supervision. L'appareil qui se connecte est n'importe quel appareil WireGuard : PC, téléphone, NAS, routeur tiers (guide dédié).",
       },
     ],
-    related: ["acces-pro-multi-appareils", "acces-pro-pair-a-pair", "console-tunnels", "connecter-routeur-agent"],
+    related: ["acces-pro-multi-appareils", "acces-pro-pair-a-pair", "acces-invite", "console-tunnels"],
   },
 
   {
@@ -350,7 +352,7 @@ export const TUNNELS_GUIDES: Guide[] = [
         a: "Chaque commande Pro couvre UN appareil (sa conf, sa clé) — un appareil de plus, une commande de plus. Le portefeuille de la console suit chaque appareil et son échéance.",
       },
     ],
-    related: ["acces-pro", "acces-pro-pair-a-pair", "console-tunnels", "ip-vpn-localisable"],
+    related: ["acces-pro", "acces-pro-pair-a-pair", "acces-invite", "console-tunnels"],
   },
 
   {
@@ -385,7 +387,7 @@ export const TUNNELS_GUIDES: Guide[] = [
     recoit: [
       "Le mécanisme en une phrase : adresses tunnel dédiées (10.8.2.x), relais par Marseille, adresses préservées, aucun port publié.",
       "Les recettes concrètes : joindre un NAS (fichiers, sauvegardes), prendre la main sur un poste (RDP, VNC), héberger un service pour vos propres appareils.",
-      "Les limites honnêtes : l'appareil distant doit être allumé, le trajet passe par Marseille, et les invités tiers ne sont pas (encore) au programme.",
+      "Les limites honnêtes : l'appareil distant doit être allumé, le trajet passe par Marseille, et les invités tiers vivent de l'Accès Invité (guide dédié).",
     ],
     etapes: [
       {
@@ -402,7 +404,7 @@ export const TUNNELS_GUIDES: Guide[] = [
       {
         title: "Hébergez un service pour vos propres appareils",
         body:
-          "Un serveur de jeu sur le PC fixe, une démo web sur le portable de développement : le service écoute sur l'adresse tunnel de sa machine, et vos AUTRES appareils Pro le joignent en privé — même derrière CGNAT. Faire entrer un tiers extérieur au compte, c'est le chantier Accès Invité — pas encore livré.",
+          "Un serveur de jeu sur le PC fixe, une démo web sur le portable de développement : le service écoute sur l'adresse tunnel de sa machine, et vos AUTRES appareils Pro le joignent en privé — même derrière CGNAT. Faire entrer un tiers extérieur au compte, c'est précisément l'Accès Invité (guide dédié) : une conf expirable qui ne joint QUE cet appareil, sur les ports déclarés.",
       },
       {
         title: "Comptez le trajet, honnêtement",
@@ -441,9 +443,9 @@ export const TUNNELS_GUIDES: Guide[] = [
         severity: "info",
       },
       {
-        title: "Les invités ne sont pas (encore) dedans",
+        title: "Les invités ont leur propre voie",
         body:
-          "Le pair-à-pair relie les appareils de VOTRE compte. Faire entrer un ami ou un client exige un accès dédié (chantier Accès Invité, à l'étude) — ne « solutionnez » jamais ça en partageant une conf : la règle une conf = un appareil la rendrait inutilisable de toute façon.",
+          "Le pair-à-pair relie les appareils de VOTRE compte. Faire entrer un ami ou un client passe par l'Accès Invité : une conf expirable à périmètre minimal (un hôte, des ports, un terme). Ne « solutionnez » JAMAIS ça en partageant une conf : la règle une conf = un appareil la rendrait inutilisable de toute façon.",
         severity: "info",
       },
     ],
@@ -458,14 +460,135 @@ export const TUNNELS_GUIDES: Guide[] = [
       },
       {
         q: "Mon ami peut-il rejoindre mon serveur de jeu ?",
-        a: "Pas encore : le tunnel relie les appareils de votre compte. L'Accès Invité — une conf expirable pour un tiers — est à l'étude ; en attendant, ne partagez jamais votre propre conf.",
+        a: "Oui — par l'Accès Invité : une conf expirable qui ne joint QUE l'appareil qui héberge le serveur, sur le port déclaré (guide dédié). Ne partagez jamais votre propre conf.",
       },
       {
         q: "Le pair-à-pair remplace-t-il le LAN étendu ?",
         a: "Non, ils se complètent : le LAN étendu joint les équipements derrière votre routeur (les caméras qui ne portent pas WireGuard), le pair-à-pair relie les appareils qui portent la conf.",
       },
     ],
-    related: ["acces-pro", "acces-pro-multi-appareils", "console-tunnels", "connecter-routeur-agent"],
+    related: ["acces-pro", "acces-invite", "acces-pro-multi-appareils", "console-tunnels"],
+  },
+
+  {
+    id: "acces-invite",
+    title: "L'Accès Invité : un tiers dans votre tunnel, pour quelques heures",
+    summary:
+      "Un ami sur votre serveur Minecraft, une démo web à un client : une conf expirable qui joint UN appareil Pro et rien d'autre — pas d'Internet, pas d'autres machines, un terme qui arrive seul.",
+    roles: "Accès Pro",
+    minutes: 5,
+    updated: "2026-10-20",
+    sectionId: "tunnels",
+    vague: "V1",
+    quoi:
+      "L'Accès Invité est une faculté de l'Accès Pro : depuis votre espace (console.403shield.ftci.fr/pro), vous créez pour un tiers une configuration WireGuard dédiée, expirable, au périmètre volontairement minuscule. L'invité rejoint UNIQUEMENT l'appareil Pro que vous désignez comme hôte — le PC qui porte le serveur de jeu, la machine de la démo — et seulement sur les ports que vous déclarez (1 à 6, ouverts en TCP et UDP). Pas d'Internet, pas de DNS, pas d'accès à vos autres appareils, à vos routeurs ou à votre LAN.\n\nTechniquement, l'invité vit sur un segment dédié du tunnel (10.8.3.x), sa configuration ne route que l'adresse de l'hôte (/32), et le serveur n'ouvre que les « pin-holes » des ports déclarés — tout le reste du segment est fermé par défaut (fail-closed) : même une conf trafiquée ne sortirait pas de ce périmètre. La durée de vie se choisit à la création (1 à 72 heures) ; à l'échéance, l'accès cesse de fonctionner seul — ou avant, si vous le révoquez d'un clic.\n\nLa doctrine du produit tient toujours : une conf = un appareil. L'invité a SA configuration, avec ses clés — jamais la vôtre.\n\nNOTE DE CAPTURE : la section Invités de l'espace /pro s'illustrera lors d'une session terrain (doctrine : jamais de faux écran).",
+    difference: [
+      {
+        with: "Partager votre propre conf Pro",
+        body:
+          "Jamais : deux appareils avec la même clé se volent leur session (roaming) — et votre conf porte TOUT votre périmètre (routeurs, LAN, autres appareils). L'invité reçoit la sienne : clés dédiées, un hôte, des ports, un terme.",
+      },
+      {
+        with: "Le VPN personnel 403Shield",
+        body:
+          "Le VPN personnel sort sur Internet (tunnel complet, IP fixe France) ; l'invité n'a AUCUNE sortie Internet — il joint un appareil de votre compte et rien d'autre. Deux produits opposés par conception.",
+      },
+      {
+        with: "Le pair-à-pair privé",
+        body:
+          "Le pair-à-pair relie VOS appareils (conf Pro complète du compte) ; l'invité est un tiers au périmètre réduit à un hôte et des ports. Le serveur de jeu entre amis combine les deux : l'hôte est un appareil Pro, les amis sont des invités.",
+      },
+    ],
+    recoit: [
+      "Le périmètre minimal en une phrase : AllowedIPs = l'adresse de l'hôte seule, pin-holes sur les ports déclarés (1-6, TCP+UDP) — tout le reste fermé par défaut.",
+      "Le cycle de vie : durée choisie de 1 à 72 h, expiration automatique, révocation immédiate, plafond de 10 invités actifs par compte.",
+      "Ce que l'invité installe : l'appli WireGuard ordinaire et la conf que vous lui remettez (QR ou fichier) — rien d'autre, aucun compte à créer.",
+    ],
+    etapes: [
+      {
+        title: "Ouvrez la section Invités de votre espace",
+        body:
+          "Connectez-vous à la console (code e-mail) et ouvrez l'espace Accès Pro : la section Invités y vit dès qu'un Accès Pro est actif — l'hôte d'un invité EST un appareil Pro de votre portefeuille (celui qui porte le service à partager).",
+      },
+      {
+        title: "Créez l'invité : hôte, ports, durée",
+        body:
+          "Choisissez l'appareil hôte (celui qui écoute), les ports à ouvrir vers lui — 25565 pour un serveur Minecraft, 3000,80,443 pour une démo web — et la durée de vie (1 à 72 h). Un nom optionnel vous aide à vous y retrouver (« Ami du samedi », « Client Alpha »).",
+        tip: "Les ports sont ouverts en TCP ET UDP vers l'hôte uniquement — déclarez le strict nécessaire, la révocation reste votre filet.",
+      },
+      {
+        title: "Remettez la conf à l'invité",
+        body:
+          "Le bouton « Voir la conf » ouvre le QR (à envoyer par WhatsApp/e-mail) et le fichier .conf. L'invité scanne depuis l'appli WireGuard (« Créer à partir d'un QR code ») ou importe le fichier sur PC — et joint l'hôte à son adresse tunnel, pour les ports déclarés.",
+      },
+      {
+        title: "Laissez mourir — ou révoquez",
+        body:
+          "Au terme, la conf cesse de fonctionner sans geste de personne (le retrait est automatique, dans les minutes qui suivent l'échéance). Besoin de couper avant ? « Révoquer » ferme l'accès immédiatement. Renouveler un invité = en recréer un — quelques secondes.",
+      },
+    ],
+    usages: [
+      {
+        title: "Le serveur de jeu entre amis",
+        body:
+          "Minecraft (ou autre) sur le PC fixe de la maison, port 25565 ouvert aux invités du soir : vos amis entrent par le tunnel, le monde reste chez vous — aucun port publié sur Internet.",
+      },
+      {
+        title: "La démo web à un client",
+        body:
+          "Le site en cours de développement écoute sur le portable (ports 3000/80/443) : le client-consulté rejoint la démo par le tunnel, le temps du rendez-vous — sans hébergement public ni compte à créer pour lui.",
+      },
+      {
+        title: "Le collaborateur ponctuel",
+        body:
+          "Un technicien qui doit intervenir sur UN poste pour quelques heures : invité au périmètre minimal, durée courte, révocation à la fin de l'intervention.",
+      },
+    ],
+    pieges: [
+      {
+        title: "Jamais votre propre conf",
+        body:
+          "Partager votre conf Pro expose TOUT votre périmètre (routeurs, LAN, appareils) et fait se voler leur session aux deux appareils. Un tiers = toujours un invité : clés dédiées, périmètre minimal, terme.",
+        severity: "warn",
+      },
+      {
+        title: "L'hôte doit être allumé et à l'écoute",
+        body:
+          "L'invité joint l'hôte — si le PC qui porte le serveur dort, rien ne répond. Prévoyez la machine allumée et le service lancé avant d'envoyer le QR.",
+        severity: "info",
+      },
+      {
+        title: "Le débit passe par Marseille",
+        body:
+          "Invité et hôte se parlent à travers la France : parfait pour une partie entre amis ou une démo, pas pour du jeu compétitif — sur place, le réseau local direct reste la bonne réponse.",
+        severity: "info",
+      },
+      {
+        title: "Un invité = un appareil aussi",
+        body:
+          "La conf invité suit la même doctrine que tout le produit : elle ne se partage pas entre deux appareils de l'invité (même clé = sessions volées). Deux appareils chez l'invité = deux invités.",
+        severity: "info",
+      },
+    ],
+    faq: [
+      {
+        q: "Que voit exactement mon invité ?",
+        a: "L'adresse de l'hôte, sur les ports déclarés, en TCP et UDP. Pas d'Internet, pas de DNS dans le tunnel, aucun autre appareil, aucun routeur, pas votre LAN — et les seules réponses qu'il reçoit viennent de l'hôte.",
+      },
+      {
+        q: "Que se passe-t-il à l'échéance ?",
+        a: "L'accès cesse de fonctionner : le peer est retiré du tunnel automatiquement (dans les minutes qui suivent le terme) et la conf de l'invité ne route plus. Côté console, l'invité apparaît « échu ». Pour renouveler, recréez un invité — quelques secondes.",
+      },
+      {
+        q: "Puis-je donner à un invité accès à mes routeurs ou à mon LAN ?",
+        a: "Non : l'hôte doit être un appareil Pro (le PC ou le NAS qui porte le service) — jamais un routeur, jamais un LAN étendu. La supervision des routeurs reste votre affaire de gérant, et un invité n'y a rien à faire.",
+      },
+      {
+        q: "Combien d'invités, et à quel prix ?",
+        a: "Jusqu'à 10 invités actifs en même temps par compte (les échus et révoqués ne comptent pas). L'Accès Invité est inclus dans l'Accès Pro actif de l'hôte — aucune facturation séparée en v1.",
+      },
+    ],
+    related: ["acces-pro", "acces-pro-pair-a-pair", "acces-pro-multi-appareils", "console-tunnels"],
   },
 
   {
@@ -570,7 +693,7 @@ export const TUNNELS_GUIDES: Guide[] = [
         a: "Installez la configuration sur le nouvel appareil (l'e-mail de livraison la contient) ; si l'ancien reste entre de mauvaises mains, le support 403Shield coupe l'accès depuis la console.",
       },
     ],
-    related: ["acces-pro", "acces-pro-multi-appareils", "ip-vpn-localisable", "vitrine-vpn"],
+    related: ["acces-pro", "acces-invite", "acces-pro-multi-appareils", "ip-vpn-localisable"],
   },
 
   {

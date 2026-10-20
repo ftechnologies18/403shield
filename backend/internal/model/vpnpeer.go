@@ -188,10 +188,16 @@ func FindVpnPeerByID(db *DB, id string) *VpnPeer {
 
 // VpnPeerNameTaken — le nom est-il déjà pris, TOUT COMPTE CONFONDU ? Le pool
 // wg0 est global à la VM : un nom vpn-* réservé par un autre compte bloque,
-// ET les peers de gestion routeurs (Router.WgPeerName) aussi.
+// ET les peers de gestion routeurs (Router.WgPeerName) ET les invités
+// (N°342 — même namespace vpn-*, même unicité globale wg0).
 func VpnPeerNameTaken(db *DB, name string) bool {
 	for i := range db.VpnPeers {
 		if db.VpnPeers[i].Name == name {
+			return true
+		}
+	}
+	for i := range db.VpnGuests {
+		if db.VpnGuests[i].Name == name {
 			return true
 		}
 	}
@@ -208,16 +214,17 @@ func VpnPeerNameTaken(db *DB, name string) bool {
 // avec l'éditeur de formules — cf. N°289 §3.3).
 const MaxVpnPeersPerAccount = 25
 
-// VpnWg0PoolSize — capacité GLOBALE du pool tunnel : 3 segments /24 sur wg0
-// (N°313, wg-peer.sh v4) — gestion/B2C/remote — soit 3 × 253 adresses
+// VpnWg0PoolSize — capacité GLOBALE du pool tunnel : 4 segments /24 sur wg0
+// (N°313 gestion/B2C/remote + N°342 invités) — soit 4 × 253 adresses
 // (le .1 de chaque segment est la gateway, réservée). Garde-fou CLOUD grossier
 // et volontairement prudent : la vraie borne par segment vit dans wg-peer.sh
 // (alloc par préfixe, échec propre « pool X.0/24 épuisé ») ; ce compteur
 // global ne sert qu'à couper le runaway avant la VM. Les routeurs n'allouent
 // que le segment gestion, les fulltunnel le segment B2C, les remote le
-// segment remote — le compteur surestime donc la pression d'un segment
-// (jamais l'inverse : échec honnête côté VM si un segment sature).
-const VpnWg0PoolSize = 759
+// segment remote, les invités le segment invités — le compteur surestime
+// donc la pression d'un segment (jamais l'inverse : échec honnête côté VM
+// si un segment sature).
+const VpnWg0PoolSize = 1012
 
 // DefaultWgVpnMonthlyQuotaGB — N°311 — quota mensuel de trafic par peer VPN
 // vendu, en Go (rx+tx confondus), quand la plateforme n'a rien réglé :
@@ -236,10 +243,11 @@ func VpnQuotaMonthKey(t time.Time) string {
 }
 
 // VpnPeerSlotsUsed — adresses tunnel réservées, tous registres confondus :
-// chaque ligne VpnPeer (pending comprise — le nom est réservé) PLUS chaque
-// routeur équipé du tunnel de gestion (WgIPv4). Jauge honnête du pool.
+// chaque ligne VpnPeer (pending comprise — le nom est réservé), chaque
+// invité (même namespace, N°342) PLUS chaque routeur équipé du tunnel de
+// gestion (WgIPv4). Jauge honnête du pool.
 func VpnPeerSlotsUsed(db *DB) int {
-	used := len(db.VpnPeers)
+	used := len(db.VpnPeers) + len(db.VpnGuests)
 	for i := range db.Routers {
 		if strings.TrimSpace(db.Routers[i].WgIPv4) != "" {
 			used++

@@ -364,6 +364,15 @@ func (a *API) Handler() http.Handler {
 	mux.HandleFunc("GET /api/tunnel/pro/lan/{routerId}", a.handleTunnelProLanPoll)
 	mux.HandleFunc("POST /api/tunnel/pro/lan/{routerId}", a.handleTunnelProLan)
 	mux.HandleFunc("POST /api/tunnel/pro/order", a.handleTunnelProOrder)
+	// N°342 — ACCÈS INVITÉ (faculté de l'Accès Pro : confs invité
+	// expirables à périmètre minimal — AllowedIPs = hôte/32 + pin-holes,
+	// TTL 1-72 h, révocation immédiate, balayage 5 min). JWT rôle tunnel,
+	// whitelist /api/tunnel/* ONLY ; liste non limitée (poll console),
+	// gestes d'écriture (créer/révoker/reveal) sous quota tunnelAction.
+	mux.HandleFunc("GET /api/tunnel/pro/guests", a.handleTunnelGuestsList)
+	mux.HandleFunc("POST /api/tunnel/pro/guests", a.handleTunnelGuestCreate)
+	mux.HandleFunc("POST /api/tunnel/pro/guests/{id}/reveal", a.handleTunnelGuestReveal)
+	mux.HandleFunc("POST /api/tunnel/pro/guests/{id}/revoke", a.handleTunnelGuestRevoke)
 
 	// N°339 — BOUCLIER DNS « 403Shield DNS » : profils du client (JWT rôle
 	// tunnel — même frontière que l'Accès Pro : l'e-mail EST l'identité

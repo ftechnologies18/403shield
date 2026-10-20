@@ -88,8 +88,8 @@ func TestSyncHealthJSONMode(t *testing.T) {
 	if h.Sync != nil || h.Neon != nil {
 		t.Fatalf("en mode JSON, sync et neon doivent être absents : %+v %+v", h.Sync, h.Neon)
 	}
-	if len(h.Tables) != 45 {
-		t.Fatalf("45 tables attendues (44 différentielles + settings — N°103 : line_quality, N°133 : chat ×2 + devices, N°182 : sites, N°199 : volume_days, N°200 : monthly_journals, N°290 : cyber_postes, N°291 : vpn_peers, N°293 : ppp_secrets, N°301 : public_vpn_orders, N°313 : tunnel_clients, N°339 : dns_profiles + dns_events), obtenues %d", len(h.Tables))
+	if len(h.Tables) != 46 {
+		t.Fatalf("46 tables attendues (45 différentielles + settings — N°103 : line_quality, N°133 : chat ×2 + devices, N°182 : sites, N°199 : volume_days, N°200 : monthly_journals, N°290 : cyber_postes, N°291 : vpn_peers, N°293 : ppp_secrets, N°301 : public_vpn_orders, N°313 : tunnel_clients, N°339 : dns_profiles + dns_events, N°342 : vpn_guests), obtenues %d", len(h.Tables))
 	}
 
 	// Une mutation mémoire apparaît dans les lignes, sans réplique (mirrored
@@ -119,8 +119,8 @@ func TestSyncHealthJSONMode(t *testing.T) {
 // ici doit faire échouer le compte).
 func TestLiveTableRowsConcordance(t *testing.T) {
 	rows := liveTableRows(BuildEmptyState())
-	if len(rows) != 45 {
-		t.Fatalf("45 entrées attendues (44 différentielles + settings — N°103 : line_quality, N°133 : chat ×2 + devices, N°182 : sites, N°199 : volume_days, N°200 : monthly_journals, N°290 : cyber_postes, N°291 : vpn_peers, N°293 : ppp_secrets, N°301 : public_vpn_orders, N°313 : tunnel_clients, N°339 : dns_profiles + dns_events), obtenues %d", len(rows))
+	if len(rows) != 46 {
+		t.Fatalf("46 entrées attendues (45 différentielles + settings — N°103 : line_quality, N°133 : chat ×2 + devices, N°182 : sites, N°199 : volume_days, N°200 : monthly_journals, N°290 : cyber_postes, N°291 : vpn_peers, N°293 : ppp_secrets, N°301 : public_vpn_orders, N°313 : tunnel_clients, N°339 : dns_profiles + dns_events, N°342 : vpn_guests), obtenues %d", len(rows))
 	}
 	seen := map[string]bool{}
 	for _, th := range rows {

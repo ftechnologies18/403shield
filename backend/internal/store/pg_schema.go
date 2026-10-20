@@ -780,6 +780,33 @@ func (p *PG) ensureSchema() error {
 		`ALTER TABLE vpn_peers ADD COLUMN IF NOT EXISTS quota_month TEXT NOT NULL DEFAULT ''`,
 		`ALTER TABLE vpn_peers ADD COLUMN IF NOT EXISTS quota_bytes BIGINT NOT NULL DEFAULT 0`,
 		`ALTER TABLE vpn_peers ADD COLUMN IF NOT EXISTS quota_last BIGINT NOT NULL DEFAULT 0`,
+		// N°342 — INVITÉS WireGuard expirables (Accès Invité : tiers sur
+		// le segment dédié 10.8.3.0/24, périmètre hôte/32 + pin-holes,
+		// cf. model/vpnguest.go + deploy/oracle/wg-peer.sh v6) : registre
+		// cloud SOURCE DE VÉRITÉ du cycle de vie (TTL 1-72 h, révocation,
+		// balayage vpnguest_sweep). Même discipline que vpn_peers : la
+		// conf cliente voyage chiffrée dans la colonne conf (secretbox,
+		// pattern WgPSK/D5-a — la vérité réseau des pin-holes vit côté VM
+		// dans les sidecars .guest, jamais ici).
+		`CREATE TABLE IF NOT EXISTS vpn_guests (
+                        id           TEXT PRIMARY KEY,
+                        account_id   TEXT NOT NULL,
+                        name         TEXT NOT NULL,
+                        label        TEXT NOT NULL DEFAULT '',
+                        host_peer_id TEXT NOT NULL DEFAULT '',
+                        host_ip      TEXT NOT NULL DEFAULT '',
+                        ports        TEXT NOT NULL DEFAULT '',
+                        ipv4         TEXT NOT NULL DEFAULT '',
+                        state        TEXT NOT NULL DEFAULT 'active',
+                        error_msg    TEXT NOT NULL DEFAULT '',
+                        conf         TEXT NOT NULL DEFAULT '',
+                        expires_at   TEXT NOT NULL DEFAULT '',
+                        created_at   TEXT NOT NULL,
+                        updated_at   TEXT NOT NULL
+                )`,
+		`CREATE UNIQUE INDEX IF NOT EXISTS idx_vpn_guests_name    ON vpn_guests (name)`,
+		`CREATE INDEX IF NOT EXISTS idx_vpn_guests_account   ON vpn_guests (account_id)`,
+		`CREATE INDEX IF NOT EXISTS idx_vpn_guests_expires   ON vpn_guests (expires_at)`,
 		// N°301 — COMMANDES VPN B2C « vente directe plateforme » (vitrine
 		// publique /vpn, cf. model/publicvpnorder.go) : facturation + cycle
 		// de vie B2C. Aucun secret ici (la conf vit sur le vpn_peer lié,

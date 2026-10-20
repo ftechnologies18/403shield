@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # wg-peer.sh — cycle de vie des peers WireGuard (N°284, v2 N°285, v3 N°312,
-# v4 N°313, v5 N°315) — ROOT only
+# v4 N°313, v5 N°315, v6 N°342) — ROOT only
 #
 # usage:
 #   wg-peer.sh add <nom> [forme]     — peer client (clé générée ici, conf client .conf).
@@ -11,6 +11,20 @@
 #                                      10.8.2.0/24, pas de DNS tunnel — l'appel de forme
 #                                      par un wg-peer.sh antérieur est simplement IGNORÉ,
 #                                      dégradation propre)
+#   wg-peer.sh add-guest <nom> <ip-hôte> <ports> — v6/N°342 (Accès Invité) : peer INVITÉ
+#                                      expirable sur le segment 10.8.3.0/24, conf
+#                                      AllowedIPs = <ip-hôte>/32 SEULEMENT (l'appareil Pro
+#                                      de l'hôte, ex. 10.8.2.13) + pin-holes iptables
+#                                      invité→hôte sur les ports déclarés (1-6, TCP+UDP).
+#                                      Fail-closed par construction : chaîne dédiée
+#                                      mikcloud-guests à DROP terminal, saut FORWARD AVANT
+#                                      les ACCEPT génériques — un invité ne peut atteindre
+#                                      QUE son hôte, sur les ports pin-holés (même avec
+#                                      une conf trafiquée 0.0.0.0/0).
+#   wg-peer.sh guest-restore          — v6/N°342 : reconstruit la chaîne mikcloud-guests
+#                                      (jump + fermetures + pin-holes) depuis les sidecars
+#                                      .guest — idempotent, appelé au boot (PostUp) et à
+#                                      chaque add-guest/remove d'invité.
 #   wg-peer.sh add-router <nom> <pub> — peer ROUTEUR MikroTik (clé publique fournie par le
 #                                       routeur, livret .router.txt pour la console MikCloud)
 #   wg-peer.sh set-lan <nom> <cidr>   — v5/N°315 (D-B1 brique 2) : étend l'AllowedIPs du PEER
@@ -28,16 +42,21 @@
 #   wg-peer.sh reip <ip>              — changement d'endpoint (IP publique)
 #   wg-peer.sh list                   — tableau des peers (handshake, transferts)
 #
-# SEGMENTS DU POOL TUNNEL (v4 — N°313, décision D-T5) : le /24 historique
-# devient TROIS segments /24 sur le même wg0 :
+# SEGMENTS DU POOL TUNNEL (v4 — N°313, décision D-T5 ; v6 — N°342) : le /24
+# historique devient QUATRE segments /24 sur le même wg0 :
 #   - 10.8.0.0/24  : routeurs de GESTION (renfort N°285) + peers VPN
 #                    HISTORIQUES (posés avant la v4 — jamais déplacés) ;
 #   - 10.8.1.0/24  : peers VPN « fulltunnel » B2C (vitrine /vpn, ventes) ;
-#   - 10.8.2.0/24  : peers « remote » (accès distant du gérant, N°312).
-# Capacité du pool : 253 → 759 adresses tunnel ; familles de trafic isolées
-# (un peer remote ne partage plus son /24 avec les clients B2C). Les adresses
-# IPv6 suivent le même découpage : fd00:8::N (historique), fd00:8:1::N
-# (fulltunnel B2C), fd00:8:2::N (remote).
+#   - 10.8.2.0/24  : peers « remote » (accès distant du gérant, N°312) ;
+#   - 10.8.3.0/24  : peers « INVITÉS » (N°342) — fail-closed : chaîne dédiée
+#                    mikcloud-guests (DROP terminal, pin-holes seuls), AUCUN
+#                    MASQUERADE, fermeture B2C/routeurs vers ce segment.
+# Capacité du pool : 253 → 1012 adresses tunnel ; familles de trafic isolées
+# (un peer remote ne partage plus son /24 avec les clients B2C, un invité
+# n'atteint QUE son hôte). Les adresses IPv6 suivent le même découpage :
+# fd00:8::N (historique), fd00:8:1::N (fulltunnel B2C), fd00:8:2::N (remote),
+# fd00:8:3::N (invités — allouée mais hors AllowedIPs de la conf : le
+# cryptokey routing WireGuard lui-même bloque tout v6 invité, v4 seul en v1).
 #
 # POSE DES SEGMENTS SECONDAIRES (10.8.1/10.8.2) — ensure_segments, appelée à
 # CHAQUE « add » client :
@@ -64,7 +83,7 @@ EP_FILE=/opt/wireguard/endpoint
 [ "$(id -u)" = "0" ] || { echo "root requis"; exit 1; }
 [ -f "$WG_CONF" ] || { echo "wg0.conf absent — lancer mode=install d'abord"; exit 1; }
 cmd="${1:-}"; name="${2:-}"
-usage(){ echo "usage: wg-peer.sh add <nom> [fulltunnel|remote] | add-router <nom> <pubkey> | set-lan <nom> <cidr> | lan-extend <nom> <cidr> | remove <nom> | qr <nom> | show-router <nom> | reip <ip> | list"; exit 1; }
+usage(){ echo "usage: wg-peer.sh add <nom> [fulltunnel|remote] | add-guest <nom> <ip-hôte> <ports> | guest-restore | add-router <nom> <pubkey> | set-lan <nom> <cidr> | lan-extend <nom> <cidr> | remove <nom> | qr <nom> | show-router <nom> | reip <ip> | list"; exit 1; }
 name2pub(){ awk -v n="$1" 'BEGIN{RS=""} index($0,"# peer: "n"\n")==1{c=split($0,L,"\n"); for(i=1;i<=c;i++) if(L[i]~/^PublicKey = /){sub("PublicKey = ","",L[i]);print L[i]}}' "$WG_CONF"; }
 apply(){ wg syncconf wg0 <(wg-quick strip wg0); }
 
@@ -93,6 +112,78 @@ alloc(){
   echo "$N"
 }
 server_pub(){ awk '/^PrivateKey/{print $3; exit}' "$WG_CONF" | wg pubkey; }
+
+# ── Invités (v6 — N°342, Accès Invité) ────────────────────────────────────
+# GUEST_POSTUP — bloc boot du segment invité : adresse secondaire + appel à
+# guest-restore (chaîne + fermetures + pin-holes). Marqueur « # mikcloud-guests »
+# indépendant de « # mikcloud-segments » : une VM en v5 reçoit le bloc au
+# premier add-guest SANS toucher au bloc segments existant (upgrade in place).
+# Le chemin du script est canonique (wg-mini tolère WG_PEER_SCRIPT pour ses
+# propres appels ; le PostUp du wg0.conf DOIT être absolu).
+GUEST_POSTUP='# mikcloud-guests (N°342) — segment INVITÉS 10.8.3.0/24, fail-closed
+PostUp = ip -4 address add 10.8.3.1/24 dev %i 2>/dev/null || true
+PostUp = ip -6 address add fd00:8:3::1/64 dev %i 2>/dev/null || true
+PostUp = /opt/wireguard/wg-peer.sh guest-restore'
+
+# ensure_boot_guests — insère le bloc GUEST_POSTUP sous [Interface] de wg0.conf
+# (UNE fois, présence testée par le marqueur) : wg-quick le rejoue à chaque
+# montée de wg0 — le segment et sa chaîne survivent au reboot.
+ensure_boot_guests(){
+  grep -q '^# mikcloud-guests' "$WG_CONF" && return 0
+  local tmp; tmp=$(mktemp)
+  awk -v block="$GUEST_POSTUP" '
+    { print }
+    /^\[Interface\]$/ && !ins { printf "%s\n", block; ins=1 }
+  ' "$WG_CONF" > "$tmp" || { rm -f "$tmp"; echo "❌ insertion PostUp invités impossible"; exit 1; }
+  install -m 600 "$tmp" "$WG_CONF"; rm -f "$tmp"
+}
+
+# guest_pin — UN pin-hole invité→hôte (TCP + UDP, multiport) : la règle est
+# ciblée /32→/32 (l'invité N vers SON hôte, sur SES ports déclarés) et vit
+# dans la chaîne dédiée, AVANT le DROP terminal.
+guest_pin(){
+  local GIP="$1" HIP="$2" PRT="$3"
+  for PROTO in tcp udp; do
+    iptables -C mikcloud-guests -s "${GIP}/32" -d "${HIP}/32" -p "$PROTO" -m multiport --dports "$PRT" -j ACCEPT 2>/dev/null || \
+      iptables -I mikcloud-guests 1 -s "${GIP}/32" -d "${HIP}/32" -p "$PROTO" -m multiport --dports "$PRT" -j ACCEPT
+  done
+}
+
+# guest_restore — reconstruit la chaîne mikcloud-guests de zéro (idempotent) :
+#   1. chaîne dédiée + DROP terminal — un invité sans pin-hole ne passe RIEN ;
+#   2. saut FORWARD en TÊTE de liste (-I 1) : le trafic -s 10.8.3.0/24 est
+#      gouverné AVANT les ACCEPT génériques des segments v4 — même une conf
+#      trafiquée (0.0.0.0/0, LAN d'un autre) se heurte au mur (fail-closed) ;
+#   3. fermetures entrantes : B2C (10.8.1.0/24) et routeurs (10.8.0.0/24) ne
+#      peuvent PAS initier vers les invités — l'hôte seul (10.8.2.x, ACCEPT
+#      générique du hairpin) répond à son invité ;
+#   4. pin-holes relus des sidecars $PEERS_DIR/*.guest (ip/host/ports) — la
+#      mémoire des invités VIT dans ces fichiers, pas dans iptables.
+# NB : le retour hôte→invité passe par l'ACCEPT générique -s 10.8.2.0/24 déjà
+# posé par ensure_runtime_segments : aucun geste supplémentaire (le couple
+# pin-hole aller / ACCEPT générique retour suffit, étatless des deux bords).
+guest_restore(){
+  iptables -N mikcloud-guests 2>/dev/null || true
+  iptables -F mikcloud-guests
+  iptables -A mikcloud-guests -j DROP
+  iptables -C FORWARD -s 10.8.3.0/24 -j mikcloud-guests 2>/dev/null || \
+    iptables -I FORWARD 1 -s 10.8.3.0/24 -j mikcloud-guests
+  iptables -C FORWARD -s 10.8.1.0/24 -d 10.8.3.0/24 -j DROP 2>/dev/null || \
+    iptables -I FORWARD 1 -s 10.8.1.0/24 -d 10.8.3.0/24 -j DROP
+  iptables -C FORWARD -s 10.8.0.0/24 -d 10.8.3.0/24 -j DROP 2>/dev/null || \
+    iptables -I FORWARD 1 -s 10.8.0.0/24 -d 10.8.3.0/24 -j DROP
+  local GIP HIP PRT n=0
+  for f in "$PEERS_DIR"/*.guest; do
+    [ -f "$f" ] || continue
+    GIP=$(sed -n 's/^ip=//p' "$f" | head -1)
+    HIP=$(sed -n 's/^host=//p' "$f" | head -1)
+    PRT=$(sed -n 's/^ports=//p' "$f" | head -1)
+    [ -n "$GIP" ] && [ -n "$HIP" ] && [ -n "$PRT" ] || continue
+    guest_pin "$GIP" "$HIP" "$PRT"
+    n=$((n+1))
+  done
+  return 0
+}
 
 # ── Segments secondaires (N°313) — gestes idempotents boot + runtime ──────
 SEG_POSTUP='# mikcloud-segments (N°313) — segments secondaires du pool tunnel (10.8.1 B2C / 10.8.2 remote)
@@ -216,6 +307,80 @@ CLIENTCONF
     echo "   conf client : $PEERS_DIR/${name}.conf (600 root — SECRET, ne jamais coller dans un log)"
     echo "   QR (SSH interactif) : sudo qrencode -t ansiutf8 < $PEERS_DIR/${name}.conf"
     ;;
+  add-guest)
+    # N°342 (v6) — ACCÈS INVITÉ : peer expirable sur le segment 10.8.3.0/24.
+    # L'HÔTE est un peer remote EXISTANT (10.8.2.x — un appareil Pro du compte
+    # qui a commandé l'invité) : la conf cliente de l'invité ne route QUE
+    # l'hôte (/32), et les pin-holes bornent les ports côté VM. Doctrine
+    # 1 conf = 1 appareil inchangée ; l'expiration/révocation vit au CLOUD
+    # (backend) qui appelle remove au terme — côté VM, remove = même geste.
+    [ -n "$name" ] || usage
+    HOSTIP="${3:-}"
+    PORTS="${4:-}"
+    echo "$name" | grep -qE '^[a-z0-9][a-z0-9-]{0,31}$' || { echo "❌ nom invalide"; exit 1; }
+    [ -z "$(name2pub "$name")" ] || { echo "❌ peer '$name' existe déjà"; exit 1; }
+    echo "$HOSTIP" | grep -qE '^10\.8\.2\.([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])$' || { echo "❌ IP hôte invalide : «${HOSTIP:-vide}» (attendu : l'adresse tunnel 10.8.2.x d'un appareil Pro)"; exit 1; }
+    # L'hôte doit être un peer remote POSÉ sur wg0 (AllowedIPs = 10.8.2.H/32 en
+    # premier item) — refus explicite plutôt qu'un invité vers une IP fantôme.
+    HOSTFOUND=$(awk -v h="${HOSTIP}/32" 'BEGIN{RS=""} /^# peer: /{c=split($0,L,"\n"); for(i=1;i<=c;i++) if(L[i]~/^AllowedIPs = /){a=L[i]; sub("AllowedIPs = ","",a); split(a,B,","); gsub(/^[ \t]+|[ \t]+$/,"",B[1]); if(B[1]==h){print "1"; exit}}}' "$WG_CONF")
+    [ -n "$HOSTFOUND" ] || { echo "❌ aucun peer remote à ${HOSTIP} sur wg0 — l'hôte d'un invité doit être un appareil Pro actif (10.8.2.x)"; exit 1; }
+    echo "$PORTS" | grep -qE '^[0-9]{1,5}(,[0-9]{1,5}){0,5}$' || { echo "❌ ports invalides : «${PORTS:-vide}» (attendu : 1 à 6 ports, séparés par des virgules — ex. 25565 ou 3000,80,443)"; exit 1; }
+    OKP=1
+    OLDIFS="$IFS"; IFS=','
+    for p in $PORTS; do
+      [ "$p" -ge 1 ] 2>/dev/null && [ "$p" -le 65535 ] 2>/dev/null || OKP=0
+    done
+    IFS="$OLDIFS"
+    [ "$OKP" = "1" ] || { echo "❌ port hors bornes (1-65535) dans «${PORTS}»"; exit 1; }
+    SEG="10.8.3"; V6P="fd00:8:3"
+    ensure_boot_segments
+    ensure_runtime_segments
+    ensure_boot_guests
+    guest_restore
+    N=$(alloc "$SEG")
+    EP=$(cat "$EP_FILE")
+    SPUB=$(server_pub)
+    PRIV=$(umask 077; wg genkey)
+    PUB=$(printf '%s' "$PRIV" | wg pubkey)
+    PSK=$(umask 077; wg genpsk)
+    # Bloc [Peer] identique aux autres formes (AllowedIPs = l'adresse de
+    # l'invité, v4 + ULA v6) — le périmètre est porté par la CONF CLIENT
+    # (AllowedIPs = hôte/32 SEUL) et par la chaîne mikcloud-guests (VM).
+    printf '\n# peer: %s\n[Peer]\nPublicKey = %s\nPresharedKey = %s\nAllowedIPs = %s.%s/32, %s::%s/128\n' "$name" "$PUB" "$PSK" "$SEG" "$N" "$V6P" "$N" >> "$WG_CONF"
+    apply
+    mkdir -p "$PEERS_DIR"
+    # Conf INVITÉ : AllowedIPs = l'hôte UNIQUEMENT — pas de 10.8.0.0/24 (les
+    # routeurs ne regardent pas un invité), pas de 10.8.2.0/24 (les AUTRES
+    # appareils Pro du compte non plus), pas de DNS, pas de 0.0.0.0/0. Le
+    # keepalive 25 s traverse le CGNAT de l'invité comme celui du gérant.
+    cat > "$PEERS_DIR/${name}.conf" <<CLIENTCONF
+[Interface]
+PrivateKey = ${PRIV}
+Address = ${SEG}.${N}/32, ${V6P}::${N}/128
+MTU = 1420
+
+[Peer]
+PublicKey = ${SPUB}
+PresharedKey = ${PSK}
+Endpoint = ${EP}:51820
+AllowedIPs = ${HOSTIP}/32
+PersistentKeepalive = 25
+CLIENTCONF
+    chmod 600 "$PEERS_DIR/${name}.conf"
+    # Sidecar .guest — la mémoire du pin-hole (lue par guest_restore au boot
+    # et à chaque geste invité) : ip de l'invité, hôte, ports déclarés.
+    printf 'ip=%s.%s\nhost=%s\nports=%s\n' "$SEG" "$N" "$HOSTIP" "$PORTS" > "$PEERS_DIR/${name}.guest"
+    chmod 600 "$PEERS_DIR/${name}.guest"
+    guest_restore
+    echo "✅ invité '$name' ajouté (segment ${SEG}) — IP ${SEG}.${N} → hôte ${HOSTIP} ports ${PORTS} — fingerprint $(printf '%s' "$PUB" | sha256sum | cut -c1-12)…"
+    echo "   conf invité : $PEERS_DIR/${name}.conf (600 root — SECRET, à remettre à l'invité par le cloud)"
+    echo "   QR (SSH interactif) : sudo qrencode -t ansiutf8 < $PEERS_DIR/${name}.conf"
+    ;;
+  guest-restore)
+    guest_restore
+    NPINS=$(( $(iptables -S mikcloud-guests 2>/dev/null | grep -c -- '-j ACCEPT') / 2 ))
+    echo "✅ chaîne mikcloud-guests restaurée — ${NPINS} invité(s) pin-holé(s), DROP terminal en place (fail-closed)"
+    ;;
   add-router)
     # N°285 — peer ROUTEUR : la clé publique est générée SUR le routeur
     # (commande wg_keygen, clé privée jamais transportée). Le livret
@@ -324,6 +489,14 @@ LIVRET
     install -m 600 /tmp/wg0.conf.new "$WG_CONF"; rm -f /tmp/wg0.conf.new
     apply
     rm -f "$PEERS_DIR/${name}.conf" "$PEERS_DIR/${name}.router.txt"
+    # N°342 — un INVITÉ emporte son pin-hole : sidecar supprimé + chaîne
+    # reconstruite (les autres invités restent pin-holés, DROP terminal en
+    # place). Les autres familles (routeurs, B2C, remote) ne passent pas ici.
+    if [ -f "$PEERS_DIR/${name}.guest" ]; then
+      rm -f "$PEERS_DIR/${name}.guest"
+      guest_restore
+      echo "   (invité : pin-hole retiré, chaîne mikcloud-guests reconstruite)"
+    fi
     echo "✅ peer '$name' révoqué (bloc + livrables supprimés, tunnel des autres peers intact)"
     ;;
   qr)

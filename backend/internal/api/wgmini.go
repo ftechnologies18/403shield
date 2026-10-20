@@ -333,6 +333,59 @@ func wgMiniLanExtend(name, lan string) (conf, ip string, err error) {
 	return env.Conf, env.IP, nil
 }
 
+// wgMiniGuestAdd — N°342 — wg-peer.sh add-guest <name> <host> <ports> :
+// pose le peer INVITÉ sur le segment 10.8.3.0/24 et renvoie la conf (une
+// seule traversée cloud, clés générées côté VM — même discipline que
+// wgMiniAdd). PREUVE PAR LA CONF, TROISIÈME FRONTIÈRE (après wg-mini v6 et
+// wg-peer.sh v6) : la ligne AllowedIPs de la conf renvoyée doit être
+// EXACTEMENT « <host>/32 » — ni 0.0.0.0/0 (un invité n'a pas de sortie
+// Internet), ni un segment (10.8.0.0/24 routeurs, 10.8.2.0/24 appareils Pro
+// du compte) : un périmètre élargi est REFUSÉ, jamais un produit en
+// trompe-l'œil. Une VM v5 répond 404 sur la route → consigne exploitant
+// explicite (ops-wg-mini-install).
+func wgMiniGuestAdd(name, host, ports string) (conf, ip string, err error) {
+	if !model.ValidVpnPeerName(name) {
+		return "", "", fmt.Errorf("nom de peer invalide : %q", name)
+	}
+	if !model.ValidGuestHostIP(host) {
+		return "", "", fmt.Errorf("IP hôte invalide : %q (attendu : l'adresse tunnel 10.8.2.x d'un appareil Pro)", host)
+	}
+	if !model.ValidGuestPorts(ports) {
+		return "", "", fmt.Errorf("ports invalides : %q (1 à 6 ports en csv, ex. 25565 ou 3000,80,443)", ports)
+	}
+	raw, err := wgMiniCallFn(http.MethodPost, "/v1/guest-add", map[string]string{"name": name, "host": host, "ports": ports})
+	if err != nil {
+		if strings.Contains(err.Error(), "404") {
+			return "", "", errors.New("wg-mini v5 détecté sur la VM — l'Accès Invité exige wg-peer.sh/wg-mini v6 : lancez le workflow ops-wg-mini-install (repose v6 + RESTART, ~2 min — cf. deploy/oracle/wg-mini/README.md)")
+		}
+		return "", "", err
+	}
+	var env struct {
+		Conf string `json:"conf"`
+		IP   string `json:"ip"`
+	}
+	if err := json.Unmarshal(raw, &env); err != nil {
+		return "", "", fmt.Errorf("wg-mini : réponse guest-add illisible : %w", err)
+	}
+	if strings.TrimSpace(env.Conf) == "" {
+		return "", "", errors.New("wg-mini : conf invité vide — vérifiez wg-peer.sh sur la VM")
+	}
+	// Preuve par la conf : AllowedIPs = host/32 EXACTEMENT (item unique).
+	allowed := ""
+	for _, line := range strings.Split(env.Conf, "\n") {
+		line = strings.TrimSpace(line)
+		if strings.HasPrefix(line, "AllowedIPs = ") {
+			allowed = strings.TrimSpace(strings.TrimPrefix(line, "AllowedIPs = "))
+			break
+		}
+	}
+	want := host + "/32"
+	if allowed != want {
+		return "", "", fmt.Errorf("wg-mini : conf invité non conforme (AllowedIPs = %q, attendu %q) — vérifiez wg-peer.sh sur la VM", allowed, want)
+	}
+	return env.Conf, env.IP, nil
+}
+
 // wgMiniPingFn — indirection pour les tests (même discipline).
 var wgMiniPingFn = wgMiniPing
 
@@ -340,7 +393,8 @@ var wgMiniPingFn = wgMiniPing
 var wgMiniListFn = wgMiniList
 
 // wgMiniAddFn / wgMiniRemoveFn / wgMiniConfFn / wgMiniAddRouterFn /
-// wgMiniSetLanFn / wgMiniLanExtendFn — indirections pour les tests.
+// wgMiniSetLanFn / wgMiniLanExtendFn / wgMiniGuestAddFn — indirections pour
+// les tests.
 var (
 	wgMiniAddFn       = wgMiniAdd
 	wgMiniRemoveFn    = wgMiniRemove
@@ -348,4 +402,5 @@ var (
 	wgMiniAddRouterFn = wgMiniAddRouter
 	wgMiniSetLanFn    = wgMiniSetLan
 	wgMiniLanExtendFn = wgMiniLanExtend
+	wgMiniGuestAddFn  = wgMiniGuestAdd
 )

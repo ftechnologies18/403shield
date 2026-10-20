@@ -178,6 +178,10 @@ func syncSteps(db *model.DB) []syncStep {
 		{vpnPeerSpec.table, func(hashes, pending map[string]map[string]uint64) tableApplier {
 			return diffTable(hashes, pending, vpnPeerSpec, db.VpnPeers)
 		}},
+		// N°342 — invités WireGuard expirables (Accès Invité, 10.8.3).
+		{vpnGuestSpec.table, func(hashes, pending map[string]map[string]uint64) tableApplier {
+			return diffTable(hashes, pending, vpnGuestSpec, db.VpnGuests)
+		}},
 		// N°301 — commandes VPN B2C « vente directe plateforme ».
 		{publicVpnOrderSpec.table, func(hashes, pending map[string]map[string]uint64) tableApplier {
 			return diffTable(hashes, pending, publicVpnOrderSpec, db.PublicVpnOrders)
@@ -861,6 +865,7 @@ func (p *PG) rebuildHashes(db *model.DB) {
 		deviceSpec.table:           hashRows(db.Devices, deviceSpec),
 		cyberPosteSpec.table:       hashRows(db.CyberPostes, cyberPosteSpec),
 		vpnPeerSpec.table:          hashRows(db.VpnPeers, vpnPeerSpec),
+		vpnGuestSpec.table:         hashRows(db.VpnGuests, vpnGuestSpec),
 		publicVpnOrderSpec.table:   hashRows(db.PublicVpnOrders, publicVpnOrderSpec),
 		tunnelClientSpec.table:     hashRows(db.TunnelClients, tunnelClientSpec),
 		dnsProfileSpec.table:       hashRows(db.DnsProfiles, dnsProfileSpec),

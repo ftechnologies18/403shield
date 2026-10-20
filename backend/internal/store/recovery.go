@@ -331,6 +331,7 @@ func mergeRecovered(dst, src *model.DB) int {
 	n += mergeSlice(&dst.Sites, src.Sites, siteSpec.idOf)
 	n += mergeSlice(&dst.CyberPostes, src.CyberPostes, cyberPosteSpec.idOf)
 	n += mergeSlice(&dst.VpnPeers, src.VpnPeers, vpnPeerSpec.idOf)
+	n += mergeSlice(&dst.VpnGuests, src.VpnGuests, vpnGuestSpec.idOf) // N°342 — invités (Accès Invité)
 	n += mergeSlice(&dst.PublicVpnOrders, src.PublicVpnOrders, publicVpnOrderSpec.idOf)
 	n += mergeSlice(&dst.PppSecrets, src.PppSecrets, pppSecretSpec.idOf)
 	n += mergeSlice(&dst.TunnelClients, src.TunnelClients, tunnelClientSpec.idOf)
