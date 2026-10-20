@@ -38,6 +38,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"strings"
+	"time"
 )
 
 // Niveaux du bouclier DNS — miroir strict de SafeWiFi (N°80) : le client
@@ -45,7 +46,7 @@ import (
 // appareil = profil DNS).
 const (
 	DnsLevelOff     = "off"     // aucun filtrage de catégorie (règles perso actives)
-	DnsLevelThreats = "threats" // menaces : malwares/phishing (listes N°339)
+	DnsLevelThreats = "threats" // menaces : malwares/phishing (agrégat URLhaus/OpenPhish N°343)
 	DnsLevelFamily  = "family"  // famille : menaces + adulte + jeux d'argent
 )
 
@@ -63,6 +64,22 @@ const (
 	MaxDnsProfilesPerEmail = 10  // un parent protège la famille, pas un lycée
 	MaxDnsRulesPerList     = 200 // bloquer/autoriser : une liste lisible
 	MaxDnsNameLength       = 80  // nom affiché, borné
+)
+
+// Rétention du journal de blocage (N°343 — purge périodique, miroir de la
+// rétention UserLogs N°64/65 : une promesse de journalisation MINIMALE se
+// tient par la purge, pas par l'intention).
+//
+//   - DnsEventRetentionDays : un blocage de plus de 30 jours n'intéresse
+//     plus le rapport d'activité du parent (la console n'en montre que les
+//     100 derniers) — la vie privée du foyer l'emporte sur l'archivistique.
+//   - MaxDnsEventsPerProfile : borne haute par profil si un appareil infesté
+//     bégaie des domaines bloqués (la dédup 10 min limite déjà le rythme :
+//     144/jour/domaine — la borne attrape le cas « beaucoup de domaines
+//     distincts », ~7 jours d'histoire au pire).
+const (
+	DnsEventRetentionDays  = 30
+	MaxDnsEventsPerProfile = 1000
 )
 
 // DnsProfile — un profil de filtrage DNS possédé par un e-mail client.
@@ -233,4 +250,42 @@ func DnsProfilesOfEmail(db *DB, email string) []*DnsProfile {
 		}
 	}
 	return out
+}
+
+// PurgeDnsEvents — N°343 — tient la promesse de journalisation minimale :
+// retire les événements de blocage plus vieux que DnsEventRetentionDays et
+// borne chaque profil à ses MaxDnsEventsPerProfile plus RÉCENTS (les
+// requêtes autorisées n'étant jamais consignées, le journal ne peut croître
+// que par les blocages — la dédup 10 min du résolveur ralentit déjà le
+// rythme, cette purge ferme le cas « appareil infesté pendant des mois »).
+// Appelée par le balayage horaire de rétention (N°64) sous verrou, avant
+// Save — la suppression se propage à PostgreSQL par syncTable, exactement
+// comme la suppression d'un profil. Retour : le nombre d'événements purgés
+// (tracé par l'appelant si non nul — preuve d'audit).
+func PurgeDnsEvents(db *DB, now time.Time) int {
+	cutoff := now.AddDate(0, 0, -DnsEventRetentionDays).Format(time.RFC3339)
+	// Les événements sont en ordre d'insertion (plus récents en QUEUE) : la
+	// borne par profil se compte en REMONTANT depuis la fin, puis le filtre
+	// final parcourt dans l'ordre pour reconstruire la tranche conservée.
+	counts := map[string]int{}
+	keepFromEnd := map[int]bool{}
+	for i := len(db.DnsEvents) - 1; i >= 0; i-- {
+		pid := db.DnsEvents[i].ProfileID
+		if counts[pid] < MaxDnsEventsPerProfile {
+			counts[pid]++
+			keepFromEnd[i] = true // cet indice est dans la fenêtre conservée
+		}
+	}
+	kept := db.DnsEvents[:0]
+	purged := 0
+	for i := range db.DnsEvents {
+		e := db.DnsEvents[i]
+		if !keepFromEnd[i] || e.CreatedAt < cutoff {
+			purged++
+			continue
+		}
+		kept = append(kept, e)
+	}
+	db.DnsEvents = kept
+	return purged
 }

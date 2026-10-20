@@ -98,13 +98,61 @@ func TestEngineFamilyBlocksSeeds(t *testing.T) {
 	}
 }
 
-func TestEngineThreatsEmptyPhase1(t *testing.T) {
-	// HONNÊTETÉ PHASE 1 : le niveau threats ne bloque RIEN tant que les
-	// listes automatiques (N°339) ne sont pas branchées — ce test VERROUILLE
-	// ce comportement : il échouera le jour où les listes arrivent, forçant
-	// sa mise à jour consciente.
+func TestEngineThreatsLiveSet(t *testing.T) {
+	// N°343 — MISE À JOUR CONSCIENTE du verrou de phase 1 : ce test était
+	// TestEngineThreatsEmptyPhase1 (N°339) et verrouillait « le niveau
+	// threats ne bloque RIEN tant que les listes ne sont pas branchées — il
+	// échouera le jour où les listes arrivent, forçant sa mise à jour
+	// consciente ». Les listes URLhaus/OpenPhish SONT branchées (N°343 :
+	// threats.go + balayage 6 h) : le verrou devient le CONTRAT du niveau —
+	// 1. set VIDE (démarrage, flux tous injoignables) : le niveau ne bloque
+	//    RIEN (fail-open, jamais de blocage au hasard) ;
+	// 2. set PEUPLÉ : le domaine listé est bloqué, le frère non.
 	p := &model.DnsProfile{Level: model.DnsLevelThreats}
+	SetThreatSet(nil, time.Time{})
+	defer SetThreatSet(nil, time.Time{})
 	if v := Decide(p, "phishing-suspect.example", at(12, 0)); v != VerdictAllow {
-		t.Fatal("phase 1 : le niveau threats reste vide (listes N°339)")
+		t.Fatal("set vide : le niveau threats ne doit rien bloquer (fail-open)")
+	}
+	SetThreatSet([]string{"phishing-suspect.example"}, time.Now().UTC())
+	if v := Decide(p, "phishing-suspect.example", at(12, 0)); v != VerdictBlock {
+		t.Fatal("set peuplé : le domaine listé doit être bloqué")
+	}
+	if v := Decide(p, "frere.example", at(12, 0)); v != VerdictAllow {
+		t.Fatal("set peuplé : un domaine non listé reste libre")
+	}
+}
+
+func TestEngineThreatsRespectsAllowlist(t *testing.T) {
+	// L'ordre figé tient avec les listes vivantes : l'exception « devoirs »
+	// dépasse l'agrégat comme elle dépasse tout.
+	SetThreatSet([]string{"banque-factice.example"}, time.Now().UTC())
+	defer SetThreatSet(nil, time.Time{})
+	p := &model.DnsProfile{
+		Level:      model.DnsLevelThreats,
+		AllowRules: "banque-factice.example",
+	}
+	if v := Decide(p, "banque-factice.example", at(12, 0)); v != VerdictAllow {
+		t.Fatal("l'allowlist doit dépasser l'agrégat de menaces")
+	}
+	sansAllow := &model.DnsProfile{Level: model.DnsLevelThreats}
+	if v := Decide(sansAllow, "banque-factice.example", at(12, 0)); v != VerdictBlock {
+		t.Fatal("sans allowlist, le domaine listé est bloqué")
+	}
+}
+
+func TestEngineFamilySharesThreatSet(t *testing.T) {
+	// family = threats + catégories (vocabulaire SafeWiFi N°80) : l'agrégat
+	// est consulté par les DEUX niveaux.
+	SetThreatSet([]string{"phish.example"}, time.Now().UTC())
+	defer SetThreatSet(nil, time.Time{})
+	p := &model.DnsProfile{Level: model.DnsLevelFamily}
+	if v := Decide(p, "phish.example", at(12, 0)); v != VerdictBlock {
+		t.Fatal("niveau family : le domaine de menaces doit être bloqué")
+	}
+	// ... et le niveau OFF n'y est pas sensible.
+	off := &model.DnsProfile{Level: model.DnsLevelOff}
+	if v := Decide(off, "phish.example", at(12, 0)); v != VerdictAllow {
+		t.Fatal("niveau off : l'agrégat ne s'applique pas")
 	}
 }
