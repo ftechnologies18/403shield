@@ -325,7 +325,11 @@ func (a *API) handlePublicVpnOrderStatus(w http.ResponseWriter, r *http.Request)
 		out["expiresAt"] = snapshot.ExpiresAt
 		out["email"] = snapshot.Email // déjà connue de l'acheteur (c'est la sienne)
 		a.store.Lock()
-		if peer := model.FindVpnPeerScoped(a.store.Data(), snapshot.PeerID, model.AccountMainID); peer != nil {
+		// N°344 — compte du peer selon le kind (B2C → acc-main, Pro → compte
+		// gérant apparié) : sans ça l'ipv4 manque sur une commande Pro.
+		db := a.store.Data()
+		if peer := model.FindVpnPeerScoped(db, snapshot.PeerID,
+			tunnelOrderPeerAccountLocked(db, snapshot.Email, snapshot.Kind)); peer != nil {
 			out["ipv4"] = peer.IPv4
 		}
 		a.store.Unlock()
@@ -384,10 +388,13 @@ func (a *API) handlePublicVpnRecover(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// Conf : copie du peer lié, self-healing wg-mini si la copie cloud est vide
-	// (pattern D5-a de la vue VPN gérant).
+	// (pattern D5-a de la vue VPN gérant). N°344 — le peer vit sous le compte
+	// qui le possède (B2C → acc-main, Pro → compte gérant apparié par e-mail,
+	// miroir du provisioning) : résolu sous le verrou, réutilisé au re-verrou.
+	peerAccountID := tunnelOrderPeerAccountLocked(db, order.Email, order.Kind)
 	var peer model.VpnPeer
 	found := false
-	if p := model.FindVpnPeerScoped(db, order.PeerID, model.AccountMainID); p != nil {
+	if p := model.FindVpnPeerScoped(db, order.PeerID, peerAccountID); p != nil {
 		peer = *p
 		found = true
 	}
@@ -406,7 +413,7 @@ func (a *API) handlePublicVpnRecover(w http.ResponseWriter, r *http.Request) {
 		if fresh, ferr := wgMiniConfFn(peer.Name); ferr == nil {
 			conf = fresh
 			a.store.Lock()
-			if p := model.FindVpnPeerScoped(a.store.Data(), order.PeerID, model.AccountMainID); p != nil {
+			if p := model.FindVpnPeerScoped(a.store.Data(), order.PeerID, peerAccountID); p != nil {
 				p.Conf = fresh
 				a.store.Save()
 			}
@@ -621,7 +628,10 @@ func (a *API) provisionPublicVpnOrder(orderID string) (model.PublicVpnOrder, err
 		if o := model.FindPublicVpnOrderByID(db, orderID); o != nil {
 			o.ErrorMsg = boundedString("wg-mini : "+err.Error(), 200)
 			o.UpdatedAt = model.NowISO()
-			if p := model.FindVpnPeerScoped(db, o.PeerID, model.AccountMainID); p != nil {
+			// N°344 — le peer réservé vit sous proAccountID (acc-main OU compte
+			// gérant Pro) : c'est la variable locale du provisioning, pas une
+			// constante — un peer Pro marqué « error » sous le BON compte.
+			if p := model.FindVpnPeerScoped(db, o.PeerID, proAccountID); p != nil {
 				p.State = model.VpnStateError
 				p.ErrorMsg = boundedString(err.Error(), 200)
 				p.UpdatedAt = model.NowISO()

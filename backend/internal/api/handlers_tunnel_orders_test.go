@@ -218,6 +218,93 @@ func TestTunnelRevealSelfHealing(t *testing.T) {
 	st.Unlock()
 }
 
+// TestTunnelRevealProPeerScope — N°344 — RÉGRESSION de l'incident
+// MCV-1A63CB60 (première commande Pro de la production, 2026-10-20) : le
+// peer d'une commande PRO vit sous le COMPTE GÉRANT apparié par e-mail
+// (provisionPublicVpnOrder branche pro), PAS sous acc-main. Le reveal le
+// cherchait sous acc-main → FindVpnPeerScoped rejetait le peer légitime →
+// 503 « Configuration indisponible » sur une conf PLENEMENT présente en
+// base. Le miroir exact du provisioning (tunnelOrderPeerAccountLocked)
+// doit résoudre sous le compte du gérant — et le self-healing
+// re-verrouillé doit réutiliser le MÊME compte.
+func TestTunnelRevealProPeerScope(t *testing.T) {
+	a, st := newTunnelTest(t)
+	st.Lock()
+	db := st.Data()
+	tunnelProSeed(db) // compte acc-pro (gerant@example.com) + routeur agent + client tc-1
+	tunnelProSeedOrder(db, "o-pro", "MCV-PRO00001", "2999-01-01T00:00:00Z")
+	st.Save()
+	st.Unlock()
+	claims := &auth.Claims{Sub: "tc-1", Role: "tunnel"}
+
+	// 1. La conf (présente sous acc-pro) est livrée : 200, conf complète,
+	// ipv4 du peer remote — AVANT N°344 : 503 conf_unavailable.
+	rec := httptest.NewRecorder()
+	a.handleTunnelReveal(rec, tunnelAuthReq(http.MethodPost, "/api/tunnel/orders/MCV-PRO00001/reveal", claims, ""))
+	if rec.Code != http.StatusOK {
+		t.Fatalf("reveal Pro : HTTP %d — %s (le peer vit sous le compte gérant : scope acc-main = bug N°344)", rec.Code, rec.Body.String())
+	}
+	var out struct {
+		Ref  string `json:"ref"`
+		Conf string `json:"conf"`
+		IPv4 string `json:"ipv4"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &out); err != nil {
+		t.Fatalf("réponse illisible : %v", err)
+	}
+	if out.Ref != "MCV-PRO00001" || out.Conf == "" || !strings.Contains(out.Conf, "AllowedIPs = 10.8.0.0/24, 10.8.2.0/24") {
+		t.Fatalf("conf Pro attendue (forme remote), eu ref=%q conf=%q", out.Ref, out.Conf)
+	}
+	if out.IPv4 != "10.8.2.7" {
+		t.Fatalf("ipv4 attendue 10.8.2.7 (peer remote du compte), eu %q", out.IPv4)
+	}
+
+	// 2. Self-healing SOUS LE COMPTE DU GÉRANT : conf cloud vidée → wg-mini
+	// relue, conf fraîche re-sauvegardée sur le peer sous acc-pro (le
+	// re-verrou utilisait acc-main avant N°344 — la conf fraîche se perdait).
+	st.Lock()
+	if p := model.FindVpnPeerScoped(st.Data(), "vp-pro1", "acc-pro"); p != nil {
+		p.Conf = ""
+	}
+	st.Save()
+	st.Unlock()
+	oldConf := wgMiniConfFn
+	wgMiniConfFn = func(name string) (string, error) {
+		if name != "vpn-pro0001" {
+			return "", errors.New("peer inattendu")
+		}
+		return confRemoteFake("10.8.2.7"), nil
+	}
+	t.Cleanup(func() { wgMiniConfFn = oldConf })
+
+	recHeal := httptest.NewRecorder()
+	a.handleTunnelReveal(recHeal, tunnelAuthReq(http.MethodPost, "/api/tunnel/orders/MCV-PRO00001/reveal", claims, ""))
+	if recHeal.Code != http.StatusOK {
+		t.Fatalf("reveal Pro self-healing : HTTP %d — %s", recHeal.Code, recHeal.Body.String())
+	}
+	st.Lock()
+	p := model.FindVpnPeerScoped(st.Data(), "vp-pro1", "acc-pro")
+	st.Unlock()
+	if p == nil || !strings.Contains(p.Conf, "10.8.0.0/24, 10.8.2.0/24") {
+		t.Fatalf("conf fraîche non re-sauvegardée sous le compte du gérant : %+v", p)
+	}
+
+	// 3. Un peer Pro d'un AUTRE compte ne doit JAMAIS sortir par ce reveal
+	// (défense multi-tenant intacte) : même ref, e-mail apparié, mais le peer
+	// migre sous un compte tiers → 503 honnête, pas de conf leakée.
+	st.Lock()
+	if p := model.FindVpnPeerScoped(st.Data(), "vp-pro1", "acc-pro"); p != nil {
+		p.AccountID = "acc-autre"
+	}
+	st.Save()
+	st.Unlock()
+	recForeign := httptest.NewRecorder()
+	a.handleTunnelReveal(recForeign, tunnelAuthReq(http.MethodPost, "/api/tunnel/orders/MCV-PRO00001/reveal", claims, ""))
+	if recForeign.Code != http.StatusServiceUnavailable {
+		t.Fatalf("peer sous un compte tiers : HTTP %d attendu (503 honnête), eu %d", http.StatusServiceUnavailable, recForeign.Code)
+	}
+}
+
 func TestTunnelRevealRenewalFollowsTarget(t *testing.T) {
 	a, st := newTunnelTest(t)
 	st.Lock()

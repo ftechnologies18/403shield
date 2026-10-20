@@ -887,8 +887,21 @@ func (a *API) handleAgentResult(w http.ResponseWriter, r *http.Request) {
 			// utilisateur ; wg-mini/réseau ne sont JAMAIS appelés ici).
 			appliedRaw, _ := cmd.Payload["allowedSources"].(string)
 			applied := agent.SanitizeWgAllowedSources(appliedRaw)
+			// N°344 — pare-feu du pilotage direct : le rapport échoe le compte
+			// de règles marquées mikcloud-wg-in (1 attendu). 0 = le routeur a
+			// exécuté un script ANTÉRIEUR à la règle (posé avant N°344) →
+			// re-file avec le script du jour — la règle suivra au check-in
+			// suivant. Un échec d'ajout aurait fait échouer le script ENTIER
+			// (rapport ko → état « error ») : fw=0 + ok = forcément un script
+			// ancien, jamais une boucle de re-files.
+			fw := 0
+			if m, okM := parseReportInt(vals.Get("fw")); okM {
+				fw = m
+			}
 			if current := wgAllowedSourcesLocked(db, router.AccountID); applied != current {
 				a.queueWgSetupRefreshLocked(nil, db, router.AccountID, "convergence de la liste de supervision")
+			} else if fw < 1 {
+				a.queueWgSetupRefreshLocked(nil, db, router.AccountID, "règle pare-feu du pilotage direct absente (script antérieur)")
 			}
 		} else {
 			router.WgState = "error"

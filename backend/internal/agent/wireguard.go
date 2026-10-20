@@ -62,6 +62,21 @@ const WgDefaultAllowedSources = WgServerTunnelIP + "/32"
 // sont derrière le NAT de l'opérateur (pattern N°284, 25 s recommandé).
 const WgKeepaliveSec = 25
 
+// WgInMarker — N°344 — commentaire RouterOS de la règle FILTER « input » du
+// pilotage direct (le pare-feu par défaut « drop all not coming from LAN »
+// jette l'input du tunnel : sans cette règle, la promesse D-B1 — Winbox 8291,
+// API 8728, SSH 22, web sur l'IP tunnel — restait muette sur le dernier
+// kilomètre, et le diagnostic wg-test rapportait « Tunnel non joignable » sur
+// un tunnel pourtant vivant). Distinct de WgMarker : le remove-then-add du
+// pare-feu ne touche NI les objets wireguard, NI les règles wg_lan
+// (« mikcloud-wg-lan », exact-match RouterOS).
+const WgInMarker = "mikcloud-wg-in"
+
+// WgInList — N°344 — nom de l'address-list RouterOS portant les sources du
+// compte (socle de gestion + peers remote du compte — la MÊME liste que
+// l'allowed-address du peer serveur, recalculée à chaque wg_setup).
+const WgInList = "mikcloud-wg-src"
+
 // ---------------------------------------------------------------------------
 // Validations (defénse en profondeur — le handler re-valide, le builder
 // re-sanitise : aucune valeur ne franchit les deux frontières non vérifiée)
@@ -289,13 +304,40 @@ func (b Builder) buildWgSetup(cmd model.Command) string {
 	// Adresse tunnel : remove-then-add par marqueur.
 	sb.WriteString("  :do { /ip address remove [find interface=" + WgIfaceName + " comment=\"" + WgMarker + "\"] } on-error={}\n")
 	sb.WriteString("  /ip address add interface=" + WgIfaceName + " address=\"" + rosEscape(addr) + "\" comment=\"" + WgMarker + "\"\n")
+	// N°344 — PILOTAGE DIRECT : le pare-feu RouterOS par défaut jette l'input
+	// venant de mikcloud-wg (defconf « drop all not coming from LAN ») — la
+	// promesse D-B1 (Winbox 8291, API 8728, SSH 22, web sur l'IP tunnel)
+	// exige UNE règle d'acceptation. Sources = la MÊME liste par compte que
+	// l'allowed-address (socle VM + peers remote du compte), posée en
+	// address-list : l'isolation inter-comptes vit DÉJÀ dans le cryptokey
+	// routing (allowed-address par compte, D-B2 — un paquet déchiffré hors
+	// liste est jeté par WireGuard lui-même) ; la liste côté pare-feu est la
+	// ceinture ET les bretelles. Chaque item est validé en amont (alphabet
+	// 10.8.N.M/32, aucun métacaractère) — aucune injection possible.
+	sb.WriteString("  :do { /ip firewall address-list remove [find list=" + WgInList + "] } on-error={}\n")
+	for _, it := range strings.Split(allowed, ",") {
+		sb.WriteString("  /ip firewall address-list add list=" + WgInList + " address=" + strings.TrimSpace(it) + " comment=" + WgInList + "\n")
+	}
+	sb.WriteString("  :do { /ip firewall filter remove [find comment=\"" + WgInMarker + "\"] } on-error={}\n")
+	// Ajout RÉSILIENT (pattern shield N°159, leçon production 19/09) : place-before=0
+	// est l'INTENTION (tête de chaîne, AVANT un éventuel drop defconf), pas une
+	// exigence — sur une table vide post-boot l'ancre est refusée, le repli pose
+	// la règle en fin de table (elle protège dès qu'elle existe). Seul l'échec
+	// des DEUX formes porte okVar à false.
+	sb.WriteString("  " + resilientAdd("/ip firewall filter add chain=input action=accept in-interface="+WgIfaceName+
+		" src-address-list="+WgInList+" place-before=0 comment=\""+WgInMarker+"\"", okVar))
 	sb.WriteString("} on-error={ :set " + okVar + " false }\n")
 	// Rapport : le compte de peers marqués (vérité routeur — le cloud n'accepte
 	// « active » que sur ce compte == 1) + l'adresse appliquée (echo).
 	sb.WriteString(":local " + p + "n 0\n")
 	sb.WriteString(":do { :foreach " + p + "p in=[/interface/wireguard peers find where interface=" + WgIfaceName + " comment=\"" + WgMarker + "\"] do={ :set " + p + "n ($" + p + "n + 1) } } on-error={}\n")
+	// N°344 — pare-feu du pilotage direct : le rapport échoe AUSSI le compte
+	// de règles marquées mikcloud-wg-in (1 attendu — 0 = script antérieur,
+	// le re-file au résultat convergera vers la règle posée).
+	sb.WriteString(":local " + p + "fw 0\n")
+	sb.WriteString(":do { :foreach " + p + "r in=[/ip firewall filter find where comment=\"" + WgInMarker + "\"] do={ :set " + p + "fw ($" + p + "fw + 1) } } on-error={}\n")
 	ok := `/tool fetch url="` + strings.TrimRight(b.BaseURL, "/") + `/agent/result?token=` + urlEscape(b.Token) +
-		`" http-method=post http-data=("cmd=` + cmd.ID + `&status=ok&peers=". $` + p + `n . "&addr=` + urlEscape(addr) + `") output=none`
+		`" http-method=post http-data=("cmd=` + cmd.ID + `&status=ok&peers=". $` + p + `n . "&addr=` + urlEscape(addr) + `&fw=". $` + p + `fw) output=none`
 	ko := b.reportLine(cmd.ID, false, map[string]string{"message": "configuration WireGuard refusee par le routeur"})
 	sb.WriteString(":if ($" + okVar + ") do={\n  " + ok + "\n} else={\n  " + ko + "\n}\n")
 	return sb.String()
@@ -311,6 +353,10 @@ func (b Builder) buildWgTeardown(cmd model.Command) string {
 	sb.WriteString(":local " + okVar + " true\n")
 	sb.WriteString(":do { /interface/wireguard peers remove [find interface=" + WgIfaceName + " comment=\"" + WgMarker + "\"] } on-error={}\n")
 	sb.WriteString(":do { /ip address remove [find interface=" + WgIfaceName + " comment=\"" + WgMarker + "\"] } on-error={}\n")
+	// N°344 — ménage du pare-feu du pilotage direct (règle + address-list
+	// du compte) : le démontage reste COMPLET, aucun objet marqué ne survit.
+	sb.WriteString(":do { /ip firewall filter remove [find comment=\"" + WgInMarker + "\"] } on-error={}\n")
+	sb.WriteString(":do { /ip firewall address-list remove [find list=" + WgInList + "] } on-error={}\n")
 	sb.WriteString(":do { /interface/wireguard remove [find name=\"" + WgIfaceName + "\"] } on-error={}\n")
 	sb.WriteString(b.resultLines(cmd.ID, okVar, map[string]string{"removed": "1"}))
 	return sb.String()

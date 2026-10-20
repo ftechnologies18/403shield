@@ -154,6 +154,11 @@ func TestBuildWgSetupShape(t *testing.T) {
 		`address="10.8.0.9/32"`,
 		`comment="mikcloud-wg"`,
 		"&status=ok&peers=",
+		// N°344 — pare-feu du pilotage direct : address-list (socle par
+		// défaut) + règle input marquée + écho fw dans le rapport.
+		"/ip firewall address-list add list=mikcloud-wg-src address=10.8.0.1/32",
+		`/ip firewall filter add chain=input action=accept in-interface=mikcloud-wg src-address-list=mikcloud-wg-src place-before=0 comment="mikcloud-wg-in"`,
+		`&fw=". $`,
 	} {
 		if !strings.Contains(s, want) {
 			t.Errorf("buildWgSetup : %q absent", want)
@@ -198,6 +203,36 @@ func TestBuildWgSetupAllowedSources(t *testing.T) {
 	}}
 	if got := b.buildWgSetup(old); !strings.Contains(got, "allowed-address=10.8.0.1/32 ") {
 		t.Error("buildWgSetup : payload antérieur sans allowedSources doit retomber sur le socle")
+	}
+}
+
+// TestBuildWgSetupFirewall — N°344 — le pare-feu du pilotage direct suit la
+// liste PAR COMPTE : chaque item de l'allowed-address devient UNE entrée de
+// l'address-list mikcloud-wg-src (socle VM + peers remote du compte —
+// l'isolation inter-comptes du cryptokey routing, ceinture ET bretelles
+// côté pare-feu routeur). Un item mal formé ne peut JAMAIS y figurer (la
+// liste est passée par SanitizeWgAllowedSources AVANT la boucle).
+func TestBuildWgSetupFirewall(t *testing.T) {
+	b := Builder{BaseURL: "https://api.mikcloud.ftci.fr", Token: "tok"}
+	cmd := model.Command{ID: "c8", Kind: model.CmdWgSetup, Payload: WgSetupPayloadFrom(
+		wgTestKey, wgTestKey, "10.8.0.9/32", "203.0.113.10", 51820,
+		"10.8.0.1/32,10.8.2.5/32,10.8.2.7/32")}
+	s := b.buildWgSetup(cmd)
+	for _, want := range []string{
+		"/ip firewall address-list add list=mikcloud-wg-src address=10.8.0.1/32 comment=mikcloud-wg-src",
+		"/ip firewall address-list add list=mikcloud-wg-src address=10.8.2.5/32 comment=mikcloud-wg-src",
+		"/ip firewall address-list add list=mikcloud-wg-src address=10.8.2.7/32 comment=mikcloud-wg-src",
+		"/ip firewall address-list remove [find list=mikcloud-wg-src]",
+		`/ip firewall filter remove [find comment="mikcloud-wg-in"]`,
+		`src-address-list=mikcloud-wg-src place-before=0 comment="mikcloud-wg-in"`,
+	} {
+		if !strings.Contains(s, want) {
+			t.Errorf("buildWgSetup pare-feu : %q absent\n%s", want, s)
+		}
+	}
+	// Le ménage précède la pose (remove-then-add : idempotent au re-file).
+	if strings.Index(s, "/ip firewall address-list remove") > strings.Index(s, "/ip firewall address-list add") {
+		t.Error("buildWgSetup : le remove de l'address-list doit précéder les add")
 	}
 }
 
@@ -267,6 +302,10 @@ func TestBuildWgTeardownShape(t *testing.T) {
 	for _, want := range []string{
 		`/interface/wireguard peers remove [find interface=mikcloud-wg`,
 		`/ip address remove [find interface=mikcloud-wg`,
+		// N°344 — le démontage emporte AUSSI le pare-feu du pilotage direct
+		// (règle marquée + address-list du compte) : aucun objet ne survit.
+		`/ip firewall filter remove [find comment="mikcloud-wg-in"]`,
+		`/ip firewall address-list remove [find list=mikcloud-wg-src]`,
 		`/interface/wireguard remove [find name="mikcloud-wg"]`,
 		"&removed=1",
 	} {

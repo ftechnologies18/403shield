@@ -538,7 +538,11 @@ func (a *API) handleRouterWgTest(w http.ResponseWriter, r *http.Request) {
 	}
 	writeJSON(w, http.StatusOK, map[string]any{
 		"ok": false, "reachable": false, "port": 0, "latencyMs": 0,
-		"message": "Tunnel non joignable (" + rc.WgIPv4 + ") — vérifiez : handshake côté VM (ops-wg status), peer posé, Security List UDP 51820",
+		// N°344 — la cause la plus fréquente sur tunnel vivant : la règle
+		// pare-feu routeur « mikcloud-wg-in » (posée par wg_setup N°344 ;
+		// absent = script antérieur → « Re-livrer les paramètres » ou attendre
+		// le re-file de démarrage).
+		"message": "Tunnel non joignable (" + rc.WgIPv4 + ") — vérifiez : handshake côté VM (ops-wg status), peer posé, Security List UDP 51820, règle mikcloud-wg-in sur le routeur (pare-feu du pilotage direct)",
 	})
 }
 

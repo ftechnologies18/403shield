@@ -101,9 +101,14 @@ func (a *API) handleTunnelReveal(w http.ResponseWriter, r *http.Request) {
 			"Configuration indisponible — contactez le support avec votre référence "+order.Ref, nil)
 		return
 	}
+	// N°344 — le peer vit sous le compte qui le possède : acc-main pour le
+	// B2C, le COMPTE GÉRANT pour une commande Pro (miroir du provisioning —
+	// cf. tunnelOrderPeerAccountLocked). Résolu AVANT le déverrouillage :
+	// la valeur sert aussi au self-healing re-verrouillé plus bas.
+	peerAccountID := tunnelOrderPeerAccountLocked(db, order.Email, order.Kind)
 	var peer model.VpnPeer
 	found := false
-	if p := model.FindVpnPeerScoped(db, order.PeerID, model.AccountMainID); p != nil {
+	if p := model.FindVpnPeerScoped(db, order.PeerID, peerAccountID); p != nil {
 		peer = *p
 		found = true
 	}
@@ -116,7 +121,7 @@ func (a *API) handleTunnelReveal(w http.ResponseWriter, r *http.Request) {
 		if fresh, ferr := wgMiniConfFn(peer.Name); ferr == nil {
 			conf = fresh
 			a.store.Lock()
-			if p := model.FindVpnPeerScoped(a.store.Data(), order.PeerID, model.AccountMainID); p != nil {
+			if p := model.FindVpnPeerScoped(a.store.Data(), order.PeerID, peerAccountID); p != nil {
 				p.Conf = fresh
 				a.store.Save()
 			}

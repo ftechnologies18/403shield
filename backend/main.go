@@ -152,6 +152,12 @@ func main() {
 	// un flux injoignable ne vide jamais l'agrégat précédent. Aucune écriture
 	// store (état rebuildable, jamais persisté).
 	go engine.RunDnsThreatsSweepForever()
+	// N°344 — cicatrice « Tunnel non joignable » : re-file wg_setup aux
+	// routeurs tunnels actifs au démarrage (règle pare-feu mikcloud-wg-in du
+	// pilotage direct — les routeurs configurés avant N°344 ne la posent
+	// jamais sans ce coup de pouce ; idempotent, application au check-in
+	// ≤ 45 s, blip < 25 s, le socle agent reste hors de ce chemin).
+	go engine.RunWgSetupHealOnce()
 	// N°150 — bootstrap Telegram plateforme : getMe (cache du @username
 	// pour le lien magique) + setWebhook (URL publique RENDER_EXTERNAL_URL
 	// ou PUBLIC_BASE_URL + secret d'env). Best-effort : un échec réseau au

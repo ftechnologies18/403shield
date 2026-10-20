@@ -80,6 +80,26 @@ func tunnelProAccountLocked(db *model.DB, email string) *model.Account {
 	return nil
 }
 
+// tunnelOrderPeerAccountLocked — N°344 — le compte SOUS LEQUEL vit le peer
+// d'une commande tunnel : le provisioning pose le peer B2C (kind sale) sous
+// acc-main (compte plateforme) et le peer PRO (kind pro) sous le COMPTE
+// GÉRANT apparié par e-mail (provisionPublicVpnOrder branche pro — miroir
+// EXACT de la décision d'écriture). Le reveal/recover/status de la console
+// tunnel doit résoudre le peer sous le MÊME compte, sinon la défense
+// multi-tenant (FindVpnPeerScoped compare AccountID) rejette le peer légitime
+// → « Configuration indisponible » sur une commande pourtant provisionnée
+// (incident MCV-1A63CB60 : première commande Pro de la production). Le repli
+// est acc-main (comportement N°314 inchangé pour le B2C — un compte gérant
+// disparu laisse la commande honnêtement indisponible).
+func tunnelOrderPeerAccountLocked(db *model.DB, email, kind string) string {
+	if kind == model.PublicVpnKindPro {
+		if acc := tunnelProAccountLocked(db, email); acc != nil {
+			return acc.ID
+		}
+	}
+	return model.AccountMainID
+}
+
 // tunnelProRoutersLocked — les routeurs du compte (tous modes : la liste
 // honnête montre aussi les routeurs simulés/réels — seuls les agents
 // supportent le LAN étendu, la console le dit).

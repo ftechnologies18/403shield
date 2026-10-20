@@ -10,6 +10,100 @@ sous-marque FTech CI) ; l'historique ci-dessous conserve les noms d'époque.
 N°319 : le DÉPÔT GitHub lui-même devient `ftechnologies18/403shield`
 (anciennes URL redirigées en 301 par GitHub — web, git et API).
 
+## 2026-10-20 — N°344 — **CORRECTIF DOUBLE TUNNEL : le reveal Pro cherchait la conf sous le mauvais compte ; le pilotage direct n'entrait jamais dans le routeur** (incident MCV-1A63CB60 — première commande Pro de la production)
+
+### Problème (rapport propriétaire, 2026-10-20)
+- **Symptôme 1 — console /pro** : « Configuration indisponible — contactez
+  le support avec votre référence MCV-1A63CB60 » sur une commande POURTANT
+  provisionnée (payée 01:42, peer posé, conf de 498 octets PRÉSENTE en base
+  Postgres).
+- **Symptôme 2 — console /app/routers/r-36aa73c7585a** : « Tunnel non
+  joignable (10.8.0.6) — vérifiez : handshake côté VM, peer posé, Security
+  List UDP 51820 » — alors que le diagnostic `ops-wg status` montre le peer
+  cyber-s-c (10.8.0.6) en handshake ACTIF (18 s) avec trafic bidirectionnel.
+- **Diagnostic mené sur la production elle-même** : re-clone + workflows
+  lecture-seule (ops-wg status, ops-vm-diag : instance RUNNING, backend
+  ok:true, wg0 8 peers vivants) + interrogation DIRECTE de la base Supabase
+  (commande MCV-1A63CB60 kind=pro provisionnée, peer vp-c78064522eaa
+  10.8.2.2/32 state=active conf=498 o — sous le compte **acc-eb2849406cec**,
+  le compte gérant apparié) + lecture croisée du provisioning et des
+  chronologies (wg_applied_at 01:45 = le re-file wg_setup du provisioning Pro ;
+  première commande Pro de la prod = personne n'avait jamais emprunté ce
+  chemin).
+
+### Ce qui a changé
+- **CAUSE 1 (reveal) — un périmètre de compte figé à acc-main** : le
+  provisioning pose le peer d'une commande PRO sous le COMPTE GÉRANT apparié
+  par e-mail (provisionPublicVpnOrder branche pro, N°315 — l'isolation
+  multi-tenant exige que le peer vive avec les routeurs du compte), mais le
+  reveal N°314 — écrit quand SEUL le B2C existait — résolvait le peer sous
+  `AccountMainID` en dur : `FindVpnPeerScoped` rejetait donc le peer légitime
+  → 503 « conf_unavailable » sur une conf présente. CORRECTIF :
+  `tunnelOrderPeerAccountLocked` (miroir EXACT de la décision d'écriture du
+  provisioning : kind pro → compte apparié par e-mail, sinon acc-main — repli
+  conservateur inchangé pour le B2C) appliqué aux QUATRE chemins qui
+  résolvent le peer d'une commande : reveal console tunnel (y compris le
+  re-verrou du self-healing wg-mini, qui réutilisait aussi la constante),
+  recover self-service par e-mail (la récupération de conf d'un Pro était
+  tout aussi cassée), statut de commande (l'ipv4 manquait) et le marquage
+  error du peer au provisioning (il restait « pending » à vie). La défense
+  multi-tenant est INTACTE : la comparaison AccountID du peer reste LA
+  frontière — seule la valeur de référence (le compte qui POSSÈDE le peer)
+  change ; un peer migré sous un compte tiers continue de refuser honnêtement
+  (testé).
+- **CAUSE 2 (pilotage direct) — la promesse D-B1 sans dernier kilomètre** :
+  le pare-feu RouterOS par défaut (defconf « drop all not coming from LAN »)
+  jette TOUT l'input venant de mikcloud-wg — la sonde wg-test (dial
+  10.8.0.N:8728 puis 8291 à travers wg0) mourait en timeout sur un tunnel
+  parfaitement vivant, et la promesse « supervision du routeur via son IP
+  tunnel : Winbox 8291, API 8728, SSH 22, web » (décision D-B1 de N°315,
+  répétée par les guides N°341) restait INJOIGNABLE. CORRECTIF — le script
+  wg_setup pose désormais la règle marquée `mikcloud-wg-in`
+  (`chain=input action=accept in-interface=mikcloud-wg src-address-list=mikcloud-wg-src`)
+  : l'address-list porte la MÊME liste PAR COMPTE que l'allowed-address du
+  peer serveur (socle VM 10.8.0.1/32 + peers remote du compte — recalculée à
+  chaque re-file), l'isolation inter-comptes vit DÉJÀ dans le cryptokey
+  routing (un paquet déchiffré hors liste est jeté par WireGuard lui-même,
+  D-B2) : la liste côté pare-feu est la ceinture ET les bretelles. Ajout
+  RÉSILIENT (pattern shield N°159, leçon production 19/09 : place-before=0
+  en intention, repli sans ancre sur table vide post-boot — seul l'échec des
+  DEUX formes échoue le script). `wg_teardown` emporte règle + address-list
+  (démontage complet, aucun objet marqué ne survit).
+- **CONVERGENCE + CICATRICE** : le rapport wg_setup échoe `fw` (compte de
+  règles marquées, 1 attendu) — le résultat re-file automatiquement quand
+  fw=0 avec peers=1 (un routeur qui a exécuté un script ANTÉRIEUR : un échec
+  d'ajout aurait échoué le script entier, donc fw=0+ok = forcément ancien,
+  jamais une boucle) ; et `RunWgSetupHealOnce` (goroutine de démarrage)
+  re-file wg_setup à TOUS les routeurs tunnels actifs au boot — sans ce coup
+  de pouce, les 5 routeurs de la production ne recevraient jamais la règle
+  (rien ne re-file un wg_setup sans geste). Coût honnête : un restart backend
+  = un re-file par routeur actif, appliqué au check-in (≤ 45 s), blip tunnel
+  < 25 s, le socle agent (check-in HTTPS public) jamais sur ce chemin.
+- **Message du diagnostic wg-test** étendu (la cause la plus fréquente sur
+  tunnel vivant est désormais nommée : « règle mikcloud-wg-in sur le
+  routeur »).
+
+### Vérifications
+- gofmt 0 (sur les fichiers touchés — gofmt 1.25 local ne parse pas les
+  méthodes génériques Go 1.27 de handlers_ppp.go, faux positif isolé) ·
+  go vet 0 · go build OK · `go test ./...` **12/12 paquets** ;
+- nouveaux tests : `TestTunnelRevealProPeerScope` (régression MCV-1A63CB60 :
+  conf livrée sous le compte du gérant, self-healing re-sauvegardé sous le
+  BON compte, peer d'un compte tiers → 503 honnête), `TestBuildWgSetupFirewall`
+  (address-list par item, règle marquée, remove-then-add), shape étendus
+  (echo fw, ménage teardown), `TestWgSetupHealOnce` (re-file des éligibles
+  par compte, aucun doublon au rejeu, non-éligibles épargnés) ;
+- tests existants INTACTS (reveal B2C sous acc-main inchangé — la constante
+  reste la référence pour le kind sale).
+
+### Non-objectifs
+- Le cloisonnement inter-comptes du hairpin remote↔remote au niveau iptables
+  (toujours au dossier — hors périmètre : côté routeur, l'address-list par
+  compte ferme déjà l'input aux remote étrangers).
+- Le re-file wg_setup au terme d'une commande Pro (le sweep B2C retire le
+  peer mais ne rafraîchit pas la liste des routeurs : l'entrée résiduelle
+  est INERTE — le peer n'existe plus sur wg0 — l'hygiène D-B4 reste à faire).
+
 ## 2026-10-20 — N°342 — **L'ACCÈS INVITÉ : UN TIERS DANS VOTRE TUNNEL, POUR QUELQUES HEURES** (confs invité expirables à périmètre minimal — serveur de jeu avec des amis, démo web à un client)
 
 - **Contexte** : GO propriétaire « lance N°342 Accès Invité avec ta
