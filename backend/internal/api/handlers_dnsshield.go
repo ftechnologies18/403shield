@@ -16,6 +16,12 @@
 //  2. RÉSOLVEUR PUBLIQUE (hors /api/ — pattern registerAgentRoutes) :
 //     POST/GET /dns-query/{publicId}   DoH RFC 8484 (wire-format).
 //
+//     N°345 — l'onboarding appareils :
+//     GET /dns-cfg/{publicId}[/{proto}]  profil .mobileconfig Apple
+//     (doh par défaut, dot en variante)
+//     DoT :853 (dot_server.go) — Android « DNS privé » via SNI
+//     <publicId>.dns.403shield.ftci.fr.
+//
 //     L'identifiant de profil dans l'URL est le pattern NextDNS :
 //     l'appareil est configuré UNE fois avec
 //     https://<base>/dns-query/<publicId> — aucune auth par requête (le
@@ -82,11 +88,11 @@ func (a *API) handleDnsShieldMe(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	rows := []map[string]any{}
+	base := agentBaseURL(r) // N°345 — posé AVANT la boucle : chaque ligne porte SES clés d'installation (DoH, hôte DoT, profils Apple)
 	for _, p := range model.DnsProfilesOfEmail(db, client.Email) {
-		rows = append(rows, dnsProfileRow(p, ""))
+		rows = append(rows, dnsProfileRow(p, base))
 	}
 	a.store.Unlock()
-	base := agentBaseURL(r)
 	// N°343 — l'état RÉEL de l'agrégat de menaces (URLhaus/OpenPhish,
 	// balayage 6 h) : la console affiche le compte servi par le
 	// résolveur — 0 tant que le premier passage n'a pas réussi, JAMAIS
@@ -105,6 +111,18 @@ func (a *API) handleDnsShieldMe(w http.ResponseWriter, r *http.Request) {
 			"maxRules":    model.MaxDnsRulesPerList,
 		},
 		"setupUrlFormat": base + "/dns-query/{publicId}",
+		// N°345 — le bloc setup de l'onboarding appareils : les QUATRE clés
+		// d'installation (DoH navigateurs, hôte DoT Android, profils Apple
+		// doh/dot) + l'état RÉEL du serveur DoT (dotEnabled n'est posé que
+		// quand l'écoute est effective — doctrine « aucun faux chiffre »).
+		"setup": map[string]any{
+			"doh":        base + "/dns-query/{publicId}",
+			"dotHost":    "{publicId}." + dnsDotZone(),
+			"appleDoh":   base + "/dns-cfg/{publicId}",
+			"appleDot":   base + "/dns-cfg/{publicId}/dot",
+			"dotZone":    dnsDotZone(),
+			"dotEnabled": dotEnabled.Load(),
+		},
 	})
 }
 
@@ -124,6 +142,11 @@ func dnsProfileRow(p *model.DnsProfile, base string) map[string]any {
 	}
 	if base != "" {
 		row["setupUrl"] = base + "/dns-query/" + p.PublicID
+		// N°345 — les clés d'installation par appareil : hôte DoT Android,
+		// profil Apple doh (défaut) et dot (variante).
+		row["dotHostname"] = p.PublicID + "." + dnsDotZone()
+		row["appleDohUrl"] = base + "/dns-cfg/" + p.PublicID
+		row["appleDotUrl"] = base + "/dns-cfg/" + p.PublicID + "/dot"
 	}
 	return row
 }
@@ -439,6 +462,10 @@ var (
 func (a *API) registerDnsShieldRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("POST /dns-query/{publicId}", a.handleDnsQuery)
 	mux.HandleFunc("GET /dns-query/{publicId}", a.handleDnsQuery)
+	// N°345 — profils .mobileconfig Apple (public : le publicId est
+	// l'acheminement, miroir du résolveur ; 404 uniforme anti-énumération).
+	mux.HandleFunc("GET /dns-cfg/{publicId}", a.handleDnsAppleConfig)
+	mux.HandleFunc("GET /dns-cfg/{publicId}/{proto}", a.handleDnsAppleConfig)
 }
 
 // handleDnsQuery — LE résolveur : RFC 8484 (GET ?dns=base64url sans

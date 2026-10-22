@@ -1101,3 +1101,14 @@ html:has(.mkpro-page) {
   background-clip: text;
   color: transparent;
 }
+
+/* ─── N°345 — page /dns (bouclier DNS) : même monde clair console que /pro
+   (miroir du bloc mkpro ci-dessus — la classe aurora est réutilisée). ─── */
+.mkdns-page {
+  color-scheme: light;
+}
+
+html:has(.mkdns-page) {
+  background: #f5f6f8;
+  color-scheme: light;
+}

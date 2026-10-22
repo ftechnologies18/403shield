@@ -51,7 +51,7 @@ async function readError(res: Response): Promise<ApiError> {
 /** apiFetch — POST JSON public (auth par code) ou GET authentifié (Bearer). */
 export async function apiFetch<T>(
   path: string,
-  opts: { method?: "GET" | "POST"; body?: unknown; token?: string | null } = {}
+  opts: { method?: "GET" | "POST" | "PUT" | "DELETE"; body?: unknown; token?: string | null } = {}
 ): Promise<T> {
   const headers: Record<string, string> = { "Content-Type": "application/json" };
   if (opts.token) headers.Authorization = `Bearer ${opts.token}`;
@@ -445,5 +445,122 @@ export async function recoverPublicVpnConf(
     method: "POST",
     body: { email, ref },
   });
+}
+
+// ---------------------------------------------------------------------------
+// Types du bouclier DNS (contrat handlers_dnsshield.go — N°339/343/345)
+// ---------------------------------------------------------------------------
+
+/** N°339 — couvre-feu d'un profil (spec FamilyGuard N°82 réutilisée telle
+ * quelle côté backend ; jours = 7 bits "1111110" lundi→dimanche). */
+export interface DnsCurfew {
+  enabled: boolean;
+  start?: string;
+  end?: string;
+  days?: string;
+}
+
+/** N°339/345 — ligne profil telle que servie par /api/dnsshield/me : les
+ * clés d'installation (setupUrl DoH, dotHostname Android, appleDoh/DotUrl)
+ * sont posées par le backend depuis l'URL de la requête. */
+export interface DnsProfile {
+  id: string;
+  publicId: string;
+  name: string;
+  level: "off" | "threats" | "family";
+  blockRules: string;
+  allowRules: string;
+  curfew: DnsCurfew;
+  status: string;
+  createdAt: string;
+  updatedAt: string;
+  setupUrl?: string;
+  dotHostname?: string;
+  appleDohUrl?: string;
+  appleDotUrl?: string;
+}
+
+/** N°345 — bloc setup de /me : les formats d'installation ({publicId} à
+ * remplacer) + l'état RÉEL du serveur DoT (dotEnabled n'est vrai que si
+ * l'écoute :853 est effective — doctrine « aucun faux chiffre »). */
+export interface DnsSetup {
+  doh: string;
+  dotHost: string;
+  appleDoh: string;
+  appleDot: string;
+  dotZone: string;
+  dotEnabled: boolean;
+}
+
+export interface DnsMeResponse {
+  email: string;
+  profiles: DnsProfile[];
+  threats: { domains: number; updatedAt: string };
+  limits: { maxProfiles: number; maxRules: number };
+  setupUrlFormat: string;
+  setup: DnsSetup;
+}
+
+export interface DnsEventsResponse {
+  events: { domain: string; action: string; at: string }[];
+}
+
+/** Corps de création/mise à jour d'un profil (PUT = remplacement des champs
+ * optionnels — miroir du contrat backend N°339). */
+export interface DnsProfilePayload {
+  name: string;
+  level: "off" | "threats" | "family";
+  blockRules?: string;
+  allowRules?: string;
+  curfew?: { enabled: boolean; start?: string; end?: string; days?: string } | null;
+}
+
+/** N°339 — profils + agrégat de menaces + bornes du compte. */
+export async function dnsMe(token: string): Promise<DnsMeResponse> {
+  return apiFetch<DnsMeResponse>("/api/dnsshield/me", { token });
+}
+
+export async function dnsProfileCreate(
+  token: string,
+  payload: DnsProfilePayload,
+): Promise<DnsProfile> {
+  return apiFetch<DnsProfile>("/api/dnsshield/profiles", {
+    method: "POST",
+    token,
+    body: payload,
+  });
+}
+
+export async function dnsProfileUpdate(
+  token: string,
+  id: string,
+  payload: DnsProfilePayload,
+): Promise<DnsProfile> {
+  return apiFetch<DnsProfile>(`/api/dnsshield/profiles/${encodeURIComponent(id)}`, {
+    method: "PUT",
+    token,
+    body: payload,
+  });
+}
+
+export async function dnsProfileDelete(
+  token: string,
+  id: string,
+): Promise<{ deleted: boolean }> {
+  return apiFetch<{ deleted: boolean }>(`/api/dnsshield/profiles/${encodeURIComponent(id)}`, {
+    method: "DELETE",
+    token,
+  });
+}
+
+/** N°339 — les 100 derniers blocages du profil (rapport d'activité). */
+export async function dnsProfileEvents(
+  token: string,
+  id: string,
+): Promise<DnsEventsResponse> {
+  return apiFetch<DnsEventsResponse>(
+    `/api/dnsshield/profiles/${encodeURIComponent(id)}/events`,
+    { token },
+  );
 }
 

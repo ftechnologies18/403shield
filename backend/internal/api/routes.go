@@ -57,6 +57,7 @@ type API struct {
 	tunnelVerify *signupLimiter
 	tunnelAction *signupLimiter // N°314 — reveal conf + renouvellement (routes authentifiées console)
 	dnsQuery     *signupLimiter // N°339 — résolveur DoH public (routes /dns-query/{publicId})
+	dotQuery     *signupLimiter // N°345 — résolveur DoT :853 (par IP, miroir des bornes DoH)
 	tunnelCodes  map[string]*tunnelCodeEntry
 	tunnelMu     sync.Mutex
 	vitals       *telemetry.Collector // B2 — Core Web Vitals (nil = collecte désactivée)
@@ -165,7 +166,7 @@ func New(s *store.Store, jwtSecret string) *API {
 	// groupe serial rejoue l'inscription déjà passée — cf. signup_abuse.go.
 	// Les autres limiteurs S3 (join, reset) gardent les constantes : aucune
 	// suite E2E ne les traverse.
-	return &API{store: s, secret: jwtSecret, gws: map[string]routeros.Gateway{}, pinLock: newPinLimiter(), signup: signupLimiterFromEnv(os.Getenv), join: newSignupLimiter(), wifiClaim: newSignupLimiterLimits(20, 100), portalTrack: newSignupLimiterLimits(300, 3000), reset: newSignupLimiter(), chat: newSignupLimiterLimits(30, 400), vpnOrder: newSignupLimiterLimits(10, 40), vpnStatus: newSignupLimiterLimits(120, 3000), vpnRecover: newSignupLimiterLimits(5, 20), tunnelCode: newSignupLimiterLimits(6, 30), tunnelVerify: newSignupLimiterLimits(12, 120), tunnelAction: newSignupLimiterLimits(8, 40), dnsQuery: newSignupLimiterLimits(240, 6000), tunnelCodes: map[string]*tunnelCodeEntry{}, egress: newEgressStats(), readStateDone: map[string]time.Time{}, readAcc: map[string]*readStateAccum{}, readStateChunks: map[string]int{}, readStateFreshAt: map[string]time.Time{}, readStateFreshPending: map[string]bool{}, devicesDone: map[string]time.Time{}, attn: map[string]time.Time{}, watcherFailN: map[string]int{}, watcherFailAt: map[string]time.Time{}, tgPairings: map[string]telegramPairing{}, tgAccountCode: map[string]string{}}
+	return &API{store: s, secret: jwtSecret, gws: map[string]routeros.Gateway{}, pinLock: newPinLimiter(), signup: signupLimiterFromEnv(os.Getenv), join: newSignupLimiter(), wifiClaim: newSignupLimiterLimits(20, 100), portalTrack: newSignupLimiterLimits(300, 3000), reset: newSignupLimiter(), chat: newSignupLimiterLimits(30, 400), vpnOrder: newSignupLimiterLimits(10, 40), vpnStatus: newSignupLimiterLimits(120, 3000), vpnRecover: newSignupLimiterLimits(5, 20), tunnelCode: newSignupLimiterLimits(6, 30), tunnelVerify: newSignupLimiterLimits(12, 120), tunnelAction: newSignupLimiterLimits(8, 40), dnsQuery: newSignupLimiterLimits(240, 6000), dotQuery: newSignupLimiterLimits(240, 6000), tunnelCodes: map[string]*tunnelCodeEntry{}, egress: newEgressStats(), readStateDone: map[string]time.Time{}, readAcc: map[string]*readStateAccum{}, readStateChunks: map[string]int{}, readStateFreshAt: map[string]time.Time{}, readStateFreshPending: map[string]bool{}, devicesDone: map[string]time.Time{}, attn: map[string]time.Time{}, watcherFailN: map[string]int{}, watcherFailAt: map[string]time.Time{}, tgPairings: map[string]telegramPairing{}, tgAccountCode: map[string]string{}}
 }
 
 // Handler — mux complet, protégé par le middleware d'authentification.

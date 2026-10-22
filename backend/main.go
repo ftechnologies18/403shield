@@ -152,6 +152,13 @@ func main() {
 	// un flux injoignable ne vide jamais l'agrégat précédent. Aucune écriture
 	// store (état rebuildable, jamais persisté).
 	go engine.RunDnsThreatsSweepForever()
+	// N°345 — serveur DoT :853 (RFC 7858) : l'onboarding ANDROID « DNS
+	// privé » (un nom d'hôte, jamais une URL) — routage SNI par profil
+	// (<publicId>.dns.403shield.ftci.fr, certificat joker). Absence de
+	// certificats ou port injoignable → désactivation FRANCHEMENT journalisée
+	// (le DoH reste seul canal, le backend démarre toujours — doctrine
+	// fail-open au boot). Provisionnés par le geste ops-dns-dot.yml.
+	go engine.ServeDoT()
 	// N°344 — cicatrice « Tunnel non joignable » : re-file wg_setup aux
 	// routeurs tunnels actifs au démarrage (règle pare-feu mikcloud-wg-in du
 	// pilotage direct — les routeurs configurés avant N°344 ne la posent
