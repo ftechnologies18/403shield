@@ -8,9 +8,10 @@ name: ops-dns-dot
 # pas poser lui-même, dans l'ordre exact de la chaîne réseau :
 #
 #   provision (confirm=EXECUTER, idempotent) :
-#     1. DNS Cloudflare  : A *.dns.403shield.ftci.fr → IP VM (DNS-only —
-#                          le port 853 N'est PAS proxifiable par Cloudflare,
-#                          Android connecte la VM EN DIRECT) ;
+#     1. DNS Cloudflare  : A dns.403shield.ftci.fr (sonde publique) ET
+#                          A *.dns.403shield.ftci.fr (les profils) → IP VM
+#                          en DNS-only (le port 853 N'est PAS proxifiable par
+#                          Cloudflare, Android connecte la VM EN DIRECT) ;
 #     2. Security List(s) + NSGs : ingress TCP/853 src 0.0.0.0/0 (miroir
 #                          exact du geste UDP/51820 de ops-oci-gestures N°295) ;
 #     3. iptables VM     : INPUT tcp/853 ACCEPT + persistance (le piège
@@ -188,29 +189,36 @@ jobs:
           PUB="${{ steps.disc.outputs.pub_addr }}"
           CF_ZONE="$(curl -fsS -H "Authorization: Bearer $CF_TOKEN" "https://api.cloudflare.com/client/v4/zones?name=ftci.fr" | jq -r '.result[0].id')"
           [ -n "$CF_ZONE" ] && [ "$CF_ZONE" != "null" ] || { echo "✗ zone ftci.fr introuvable"; exit 1; }
-          EXISTING="$(curl -fsS -H "Authorization: Bearer $CF_TOKEN" \
-            "https://api.cloudflare.com/client/v4/zones/$CF_ZONE/dns_records?name=*.dns.403shield.ftci.fr" \
-            | jq -r '.result[0]')"
-          if [ "$EXISTING" != "null" ] && [ -n "$EXISTING" ]; then
-            RID="$(echo "$EXISTING" | jq -r '.id')"
-            RCUR="$(echo "$EXISTING" | jq -r '.content')"
-            RPROX="$(echo "$EXISTING" | jq -r '.proxied')"
-            if [ "$RCUR" = "$PUB" ] && [ "$RPROX" = "false" ]; then
-              echo "✓ *.dns.403shield.ftci.fr → $PUB (DNS-only) déjà en place"
+          # DEUX enregistrements (piège de la 3e exécution : le joker
+          # *.dns.403shield.ftci.fr couvre <id>.dns… mais PAS l'hôte nu —
+          # or la SONDE publique de santé parle à l'hôte nu) :
+          #   *.dns.403shield.ftci.fr → les profils Android/Apple DoT
+          #    dns.403shield.ftci.fr → la sonde (REFUSED) + monitoring
+          for NAME in 'dns.403shield.ftci.fr' '*.dns.403shield.ftci.fr'; do
+            EXISTING="$(curl -fsS -H "Authorization: Bearer $CF_TOKEN" \
+              "https://api.cloudflare.com/client/v4/zones/$CF_ZONE/dns_records?name=$NAME" \
+              | jq -r '.result[0]')"
+            if [ "$EXISTING" != "null" ] && [ -n "$EXISTING" ]; then
+              RID="$(echo "$EXISTING" | jq -r '.id')"
+              RCUR="$(echo "$EXISTING" | jq -r '.content')"
+              RPROX="$(echo "$EXISTING" | jq -r '.proxied')"
+              if [ "$RCUR" = "$PUB" ] && [ "$RPROX" = "false" ]; then
+                echo "✓ $NAME → $PUB (DNS-only) déjà en place"
+              else
+                echo "→ mise à jour $NAME vers $PUB (ancien : $RCUR, proxied=$RPROX)"
+                curl -fsS -X PUT -H "Authorization: Bearer $CF_TOKEN" -H "Content-Type: application/json" \
+                  "https://api.cloudflare.com/client/v4/zones/$CF_ZONE/dns_records/$RID" \
+                  -d "{\"type\":\"A\",\"name\":\"$NAME\",\"content\":\"$PUB\",\"proxied\":false,\"ttl\":300}" \
+                  | jq -r '.success'
+              fi
             else
-              echo "→ mise à jour vers $PUB (ancien : $RCUR, proxied=$RPROX)"
-              curl -fsS -X PUT -H "Authorization: Bearer $CF_TOKEN" -H "Content-Type: application/json" \
-                "https://api.cloudflare.com/client/v4/zones/$CF_ZONE/dns_records/$RID" \
-                -d "{\"type\":\"A\",\"name\":\"*.dns.403shield.ftci.fr\",\"content\":\"$PUB\",\"proxied\":false,\"ttl\":300}" \
+              echo "→ création A $NAME → $PUB (DNS-only — le 853 n'est pas proxifiable, Android connecte la VM en direct)"
+              curl -fsS -X POST -H "Authorization: Bearer $CF_TOKEN" -H "Content-Type: application/json" \
+                "https://api.cloudflare.com/client/v4/zones/$CF_ZONE/dns_records" \
+                -d "{\"type\":\"A\",\"name\":\"$NAME\",\"content\":\"$PUB\",\"proxied\":false,\"ttl\":300}" \
                 | jq -r '.success'
             fi
-          else
-            echo "→ création A *.dns.403shield.ftci.fr → $PUB (DNS-only — le 853 n'est pas proxifiable, Android connecte la VM en direct)"
-            curl -fsS -X POST -H "Authorization: Bearer $CF_TOKEN" -H "Content-Type: application/json" \
-              "https://api.cloudflare.com/client/v4/zones/$CF_ZONE/dns_records" \
-              -d "{\"type\":\"A\",\"name\":\"*.dns.403shield.ftci.fr\",\"content\":\"$PUB\",\"proxied\":false,\"ttl\":300}" \
-              | jq -r '.success'
-          fi
+          done
 
       # ───────────────── ÉTAPE 2 — Security Lists + NSGs ──────────────────
       - name: "Provision 2/6 — Security Lists + NSGs : ingress TCP/853 (idempotent)"
