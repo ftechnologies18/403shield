@@ -21,7 +21,7 @@ name: ops-dns-dot
 #                          renouvellements — la VM est déjà le coffre des
 #                          secrets, cf. /etc/mikcloud/mikcloud.env) ; SANs =
 #                          *.dns.403shield.ftci.fr + hôte nu ; install dans
-#                          /etc/mikcloud/dns-tls/ (root:mikcloud 640) avec
+#                          /var/lib/mikcloud/dns-tls/ (root:mikcloud 640) avec
 #                          reloadcmd de re-permissage (renouvellement ~60 j,
 #                          le backend re-stat les mtodes et recharge À CHAUD) ;
 #     5. Unité systemd   : drop-in AmbientCapabilities=CAP_NET_BIND_SERVICE
@@ -170,7 +170,7 @@ jobs:
           ssh $SSHO "$DEPLOY_USER@$ORACLE_HOST" bash -s <<'REMOTE'
           set -uo pipefail
           echo "iptables tcp/853 : $(sudo iptables -C INPUT -p tcp --dport 853 -j ACCEPT 2>/dev/null && echo PRÉSENTE || echo absente)"
-          echo "certificat : $(sudo ls -la /etc/mikcloud/dns-tls/ 2>/dev/null || echo 'absent (/etc/mikcloud/dns-tls)')"
+          echo "certificat : $(sudo ls -la /var/lib/mikcloud/dns-tls/ 2>/dev/null || echo 'absent (/var/lib/mikcloud/dns-tls)')"
           echo "acme.sh : $(sudo ls -d /root/.acme.sh 2>/dev/null || echo 'non installé')"
           echo "drop-in : $(sudo cat /etc/systemd/system/mikcloud.service.d/10-dns-dot.conf 2>/dev/null || echo 'absent')"
           echo "env DoT : $(sudo grep -cE '^(DNS_DOT_ADDR|DNS_TLS_CERTFILE|DNS_TLS_KEYFILE)=' /etc/mikcloud/mikcloud.env 2>/dev/null || echo 0)/3 variables"
@@ -282,19 +282,25 @@ jobs:
             echo "✓ acme.sh déjà installé"
           fi
           set -a; . /tmp/cf.env; set +a
+          # idempotent : sans --force, acme.sh SAUTE l'émission si le cert
+          # est encore valide (première exécution = émission, reprises = skip)
+          # — pipefail (set -euo pipefail) fait remonter un échec réel.
           /root/.acme.sh/acme.sh --issue --dns dns_cf \
             -d "$ZONE_D" -d "*.$ZONE_D" \
-            --server letsencrypt --keylength ec-256 --force 2>&1 | tail -5 \
-            || /root/.acme.sh/acme.sh --issue --dns dns_cf -d "$ZONE_D" -d "*.$ZONE_D" --server letsencrypt --keylength ec-256 2>&1 | tail -5
+            --server letsencrypt --keylength ec-256 2>&1 | tail -6
           rm -f /tmp/cf.env
-          install -d -o root -g mikcloud -m 750 /etc/mikcloud/dns-tls
+          # cicatrice 1re exécution : /etc/mikcloud/dns-tls était illisible
+          # pour le service (EACCES) — le StateDirectory est le contrat systemd
+          # de lisibilité ; l'ancien emplacement est purgé.
+          rm -rf /etc/mikcloud/dns-tls
+          install -d -o root -g mikcloud -m 750 /var/lib/mikcloud/dns-tls
           /root/.acme.sh/acme.sh --install-cert -d "$ZONE_D" --ecc \
-            --fullchain-file /etc/mikcloud/dns-tls/fullchain.pem \
-            --key-file /etc/mikcloud/dns-tls/privkey.pem \
-            --reloadcmd "chown root:mikcloud /etc/mikcloud/dns-tls/fullchain.pem /etc/mikcloud/dns-tls/privkey.pem && chmod 640 /etc/mikcloud/dns-tls/fullchain.pem /etc/mikcloud/dns-tls/privkey.pem"
-          openssl x509 -in /etc/mikcloud/dns-tls/fullchain.pem -noout -ext subjectAltName | grep -q "\*.$ZONE_D" \
+            --fullchain-file /var/lib/mikcloud/dns-tls/fullchain.pem \
+            --key-file /var/lib/mikcloud/dns-tls/privkey.pem \
+            --reloadcmd "chown root:mikcloud /var/lib/mikcloud/dns-tls/fullchain.pem /var/lib/mikcloud/dns-tls/privkey.pem && chmod 640 /var/lib/mikcloud/dns-tls/fullchain.pem /var/lib/mikcloud/dns-tls/privkey.pem"
+          openssl x509 -in /var/lib/mikcloud/dns-tls/fullchain.pem -noout -ext subjectAltName | grep -q "\*.$ZONE_D" \
             || { echo "✗ le SAN joker est absent du certificat"; exit 1; }
-          echo "✓ certificat joker installé (/etc/mikcloud/dns-tls, root:mikcloud 640) — renouvellement ~60 j, le backend recharge à chaud sur mtime"
+          echo "✓ certificat joker installé (/var/lib/mikcloud/dns-tls, root:mikcloud 640) — renouvellement ~60 j, le backend recharge à chaud sur mtime"
 
           echo "── 5/6 drop-in systemd AmbientCapabilities (port <1024 sous mikcloud) ──"
           install -d -m 755 /etc/systemd/system/mikcloud.service.d
@@ -309,7 +315,7 @@ jobs:
           echo "✓ drop-in posé"
 
           echo "── 6/6 variables d'env + redémarrage ──"
-          for kv in "DNS_DOT_ADDR=:853" "DNS_TLS_CERTFILE=/etc/mikcloud/dns-tls/fullchain.pem" "DNS_TLS_KEYFILE=/etc/mikcloud/dns-tls/privkey.pem"; do
+          for kv in "DNS_DOT_ADDR=:853" "DNS_TLS_CERTFILE=/var/lib/mikcloud/dns-tls/fullchain.pem" "DNS_TLS_KEYFILE=/var/lib/mikcloud/dns-tls/privkey.pem"; do
             k="${kv%%=*}"
             sed -i "/^${k}=/d" /etc/mikcloud/mikcloud.env
             printf '%s\n' "$kv" >> /etc/mikcloud/mikcloud.env
