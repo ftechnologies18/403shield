@@ -1,0 +1,382 @@
+name: ops-dns-dot
+
+# ═══ N°345 — LE GESTE D'ACTIVATION DoT DU BOUCLIER DNS (DNS-over-TLS :853) ═══
+#
+# Contexte : le backend N°345 embarque le serveur DoT (RFC 7858) avec routage
+# SNI par profil — <publicId>.dns.403shield.ftci.fr (dot_server.go). Le code
+# est livré par deploy-oracle ; ce workflow pose TOUT ce que le code ne peut
+# pas poser lui-même, dans l'ordre exact de la chaîne réseau :
+#
+#   provision (confirm=EXECUTER, idempotent) :
+#     1. DNS Cloudflare  : A *.dns.403shield.ftci.fr → IP VM (DNS-only —
+#                          le port 853 N'est PAS proxifiable par Cloudflare,
+#                          Android connecte la VM EN DIRECT) ;
+#     2. Security List(s) + NSGs : ingress TCP/853 src 0.0.0.0/0 (miroir
+#                          exact du geste UDP/51820 de ops-oci-gestures N°295) ;
+#     3. iptables VM     : INPUT tcp/853 ACCEPT + persistance (le piège
+#                          Ubuntu-Oracle : le REJECT final des règles OCI) ;
+#     4. Certificat JOKER: acme.sh sur la VM, défi DNS-01 Cloudflare (le
+#                          token transite par un fichier 600 scpé puis servi,
+#                          acme.sh le conserve dans /root/.acme.sh pour les
+#                          renouvellements — la VM est déjà le coffre des
+#                          secrets, cf. /etc/mikcloud/mikcloud.env) ; SANs =
+#                          *.dns.403shield.ftci.fr + hôte nu ; install dans
+#                          /etc/mikcloud/dns-tls/ (root:mikcloud 640) avec
+#                          reloadcmd de re-permissage (renouvellement ~60 j,
+#                          le backend re-stat les mtodes et recharge À CHAUD) ;
+#     5. Unité systemd   : drop-in AmbientCapabilities=CAP_NET_BIND_SERVICE
+#                          (l'écoute <1024 sous User=mikcloud — le fichier
+#                          d'unité de base du repo reste INTACT, le drop-in
+#                          est additif et idempotent) ;
+#     6. Environnement   : DNS_DOT_ADDR/DNS_TLS_CERTFILE/DNS_TLS_KEYFILE
+#                          posés dans /etc/mikcloud/mikcloud.env (idempotents,
+#                          préservés par deploy-oracle N°345) + daemon-reload ;
+#     7. Redémarrage     : systemctl restart mikcloud + healthcheck patient
+#                          (le Load des ~37 tables prend ~1 min) + preuve
+#                          locale (ligne de log « N°345 DoT : en écoute » +
+#                          ss :853) ;
+#     8. PREUVE RÉELLE DEPUIS LE RUNNER : requête DoT complète sur
+#        dns.403shield.ftci.fr:853 — certificat PUBLIC validé (chaîne Let's
+#        Encrypt + nom d'hôte), SAN joker présent, réponse REFUSED de la
+#        sonde hôte nu (le serveur répond SANS filtrer : le routage par
+#        profil est prouvé par les tests du dépôt, la prod prouve la chaîne).
+#
+#   preflight (DÉFAUT, lecture seule) : enregistrement CF, règles SL/NSG/iptables,
+#     état du certificat, drop-in, variables d'env, écoutes VM.
+#   verify — rejoue la preuve réseau du runner (utile après coup).
+#
+# Sécurité : mutation derrière confirm=EXECUTER ; heredoc 'REMOTE' (piège n°18) ;
+# secrets jamais échoés ; UpdateSecurityList relit-compte-avant-PUT (jamais de
+# jeu vide) ; déclenchement workflow_dispatch UNIQUEMENT.
+#
+# NOTE transport docker : le drop-in systemd ne vaut que pour le transport
+# systemd (actif). Si la VM revenait au transport docker (deploy-oracle N°281),
+# le conteneur exigera --cap-add=NET_BIND_SERVICE pour lier :853 — documenté
+# ici pour l'exploitant, le geste reste systemd-first.
+
+on:
+  workflow_dispatch:
+    inputs:
+      gesture:
+        description: "Geste : preflight (lecture seule) | provision | verify"
+        type: choice
+        default: "preflight"
+        options:
+          - preflight
+          - provision
+          - verify
+      confirm:
+        description: "Taper EXECUTER pour autoriser provision (les autres gestes n'en ont pas besoin)"
+        type: string
+        default: ""
+
+permissions: {}
+
+concurrency:
+  group: ops-dns-dot
+  cancel-in-progress: false
+
+jobs:
+  gesture:
+    name: DNS DoT — ${{ inputs.gesture }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      OCI_USER: ${{ secrets.OCI_CLI_USER }}
+      OCI_TENANCY: ${{ secrets.OCI_CLI_TENANCY }}
+      OCI_FINGERPRINT: ${{ secrets.OCI_CLI_FINGERPRINT }}
+      OCI_REGION: ${{ secrets.OCI_CLI_REGION }}
+      OCI_KEY: ${{ secrets.OCI_API_KEY }}
+      CF_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      ORACLE_HOST: ${{ secrets.ORACLE_HOST }}
+      DEPLOY_USER: ${{ secrets.ORACLE_USER }}
+      SSH_KEY: ${{ secrets.ORACLE_SSH_KEY }}
+      DNS_ZONE_NAME: "dns.403shield.ftci.fr"
+    steps:
+      - name: Garde — confirmation pour le geste mutatif
+        run: |
+          if [ "${{ inputs.gesture }}" = "provision" ] && [ "${{ inputs.confirm }}" != "EXECUTER" ]; then
+            echo "✗ geste mutatif : relancer avec confirm=EXECUTER (mesure anti-clic accidentel)"
+            exit 1
+          fi
+          echo "garde OK : ${{ inputs.gesture }}"
+
+      - name: OCI CLI + profil (clé API du coffre GitHub)
+        run: |
+          python3 -m pip install --quiet oci-cli \
+            || python3 -m pip install --quiet --break-system-packages oci-cli
+          mkdir -p ~/.oci
+          {
+            echo "[DEFAULT]"
+            echo "user=$OCI_USER"
+            echo "fingerprint=$OCI_FINGERPRINT"
+            echo "tenancy=$OCI_TENANCY"
+            echo "region=$OCI_REGION"
+            echo "key_file=$HOME/.oci/oci_api_key.pem"
+          } > ~/.oci/config
+          printf '%s\n' "$OCI_KEY" > ~/.oci/oci_api_key.pem
+          chmod 600 ~/.oci/config ~/.oci/oci_api_key.pem
+          oci iam region-subscription list --query 'length(data)' --raw-output >/dev/null
+          echo "auth OCI OK (région $OCI_REGION)"
+
+      - name: Découverte — instance, VNIC, subnet, SL, NSG, IP publique
+        id: disc
+        run: |
+          set -euo pipefail
+          TEN="$OCI_TENANCY"
+          INST_ID="$(oci compute instance list --compartment-id "$TEN" --all \
+            --query "data[?\"display-name\"=='Ftechci' && \"lifecycle-state\"!='TERMINATED'].id | [0]" --raw-output 2>/dev/null || true)"
+          if [ -z "$INST_ID" ] || [ "$INST_ID" = "null" ]; then
+            INST_ID="$(oci compute instance list --compartment-id "$TEN" --all \
+              --query "data[?\"lifecycle-state\"=='RUNNING' && shape=='VM.Standard.A1.Flex'].id | [0]" --raw-output)"
+          fi
+          [ -n "$INST_ID" ] && [ "$INST_ID" != "null" ] || { echo "✗ aucune instance cible"; exit 1; }
+          VNIC_ID="$(oci compute instance list-vnics --instance-id "$INST_ID" --query 'data[0]."id"' --raw-output)"
+          PUB_ADDR="$(oci compute instance list-vnics --instance-id "$INST_ID" --query 'data[0]."public-ip"' --raw-output)"
+          [ -n "$PUB_ADDR" ] && [ "$PUB_ADDR" != "null" ] || { echo "✗ pas d'IP publique"; exit 1; }
+          SUBNET_ID="$(oci network vnic get --vnic-id "$VNIC_ID" --query 'data."subnet-id"' --raw-output)"
+          NSG_IDS="$(oci network vnic get --vnic-id "$VNIC_ID" --query 'data."nsg-ids"' --raw-output)"
+          SL_IDS="$(oci network subnet get --subnet-id "$SUBNET_ID" --query 'data."security-list-ids"' --raw-output)"
+          echo "Cible : $INST_ID — IP publique $PUB_ADDR"
+          echo "pub_addr=$PUB_ADDR" >> "$GITHUB_OUTPUT"
+          echo "subnet_id=$SUBNET_ID" >> "$GITHUB_OUTPUT"
+          echo "vnic_id=$VNIC_ID" >> "$GITHUB_OUTPUT"
+          echo "sl_ids=$(echo "$SL_IDS" | jq -c .)" >> "$GITHUB_OUTPUT"
+          echo "nsg_ids=$NSG_IDS" >> "$GITHUB_OUTPUT"
+
+      - name: Preflight — lecture seule intégrale (CF, SL, VM)
+        if: inputs.gesture == 'preflight'
+        run: |
+          set -euo pipefail
+          echo "═══ 1. Enregistrement DNS Cloudflare (*.dns.403shield.ftci.fr) ═══"
+          CF_ZONE="$(curl -fsS -H "Authorization: Bearer $CF_TOKEN" "https://api.cloudflare.com/client/v4/zones?name=ftci.fr" | jq -r '.result[0].id')"
+          [ -n "$CF_ZONE" ] && [ "$CF_ZONE" != "null" ] || { echo "✗ zone ftci.fr introuvable avec ce token"; exit 1; }
+          echo "zone ftci.fr : $CF_ZONE"
+          curl -fsS -H "Authorization: Bearer $CF_TOKEN" \
+            "https://api.cloudflare.com/client/v4/zones/$CF_ZONE/dns_records?name=*.dns.403shield.ftci.fr" \
+            | jq -r '.result[] | {type, name, content, proxied, ttl}'
+          echo
+          echo "═══ 2. Security Lists — règles TCP/853 présentes ? ═══"
+          for SL in $(echo '${{ steps.disc.outputs.sl_ids }}' | jq -r '.[]'); do
+            N="$(oci network security-list get --security-list-id "$SL" --query 'data."ingress-security-rules"' --output json \
+              | jq '[.[] | select((.protocol=="6") and ((.source//"")=="0.0.0.0/0") and (((.["tcp-options"]["destination-port-range"]["min"]) // 0) <= 853 and (((.["tcp-options"]["destination-port-range"]["max"]) // 65535)) >= 853))] | length')"
+            echo "$SL : $N règle(s) TCP/853"
+          done
+          echo
+          echo "═══ 3. VM — iptables, certificat, drop-in, env, écoutes ═══"
+          install -m 600 /dev/null /tmp/k
+          printf '%s\n' "$SSH_KEY" > /tmp/k
+          SSHO="-i /tmp/k -o StrictHostKeyChecking=accept-new -o ConnectTimeout=20"
+          ssh $SSHO "$DEPLOY_USER@$ORACLE_HOST" bash -s <<'REMOTE'
+          set -uo pipefail
+          echo "iptables tcp/853 : $(sudo iptables -C INPUT -p tcp --dport 853 -j ACCEPT 2>/dev/null && echo PRÉSENTE || echo absente)"
+          echo "certificat : $(sudo ls -la /etc/mikcloud/dns-tls/ 2>/dev/null || echo 'absent (/etc/mikcloud/dns-tls)')"
+          echo "acme.sh : $(sudo ls -d /root/.acme.sh 2>/dev/null || echo 'non installé')"
+          echo "drop-in : $(sudo cat /etc/systemd/system/mikcloud.service.d/10-dns-dot.conf 2>/dev/null || echo 'absent')"
+          echo "env DoT : $(sudo grep -cE '^(DNS_DOT_ADDR|DNS_TLS_CERTFILE|DNS_TLS_KEYFILE)=' /etc/mikcloud/mikcloud.env 2>/dev/null || echo 0)/3 variables"
+          echo "écoutes : $(sudo ss -tlnp | grep -E ':(853|4000)\b' | awk '{print $4}' | sort -u | tr '\n' ' ')"
+          echo "log DoT : $(sudo journalctl -u mikcloud -n 50 --no-pager 2>/dev/null | grep -oE 'N°345 DoT : .*' | tail -1 || echo 'aucune ligne')"
+          REMOTE
+          rm -f /tmp/k
+          echo "preflight terminé"
+
+      # ───────────────────── ÉTAPE 1 — DNS Cloudflare ─────────────────────
+      - name: "Provision 1/6 — DNS : A *.dns.403shield.ftci.fr → VM (DNS-only)"
+        if: inputs.gesture == 'provision'
+        run: |
+          set -euo pipefail
+          PUB="${{ steps.disc.outputs.pub_addr }}"
+          CF_ZONE="$(curl -fsS -H "Authorization: Bearer $CF_TOKEN" "https://api.cloudflare.com/client/v4/zones?name=ftci.fr" | jq -r '.result[0].id')"
+          [ -n "$CF_ZONE" ] && [ "$CF_ZONE" != "null" ] || { echo "✗ zone ftci.fr introuvable"; exit 1; }
+          EXISTING="$(curl -fsS -H "Authorization: Bearer $CF_TOKEN" \
+            "https://api.cloudflare.com/client/v4/zones/$CF_ZONE/dns_records?name=*.dns.403shield.ftci.fr" \
+            | jq -r '.result[0]')"
+          if [ "$EXISTING" != "null" ] && [ -n "$EXISTING" ]; then
+            RID="$(echo "$EXISTING" | jq -r '.id')"
+            RCUR="$(echo "$EXISTING" | jq -r '.content')"
+            RPROX="$(echo "$EXISTING" | jq -r '.proxied')"
+            if [ "$RCUR" = "$PUB" ] && [ "$RPROX" = "false" ]; then
+              echo "✓ *.dns.403shield.ftci.fr → $PUB (DNS-only) déjà en place"
+            else
+              echo "→ mise à jour vers $PUB (ancien : $RCUR, proxied=$RPROX)"
+              curl -fsS -X PUT -H "Authorization: Bearer $CF_TOKEN" -H "Content-Type: application/json" \
+                "https://api.cloudflare.com/client/v4/zones/$CF_ZONE/dns_records/$RID" \
+                -d "{\"type\":\"A\",\"name\":\"*.dns.403shield.ftci.fr\",\"content\":\"$PUB\",\"proxied\":false,\"ttl\":300}" \
+                | jq -r '.success'
+            fi
+          else
+            echo "→ création A *.dns.403shield.ftci.fr → $PUB (DNS-only — le 853 n'est pas proxifiable, Android connecte la VM en direct)"
+            curl -fsS -X POST -H "Authorization: Bearer $CF_TOKEN" -H "Content-Type: application/json" \
+              "https://api.cloudflare.com/client/v4/zones/$CF_ZONE/dns_records" \
+              -d "{\"type\":\"A\",\"name\":\"*.dns.403shield.ftci.fr\",\"content\":\"$PUB\",\"proxied\":false,\"ttl\":300}" \
+              | jq -r '.success'
+          fi
+
+      # ───────────────── ÉTAPE 2 — Security Lists + NSGs ──────────────────
+      - name: "Provision 2/6 — Security Lists + NSGs : ingress TCP/853 (idempotent)"
+        if: inputs.gesture == 'provision'
+        run: |
+          set -euo pipefail
+          NEWRULE='{"protocol":"6","source":"0.0.0.0/0","source-type":"CIDR_BLOCK","is-stateless":false,"description":"DNS-over-TLS TCP 853 (ops-dns-dot N°345)","tcp-options":{"destination-port-range":{"min":853,"max":853},"source-port-range":null},"udp-options":null,"icmp-options":null}'
+          for SL in $(echo '${{ steps.disc.outputs.sl_ids }}' | jq -r '.[]'); do
+            RULES="$(oci network security-list get --security-list-id "$SL" --query 'data."ingress-security-rules"' --output json)"
+            OPEN="$(echo "$RULES" | jq '[.[] | select((.protocol=="6") and ((.source//"")=="0.0.0.0/0") and (((.["tcp-options"]["destination-port-range"]["min"]) // 0) <= 853 and (((.["tcp-options"]["destination-port-range"]["max"]) // 65535)) >= 853))] | length')"
+            if [ "${OPEN:-0}" -gt 0 ]; then
+              echo "✓ $SL : TCP/853 déjà couvert"
+              continue
+            fi
+            BEFORE="$(echo "$RULES" | jq length)"
+            echo "$RULES" | jq --argjson r "$NEWRULE" '. + [$r]' > /tmp/rules.json
+            AFTER="$(jq length /tmp/rules.json)"
+            [ "$AFTER" = "$((BEFORE + 1))" ] || { echo "✗ construction des règles ($BEFORE → $AFTER) — ABANDON sans PUT"; exit 1; }
+            oci network security-list update --security-list-id "$SL" \
+              --ingress-security-rules file:///tmp/rules.json --force \
+              --query 'data."display-name"' --raw-output >/dev/null
+            NOW="$(oci network security-list get --security-list-id "$SL" --query 'data."ingress-security-rules"' --output json | jq length)"
+            [ "$NOW" = "$AFTER" ] || { echo "✗ vérification post-PUT ($NOW ≠ $AFTER)"; exit 1; }
+            echo "✓ $SL : $NOW règles ingress — TCP/853 ouvert"
+          done
+          for NSG in $(echo '${{ steps.disc.outputs.nsg_ids }}' | jq -r '.[]' 2>/dev/null); do
+            [ -n "$NSG" ] || continue
+            EXISTS="$(oci network nsg rules list --nsg-id "$NSG" --all --output json \
+              | jq '[.[] | select((.direction=="INGRESS") and (.protocol=="6") and ((.source//"")=="0.0.0.0/0"))] | length')"
+            [ "${EXISTS:-0}" -gt 0 ] && { echo "✓ NSG déjà couvert"; continue; }
+            printf '%s' "$NEWRULE" | jq '. + {"direction":"INGRESS"}' > /tmp/nsgrule.json
+            oci network nsg rules add --nsg-id "$NSG" --security-rules file:///tmp/nsgrule.json >/dev/null
+            echo "✓ règle NSG ajoutée"
+          done
+
+      # ───────────────────── ÉTAPES 3-7 — LA VM ───────────────────────────
+      - name: "Provision 3-7/6 — VM : iptables + certificat joker + drop-in + env + redémarrage"
+        if: inputs.gesture == 'provision'
+        run: |
+          set -euo pipefail
+          install -m 600 /dev/null /tmp/k
+          printf '%s\n' "$SSH_KEY" > /tmp/k
+          SSHO="-i /tmp/k -o StrictHostKeyChecking=accept-new -o ConnectTimeout=20"
+          # Le token Cloudflare transite par un fichier 600 scpé (jamais en
+          # argument de commande — jamais dans les ps de la VM), servi par le
+          # script, puis acme.sh le conserve dans /root/.acme.sh pour les
+          # renouvellements automatiques (~60 j, cron posé par l'installateur).
+          printf 'CF_Token=%s\nCF_Account_ID=' "$CF_TOKEN" > /tmp/cf.env
+          scp $SSHO /tmp/cf.env "$DEPLOY_USER@$ORACLE_HOST:/tmp/cf.env"
+          rm -f /tmp/cf.env
+          ssh $SSHO "$DEPLOY_USER@$ORACLE_HOST" 'sudo bash -s' <<'REMOTE'
+          set -euo pipefail
+          ZONE_D="dns.403shield.ftci.fr"
+
+          echo "── 3/6 iptables INPUT tcp/853 (piège Ubuntu-Oracle) ──"
+          if iptables -C INPUT -p tcp --dport 853 -j ACCEPT 2>/dev/null; then
+            echo "✓ déjà acceptée"
+          else
+            iptables -I INPUT -p tcp --dport 853 -j ACCEPT
+            netfilter-persistent save >/dev/null 2>&1 || iptables-save > /etc/iptables/rules.v4
+            echo "✓ règle posée + persistée"
+          fi
+
+          echo "── 4/6 certificat joker (acme.sh, défi DNS-01 Cloudflare) ──"
+          if [ ! -d /root/.acme.sh ]; then
+            curl -sS https://get.acme.sh | sh -s email=freelancetechnologies.ci@gmail.com >/dev/null 2>&1
+            echo "✓ acme.sh installé (cron de renouvellement posé par l'installateur)"
+          else
+            echo "✓ acme.sh déjà installé"
+          fi
+          set -a; . /tmp/cf.env; set +a
+          /root/.acme.sh/acme.sh --issue --dns dns_cf \
+            -d "$ZONE_D" -d "*.$ZONE_D" \
+            --server letsencrypt --keylength ec-256 --force 2>&1 | tail -5 \
+            || /root/.acme.sh/acme.sh --issue --dns dns_cf -d "$ZONE_D" -d "*.$ZONE_D" --server letsencrypt --keylength ec-256 2>&1 | tail -5
+          rm -f /tmp/cf.env
+          install -d -o root -g mikcloud -m 750 /etc/mikcloud/dns-tls
+          /root/.acme.sh/acme.sh --install-cert -d "$ZONE_D" --ecc \
+            --fullchain-file /etc/mikcloud/dns-tls/fullchain.pem \
+            --key-file /etc/mikcloud/dns-tls/privkey.pem \
+            --reloadcmd "chown root:mikcloud /etc/mikcloud/dns-tls/fullchain.pem /etc/mikcloud/dns-tls/privkey.pem && chmod 640 /etc/mikcloud/dns-tls/fullchain.pem /etc/mikcloud/dns-tls/privkey.pem"
+          openssl x509 -in /etc/mikcloud/dns-tls/fullchain.pem -noout -ext subjectAltName | grep -q "\*.$ZONE_D" \
+            || { echo "✗ le SAN joker est absent du certificat"; exit 1; }
+          echo "✓ certificat joker installé (/etc/mikcloud/dns-tls, root:mikcloud 640) — renouvellement ~60 j, le backend recharge à chaud sur mtime"
+
+          echo "── 5/6 drop-in systemd AmbientCapabilities (port <1024 sous mikcloud) ──"
+          install -d -m 755 /etc/systemd/system/mikcloud.service.d
+          cat > /etc/systemd/system/mikcloud.service.d/10-dns-dot.conf <<'UNIT'
+          # N°345 — ops-dns-dot.yml : l'écoute DoT :853 (port privilégié) sous
+          # User=mikcloud. Fichier d'unité de base (deploy/oracle/) INTACT.
+          [Service]
+          AmbientCapabilities=CAP_NET_BIND_SERVICE
+          CapabilityBoundingSet=CAP_NET_BIND_SERVICE
+          UNIT
+          chmod 644 /etc/systemd/system/mikcloud.service.d/10-dns-dot.conf
+          echo "✓ drop-in posé"
+
+          echo "── 6/6 variables d'env + redémarrage ──"
+          for kv in "DNS_DOT_ADDR=:853" "DNS_TLS_CERTFILE=/etc/mikcloud/dns-tls/fullchain.pem" "DNS_TLS_KEYFILE=/etc/mikcloud/dns-tls/privkey.pem"; do
+            k="${kv%%=*}"
+            sed -i "/^${k}=/d" /etc/mikcloud/mikcloud.env
+            printf '%s\n' "$kv" >> /etc/mikcloud/mikcloud.env
+          done
+          systemctl daemon-reload
+          systemctl restart mikcloud
+          i=0
+          until curl -fsS -o /dev/null http://127.0.0.1:4000/; do
+            i=$((i+1)); [ "$i" -ge 60 ] && { echo "✗ BACKEND KO après 10 min"; journalctl -u mikcloud -n 30 --no-pager; exit 1; }
+            sleep 10
+          done
+          echo "✓ BACKEND OK (healthcheck au bout de $((i*10)) s)"
+          journalctl -u mikcloud --since "3 minutes ago" --no-pager | grep -E "N°345 DoT : en écoute" \
+            || { echo "✗ la ligne « N°345 DoT : en écoute » est absente du journal"; journalctl -u mikcloud -n 20 --no-pager; exit 1; }
+          ss -tlne | grep -q ':853 ' || { echo "✗ rien n'écoute sur :853"; exit 1; }
+          echo "✓ VM PARFAITE : backend + DoT :853 en écoute"
+          REMOTE
+          rm -f /tmp/k
+
+      # ───────────────── ÉTAPE 8 — PREUVE RÉELLE DEPUIS LE RUNNER ──────────
+      - name: "Provision 8/8 + verify — PREUVE RÉELLE : DoT public complet"
+        if: inputs.gesture == 'provision' || inputs.gesture == 'verify'
+        run: |
+          set -euo pipefail
+          echo "── attente de la résolution DNS (le record vient d'être posé)"
+          for i in $(seq 1 24); do
+            IP="$(python3 -c 'import socket; print(socket.gethostbyname("dns.403shield.ftci.fr"))' 2>/dev/null || true)"
+            [ -n "$IP" ] && break
+            sleep 5
+          done
+          [ -n "$IP" ] || { echo "✗ dns.403shield.ftci.fr ne résout pas"; exit 1; }
+          echo "✓ dns.403shield.ftci.fr → $IP"
+          python3 - <<'PYEOF'
+          import socket, ssl, struct, sys
+          ctx = ssl.create_default_context()  # validation RÉELLE : chaîne publique + hostname
+          with socket.create_connection(("dns.403shield.ftci.fr", 853), timeout=20) as s:
+              with ctx.wrap_socket(s, server_hostname="dns.403shield.ftci.fr") as t:
+                  cert = t.getpeercert()
+                  sans = [v for (k, v) in cert.get("subjectAltName", []) if k == "DNS"]
+                  assert "*.dns.403shield.ftci.fr" in sans, f"SAN joker absent : {sans}"
+                  assert "dns.403shield.ftci.fr" in sans, f"SAN hôte nu absent : {sans}"
+                  # question wire « example.com A » — la sonde hôte nu doit répondre REFUSED (5)
+                  q = b"\xab\xcd\x01\x00\x00\x01\x00\x00\x00\x00\x00\x00" + b"\x07example\x03com\x00\x00\x01\x00\x01"
+                  t.sendall(struct.pack(">H", len(q)) + q)
+                  hdr = b""
+                  while len(hdr) < 2:
+                      c = t.recv(2 - len(hdr))
+                      assert c, "connexion fermée avant la réponse"
+                      hdr += c
+                  n = struct.unpack(">H", hdr)[0]
+                  body = b""
+                  while len(body) < n:
+                      c = t.recv(n - len(body))
+                      assert c, "connexion fermée en cours de réponse"
+                      body += c
+                  rcode = body[3] & 0x0F
+                  assert rcode == 5, f"rcode attendu 5 (REFUSED — sonde hôte nu), obtenu {rcode}"
+                  issuer = dict(x[0] for x in cert.get("issuer", []))
+                  print(f"✅ DoT PUBLIC VÉRIFIÉ : certificat {issuer.get('organizationName','?')} valide, SANs {sans}, réponse REFUSED de la sonde — la chaîne DNS→SL→iptables→:853→TLS→moteur est OUVERTE")
+          PYEOF
+
+      - name: Résumé du geste
+        if: always()
+        run: |
+          {
+            echo "### ops-dns-dot — ${{ inputs.gesture }}"
+            echo "- IP publique VM : \`${{ steps.disc.outputs.pub_addr || '?' }}\`"
+            echo "- zone DoT : \`*.dns.403shield.ftci.fr\` (joker Let's Encrypt DNS-01, renouvellement ~60 j automatique)"
+            echo "- la console /dns affiche l'état réel (setup.dotEnabled) — doctrine « aucun faux chiffre »"
+          } >> "$GITHUB_STEP_SUMMARY"
