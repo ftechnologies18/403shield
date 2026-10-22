@@ -10,6 +10,133 @@ sous-marque FTech CI) ; l'historique ci-dessous conserve les noms d'époque.
 N°319 : le DÉPÔT GitHub lui-même devient `ftechnologies18/403shield`
 (anciennes URL redirigées en 301 par GitHub — web, git et API).
 
+## 2026-10-22 — N°345 — **BOUCLIER DNS PHASE 3 : L'ONBOARDING APPAREILS — serveur DoT :853 à routage SNI par profil (Android « DNS privé »), générateur de profils .mobileconfig Apple, et console `/dns` avec les guides par système** (le premier écran du produit — l'API existait depuis N°339 sans interface)
+
+> Renumérotation (doctrine N°338→339, N°340→343) : ce jalon était annoncé
+> « N°344 » dans la feuille de route DNS (livrée avec la réponse de nommage
+> Baobab) ; une session concurrente a pris N°344 (correctif double tunnel +
+> ops-db-diag) pendant le chantier — le présent jalon devient N°345, les
+> jalons suivants se décalent d'autant (UDP/53 box & Starlink → N°346,
+> vitrine /dns + GeniusPay → N°347).
+
+### Le problème (l'appareil qui n'arrivait pas à entrer)
+- **Android** : « DNS privé » n'accepte QU'UN NOM D'HÔTE — jamais une URL,
+  jamais un port. Le DoH de N°339 (qui couvre navigateurs et profils Apple)
+  est STRUCTURELLEMENT invisible d'Android : il exige DoT (RFC 7858) sur 853.
+- **iOS / macOS** : pas de case « URL DoH » dans les Réglages — le mécanisme
+  natif grand public est le PROFIL DE CONFIGURATION DNS (pattern
+  NextDNS/AdGuard : l'appareil télécharge un .mobileconfig, l'installe en
+  trois gestes). Aucun profil n'était généré.
+- **La console** : l'API `/api/dnsshield/*` vivait depuis N°339 sans AUCUN
+  écran — ni création de profil, ni journal, ni guide d'installation.
+
+### Ce qui a changé — backend (`internal/api/dot_server.go`, `handlers_dnsshield_apple.go`)
+- **LE SERVEUR DoT :853** (RFC 7858, stdlib pure — crypto/tls) : Android
+  configure UN nom d'hôte, le profil DEVIENT le nom d'hôte. Chaque profil
+  répond sur `<publicId>.dns.403shield.ftci.fr` : le SNI (16 hex + zone)
+  route vers le profil, le certificat JOKER sert toutes les poignées de
+  main (le SNI ne sélectionne JAMAIS le certificat). Disciplines miroir
+  strict du DoH : fail-open (message incompréhensible → forward tel quel ;
+  amont mort → FERMETURE, l'appareil retombe sur son DNS système),
+  anti-énumération (profil inconnu/inactif → connexion fermée, le miroir
+  exact du 404 DoH), journal minimal (les MÊMES dnsLogEvent + dédup 10 min —
+  seuls les blocages/couve-feux sont consignés), ordre de décision intact
+  (allow → couvre-feu → bloquer → niveau). L'HÔTE NU (`dns.403shield.ftci.fr`)
+  est la SONDE publique : REFUSED à toute question lisible — preuve de
+  service sans jamais filtrer. Défenses : poignée de main bornée 15 s, idle
+  2 min, vie max 1 h, 512 connexions simultanées, limiteur 240/10 min +
+  6000/24 h par IP (miroir DoH), logs de rejet throttlés 1/min.
+- **RECHARGEMENT À CHAUD** : le couple fullchain/privkey est re-staté à
+  chaque poignée de main (≤ 1 sonde/minute) ; le renouvellement Let's
+  Encrypt (~60 j, posé par le geste ops) se pose SANS redémarrage ni
+  intervention. En échec de rechargement, l'ANCIEN certificat continue.
+- **BOOT HONNÊTE** : certificats absents ou port injoignable → le serveur
+  se désactive avec un log franc — JAMAIS fatal (le backend, le DoH, les
+  consoles démarrent toujours). `setup.dotEnabled` dans `/me` publie l'état
+  RÉEL (posé quand l'écoute est effective) — la console n'affiche jamais
+  « opérationnel » tant que le :853 n'écoute pas (doctrine « aucun faux
+  chiffre »).
+- **LE GÉNÉRATEUR .mobileconfig** — `GET /dns-cfg/{publicId}` (défaut DoH)
+  et `GET /dns-cfg/{publicId}/dot` (variante TLS avec le même hôte que le
+  DNS privé Android) : charge Apple `com.apple.dnsSettings.managed`, UUID
+  v4 régénérés à chaque téléchargement, échappement XML strict du nom du
+  profil, Content-Type `application/x-apple-aspen-config` + pièce jointe
+  nommée. Profil NON SIGNÉ — honnêteté documentée (Apple l'indique à
+  l'installation, la console le dit avant le téléchargement). 404 uniforme
+  anti-énumération (miroir du résolveur), limiteur DoH partagé.
+- **`/api/dnsshield/me` ÉTENDU (additif)** : bloc `setup` (formats DoH,
+  hôte DoT, profils Apple doh/dot + état réel DoT) et clés par profil
+  (`dotHostname`, `appleDohUrl`, `appleDotUrl`) — `setupUrlFormat` inchangé.
+
+### Ce qui a changé — console tunnel (`/dns` — premier écran du produit)
+- **Profils** : créer/modifier/supprimer (nom, niveau off|threats|family
+  avec le vocabulaire SafeWiFi, règles bloquer/autoriser, couvre-feu 7
+  jours), journal des 100 derniers blocages (rapport d'activité, rappel
+  « les autorisées ne sont JAMAIS consignées »).
+- **« INSTALLER SUR UN APPAREIL »** — le cœur du jalon : une modale par
+  profil, UN ONGLET PAR SYSTÈME, les VALEURS RÉELLES du backend : Android
+  (hôte à coller dans « DNS privé » + état réel du serveur — ambre tant
+  que le geste ops n'a pas tourné), iPhone/iPad et Mac (téléchargement du
+  profil + étapes exactes par système), Navigateurs (URL DoH — LIVE dès
+  N°339), Windows (méthode navigateur d'abord, guide natif annoncé au jalon
+  routeurs — pas de promesse en avance), Box/Routeur (jalon N°346 annoncé
+  tel quel : UDP/53 pour box FAI, Starlink, routeurs perso, TV et objets
+  connectés). Copie en un geste avec confirmation visuelle, Escape ferme,
+  focus au titre, bottom-sheet mobile (même confort que /me et /pro).
+- Thème clair console (`.mkdns-page`, miroir /pro N°337), wordmark aurora,
+  zéro bleu/indigo (couvre-feu en slate), responsive 390→1280.
+
+### Ce qui a changé — production (N°345-C, geste `ops-dns-dot.yml`)
+- **LES 8 ÉTAPES DE LA CHAÎNE RÉSEAU** (idempotentes, `workflow_dispatch`
+  avec `confirm=EXECUTER`) : ① enregistrement Cloudflare
+  `*.dns.403shield.ftci.fr` → IP VM en DNS-only (le 853 n'est pas
+  proxifiable — Android connecte la VM en direct) ② Security Lists + NSGs
+  ingress TCP/853 (miroir du geste UDP/51820 de N°295 : relire-compter-
+  avant-PUT, jamais de jeu vide) ③ iptables VM + persistance (piège
+  Ubuntu-Oracle) ④ **certificat joker** : acme.sh sur la VM, défi DNS-01
+  Cloudflare (token scpé en fichier 600, jamais en argument — acme.sh le
+  conserve pour les renouvellements automatiques ~60 j), install
+  `/etc/mikcloud/dns-tls/` root:mikcloud 640 avec reloadcmd de
+  re-permissage ⑤ drop-in systemd `AmbientCapabilities=CAP_NET_BIND_SERVICE`
+  (port <1024 sous User=mikcloud — l'unité de base du repo reste INTACTE)
+  ⑥ variables `DNS_DOT_ADDR/DNS_TLS_CERTFILE/DNS_TLS_KEYFILE` dans
+  `/etc/mikcloud/mikcloud.env` ⑦ redémarrage + healthcheck patient +
+  preuve locale (ligne « N°345 DoT : en écoute » + ss :853) ⑧ **PREUVE
+  RÉELLE DEPUIS LE RUNNER** : requête DoT complète sur
+  `dns.403shield.ftci.fr:853` — certificat PUBLIC validé (chaîne Let's
+  Encrypt + hostname), SANs joker + hôte nu, réponse REFUSED de la sonde.
+  Gestes `preflight` (lecture seule intégrale) et `verify` (preuve réseau)
+  inclus.
+- **deploy-oracle.yml** : les variables bouclier DNS sont PRÉSERVÉES par le
+  pas de sync env (miroir de la garde DATABASE_URL N°274) — un futur dégel
+  du sentinel ne les effacera jamais.
+
+### Intacts (contrats vérifiés par les portes)
+- Le résolveur DoH N°339/343 : wire format, ordre de décision, journal
+  minimal, 404 anti-énumération, limiteurs — AUCUNE ligne du chemin DoH
+  modifiée (le serveur DoT partage le moteur, il ne le touche pas).
+- Le moteur dnsshield et le modèle : inchangés (schéma DB : AUCUN).
+- Les routes existantes : additions pures (`/dns-cfg/*` publics + bloc
+  `setup` additif dans `/me`).
+
+### Portes
+- Backend : gofmt 0 · go vet 0 · build OK · `go test ./...` complet vert ·
+  `-race` ciblé (api + dnsshield + model).
+- Smoke RÉEL sur binaire (cert joker auto-signé, env DoT, amont 1.1.1.1
+  réel) : **10/10 PASS** — règle perso → sinkhole 0.0.0.0 · autorisé →
+  forward réel · hôte nu → REFUSED · SNI hors contrat → fermé · SNI
+  malformé → fermé · certificat servi (SANs prouvés par openssl) ·
+  .mobileconfig doh (ServerURL) + dot (ServerName) · bloc setup /me
+  (dotEnabled réel) · 404 anti-énumération ; + chemin « désactivé sans
+  certificats » (log franc, DoH seul, dotEnabled=false) et journal minimal
+  consigné.
+- Console : ESLint 0 · tsc 0 · `next build` 10/10 routes (dont `/dns`) ;
+  parcours complet au navigateur sur VRAI backend (smokeseed éphémère,
+  jamais commité) : 2 profils rendus, modale 6 onglets, hôte Android,
+  liens profils Apple doh/dot, copie « Copié », journal, création de
+  profil via formulaire (2/10 → 3/10), Escape, 0 erreur console ; VLM
+  PASS desktop 1280 + mobile 390 (footer en bas, aucun débordement).
+
 ## 2026-10-20 — N°344 — **CORRECTIF DOUBLE TUNNEL : le reveal Pro cherchait la conf sous le mauvais compte ; le pilotage direct n'entrait jamais dans le routeur** (incident MCV-1A63CB60 — première commande Pro de la production)
 
 ### Problème (rapport propriétaire, 2026-10-20)
