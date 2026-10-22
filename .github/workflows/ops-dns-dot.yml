@@ -283,11 +283,18 @@ jobs:
           fi
           set -a; . /tmp/cf.env; set +a
           # idempotent : sans --force, acme.sh SAUTE l'émission si le cert
-          # est encore valide (première exécution = émission, reprises = skip)
-          # — pipefail (set -euo pipefail) fait remonter un échec réel.
+          # est encore valide — et signale ce skip par un code de sortie 2
+          # (piège de la 2e exécution : 2 ≠ échec, c'est « déjà émis, next
+          # renewal 2026-12-21 »). Idiome acme.sh : 0 = émis, 2 = skip, le
+          # reste = échec réel.
+          set +e
           /root/.acme.sh/acme.sh --issue --dns dns_cf \
             -d "$ZONE_D" -d "*.$ZONE_D" \
             --server letsencrypt --keylength ec-256 2>&1 | tail -6
+          rc="${PIPESTATUS[0]}"
+          set -e
+          [ "$rc" -eq 0 ] || [ "$rc" -eq 2 ] || { echo "✗ acme.sh --issue a échoué (rc=$rc)"; exit "$rc"; }
+          [ "$rc" -eq 0 ] && echo "✓ certificat émis" || echo "✓ certificat déjà valide (skip acme.sh rc=2) — installation seule"
           rm -f /tmp/cf.env
           # cicatrice 1re exécution : /etc/mikcloud/dns-tls était illisible
           # pour le service (EACCES) — le StateDirectory est le contrat systemd
