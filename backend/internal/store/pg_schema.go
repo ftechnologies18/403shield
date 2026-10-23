@@ -944,6 +944,29 @@ func (p *PG) ensureSchema() error {
                         created_at  TEXT NOT NULL
                 )`,
 		`CREATE INDEX IF NOT EXISTS idx_dns_events_profile ON dns_events (profile_id, created_at)`,
+		// N°346 — LIAISONS « toute la maison » du bouclier DNS (résolveur
+		// UDP/53) : IP publique du logement → profil de filtrage. Le DNS
+		// classique n'a AUCUN champ d'identification — l'IP source est
+		// l'acheminement, la liaison est revendiquée depuis la console
+		// (l'IP de la requête HTTP du client naviguant depuis chez lui)
+		// ou révélée par la sonde probe-<token>. AUCUN secret : une IP
+		// publique est une adresse d'acheminement, pas une clé (doctrine
+		// PublicID dns_profiles). Anti-open-resolver : une IP sans
+		// liaison reçoit REFUSED — jamais un amplificateur public.
+		`CREATE TABLE IF NOT EXISTS dns_home_bindings (
+                        id           TEXT PRIMARY KEY,
+                        profile_id   TEXT NOT NULL,
+                        owner_email  TEXT NOT NULL,
+                        ip           TEXT NOT NULL,
+                        label        TEXT NOT NULL DEFAULT '',
+                        last_query_at TEXT NOT NULL DEFAULT '',
+                        query_count  INTEGER NOT NULL DEFAULT 0,
+                        created_at   TEXT NOT NULL,
+                        updated_at   TEXT NOT NULL
+                )`,
+		`CREATE UNIQUE INDEX IF NOT EXISTS idx_dns_home_ip ON dns_home_bindings (ip)`,
+		`CREATE INDEX IF NOT EXISTS idx_dns_home_owner ON dns_home_bindings (owner_email)`,
+		`CREATE INDEX IF NOT EXISTS idx_dns_home_profile ON dns_home_bindings (profile_id)`,
 		// N°294 — cycle de vie complet de l'abonné : suspension auto
 		// (ExpMode→disable, gabarit hotspot F1), réactivation F4,
 		// IP statique (phase B), récurrent + rappels (phase C).

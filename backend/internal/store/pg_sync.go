@@ -201,6 +201,10 @@ func syncSteps(db *model.DB) []syncStep {
 		{dnsEventSpec.table, func(hashes, pending map[string]map[string]uint64) tableApplier {
 			return diffTable(hashes, pending, dnsEventSpec, db.DnsEvents)
 		}},
+		// N°346 — bouclier DNS : liaisons « toute la maison » (UDP/53).
+		{dnsHomeBindingSpec.table, func(hashes, pending map[string]map[string]uint64) tableApplier {
+			return diffTable(hashes, pending, dnsHomeBindingSpec, db.DnsHomeBindings)
+		}},
 		{transactionSpec.table, func(hashes, pending map[string]map[string]uint64) tableApplier {
 			return diffTable(hashes, pending, transactionSpec, db.Transactions)
 		}},

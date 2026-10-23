@@ -131,18 +131,19 @@ jobs:
                 ;;
               *) echo "DSN Render appliqué tel quel (Supabase primaire)";;
             esac
-            # N°345 — les variables du bouclier DNS (serveur DoT :853 +
-            # certificat joker) sont posées sur la VM par ops-dns-dot.yml :
-            # Render ne les connaît pas — un futur dégel du sync ne doit
-            # JAMAIS les effacer (même garde que DATABASE_URL ci-dessus).
-            DNS_VARS=$(sudo grep -E "^(DNS_DOT_ADDR|DNS_DOT_ZONE|DNS_TLS_CERTFILE|DNS_TLS_KEYFILE)=" /etc/mikcloud/mikcloud.env 2>/dev/null || true)
+            # N°345/346 — les variables du bouclier DNS (serveur DoT :853 +
+            # certificat joker + résolveur maison UDP/53) sont posées sur la
+            # VM par ops-dns-dot.yml / ops-dns-udp53.yml : Render ne les
+            # connaît pas — un futur dégel du sync ne doit JAMAIS les effacer
+            # (même garde que DATABASE_URL ci-dessus).
+            DNS_VARS=$(sudo grep -E "^(DNS_DOT_ADDR|DNS_DOT_ZONE|DNS_TLS_CERTFILE|DNS_TLS_KEYFILE|DNS_UDP53_ADDR|DNS_UDP53_RESOLVER_IP)=" /etc/mikcloud/mikcloud.env 2>/dev/null || true)
             if [ -n "$DNS_VARS" ]; then
               printf "%s\n" "$DNS_VARS" | while IFS= read -r _l; do
                 _k=${_l%%=*}
                 sed -i "/^${_k}=/d" /tmp/mikcloud.env.new
                 printf "%s\n" "$_l" >> /tmp/mikcloud.env.new
               done
-              echo "N°345 : variables bouclier DNS préservées ($(printf "%s\n" "$DNS_VARS" | wc -l) lignes)"
+              echo "N°345/346 : variables bouclier DNS préservées ($(printf "%s\n" "$DNS_VARS" | wc -l) lignes)"
             fi
             sudo install -o root -g mikcloud -m 640 /tmp/mikcloud.env.new /etc/mikcloud/mikcloud.env &&
             rm -f /tmp/mikcloud.env.new

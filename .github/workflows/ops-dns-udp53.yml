@@ -1,0 +1,383 @@
+name: ops-dns-udp53
+
+# ═══ N°346 — LE GESTE D'ACTIVATION UDP/53 DU BOUCLIER DNS (« TOUTE LA MAISON ») ═══
+#
+# Contexte : le backend N°346 embarque le serveur DNS classique (RFC 1035,
+# udp53_server.go) — UDP/53 + TCP/53, routage par IP SOURCE (la liaison
+# dns_home_bindings revendiquée depuis la console ou révélée par la sonde
+# probe-<token>), IP non liée → REFUSED : JAMAIS un open resolver. Le code
+# est livré par deploy-oracle ; ce workflow pose TOUT ce que le code ne peut
+# pas poser lui-même, dans l'ordre exact de la chaîne réseau :
+#
+#   provision (confirm=EXECUTER, idempotent) :
+#     1. Security List(s) + NSGs : ingress UDP/53 ET TCP/53 src 0.0.0.0/0
+#        (miroir exact du geste TCP/853 de ops-dns-dot N°345 — relire-
+#        compter-avant-PUT, jamais de jeu vide) ;
+#     2. iptables VM        : INPUT udp/53 + tcp/53 ACCEPT + persistance
+#        (le piège Ubuntu-Oracle : le REJECT final des règles OCI) ;
+#     3. systemd-resolved   : LE PIÈGE UBUNTU — le stub écoute 127.0.0.53:53
+#        par défaut et bloque le bind :53 du backend. DNSStubListener=no +
+#        repoint du symlink /etc/resolv.conf → ../run/systemd/resolve/
+#        resolv.conf (SANS le repoint, la résolution SYSTÈME de la VM
+#        casserait — apt, etc. ; l'amont du bouclier lui-même n'en dépend
+#        pas : dnsshield.Forward parle aux anycast publics en direct) ;
+#     4. Environnement      : DNS_UDP53_ADDR=:53 + DNS_UDP53_RESOLVER_IP
+#        (l'IP publique de la VM — c'est ELLE que la console affiche à
+#        poser en DNS 1 sur la box) posés dans /etc/mikcloud/mikcloud.env
+#        (idempotents, préservés par deploy-oracle) ; le drop-in
+#        AmbientCapabilities=CAP_NET_BIND_SERVICE (N°345) couvre DÉJÀ le
+#        port 53 — vérifié, posé au cas où (idempotent) ;
+#     5. Redémarrage        : systemctl restart mikcloud + healthcheck
+#        patient + preuve locale (ligne de log « N°346 UDP53 : en écoute »
+#        + ss :53 UDP ET TCP) ;
+#     6. PREUVE RÉELLE DEPUIS LE RUNNER : requête DNS classique UDP/53 PUIS
+#        TCP/53 vers l'IP publique de la VM — réponse REFUSED attendue des
+#        DEUX (le runner n'est pas une IP liée : le serveur répond DONC il
+#        est atteignable, et REFUSE DONC il n'est pas un open resolver —
+#        un timeout = chaîne cassée, un NOERROR = amplificateur public,
+#        les deux sont des échecs du geste).
+#
+#   AUCUN enregistrement DNS à poser : la box reçoit l'IP DIRECTEMENT (le
+#   DNS classique se configure par adresse, pas par nom) ; l'enregistrement
+#   A dns.403shield.ftci.fr (N°345) sert déjà le réchauffage de secours de
+#   l'IP du résolveur — rien à muter côté Cloudflare.
+#
+#   preflight (DÉFAUT, lecture seule) : règles SL/NSG UDP+TCP/53, iptables,
+#     état du stub systemd-resolved, variables d'env, écoutes VM.
+#   verify — rejoue la preuve réseau du runner (utile après coup).
+#
+# Sécurité : mutation derrière confirm=EXECUTER ; heredoc 'REMOTE' (piège n°18) ;
+# secrets jamais échoés ; UpdateSecurityList relit-compte-avant-PUT ; déclenchement
+# workflow_dispatch UNIQUEMENT.
+#
+# NOTE transport docker : le drop-in systemd ne vaut que pour le transport
+# systemd (actif). Si la VM revenait au transport docker (deploy-oracle N°281),
+# le conteneur exigera --cap-add=NET_BIND_SERVICE -p 53:53/udp -p 53:53/tcp —
+# documenté ici pour l'exploitant, le geste reste systemd-first.
+
+on:
+  workflow_dispatch:
+    inputs:
+      gesture:
+        description: "Geste : preflight (lecture seule) | provision | verify"
+        type: choice
+        default: "preflight"
+        options:
+          - preflight
+          - provision
+          - verify
+      confirm:
+        description: "Taper EXECUTER pour autoriser provision (les autres gestes n'en ont pas besoin)"
+        type: string
+        default: ""
+
+permissions: {}
+
+concurrency:
+  group: ops-dns-udp53
+  cancel-in-progress: false
+
+jobs:
+  gesture:
+    name: DNS UDP/53 — ${{ inputs.gesture }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      OCI_USER: ${{ secrets.OCI_CLI_USER }}
+      OCI_TENANCY: ${{ secrets.OCI_CLI_TENANCY }}
+      OCI_FINGERPRINT: ${{ secrets.OCI_CLI_FINGERPRINT }}
+      OCI_REGION: ${{ secrets.OCI_CLI_REGION }}
+      OCI_KEY: ${{ secrets.OCI_API_KEY }}
+      ORACLE_HOST: ${{ secrets.ORACLE_HOST }}
+      DEPLOY_USER: ${{ secrets.ORACLE_USER }}
+      SSH_KEY: ${{ secrets.ORACLE_SSH_KEY }}
+    steps:
+      - name: Garde — confirmation pour le geste mutatif
+        run: |
+          if [ "${{ inputs.gesture }}" = "provision" ] && [ "${{ inputs.confirm }}" != "EXECUTER" ]; then
+            echo "✗ geste mutatif : relancer avec confirm=EXECUTER (mesure anti-clic accidentel)"
+            exit 1
+          fi
+          echo "garde OK : ${{ inputs.gesture }}"
+
+      - name: OCI CLI + profil (clé API du coffre GitHub)
+        run: |
+          python3 -m pip install --quiet oci-cli \
+            || python3 -m pip install --quiet --break-system-packages oci-cli
+          mkdir -p ~/.oci
+          {
+            echo "[DEFAULT]"
+            echo "user=$OCI_USER"
+            echo "fingerprint=$OCI_FINGERPRINT"
+            echo "tenancy=$OCI_TENANCY"
+            echo "region=$OCI_REGION"
+            echo "key_file=$HOME/.oci/oci_api_key.pem"
+          } > ~/.oci/config
+          printf '%s\n' "$OCI_KEY" > ~/.oci/oci_api_key.pem
+          chmod 600 ~/.oci/config ~/.oci/oci_api_key.pem
+          oci iam region-subscription list --query 'length(data)' --raw-output >/dev/null
+          echo "auth OCI OK (région $OCI_REGION)"
+
+      - name: Découverte — instance, VNIC, subnet, SL, NSG, IP publique
+        id: disc
+        run: |
+          set -euo pipefail
+          TEN="$OCI_TENANCY"
+          INST_ID="$(oci compute instance list --compartment-id "$TEN" --all \
+            --query "data[?\"display-name\"=='Ftechci' && \"lifecycle-state\"!='TERMINATED'].id | [0]" --raw-output 2>/dev/null || true)"
+          if [ -z "$INST_ID" ] || [ "$INST_ID" = "null" ]; then
+            INST_ID="$(oci compute instance list --compartment-id "$TEN" --all \
+              --query "data[?\"lifecycle-state\"=='RUNNING' && shape=='VM.Standard.A1.Flex'].id | [0]" --raw-output)"
+          fi
+          [ -n "$INST_ID" ] && [ "$INST_ID" != "null" ] || { echo "✗ aucune instance cible"; exit 1; }
+          VNIC_ID="$(oci compute instance list-vnics --instance-id "$INST_ID" --query 'data[0]."id"' --raw-output)"
+          PUB_ADDR="$(oci compute instance list-vnics --instance-id "$INST_ID" --query 'data[0]."public-ip"' --raw-output)"
+          [ -n "$PUB_ADDR" ] && [ "$PUB_ADDR" != "null" ] || { echo "✗ pas d'IP publique"; exit 1; }
+          SUBNET_ID="$(oci network vnic get --vnic-id "$VNIC_ID" --query 'data."subnet-id"' --raw-output)"
+          NSG_IDS="$(oci network vnic get --vnic-id "$VNIC_ID" --query 'data."nsg-ids"' --raw-output)"
+          SL_IDS="$(oci network subnet get --subnet-id "$SUBNET_ID" --query 'data."security-list-ids"' --raw-output)"
+          echo "Cible : $INST_ID — IP publique $PUB_ADDR"
+          echo "pub_addr=$PUB_ADDR" >> "$GITHUB_OUTPUT"
+          echo "subnet_id=$SUBNET_ID" >> "$GITHUB_OUTPUT"
+          echo "vnic_id=$VNIC_ID" >> "$GITHUB_OUTPUT"
+          echo "sl_ids=$(echo "$SL_IDS" | jq -c .)" >> "$GITHUB_OUTPUT"
+          echo "nsg_ids=$NSG_IDS" >> "$GITHUB_OUTPUT"
+
+      - name: Preflight — lecture seule intégrale (SL, VM)
+        if: inputs.gesture == 'preflight'
+        run: |
+          set -euo pipefail
+          echo "═══ 1. Security Lists — règles UDP/53 + TCP/53 présentes ? ═══"
+          for SL in $(echo '${{ steps.disc.outputs.sl_ids }}' | jq -r '.[]'); do
+            U="$(oci network security-list get --security-list-id "$SL" --query 'data."ingress-security-rules"' --output json \
+              | jq '[.[] | select((.protocol=="17") and ((.source//"")=="0.0.0.0/0") and (((.["udp-options"]["destination-port-range"]["min"]) // 0) <= 53 and (((.["udp-options"]["destination-port-range"]["max"]) // 65535)) >= 53))] | length')"
+            T="$(oci network security-list get --security-list-id "$SL" --query 'data."ingress-security-rules"' --output json \
+              | jq '[.[] | select((.protocol=="6") and ((.source//"")=="0.0.0.0/0") and (((.["tcp-options"]["destination-port-range"]["min"]) // 0) <= 53 and (((.["tcp-options"]["destination-port-range"]["max"]) // 65535)) >= 53))] | length')"
+            echo "$SL : UDP/53 ×$U, TCP/53 ×$T"
+          done
+          echo
+          echo "═══ 2. VM — iptables, stub systemd-resolved, env, écoutes ═══"
+          install -m 600 /dev/null /tmp/k
+          printf '%s\n' "$SSH_KEY" > /tmp/k
+          SSHO="-i /tmp/k -o StrictHostKeyChecking=accept-new -o ConnectTimeout=20"
+          ssh $SSHO "$DEPLOY_USER@$ORACLE_HOST" bash -s <<'REMOTE'
+          set -uo pipefail
+          echo "iptables udp/53 : $(sudo iptables -C INPUT -p udp --dport 53 -j ACCEPT 2>/dev/null && echo PRÉSENTE || echo absente)"
+          echo "iptables tcp/53 : $(sudo iptables -C INPUT -p tcp --dport 53 -j ACCEPT 2>/dev/null && echo PRÉSENTE || echo absente)"
+          echo "systemd-resolved : $(systemctl is-active systemd-resolved 2>/dev/null || echo 'absent')"
+          echo "stub listener : $(sudo grep -E '^DNSStubListener' /etc/systemd/resolved.conf 2>/dev/null || echo 'non configuré (=yes par défaut — LE PIÈGE : 127.0.0.53:53 bloque le bind :53)')"
+          echo "resolv.conf → $(readlink /etc/resolv.conf 2>/dev/null || echo 'fichier plat')"
+          echo "occupe :53 : $(sudo ss -ulnp | grep ':53 ' | head -3 || echo 'rien en UDP')"
+          echo "env UDP53 : $(sudo grep -cE '^(DNS_UDP53_ADDR|DNS_UDP53_RESOLVER_IP)=' /etc/mikcloud/mikcloud.env 2>/dev/null || echo 0)/2 variables"
+          echo "drop-in caps : $(sudo cat /etc/systemd/system/mikcloud.service.d/10-dns-dot.conf 2>/dev/null | grep -c AmbientCapabilities || echo 0) (N°345 — couvre déjà le port 53)"
+          echo "écoutes : $(sudo ss -ulnp | grep ':53 ' | awk '{print $5}' | tr '\n' ' ')| $(sudo ss -tlnp | grep ':53 ' | awk '{print $4}' | tr '\n' ' ')"
+          echo "log UDP53 : $(sudo journalctl -u mikcloud -n 50 --no-pager 2>/dev/null | grep -oE 'N°346 UDP53 : .*' | tail -1 || echo 'aucune ligne')"
+          REMOTE
+          rm -f /tmp/k
+          echo "preflight terminé"
+
+      # ───────────────── ÉTAPE 1 — Security Lists + NSGs ──────────────────
+      - name: "Provision 1/5 — Security Lists + NSGs : ingress UDP/53 + TCP/53 (idempotent)"
+        if: inputs.gesture == 'provision'
+        run: |
+          set -euo pipefail
+          # UDP = protocole 17, TCP = protocole 6 (miroir exact du geste
+          # TCP/853 N°345 — deux règles distinctes, relire-compter-avant-PUT).
+          NEWRULE_UDP='{"protocol":"17","source":"0.0.0.0/0","source-type":"CIDR_BLOCK","is-stateless":false,"description":"DNS classique UDP 53 (ops-dns-udp53 N°346)","tcp-options":null,"udp-options":{"destination-port-range":{"min":53,"max":53},"source-port-range":null},"icmp-options":null}'
+          NEWRULE_TCP='{"protocol":"6","source":"0.0.0.0/0","source-type":"CIDR_BLOCK","is-stateless":false,"description":"DNS classique TCP 53 (ops-dns-udp53 N°346)","tcp-options":{"destination-port-range":{"min":53,"max":53},"source-port-range":null},"udp-options":null,"icmp-options":null}'
+          for SL in $(echo '${{ steps.disc.outputs.sl_ids }}' | jq -r '.[]'); do
+            for PAIR in "17:udp:udp-options:$NEWRULE_UDP" "6:tcp:tcp-options:$NEWRULE_TCP"; do
+              PROTO="${PAIR%%:*}"; REST="${PAIR#*:}"; NAME="${REST%%:*}"; REST2="${REST#*:}"; OPT="${REST2%%:*}"; RULE="${REST2#*:}"
+              RULES="$(oci network security-list get --security-list-id "$SL" --query 'data."ingress-security-rules"' --output json)"
+              OPEN="$(echo "$RULES" | jq --arg p "$PROTO" --arg o "$OPT" '[.[] | select((.protocol==$p) and ((.source//"")=="0.0.0.0/0") and (((.[$o]["destination-port-range"]["min"]) // 0) <= 53 and (((.[$o]["destination-port-range"]["max"]) // 65535)) >= 53))] | length')"
+              if [ "${OPEN:-0}" -gt 0 ]; then
+                echo "✓ $SL : $NAME/53 déjà couvert"
+                continue
+              fi
+              BEFORE="$(echo "$RULES" | jq length)"
+              echo "$RULES" | jq --argjson r "$RULE" '. + [$r]' > /tmp/rules.json
+              AFTER="$(jq length /tmp/rules.json)"
+              [ "$AFTER" = "$((BEFORE + 1))" ] || { echo "✗ construction des règles ($BEFORE → $AFTER) — ABANDON sans PUT"; exit 1; }
+              oci network security-list update --security-list-id "$SL" \
+                --ingress-security-rules file:///tmp/rules.json --force \
+                --query 'data."display-name"' --raw-output >/dev/null
+              NOW="$(oci network security-list get --security-list-id "$SL" --query 'data."ingress-security-rules"' --output json | jq length)"
+              [ "$NOW" = "$AFTER" ] || { echo "✗ vérification post-PUT ($NOW ≠ $AFTER)"; exit 1; }
+              echo "✓ $SL : $NOW règles ingress — $NAME/53 ouvert"
+            done
+          done
+          for NSG in $(echo '${{ steps.disc.outputs.nsg_ids }}' | jq -r '.[]' 2>/dev/null); do
+            [ -n "$NSG" ] || continue
+            for RULE in "$NEWRULE_UDP" "$NEWRULE_TCP"; do
+              PROTO="$(echo "$RULE" | jq -r '.protocol')"
+              EXISTS="$(oci network nsg rules list --nsg-id "$NSG" --all --output json \
+                | jq --arg p "$PROTO" '[.[] | select((.direction=="INGRESS") and (.protocol==$p) and ((.source//"")=="0.0.0.0/0"))] | length')"
+              [ "${EXISTS:-0}" -gt 0 ] && { echo "✓ NSG $PROTO déjà couvert"; continue; }
+              printf '%s' "$RULE" | jq '. + {"direction":"INGRESS"}' > /tmp/nsgrule.json
+              oci network nsg rules add --nsg-id "$NSG" --security-rules file:///tmp/nsgrule.json >/dev/null
+              echo "✓ règle NSG $PROTO/53 ajoutée"
+            done
+          done
+
+      # ───────────────── ÉTAPES 2-4 — LA VM ───────────────────────────────
+      - name: "Provision 2-4/5 — VM : iptables + systemd-resolved + env + redémarrage"
+        if: inputs.gesture == 'provision'
+        run: |
+          set -euo pipefail
+          install -m 600 /dev/null /tmp/k
+          printf '%s\n' "$SSH_KEY" > /tmp/k
+          SSHO="-i /tmp/k -o StrictHostKeyChecking=accept-new -o ConnectTimeout=20"
+          # L'IP publique transite par un fichier 600 scpé (discipline du
+          # geste N°345 — rien en argument de commande).
+          printf 'PUB_ADDR=%s\n' "${{ steps.disc.outputs.pub_addr }}" > /tmp/udp53.env
+          scp $SSHO /tmp/udp53.env "$DEPLOY_USER@$ORACLE_HOST:/tmp/udp53.env"
+          rm -f /tmp/udp53.env
+          ssh $SSHO "$DEPLOY_USER@$ORACLE_HOST" 'sudo bash -s' <<'REMOTE'
+          set -euo pipefail
+          . /tmp/udp53.env
+          rm -f /tmp/udp53.env
+          echo "── 2/5 iptables INPUT udp/53 + tcp/53 (piège Ubuntu-Oracle) ──"
+          for SPEC in "udp 53" "tcp 53"; do
+            PROTO="${SPEC%% *}"; PORT="${SPEC##* }"
+            if iptables -C INPUT -p "$PROTO" --dport "$PORT" -j ACCEPT 2>/dev/null; then
+              echo "✓ $PROTO/$PORT déjà acceptée"
+            else
+              iptables -I INPUT -p "$PROTO" --dport "$PORT" -j ACCEPT
+              netfilter-persistent save >/dev/null 2>&1 || iptables-save > /etc/iptables/rules.v4
+              echo "✓ $PROTO/$PORT posée + persistée"
+            fi
+          done
+
+          echo "── 3/5 systemd-resolved : ôter le stub 127.0.0.53:53 (LE PIÈGE UBUNTU) ──"
+          if systemctl is-active systemd-resolved >/dev/null 2>&1; then
+            if ss -uln | grep -q '127.0.0.53:53'; then
+              echo "→ stub actif sur 127.0.0.53:53 — il bloque le bind :53 du backend"
+              if grep -qE '^\s*DNSStubListener=' /etc/systemd/resolved.conf; then
+                sed -i 's/^\s*DNSStubListener=.*/DNSStubListener=no/' /etc/systemd/resolved.conf
+              else
+                printf '\nDNSStubListener=no\n' >> /etc/systemd/resolved.conf
+              fi
+              # SANS ce repoint, /etc/resolv.conf → stub-resolv.conf (127.0.0.53)
+              # et la résolution SYSTÈME de la VM casserait (apt, etc.). L'amont
+              # du bouclier n'en dépend pas (anycast publics en direct) mais le
+              # reste de la VM oui.
+              ln -sf /run/systemd/resolve/resolv.conf /etc/resolv.conf
+              systemctl restart systemd-resolved
+              sleep 2
+              ss -uln | grep -q '127.0.0.53:53' && { echo "✗ le stub écoute encore"; exit 1; }
+              echo "✓ stub désactivé, resolv.conf repointé"
+            else
+              echo "✓ aucun stub sur 127.0.0.53:53 — rien à faire"
+            fi
+            # La résolution système doit VIVRE après le repoint (sinon la VM
+            # est cassée pour tout le reste — apt, journaliers, acme.sh).
+            if ! grep -qE '^nameserver' /etc/resolv.conf; then
+              echo "✗ /etc/resolv.conf sans nameserver après repoint"; cat /etc/resolv.conf; exit 1
+            fi
+            if grep -q '127.0.0.53' /etc/resolv.conf; then
+              echo "✗ /etc/resolv.conf pointe encore vers le stub désactivé"; exit 1
+            fi
+            getent hosts archive.ubuntu.com >/dev/null || { echo "✗ résolution système KO après le geste — ABANDON avant restart"; exit 1; }
+            echo "✓ résolution système vivante (getent OK)"
+          else
+            echo "✓ systemd-resolved absent de la VM — rien à faire"
+          fi
+
+          echo "── 4/5 env UDP53 + drop-in caps (idempotents) ──"
+          for kv in "DNS_UDP53_ADDR=:53" "DNS_UDP53_RESOLVER_IP=$PUB_ADDR"; do
+            k="${kv%%=*}"
+            sed -i "/^${k}=/d" /etc/mikcloud/mikcloud.env
+            printf '%s\n' "$kv" >> /etc/mikcloud/mikcloud.env
+          done
+          echo "✓ DNS_UDP53_ADDR=:53 + DNS_UDP53_RESOLVER_IP=$PUB_ADDR posés"
+          # Le drop-in N°345 (AmbientCapabilities=CAP_NET_BIND_SERVICE) couvre
+          # déjà le port 53 — vérifié, posé au cas où (idempotent, unité de
+          # base du repo INTACTE).
+          install -d -m 755 /etc/systemd/system/mikcloud.service.d
+          if ! grep -q 'AmbientCapabilities=CAP_NET_BIND_SERVICE' /etc/systemd/system/mikcloud.service.d/10-dns-dot.conf 2>/dev/null; then
+            cat > /etc/systemd/system/mikcloud.service.d/10-dns-dot.conf <<'UNIT'
+          # N°345/346 — ops-dns-dot/udp53 : l'écoute des ports privilégiés
+          # (853 DoT, 53 DNS classique) sous User=mikcloud. Unité de base INTACTE.
+          [Service]
+          AmbientCapabilities=CAP_NET_BIND_SERVICE
+          CapabilityBoundingSet=CAP_NET_BIND_SERVICE
+          UNIT
+            chmod 644 /etc/systemd/system/mikcloud.service.d/10-dns-dot.conf
+            echo "✓ drop-in caps posé (absent — cas docker→systemd)"
+          else
+            echo "✓ drop-in caps déjà en place (N°345)"
+          fi
+          systemctl daemon-reload
+          systemctl restart mikcloud
+          i=0
+          until curl -fsS -o /dev/null http://127.0.0.1:4000/; do
+            i=$((i+1)); [ "$i" -ge 60 ] && { echo "✗ BACKEND KO après 10 min"; journalctl -u mikcloud -n 30 --no-pager; exit 1; }
+            sleep 10
+          done
+          echo "✓ BACKEND OK (healthcheck au bout de $((i*10)) s)"
+          journalctl -u mikcloud --since "3 minutes ago" --no-pager | grep -E "N°346 UDP53 : en écoute" \
+            || { echo "✗ la ligne « N°346 UDP53 : en écoute » est absente du journal"; journalctl -u mikcloud -n 20 --no-pager; exit 1; }
+          ss -ulne | grep -q ':53 ' || { echo "✗ rien n'écoute sur :53/udp"; ss -ulnp; exit 1; }
+          ss -tlne | grep -q ':53 ' || { echo "✗ rien n'écoute sur :53/tcp"; ss -tlnp; exit 1; }
+          echo "✓ VM PARFAITE : backend + DNS classique :53 (UDP+TCP) en écoute"
+          REMOTE
+          rm -f /tmp/k
+
+      # ───────────────── ÉTAPE 5 — PREUVE RÉELLE DEPUIS LE RUNNER ──────────
+      - name: "Provision 5/5 + verify — PREUVE RÉELLE : UDP/53 et TCP/53 publics, REFUSED attendu"
+        if: inputs.gesture == 'provision' || inputs.gesture == 'verify'
+        run: |
+          set -euo pipefail
+          PUB="${{ steps.disc.outputs.pub_addr }}"
+          echo "── cible : $PUB (IP directe — la box ne passe pas par un nom)"
+          python3 - "$PUB" <<'PYEOF'
+          import socket, struct, sys, time
+
+          pub = sys.argv[1]
+
+          def query(name, via_tcp=False):
+              # question wire « example.com A » RD=1
+              q = b"\xab\xcd\x01\x00\x00\x01\x00\x00\x00\x00\x00\x00" + b"\x07example\x03com\x00\x00\x01\x00\x01"
+              if via_tcp:
+                  with socket.create_connection((pub, 53), timeout=15) as s:
+                      s.sendall(struct.pack(">H", len(q)) + q)
+                      hdr = b""
+                      while len(hdr) < 2:
+                          c = s.recv(2 - len(hdr)); assert c, "fermeture avant réponse"
+                          hdr += c
+                      n = struct.unpack(">H", hdr)[0]
+                      body = b""
+                      while len(body) < n:
+                          c = s.recv(n - len(body)); assert c, "fermeture en cours"
+                          body += c
+                  return body
+              s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM); s.settimeout(15)
+              s.sendto(q, (pub, 53)); body, _ = s.recvfrom(65535); s.close()
+              return body
+
+          # 1. UDP/53 — REFUSED attendu : le runner n'est PAS une IP liée.
+          #    Un timeout = chaîne cassée (SL/iptables) ; un NOERROR = open
+          #    resolver (inacceptable) ; REFUSED = la chaîne est OUVERTE et
+          #    le serveur n'est PAS un amplificateur public.
+          body = query("example.com")
+          rcode = body[3] & 0x0F
+          assert rcode == 5, f"UDP/53 : rcode attendu 5 (REFUSED), obtenu {rcode}"
+          print(f"✅ UDP/53 PUBLIC : réponse REFUSED (le résolveur répond et N'EST PAS un open resolver)")
+
+          # 2. TCP/53 — même discipline (le chemin de reprise des troncatures).
+          body = query("example.com", via_tcp=True)
+          rcode = body[3] & 0x0F
+          assert rcode == 5, f"TCP/53 : rcode attendu 5 (REFUSED), obtenu {rcode}"
+          print(f"✅ TCP/53 PUBLIC : réponse REFUSED (cadrage RFC 1035 §4.2.2 vivant)")
+          print(f"✅ CHAÎNE OUVERTE : DNS box → SL → iptables → :53 (UDP+TCP) → moteur — les liaisons de la console filtreront les logements liés")
+          PYEOF
+
+      - name: Résumé du geste
+        if: always()
+        run: |
+          {
+            echo "### ops-dns-udp53 — ${{ inputs.gesture }}"
+            echo "- IP publique VM (à poser en DNS 1 sur la box) : \`${{ steps.disc.outputs.pub_addr || '?' }}\`"
+            echo "- DNS 2 : celui du FAI (filet de secours — doctrine fail-open)"
+            echo "- la console /dns affiche l'état réel (setup.udp53Enabled) — doctrine « aucun faux chiffre »"
+          } >> "$GITHUB_STEP_SUMMARY"

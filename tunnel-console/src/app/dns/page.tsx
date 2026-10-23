@@ -40,6 +40,7 @@ import {
   Laptop,
   Loader2,
   LogOut,
+  MapPin,
   MonitorSmartphone,
   Pencil,
   Plus,
@@ -52,6 +53,11 @@ import {
 } from "lucide-react";
 import {
   clearToken,
+  dnsHomeClaim,
+  dnsHomeDelete,
+  dnsHomeList,
+  dnsHomeProbeCreate,
+  dnsHomeProbeStatus,
   dnsMe,
   dnsProfileCreate,
   dnsProfileDelete,
@@ -59,9 +65,12 @@ import {
   dnsProfileUpdate,
   getToken,
   type DnsEventsResponse,
+  type DnsHomeResponse,
   type DnsMeResponse,
   type DnsProfile,
   type DnsProfilePayload,
+  type DnsProbeResponse,
+  type DnsProbeStatusResponse,
 } from "@/lib/api";
 
 // ---------------------------------------------------------------------------
@@ -86,6 +95,21 @@ function formatTime(iso: string): string {
     return new Date(iso).toLocaleString("fr-FR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
   } catch {
     return iso;
+  }
+}
+
+/** N°346 — « il y a X » pour la santé d'une liaison maison (agrégat
+ * différé ≤ 60 s — l'honnêteté va jusqu'au libellé). */
+function timeAgo(iso: string): string {
+  if (!iso) return "jamais";
+  try {
+    const s = Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 1000));
+    if (s < 60) return "à l'instant";
+    if (s < 3600) return `il y a ${Math.floor(s / 60)} min`;
+    if (s < 86400) return `il y a ${Math.floor(s / 3600)} h`;
+    return `il y a ${Math.floor(s / 86400)} j`;
+  } catch {
+    return "—";
   }
 }
 
@@ -213,6 +237,20 @@ export default function DnsPage() {
   const [eventsLoading, setEventsLoading] = useState(false);
   const eventsHeadRef = useRef<HTMLHeadingElement | null>(null);
 
+  // N°346 — TOUTE LA MAISON : liaisons IP→profil + sonde de ligne.
+  const [home, setHome] = useState<DnsHomeResponse | null>(null);
+  const [homeLoading, setHomeLoading] = useState(false);
+  // Formulaire de liaison (IP pré-remplie avec celle de la requête).
+  const [hProfileId, setHProfileId] = useState("");
+  const [hLabel, setHLabel] = useState("Maison");
+  const [hIP, setHIP] = useState("");
+  const [hError, setHError] = useState("");
+  const [hBusy, setHBusy] = useState(false);
+  // Sonde : jeton vivant + dernier statut ("expired" local quand 404).
+  const [probe, setProbe] = useState<DnsProbeResponse | null>(null);
+  const [probeStatus, setProbeStatus] = useState<DnsProbeStatusResponse | { status: "expired" } | null>(null);
+  const [probeBusy, setProbeBusy] = useState(false);
+
   // Formulaire création/édition.
   const [formOpen, setFormOpen] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
@@ -235,20 +273,37 @@ export default function DnsPage() {
     }
     setLoading(true);
     setError("");
+    setHomeLoading(true);
     try {
-      setMe(await dnsMe(token));
-    } catch (err) {
-      const status = (err as { status?: number }).status;
-      if (status === 401) {
-        clearToken();
-        router.replace("/login");
-        return;
+      // N°346 — profils et maison d'un seul mouvement (Promise.allSettled :
+      // un périmètre en échec n'efface pas l'autre — la page reste utile).
+      const [meRes, homeRes] = await Promise.allSettled([dnsMe(token), dnsHomeList(token)]);
+      if (meRes.status === "rejected") {
+        const status = (meRes.reason as { status?: number }).status;
+        if (status === 401) {
+          clearToken();
+          router.replace("/login");
+          return;
+        }
+        setError(meRes.reason instanceof Error ? meRes.reason.message : "Chargement impossible");
+      } else {
+        setMe(meRes.value);
       }
-      setError(err instanceof Error ? err.message : "Chargement impossible");
+      if (homeRes.status === "fulfilled") {
+        setHome(homeRes.value);
+        setHIP((cur) => cur || homeRes.value.myIp || "");
+      }
     } finally {
       setLoading(false);
+      setHomeLoading(false);
     }
   }, [router]);
+
+  // N°346 — le profil proposé par défaut dans le formulaire maison : le
+  // premier du compte (l'utilisateur change s'il veut).
+  useEffect(() => {
+    if (!hProfileId && me && me.profiles.length > 0) setHProfileId(me.profiles[0].id);
+  }, [me, hProfileId]);
 
   useEffect(() => {
     void load();
@@ -363,7 +418,94 @@ export default function DnsPage() {
     }
   };
 
+  // ── N°346 — Toute la maison : liaison, détachement, sonde ──────────────
+
+  const claimHome = async (profileIdArg?: string, ipArg?: string) => {
+    const token = getToken();
+    if (!token) return;
+    const profileId = profileIdArg || hProfileId;
+    if (!profileId) {
+      setHError("Créez d'abord un profil de filtrage — c'est lui que la maison suivra.");
+      return;
+    }
+    setHError("");
+    setHBusy(true);
+    try {
+      await dnsHomeClaim(token, profileId, hLabel.trim() || "Maison", ipArg || hIP.trim() || undefined);
+      await load();
+    } catch (err) {
+      setHError(err instanceof Error ? err.message : "Liaison impossible");
+    } finally {
+      setHBusy(false);
+    }
+  };
+
+  const removeHome = async (id: string, label: string) => {
+    const token = getToken();
+    if (!token) return;
+    if (!window.confirm(`Détacher « ${label} » ? La box retrouvera le DNS de votre FAI (rien à désinstaller sur les appareils).`)) return;
+    setHBusy(true);
+    try {
+      await dnsHomeDelete(token, id);
+      await load();
+    } catch (err) {
+      setHError(err instanceof Error ? err.message : "Détachement impossible");
+    } finally {
+      setHBusy(false);
+    }
+  };
+
+  const startProbe = async () => {
+    const token = getToken();
+    if (!token) return;
+    setProbeBusy(true);
+    setProbeStatus(null);
+    setHError("");
+    try {
+      setProbe(await dnsHomeProbeCreate(token));
+    } catch (err) {
+      setHError(err instanceof Error ? err.message : "Sonde indisponible — réessayez");
+    } finally {
+      setProbeBusy(false);
+    }
+  };
+
+  // Poll de la sonde : toutes les 3 s, jusqu'à « received » ou expiration
+  // (le 404 du backend devient l'état local « expired » — honnête).
+  useEffect(() => {
+    if (!probe) return;
+    let live = true;
+    const poll = async () => {
+      const token = getToken();
+      if (!token || !live) return;
+      try {
+        const st = await dnsHomeProbeStatus(token, probe.token);
+        if (!live) return;
+        setProbeStatus(st);
+        if (st.status === "received") live = false;
+      } catch {
+        if (live) {
+          setProbeStatus({ status: "expired" });
+          live = false;
+        }
+      }
+    };
+    void poll();
+    const iv = setInterval(() => void poll(), 3000);
+    const stop = setTimeout(() => {
+      live = false;
+      clearInterval(iv);
+    }, 15 * 60 * 1000);
+    return () => {
+      live = false;
+      clearInterval(iv);
+      clearTimeout(stop);
+    };
+  }, [probe]);
+
   const dotEnabled = me?.setup?.dotEnabled ?? false;
+  const udp53Enabled = me?.setup?.udp53Enabled ?? home?.udp53Enabled ?? false;
+  const resolverIp = me?.setup?.resolverIp || home?.resolverIp || "";
   const profiles = me?.profiles ?? [];
 
   return (
@@ -725,6 +867,276 @@ export default function DnsPage() {
             </div>
           </section>
         ) : null}
+
+        {/* ── N°346 — Toute la maison (box, routeurs, TV, consoles) ── */}
+        <section id="maison" className="mt-8 scroll-mt-20 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h2 className="text-lg font-bold tracking-tight text-slate-900">
+              Toute la maison
+              <span className="ml-2 rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700">
+                Box · Starlink · routeurs
+              </span>
+            </h2>
+            {home ? (
+              <p className="text-xs font-medium text-slate-500">
+                {home.bindings.length}/{home.limits.maxBindings} logements liés
+              </p>
+            ) : null}
+          </div>
+          <p className="mt-2 max-w-3xl text-sm leading-relaxed text-slate-600">
+            Pointez les serveurs DNS de votre box vers le résolveur 403Shield : chaque appareil du
+            logement — TV, consoles, objets connectés, invités — est filtré <strong>sans rien
+            installer</strong>. La liaison se fait par l&apos;IP publique de votre ligne : liez-la
+            ci-dessous <em>depuis chez vous</em>, ou laissez la sonde la révéler.
+          </p>
+
+          {!udp53Enabled ? (
+            <p className="mt-4 rounded-xl border border-amber-300 bg-amber-50 px-3.5 py-3 text-sm leading-relaxed text-amber-800">
+              Le résolveur maison (UDP/53) est en cours d&apos;activation côté infrastructure. En
+              attendant, les téléphones et ordinateurs du foyer sont déjà couvrables via les onglets
+              Android, iPhone/iPad, Mac et Navigateurs.
+            </p>
+          ) : (
+            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              {/* La carte résolveur : les valeurs à poser sur la box */}
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  DNS 1 — le résolveur du bouclier
+                </p>
+                {resolverIp ? (
+                  <CopyField label="" value={resolverIp} hint="" />
+                ) : (
+                  <p className="mt-1 text-sm text-slate-500">détection de l&apos;adresse en cours — actualisez dans un instant</p>
+                )}
+                <p className="mt-2 text-xs leading-relaxed text-slate-500">
+                  <strong>DNS 2 : laissez celui de votre FAI.</strong> C&apos;est le filet de
+                  secours — un bouclier injoignable ne coupe jamais Internet, il se laisse dépasser.
+                </p>
+              </div>
+
+              {/* La carte sonde : tester la ligne */}
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Tester ma ligne (2 minutes)
+                </p>
+                <p className="mt-1 text-xs leading-relaxed text-slate-500">
+                  Vérifie que votre FAI ne détourne pas le port 53 — et révèle l&apos;IP réelle de
+                  votre box (utile si vous consultez cette page en 4G).
+                </p>
+                {!probe ? (
+                  <button
+                    type="button"
+                    onClick={() => void startProbe()}
+                    disabled={probeBusy}
+                    className="mt-2 inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-3.5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700 disabled:opacity-60"
+                  >
+                    {probeBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <MapPin className="h-4 w-4" />}
+                    Lancer le test
+                  </button>
+                ) : (
+                  <div className="mt-2 grid gap-2">
+                    <div className="rounded-lg border border-slate-200 bg-white px-3 py-2">
+                      <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+                        Sur un appareil du logement — Windows (Invite de commandes)
+                      </p>
+                      <code className="mt-1 block break-all font-mono text-xs text-slate-800">
+                        nslookup {probe.name} {resolverIp || home?.resolverIp || "<résolveur>"}
+                      </code>
+                    </div>
+                    <div className="rounded-lg border border-slate-200 bg-white px-3 py-2">
+                      <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+                        macOS / Linux (Terminal)
+                      </p>
+                      <code className="mt-1 block break-all font-mono text-xs text-slate-800">
+                        dig @{resolverIp || home?.resolverIp || "<résolveur>"} {probe.name}
+                      </code>
+                    </div>
+                    {probeStatus?.status === "pending" ? (
+                      <p className="flex items-start gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs leading-relaxed text-slate-600">
+                        <Loader2 className="mt-0.5 h-3.5 w-3.5 shrink-0 animate-spin text-emerald-600" />
+                        En attente d&apos;une requête depuis chez vous… Si rien n&apos;arrive après
+                        une minute, votre FAI détourne peut-être le port 53 : les onglets Android et
+                        Apple (DNS chiffré) restent alors la voie.
+                      </p>
+                    ) : null}
+                    {probeStatus?.status === "received" ? (
+                      <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs leading-relaxed text-emerald-800">
+                        <p className="font-semibold">
+                          ✓ Ligne propre — requête reçue de {probeStatus.ip}
+                        </p>
+                        {probeStatus.bound ? (
+                          <p className="mt-1">
+                            {probeStatus.mine
+                              ? "Cette IP est déjà liée à votre compte — votre maison est protégée."
+                              : "Cette IP est déjà liée à un autre compte."}
+                          </p>
+                        ) : (
+                          <div className="mt-1.5">
+                            <p>C&apos;est l&apos;IP de votre box. Liez-la à un profil :</p>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setHIP(probeStatus.ip ?? "");
+                                void claimHome(undefined, probeStatus.ip);
+                              }}
+                              disabled={hBusy}
+                              className="mt-1.5 inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-emerald-700 disabled:opacity-60"
+                            >
+                              {hBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
+                              Lier {probeStatus.ip}
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    ) : null}
+                    {probeStatus?.status === "expired" ? (
+                      <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                        Sonde expirée (15 min) — relancez le test.
+                      </p>
+                    ) : null}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setProbe(null);
+                        setProbeStatus(null);
+                      }}
+                      className="justify-self-start text-xs font-semibold text-slate-500 underline underline-offset-2 hover:text-slate-700"
+                    >
+                      Fermer le test
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Les liaisons du compte */}
+          <h3 className="mt-6 text-sm font-bold uppercase tracking-wide text-slate-500">
+            Vos logements liés
+          </h3>
+          {homeLoading && !home ? (
+            <p className="mt-2 flex items-center gap-2 text-sm text-slate-500">
+              <Loader2 className="h-4 w-4 animate-spin" /> Lecture…
+            </p>
+          ) : home && home.bindings.length > 0 ? (
+            <ul className="mt-2 divide-y divide-slate-100 rounded-xl border border-slate-200">
+              {home.bindings.map((b) => (
+                <li key={b.id} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-slate-800">
+                      {b.label} <span className="font-mono font-normal text-slate-500">· {b.ip}</span>
+                    </p>
+                    <p className="text-xs text-slate-500">
+                      Profil « {b.profileName} » · dernière requête vue {timeAgo(b.lastQueryAt)} ·{" "}
+                      {b.queryCount.toLocaleString("fr-FR")} requêtes servies
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {b.lastQueryAt ? (
+                      <span className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700">
+                        <ShieldCheck className="h-3 w-3" /> protégée
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[11px] font-semibold text-slate-500">
+                        en attente de la box
+                      </span>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => void removeHome(b.id, b.label)}
+                      disabled={hBusy}
+                      aria-label={`Détacher ${b.label}`}
+                      className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="mt-2 rounded-xl border border-dashed border-slate-300 bg-slate-50 px-3.5 py-3 text-sm text-slate-500">
+              Aucun logement lié pour l&apos;instant — remplissez le formulaire ci-dessous{" "}
+              <em>depuis chez vous</em> (l&apos;IP de votre ligne se remplit seule).
+            </p>
+          )}
+
+          {/* Le formulaire de liaison */}
+          <div className="mt-4 grid gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4 sm:grid-cols-[1fr_1fr_auto]">
+            <div>
+              <label htmlFor="maison-profil" className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                Profil appliqué à la maison
+              </label>
+              <select
+                id="maison-profil"
+                value={hProfileId}
+                onChange={(e) => setHProfileId(e.target.value)}
+                className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-800 focus:border-emerald-400 focus:outline-none"
+              >
+                {profiles.length === 0 ? <option value="">— aucun profil —</option> : null}
+                {profiles.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name} ({levelInfo(p.level).label})
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label htmlFor="maison-label" className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Nom
+                </label>
+                <input
+                  id="maison-label"
+                  value={hLabel}
+                  onChange={(e) => setHLabel(e.target.value)}
+                  maxLength={60}
+                  placeholder="Maison"
+                  className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-800 focus:border-emerald-400 focus:outline-none"
+                />
+              </div>
+              <div>
+                <label htmlFor="maison-ip" className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  IP publique
+                </label>
+                <input
+                  id="maison-ip"
+                  value={hIP}
+                  onChange={(e) => setHIP(e.target.value)}
+                  placeholder={home?.myIp || "détection…"}
+                  className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 font-mono text-sm text-slate-800 focus:border-emerald-400 focus:outline-none"
+                />
+              </div>
+            </div>
+            <div className="flex items-end">
+              <button
+                type="button"
+                onClick={() => void claimHome()}
+                disabled={hBusy || profiles.length === 0}
+                className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700 disabled:opacity-60"
+              >
+                {hBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <RouterIcon className="h-4 w-4" />}
+                Lier mon logement
+              </button>
+            </div>
+          </div>
+          {home?.myIp ? (
+            <p className="mt-1.5 text-xs text-slate-500">
+              Vous consultez cette page depuis <span className="font-mono">{home.myIp}</span> — si
+              c&apos;est votre réseau domestique, c&apos;est la bonne IP. Sinon, lancez la sonde
+              depuis chez vous.
+            </p>
+          ) : null}
+          {hError ? (
+            <p className="mt-2 rounded-xl border border-red-200 bg-red-50 px-3.5 py-2.5 text-sm text-red-700">{hError}</p>
+          ) : null}
+          <p className="mt-3 rounded-xl bg-slate-50 px-3.5 py-2.5 text-xs leading-relaxed text-slate-500">
+            Honnêteté produit : certains FAI partagent une même IP publique entre foyers (CGNAT) —
+            la liaison reste fonctionnelle mais le filtrage est alors celui du profil lié, partagé
+            par tous les logements derrière cette IP. Si votre IP change (rébox, redémarrage FAI),
+            re-liez simplement la nouvelle : la maison suit en un clic.
+          </p>
+        </section>
       </main>
 
       {/* ── Footer sticky ─────────────────────────────────────────── */}
@@ -965,24 +1377,59 @@ export default function DnsPage() {
 
               {systeme === "box" ? (
                 <div className="grid gap-4">
-                  <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5 text-center">
-                    <RouterIcon className="mx-auto h-8 w-8 text-slate-300" aria-hidden />
-                    <p className="mt-2 text-sm font-semibold text-slate-700">
-                      Le jalon suivant du bouclier : la box et le routeur
+                  {!udp53Enabled ? (
+                    <p className="rounded-xl border border-amber-300 bg-amber-50 px-3.5 py-3 text-sm leading-relaxed text-amber-800">
+                      Le résolveur maison (UDP/53) est en cours d&apos;activation côté
+                      infrastructure — le guide ci-dessous est déjà le bon. En attendant, les
+                      onglets Android et Apple couvrent les téléphones et ordinateurs.
                     </p>
-                    <p className="mx-auto mt-1.5 max-w-md text-sm leading-relaxed text-slate-500">
-                      Un résolveur classique (UDP/53) protègera TOUTE la maison — box FAI, Starlink,
-                      routeurs perso — sans rien installer sur les appareils : TV, consoles et
-                      objets connectés compris.
-                    </p>
-                    <p className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-amber-300 bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700">
-                      <Globe className="h-3.5 w-3.5" /> Jalon N°346 — en préparation
-                    </p>
-                  </div>
-                  <p className="text-xs leading-relaxed text-slate-500">
-                    En attendant : Android (onglet Android) et Apple (profil) couvrent déjà les
-                    téléphones et ordinateurs du foyer — ce sont eux qui portent l&apos;essentiel du
-                    trafic familial.
+                  ) : null}
+                  <ol className="grid gap-2.5">
+                    <Step n={1}>
+                      <strong>Liez d&apos;abord votre logement</strong> — la liaison identifie votre
+                      ligne (IP publique) et lui applique CE profil. Depuis chez vous, un clic&nbsp;:
+                      <div className="mt-1.5">
+                        {home?.bindings?.some((b) => b.profileId === installFor.id && b.lastQueryAt) ? (
+                          <p className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">
+                            <Check className="h-3.5 w-3.5" /> Maison liée et déjà en train de filtrer
+                          </p>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => void claimHome(installFor.id)}
+                            disabled={hBusy}
+                            className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-emerald-700 disabled:opacity-60"
+                          >
+                            {hBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RouterIcon className="h-3.5 w-3.5" />}
+                            Lier ce profil à mon logement
+                          </button>
+                        )}
+                      </div>
+                    </Step>
+                    <Step n={2}>
+                      Ouvrez les réglages de votre box : interface web (<code className="rounded bg-slate-100 px-1">192.168.1.1</code>{" "}
+                      ou <code className="rounded bg-slate-100 px-1">192.168.0.1</code> selon le modèle), application de votre FAI, ou
+                      application Starlink (Settings) pour une parabole.
+                    </Step>
+                    <Step n={3}>
+                      Trouvez la section <strong>DNS</strong> (parfois « serveurs DNS », « DNS
+                      personnalisés ») et posez <strong>DNS 1</strong> ={" "}
+                      <span className="font-mono font-semibold text-slate-900">{resolverIp || "voir section Toute la maison"}</span>.
+                      <strong> DNS 2 : laissez celui de votre FAI</strong> — filet de secours (un
+                      bouclier injoignable ne coupe jamais Internet, il se laisse dépasser).
+                    </Step>
+                    <Step n={4}>
+                      Enregistrez (redémarrez la box si elle le demande). Toute la maison passe par
+                      le bouclier : TV, consoles, objets connectés et invités — sans rien installer.
+                    </Step>
+                  </ol>
+                  <p className="rounded-xl bg-slate-50 px-3.5 py-2.5 text-xs leading-relaxed text-slate-500">
+                    La santé de la maison (dernière requête vue, test de ligne contre le
+                    détournement du port 53 par certains FAI) vit dans la section{" "}
+                    <a href="#maison" className="font-semibold text-emerald-700 underline underline-offset-2">
+                      Toute la maison
+                    </a>{" "}
+                    de cette page. Box du FAI, Starlink et routeurs persos : même méthode.
                   </p>
                 </div>
               ) : null}

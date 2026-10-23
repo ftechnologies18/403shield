@@ -159,6 +159,15 @@ func main() {
 	// (le DoH reste seul canal, le backend démarre toujours — doctrine
 	// fail-open au boot). Provisionnés par le geste ops-dns-dot.yml.
 	go engine.ServeDoT()
+	// N°346 — serveur DNS classique UDP/53 + TCP/53 : « TOUTE LA MAISON »
+	// (box FAI, Starlink, routeurs perso — TV, consoles, objets connectés,
+	// invités, sans rien installer). Routage par IP source : la liaison
+	// IP publique du logement → profil (dns_home_bindings, revendiquée
+	// depuis la console ou révélée par la sonde probe-<token>). IP non
+	// liée → REFUSED : JAMAIS un open resolver. Port 53 occupé ou caps
+	// absentes → désactivation franchement journalisée (le bouclier
+	// reste servi en DoH/DoT, le backend démarre toujours).
+	go engine.ServeUDP53()
 	// N°344 — cicatrice « Tunnel non joignable » : re-file wg_setup aux
 	// routeurs tunnels actifs au démarrage (règle pare-feu mikcloud-wg-in du
 	// pilotage direct — les routeurs configurés avant N°344 ne la posent

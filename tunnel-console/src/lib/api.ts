@@ -480,9 +480,10 @@ export interface DnsProfile {
   appleDotUrl?: string;
 }
 
-/** N°345 — bloc setup de /me : les formats d'installation ({publicId} à
- * remplacer) + l'état RÉEL du serveur DoT (dotEnabled n'est vrai que si
- * l'écoute :853 est effective — doctrine « aucun faux chiffre »). */
+/** N°345/346 — bloc setup de /me : les formats d'installation ({publicId} à
+ * remplacer) + l'état RÉEL des serveurs DoT/UDP53 (dotEnabled/udp53Enabled
+ * ne sont vrais que si l'écoute est effective — doctrine « aucun faux
+ * chiffre ») + l'IP du résolveur à poser sur la box (vide tant qu'inconnue). */
 export interface DnsSetup {
   doh: string;
   dotHost: string;
@@ -490,6 +491,12 @@ export interface DnsSetup {
   appleDot: string;
   dotZone: string;
   dotEnabled: boolean;
+  /** N°346 — jalon maison : état réel du résolveur UDP/53. */
+  udp53Enabled: boolean;
+  /** N°346 — l'IP publique du résolveur (à poser en DNS 1 sur la box). */
+  resolverIp: string;
+  /** N°346 — la zone (sonde probe-<token> + documentation). */
+  resolverHost: string;
 }
 
 export interface DnsMeResponse {
@@ -499,6 +506,108 @@ export interface DnsMeResponse {
   limits: { maxProfiles: number; maxRules: number };
   setupUrlFormat: string;
   setup: DnsSetup;
+}
+
+// ---------------------------------------------------------------------------
+// N°346 — liaisons « toute la maison » (résolveur UDP/53)
+// ---------------------------------------------------------------------------
+
+/** N°346 — une liaison IP publique de logement → profil (jointure profil
+ * côté backend : profileName pour l'affichage). lastQueryAt/queryCount
+ * sont des agrégats différés (≤ 60 s) — la santé de la maison, jamais un
+ * journal des domaines consultés. */
+export interface DnsHomeBinding {
+  id: string;
+  ip: string;
+  label: string;
+  profileId: string;
+  profileName: string;
+  lastQueryAt: string;
+  queryCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface DnsHomeResponse {
+  /** L'IP de la requête en cours (celle de la box si le client est chez lui). */
+  myIp: string;
+  resolverIp: string;
+  resolverHost: string;
+  udp53Enabled: boolean;
+  bindings: DnsHomeBinding[];
+  limits: { maxBindings: number };
+}
+
+/** N°346 — sonde de ligne : le jeton éphémère + le nom à interroger depuis
+ * un appareil DU logement (15 min de validité). */
+export interface DnsProbeResponse {
+  token: string;
+  name: string;
+  expiresAt: string;
+  resolverIp: string;
+}
+
+/** N°346 — statut de la sonde : pending (rien reçu), received (la ligne
+ * est propre — ip = l'IP source révélée), ou 404 (inconnue/expirée). */
+export interface DnsProbeStatusResponse {
+  status: "pending" | "received";
+  expiresAt: string;
+  ip?: string;
+  at?: string;
+  bound?: boolean;
+  mine?: boolean;
+}
+
+/** N°346 — liaisons + IP de la requête + état réel du résolveur maison. */
+export async function dnsHomeList(token: string): Promise<DnsHomeResponse> {
+  return apiFetch<DnsHomeResponse>("/api/dnsshield/home", { token });
+}
+
+/** N°346 — lie une IP de logement à un profil (ip facultative : défaut =
+ * l'IP de la requête — le client est chez lui). */
+export async function dnsHomeClaim(
+  token: string,
+  profileId: string,
+  label: string,
+  ip?: string,
+): Promise<DnsHomeBinding> {
+  return apiFetch<DnsHomeBinding>("/api/dnsshield/home", {
+    method: "POST",
+    token,
+    body: { profileId, label, ip: ip || undefined },
+  });
+}
+
+/** N°346 — détache un logement (la box retombe sur le DNS du FAI). */
+export async function dnsHomeDelete(
+  token: string,
+  id: string,
+): Promise<{ deleted: boolean }> {
+  return apiFetch<{ deleted: boolean }>(`/api/dnsshield/home/${encodeURIComponent(id)}`, {
+    method: "DELETE",
+    token,
+  });
+}
+
+/** N°346 — génère une sonde de ligne (détection du détournement FAI du
+ * port 53 + révélation de l'IP réelle de la box). */
+export async function dnsHomeProbeCreate(token: string): Promise<DnsProbeResponse> {
+  return apiFetch<DnsProbeResponse>("/api/dnsshield/home/probe", {
+    method: "POST",
+    token,
+    body: {},
+  });
+}
+
+/** N°346 — le statut de la sonde (poll). */
+export async function dnsHomeProbeStatus(
+  token: string,
+  probeToken: string,
+): Promise<DnsProbeStatusResponse> {
+  return apiFetch<DnsProbeStatusResponse>(
+    `/api/dnsshield/home/probe/${encodeURIComponent(probeToken)}`,
+    { token },
+  );
 }
 
 export interface DnsEventsResponse {

@@ -353,6 +353,25 @@ var dnsEventSpec = entitySpec[model.DnsEvent]{
 	hashOf: hashEntity[model.DnsEvent],
 }
 
+// dnsHomeBindingSpec — N°346 : liaisons « toute la maison » (IP publique
+// du logement → profil — acheminement du résolveur UDP/53). Le compteur
+// et last_query_at vivent dans la table (flush différé ≤ 60 s) : la diff
+// syncTable les propage comme n'importe quel champ.
+var dnsHomeBindingSpec = entitySpec[model.DnsHomeBinding]{
+	table: "dns_home_bindings",
+	cols:  []string{"id", "profile_id", "owner_email", "ip", "label", "last_query_at", "query_count", "created_at", "updated_at"},
+	idOf:  func(x *model.DnsHomeBinding) string { return x.ID },
+	scan: func(r *sql.Rows) (model.DnsHomeBinding, error) {
+		var x model.DnsHomeBinding
+		err := r.Scan(&x.ID, &x.ProfileID, &x.OwnerEmail, &x.IP, &x.Label, &x.LastQueryAt, &x.QueryCount, &x.CreatedAt, &x.UpdatedAt)
+		return x, err
+	},
+	args: func(x *model.DnsHomeBinding) []any {
+		return []any{x.ID, x.ProfileID, x.OwnerEmail, x.IP, x.Label, x.LastQueryAt, x.QueryCount, x.CreatedAt, x.UpdatedAt}
+	},
+	hashOf: hashEntity[model.DnsHomeBinding],
+}
+
 var profileSpec = entitySpec[model.Profile]{
 	table: "profiles",
 	cols:  []string{"id", "name", "rate_limit", "session_timeout_min", "shared_users", "validity_days", "price", "data_quota_mb", "created_at", "account_id", "exp_mode", "grace_period_min", "lock_user", "selling_price", "lock_first_device", "address_pool", "parent_queue", "validity_min", "quota_mode", "throttle_rate"},

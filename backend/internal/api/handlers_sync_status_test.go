@@ -107,15 +107,16 @@ func TestSyncStatusContract(t *testing.T) {
 		t.Fatalf("mode JSON : neon doit être null, obtenu %v", out["neon"])
 	}
 
-	// Tables : 46 entrées, lignes mémoire exactes pour le seed
-	// (45 différentielles + settings — N°133 : chat ×2 + devices ; N°152 :
+	// Tables : 47 entrées, lignes mémoire exactes pour le seed
+	// (46 différentielles + settings — N°133 : chat ×2 + devices ; N°152 :
 	// + announcements ; N°182 : + sites ; N°200 : + monthly_journals ;
 	// N°290 : + cyber_postes ; N°291 : + vpn_peers ; N°293 : + ppp_secrets ;
 	// N°301 : + public_vpn_orders ; N°313 : + tunnel_clients ; N°339 :
-	// + dns_profiles + dns_events ; N°342 : + vpn_guests).
+	// + dns_profiles + dns_events ; N°342 : + vpn_guests ; N°346 :
+	// + dns_home_bindings).
 	tables, ok := out["tables"].([]any)
-	if !ok || len(tables) != 46 {
-		t.Fatalf("46 tables attendues (45 différentielles + settings — N°182 : sites, N°199 : volume_days, N°200 : monthly_journals, N°290 : cyber_postes, N°291 : vpn_peers, N°293 : ppp_secrets, N°301 : public_vpn_orders, N°313 : tunnel_clients, N°342 : vpn_guests), obtenu %v", len(tables))
+	if !ok || len(tables) != 47 {
+		t.Fatalf("47 tables attendues (46 différentielles + settings — N°182 : sites, N°199 : volume_days, N°200 : monthly_journals, N°290 : cyber_postes, N°291 : vpn_peers, N°293 : ppp_secrets, N°301 : public_vpn_orders, N°313 : tunnel_clients, N°339 : dns_profiles + dns_events, N°342 : vpn_guests, N°346 : dns_home_bindings), obtenu %v", len(tables))
 	}
 	findTable := func(name string) map[string]any {
 		for _, e := range tables {

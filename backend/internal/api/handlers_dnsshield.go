@@ -122,6 +122,13 @@ func (a *API) handleDnsShieldMe(w http.ResponseWriter, r *http.Request) {
 			"appleDot":   base + "/dns-cfg/{publicId}/dot",
 			"dotZone":    dnsDotZone(),
 			"dotEnabled": dotEnabled.Load(),
+			// N°346 — le jalon maison : l'état RÉEL du serveur UDP/53,
+			// l'IP du résolveur à poser sur la box (env/geste ops —
+			// doctrine « aucun faux chiffre » : vide tant qu'inconnue)
+			// et la zone (sonde probe-<token> + documentation).
+			"udp53Enabled": udp53Enabled.Load(),
+			"resolverIp":   dnsUdp53ResolverIP(),
+			"resolverHost": dnsDotZone(),
 		},
 	})
 }
@@ -339,6 +346,16 @@ func (a *API) handleDnsShieldProfileDelete(w http.ResponseWriter, r *http.Reques
 		}
 	}
 	db.DnsEvents = kept
+	// N°346 — les liaisons MAISON du profil partent avec lui (miroir du
+	// journal) : jamais une maison pointant un profil disparu — elle
+	// retomberait sur REFUSED (silence DNS) au lieu du FAI.
+	keptB := db.DnsHomeBindings[:0]
+	for _, b := range db.DnsHomeBindings {
+		if b.ProfileID != id {
+			keptB = append(keptB, b)
+		}
+	}
+	db.DnsHomeBindings = keptB
 	a.logActivity(db, model.AccountMainID, "tunnel",
 		"Profil bouclier DNS supprimé : «"+name+"» — "+client.Email)
 	a.store.Save()

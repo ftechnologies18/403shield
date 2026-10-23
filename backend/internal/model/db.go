@@ -109,6 +109,11 @@ type DB struct {
 	// uniquement — les requêtes autorisées ne sont JAMAIS consignées,
 	// la journalisation minimale est une promesse produit).
 	DnsEvents []DnsEvent `json:"dnsEvents"`
+	// N°346 — LIAISONS « toute la maison » du bouclier DNS (résolveur
+	// UDP/53 : IP publique du logement → profil — le DNS classique
+	// n'a pas de champ d'identification, l'IP source est l'achemi-
+	// nement). Cf. dnshomebinding.go.
+	DnsHomeBindings []DnsHomeBinding `json:"dnsHomeBindings"`
 	// N°68 — demandes de réinitialisation de mot de passe (« Mot de passe
 	// oublié ? ») : token hashé, expiration 60 min, usage unique — voir
 	// PasswordReset. Borné par prunePasswordResetsLocked.

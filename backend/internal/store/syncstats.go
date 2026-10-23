@@ -363,6 +363,8 @@ func liveTableRows(db *model.DB) []TableHealth {
 		{Table: "tunnel_clients", Rows: len(db.TunnelClients)},
 		{Table: "dns_profiles", Rows: len(db.DnsProfiles)},
 		{Table: "dns_events", Rows: len(db.DnsEvents)},
+		// N°346 — liaisons « toute la maison » (parité synchro différentielle).
+		{Table: "dns_home_bindings", Rows: len(db.DnsHomeBindings)},
 		{Table: "settings", Rows: len(db.SettingsByAccount)},
 	}
 }

@@ -100,6 +100,7 @@ func (p *PG) Load() (db *model.DB, found bool, err error) {
 		{"tunnel_clients", func() error { return loadInto(p, &db.TunnelClients, tunnelClientSpec) }},
 		{"dns_profiles", func() error { return loadInto(p, &db.DnsProfiles, dnsProfileSpec) }},
 		{"dns_events", func() error { return loadInto(p, &db.DnsEvents, dnsEventSpec) }},
+		{"dns_home_bindings", func() error { return loadInto(p, &db.DnsHomeBindings, dnsHomeBindingSpec) }},
 		{"settings", func() error { return p.loadSettings(db) }},
 	}
 	for _, st := range steps {

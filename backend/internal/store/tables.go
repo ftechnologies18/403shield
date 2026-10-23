@@ -85,7 +85,9 @@ const (
 	TableTunnelClients = "tunnel_clients"
 	TableDnsProfiles   = "dns_profiles"
 	TableDnsEvents     = "dns_events"
-	TableSettings      = "settings" // hors diff d'empreintes (syncSettings)
+	// N°346 — liaisons « toute la maison » du bouclier DNS (UDP/53).
+	TableDnsHomeBindings = "dns_home_bindings"
+	TableSettings        = "settings" // hors diff d'empreintes (syncSettings)
 )
 
 // syncKnownTables — registre des noms acceptés par SaveTables/SyncTables :
@@ -137,6 +139,7 @@ var syncKnownTables = map[string]bool{
 	TableTunnelClients:        true,
 	TableDnsProfiles:          true,
 	TableDnsEvents:            true,
+	TableDnsHomeBindings:      true,
 	TableSettings:             true,
 }
 

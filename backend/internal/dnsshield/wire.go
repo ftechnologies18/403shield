@@ -26,6 +26,7 @@ package dnsshield
 import (
 	"encoding/binary"
 	"errors"
+	"net"
 )
 
 // Question — l'unique question d'un message DNS (QDCOUNT attendu 1 ; un
@@ -126,6 +127,50 @@ func BuildBlocked(q Question) []byte {
 // rééchée, aucune réponse — « pas de service à cette heure ».
 func BuildRefused(q Question) []byte {
 	return buildHeaderOnly(q, 5)
+}
+
+// BuildNoError — N°346 — NOERROR vide (question rééchée, aucune réponse) :
+// la réponse de la sonde maison pour les types qui ne la concernent pas
+// (l'ARRIVÉE de la question est la preuve, le type ne concerne personne).
+func BuildNoError(q Question) []byte {
+	return buildHeaderOnly(q, 0)
+}
+
+// BuildAnswerA — N°346 — réponse A arbitraire (TTL paramétrable) : la
+// sonde maison probe-<token> répond l'IP DU RÉSOLVEUR — la réponse EST
+// l'adresse à configurer sur la box. IP absente/invalide → NOERROR vide
+// (l'arrivée reste prouvée, jamais de réponse fabriquée).
+func BuildAnswerA(q Question, ip net.IP, ttl uint32) []byte {
+	v4 := ip.To4()
+	if v4 == nil {
+		return buildHeaderOnly(q, 0)
+	}
+	if q.Qtype != qtypeA {
+		return buildHeaderOnly(q, 0)
+	}
+	name := encodeName(q.Name)
+	out := make([]byte, 0, 12+len(name)+4+2+10+2+4)
+	out = binary.BigEndian.AppendUint16(out, q.ID)
+	flags := uint16(0x8000)
+	if q.RD {
+		flags |= 0x0100
+	}
+	flags |= 0x0080
+	out = binary.BigEndian.AppendUint16(out, flags)
+	out = binary.BigEndian.AppendUint16(out, 1) // QDCOUNT
+	out = binary.BigEndian.AppendUint16(out, 1) // ANCOUNT
+	out = binary.BigEndian.AppendUint16(out, 0)
+	out = binary.BigEndian.AppendUint16(out, 0)
+	out = append(out, name...)
+	out = binary.BigEndian.AppendUint16(out, q.Qtype)
+	out = binary.BigEndian.AppendUint16(out, 1)
+	out = binary.BigEndian.AppendUint16(out, 0xC00C) // pointeur vers la question (offset 12)
+	out = binary.BigEndian.AppendUint16(out, q.Qtype)
+	out = binary.BigEndian.AppendUint16(out, 1) // IN
+	out = binary.BigEndian.AppendUint32(out, ttl)
+	out = binary.BigEndian.AppendUint16(out, 4)
+	out = append(out, v4...)
+	return out
 }
 
 // buildHeaderOnly — en-tête réponse + question, rcode posé, compteurs 0.
