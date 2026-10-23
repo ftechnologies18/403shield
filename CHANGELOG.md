@@ -10,6 +10,138 @@ sous-marque FTech CI) ; l'historique ci-dessous conserve les noms d'époque.
 N°319 : le DÉPÔT GitHub lui-même devient `ftechnologies18/403shield`
 (anciennes URL redirigées en 301 par GitHub — web, git et API).
 
+## 2026-10-23 — N°347 — **BOUCLIER DNS PHASE 5 : LA VITRINE « TOURACO » — le bouclier DNS porte le nom de l'oiseau africain (il remplace le nom de code BAOBAB), l'abonnement TOURACO se vend sans compte depuis le site /dns, GeniusPay encaisse, le droit vit sur l'e-mail** (gratuit intact pour toujours, capacités étendues 25 profils · 600 règles · 15 logements · journal 90 j)
+
+### Le nom d'abord (la décision de l'exploitant)
+- Le service résolveur s'appelle désormais **TOURACO** — l'oiseau guetteur
+  africain aux ailes écarlates. Il remplace le nom de code interne
+  **BAOBAB** : l'oiseau veille, l'abonnement étend. Les formules vendues
+  sont « TOURACO Mensuel » (1 000 F) et « TOURACO Annuel » (10 000 F,
+  ~2 mois offerts — prix aligné sous le VPN B2C N°301 : le produit DNS
+  est léger à opérer, aucune bande passante tunnelnée, le filtrage
+  résout sans transporter).
+
+### Le problème (un produit complet sans canal de vente)
+- N°339→346 ont livré un bouclier DNS COMPLET (DoH navigateurs, DoT
+  Android, UDP/53 toute la maison, menaces vivantes) — entièrement
+  gratuit, entièrement dans la console tunnel. Aucune voie de revenus,
+  aucun canal d'achat sans compte : la vitrine publique `/dns` n'existait
+  pas.
+- La doctrine du jalon est **ADDITIVE, jamais une coupure** : le gratuit
+  reste utilisable POUR TOUJOURS (10 profils, 200 règles par liste,
+  5 logements, journal 30 j — constantes historiques INTACTES).
+  L'abonnement vend des CAPACITÉS ÉTENDUES : 25 profils, 600 règles,
+  15 logements (domicile + bureau + maison de famille), journal 90 j.
+  À l'expiration, RIEN n'est supprimé : le droit cesse, les quotas
+  retombent, les profils et liaisons restent servis — seule la création
+  au-delà des bornes gratuites redevient refusée.
+
+### Ce qui a changé — backend (`handlers_public_dns.go`, `publicdns_sweep.go`, `publicdnsorder.go`)
+- **QUATRE routes publiques `/api/public/dns/*`** (miroir strict de la
+  vente directe VPN N°301 — l'acheteur n'a PAS de compte) : catalogue
+  (cacheable, fermé → `{"enabled":false}` sans fuite), création de
+  commande (honeypot + quotas IP + une seule pending par e-mail +
+  plafond 500 ordres actifs), statut MINIMAL par référence (jamais
+  d'e-mail — anti-énumération), récupération self-service de l'e-mail
+  d'activation (réponse générique). Références **MCD-** (MC- = SaaS,
+  MCV- = VPN, MCD- = abonnement DNS : le webhook GeniusPay route par
+  préfixe, AVANT l'appariement BillingRequests).
+- **Le droit EST l'échéance** (la différence structurelle avec le VPN) :
+  aucun réseau à provisionner, aucun peer, aucune conf —
+  `provisionPublicDnsOrder` pose `ExpiresAt = paid + mois` sous le
+  verrou, l'entitlement d'un e-mail est la PLUS LOINTAINE de ses
+  échéances provisionnées non échues (les commandes se cumulent
+  proprement). TROIS sources convergent : webhook GeniusPay MCD-, poll
+  de retour de caisse, confirmation manuelle plateforme — un
+  provisioning en échec reste « paid » et est REJOUÉ par le balayage
+  horaire (la promesse « activation auto » ne se perd jamais).
+- **Renouvellement 1-clic** (console /dns, JWT tunnel) : `kind renewal`
+  — l'échéance étendue vit sur la CIBLE au max(terme, maintenant) +
+  mois : un abonné qui renouvelle AVANT le terme ne perd jamais ses
+  jours restants. Cible morte au paiement → dégénérescence honnête en
+  vente neuve (trace visible plateforme).
+- **Quotas résolus À LA LECTURE** (`DnsQuotasForEmail` sous le verrou —
+  une requête, aucune recopie, aucun cache) : un terme franchi retombe
+  au tier gratuit à la seconde. `PurgeDnsEvents` devient PAR
+  PROPRIÉTAIRE (abonné 90 j/3000 événements, gratuit 30 j/1000) ;
+  `NormalizeDnsRulesWithMax` porte la borne paramétrée (600 vs 200) ;
+  `/api/dnsshield/me` sert le bloc `subscription` (état, échéance,
+  commandes cibles du renouvellement) et les bornes EFFECTIVES ;
+  `/api/dnsshield/home` sert `maxBindings` effectif (15/5).
+- **Console plateforme** : file `GET /api/admin/dns/orders` (pending en
+  tête — le travail du canal manual) + `POST …/{id}/resolve`
+  (markPaid → provisioning auto / cancel — un droit provisionné annulé
+  perd son entitlement, les quotas retombent, rien n'est supprimé).
+- **Toggle vitrine** `settings.platform_public_dns_shop` (opt-in OFF
+  par défaut — l'ouverture est un geste de l'exploitant ; la FERMETURE
+  n'annule RIEN : les droits courent jusqu'à leur terme, même doctrine
+  que le module gérant — couper des clients payants sans geste explicite
+  serait une trahison de confiance).
+
+### Ce qui a changé — site (`frontend/src/app/dns/`, caisse `/checkout` bi-produit)
+- **Vitrine `/dns`** : page produit clay complète bilingue — hero
+  « Bouclier DNS · TOURACO », 4 sections (profils & règles, menaces
+  vivantes URLhaus/OpenPhish, toute la maison, tous les appareils),
+  FAQ 7 objections réelles (VPN vs DNS, expiration sans coupure,
+  FAI/Starlink, performance, contournement), tarifs depuis la SOURCE
+  UNIQUE `pricing.segments` (nouveau segment dns : Gratuit 0 F pour
+  toujours + TOURACO Mensuel/Annuel), méga menu Produits, footer,
+  sitemap, JSON-LD.
+- **Caisse `/checkout` bi-produit** : onglets « VPN B2C » / « Bouclier
+  DNS TOURACO », routage par PRÉFIXE de référence (un retour GeniusPay
+  MCD- s'affiche en mots DNS même sous l'onglet VPN — le suivi suit la
+  référence, pas l'onglet), catalogue par onglet avec cache, poll 5 s,
+  écran provisioned = message d'activation + échéance + lien console
+  /dns, recover par produit. La copy VPN N°323 est INTACTE.
+- **Client `src/lib/public-dns.ts`** (miroir de public-vpn.ts).
+
+### Ce qui a changé — console tunnel (`tunnel-console/src/app/dns/page.tsx`)
+- **Carte « Abonnement TOURACO »** en tête de page : état + échéance +
+  capacités + commandes actives (chacune avec bouton Renouveler), ou
+  encart découverte + lien vitrine si le compte est au tier gratuit.
+- **Modale de renouvellement 1-clic** (miroir /me N°334-B) : formules
+  live avec montants par moyen, Wave/carte, honeypot, redirection
+  GeniusPay, repli canal manual honnête. **Bandeau retour
+  `?order=MCD-…`** avec poll 4 s : succès → rafraîchit /me, les bornes
+  étendues (25/600) apparaissent immédiatement. Les compteurs de la
+  page suivent désormais les bornes EFFECTIVES du serveur.
+
+### Ce qui a changé — console plateforme (`platform-vpn-view.tsx`, `platform-settings-view.tsx`)
+- **Onglet « Commandes DNS · TOURACO »** dans la vue VPN & Vente
+  directe : file pending en tête, montants FCFA, badges de statut
+  partagés avec le canal VPN, actions Confirmer l'encaissement / Annuler
+  (confirmation claire : droit retiré, quotas au gratuit, rien n'est
+  supprimé), état de la vitrine affiché. **Carte switch « Vitrine /dns »**
+  dans les paramètres plateforme, à côté du toggle VPN (i18n fr/en).
+
+### Intacts (contrats vérifiés par les portes)
+- Résolveur DoH N°339/343, serveur DoT N°345, UDP/53 N°346 : ZÉRO ligne
+  modifiée (le droit vit dans le registre, jamais dans le résolveur).
+- Canal VPN N°301/314 (réfs MCV-, e-mails, sweeps, renouvellement),
+  catalogue et flux GeniusPay existants, e-mails transactionnels.
+- Tier gratuit : constantes historiques de dnsprofile.go/dnshomebinding.go
+  INTACTES (la source unique des bornes gratuites).
+
+### Portes
+gofmt 0 · vet 0 · build OK · `go test ./...` complet vert · **+24 tests
+N°347** (modèle 8 : entitlement, quotas, retombée au terme, purge par
+propriétaire, bornes paramétrées, ref MCD-, extension ; API 16 : vitrine,
+machine à états, webhook MCD-, renew tunnel, /me subscription, quotas
+10→25 / 200→600 / 5→15, file admin, sweep, routes) · `-race` api (551
+tests en 2 passes) + dnsshield + model + store · **SMOKE RÉEL binaire
+13/13** (vitrine fermée → ouverte, commande MCD-, honeypot, doublon 409,
+file admin, markPaid → « abonnement TOURACO activé jusqu'au 2027-10-23 »,
+statut sans fuite, recover 503 honnête, 401 sans JWT) · frontend lint 0 +
+typecheck 0 + build 66/66 · tunnel-console lint 0 + tsc 0 + build 10/10 ·
+rendu réel navigateur /dns + /checkout?product=dns + console tunnel.
+**Schéma DB** : + `public_dns_orders` (47e table différentielle, aucun
+secret — le droit est l'échéance) + colonne
+`settings.platform_public_dns_shop` ; compteurs tables 47→48.
+
+> Jalons suivants (feuille de route DNS) : ouverture de la vitrine =
+> geste de l'exploitant (paramètres plateforme, switch « Vitrine /dns ») ;
+> guide public « qu'est-ce que le DNS filtré ? » dans le centre de guides.
+
 ## 2026-10-23 — N°346 — **BOUCLIER DNS PHASE 4 : « TOUTE LA MAISON » — serveur DNS classique UDP/53 + TCP/53 à routage par IP source, liaisons logement→profil, sonde de ligne (détection du détournement FAI du port 53), et le guide box dans la console** (box FAI, Starlink, routeurs perso : TV, consoles, objets connectés, invités — sans rien installer)
 
 ### Le problème (le parc qui ne s'installe pas)
