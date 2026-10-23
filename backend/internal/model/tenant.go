@@ -420,6 +420,13 @@ type PlatformConfig struct {
 	// aligné sur la famille platform_* — N°302) sur le compte principal
 	// uniquement.
 	PublicVpnShop *bool `json:"publicVpnShop,omitempty"`
+	// N°347 — vitrine DNS « TOURACO » (/dns — l'abonnement du bouclier DNS
+	// TOURACO : capacités étendues, jamais une coupure du gratuit) : canal
+	// opt-in OFF par défaut (même doctrine que PublicVpnShop — un flag, pas
+	// un nouvel usage ; l'ouverture est un geste de l'exploitant). Colonne
+	// settings.platform_public_dns_shop (NOT NULL DEFAULT FALSE) sur le
+	// compte principal uniquement.
+	PublicDnsShop *bool `json:"publicDnsShop,omitempty"`
 	// WgVpnMonthlyQuotaGB — N°311 — quota mensuel de trafic par peer VPN
 	// vendu, en Go (rx+tx confondus) : le garde-fou egress du tier Always
 	// Free OCI (N°289 §3.1 — ~10 To/mois TOUTE la plateforme). Nil = défaut
@@ -435,6 +442,12 @@ type PlatformConfig struct {
 // (nil = fermée : opt-in strict).
 func (p PlatformConfig) PublicVpnShopEnabled() bool {
 	return p.PublicVpnShop != nil && *p.PublicVpnShop
+}
+
+// PublicDnsShopEnabled — N°347 — valeur EFFECTIVE d'ouverture de la
+// vitrine DNS /dns (nil = fermée : opt-in strict, miroir PublicVpnShop).
+func (p PlatformConfig) PublicDnsShopEnabled() bool {
+	return p.PublicDnsShop != nil && *p.PublicDnsShop
 }
 
 // WgVpnMonthlyQuotaEffective — N°311 — valeur EFFECTIVE du quota mensuel

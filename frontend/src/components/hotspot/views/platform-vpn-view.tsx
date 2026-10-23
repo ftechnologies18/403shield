@@ -14,7 +14,12 @@
 //     d'un peer de N'IMPORTE QUEL compte (le levier ops) ;
 //   - Commandes B2C : la file du canal direct — confirmation manuelle
 //     (markPaid → provisioning AUTO), annulation (révoque le peer), suivi
-//     des provisioning différés (ErrorMsg, rejoués par le balayage horaire).
+//     des provisioning différés (ErrorMsg, rejoués par le balayage horaire) ;
+//   - Commandes DNS (N°347) : la file TOURACO de la vitrine /dns — même
+//     console que les commandes B2C (markPaid → activation AUTO, annulation
+//     SANS suppression : les quotas retombent au gratuit), avec l'état
+//     d'ouverture de la vitrine /dns (le levier vit dans les paramètres
+//     plateforme, à côté du toggle VPN).
 //
 // La réconciliation GLOBALE (manquants + fantômes) vit dans le header : le
 // bouton remplace le « wg-peer.sh list | diff » des ops.
@@ -23,7 +28,7 @@
 // (canView réserve la vue aux admins plateforme ; le serveur double la garde
 // par isPlatformAdmin — rang 3). La conf ne sort JAMAIS de cette vue.
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ChangeEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Ban,
@@ -65,10 +70,13 @@ import { Progress } from "@/components/ui/progress";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
+  fetchPlatformDnsOrders,
+  fetchPlatformSettings,
   fetchPlatformVpnOverview,
   fetchPlatformVpnOrders,
   fetchPlatformVpnPeers,
   fetchPlatformVpnReconcile,
+  resolvePlatformDnsOrder,
   resolvePlatformVpnOrder,
   revokePlatformVpnPeer,
   setPlatformVpnModule,
@@ -82,7 +90,7 @@ import { EmptyState } from "@/components/hotspot/empty-state";
 import { LoadingRows } from "@/components/hotspot/loading";
 import { PageHeader } from "@/components/hotspot/page-header";
 import { StatCard } from "@/components/hotspot/stat-card";
-import type { PlatformVpnAccountRow, PlatformVpnPeerRow, PublicVpnOrder } from "@/lib/hotspot/types";
+import type { PlatformVpnAccountRow, PlatformVpnPeerRow, PublicDnsOrder, PublicVpnOrder } from "@/lib/hotspot/types";
 
 const REFRESH_OPTIONS = [
   { value: "10000", label: "10 s" },
@@ -93,6 +101,19 @@ const REFRESH_OPTIONS = [
 const OVERVIEW_KEY = ["/api/admin/vpn/overview"] as const;
 const PEERS_KEY = ["/api/admin/vpn/peers"] as const;
 const ORDERS_KEY = ["/api/admin/vpn/orders"] as const;
+// N°347 — file des commandes DNS TOURACO + état de la vitrine /dns (même
+// clé de cache que platform-settings-view, où vit le toggle publicDnsShop).
+const DNS_ORDERS_KEY = ["/api/admin/dns/orders"] as const;
+const PLATFORM_SETTINGS_KEY = ["/api/admin/platform/settings"] as const;
+
+/** N°347 — libellé de formule depuis planId + months (miroir du catalogue
+ * backend PublicDnsPlans : dns-month = TOURACO Mensuel, dns-year = TOURACO
+ * Annuel — repli honnête sur la durée couverte si le catalogue évolue). */
+function dnsPlanLabel(planId: string, months: number): string {
+  if (planId === "dns-year" || months >= 12) return "TOURACO Annuel";
+  if (planId === "dns-month" || months >= 1) return "TOURACO Mensuel";
+  return "TOURACO";
+}
 
 /** Badge d'état d'un peer (miroir vpn-view). */
 function PeerStateBadge({ state }: { state: string }) {
@@ -133,10 +154,11 @@ function VpnQuotaCell({ bytes, limitGb, lang }: { bytes: number; limitGb: number
   );
 }
 
-/** Badge d'état d'une commande B2C. */
-function OrderStateBadge({ status }: { status: string }) {
+/** Badge d'état d'une commande (B2C VPN N°301 et DNS TOURACO N°347 — mêmes
+ * couleurs ; les libellés vivent sous le préfixe de domaine passé). */
+function OrderStateBadge({ status, keyPrefix = "platformVpn.orders.status" }: { status: string; keyPrefix?: string }) {
   const { t } = useI18n();
-  const key = `platformVpn.orders.status.${status}`;
+  const key = `${keyPrefix}.${status}`;
   const label = t(key);
   const cls =
     status === "provisioned"
@@ -158,11 +180,13 @@ export default function PlatformVpnView() {
   const [refreshMs, setRefreshMs] = useState(30_000);
   const [peerQuery, setPeerQuery] = useState("");
   const [orderQuery, setOrderQuery] = useState("");
+  // N°347 — recherche de la file DNS (réf MCD-, e-mail, formule, cible).
+  const [dnsOrderQuery, setDnsOrderQuery] = useState("");
 
   // Confirmation en attente (module grant/withdraw, revoke peer, order resolve).
-  type ConfirmKind = "grant" | "withdraw" | "revoke" | "markPaid" | "cancel";
+  type ConfirmKind = "grant" | "withdraw" | "revoke" | "markPaid" | "cancel" | "dnsMarkPaid" | "dnsCancel";
   const [confirm, setConfirm] = useState<
-    | { kind: ConfirmKind; account?: PlatformVpnAccountRow; peer?: PlatformVpnPeerRow; order?: PublicVpnOrder }
+    | { kind: ConfirmKind; account?: PlatformVpnAccountRow; peer?: PlatformVpnPeerRow; order?: PublicVpnOrder; dnsOrder?: PublicDnsOrder }
     | null
   >(null);
 
@@ -190,10 +214,28 @@ export default function PlatformVpnView() {
     enabled: ordersEnabled,
   });
 
+  // N°347 — file des commandes de l'abonnement DNS « TOURACO » (chargée à
+  // l'ouverture de l'onglet, miroir de la file B2C) + état de la vitrine
+  // /dns (même cache que platform-settings-view, où vit le toggle).
+  const dnsTabEnabled = tab === "dns";
+  const { data: dnsOrdersData, isLoading: dnsOrdersLoading } = useQuery({
+    queryKey: DNS_ORDERS_KEY,
+    queryFn: () => fetchPlatformDnsOrders(),
+    refetchInterval: refreshMs,
+    enabled: dnsTabEnabled,
+  });
+  const { data: dnsSettingsData } = useQuery({
+    queryKey: PLATFORM_SETTINGS_KEY,
+    queryFn: () => fetchPlatformSettings(),
+    refetchInterval: refreshMs,
+    enabled: dnsTabEnabled,
+  });
+
   const invalidateAll = () => {
     void queryClient.invalidateQueries({ queryKey: OVERVIEW_KEY });
     void queryClient.invalidateQueries({ queryKey: PEERS_KEY });
     void queryClient.invalidateQueries({ queryKey: ORDERS_KEY });
+    void queryClient.invalidateQueries({ queryKey: DNS_ORDERS_KEY });
   };
 
   const reconcileMutation = useMutation({
@@ -237,6 +279,24 @@ export default function PlatformVpnView() {
     onError: (err: Error) => toast.error(err.message),
   });
 
+  // N°347 — résolution d'une commande DNS TOURACO : markPaid (encaissement
+  // du canal manual + activation AUTO — la réponse porte l'échéance) ou
+  // cancel (si provisionnée : le droit cesse, les quotas retombent au
+  // gratuit, RIEN n'est supprimé). Mêmes toasts que la file VPN.
+  const dnsResolveMutation = useMutation({
+    mutationFn: ({ id, action }: { id: string; action: "markPaid" | "cancel" }) => resolvePlatformDnsOrder(id, action),
+    onSuccess: (res) => {
+      if (res.status === "paid") {
+        // Provisioning différé (rejoué par le balayage) : informatif, pas un échec.
+        toast.info(res.message);
+      } else {
+        toast.success(res.message || t("platformDns.orders.confirmPaidToast"));
+      }
+      invalidateAll();
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+
   // N°301 — ouverture/fermeture de la vitrine B2C (/vpn) : passe par les
   // paramètres plateforme (PUT /api/admin/platform/settings) ; la
   // FERMETURE n'annule rien (les commandes en service restent actives).
@@ -264,6 +324,14 @@ export default function PlatformVpnView() {
     if (!q) return orders;
     return orders.filter((o) => [o.ref, o.email, o.peerName, o.planId].some((v) => v.toLowerCase().includes(q)));
   }, [ordersData, orderQuery]);
+
+  // N°347 — filtre de la file DNS (réf MCD-, e-mail, formule, cible de renouvellement).
+  const filteredDnsOrders = useMemo(() => {
+    const orders = dnsOrdersData?.orders ?? [];
+    const q = dnsOrderQuery.trim().toLowerCase();
+    if (!q) return orders;
+    return orders.filter((o) => [o.ref, o.email, o.planId, o.renewTargetRef ?? ""].some((v) => v.toLowerCase().includes(q)));
+  }, [dnsOrdersData, dnsOrderQuery]);
 
   // ─── État de chargement / erreur 403 (miroir platform-team-view) ───
   if (overviewLoading) {
@@ -303,6 +371,20 @@ export default function PlatformVpnView() {
   const b2cActive = (b2c?.provisioned ?? 0) + (b2c?.paid ?? 0);
   const pendingTotal = (b2c?.pending ?? 0);
 
+  // N°347 — vitrine /dns (affichage d'état dans l'onglet DNS) + compteurs
+  // de file (pending en tête côté serveur, plafond 200).
+  const dnsShopOpen = dnsSettingsData?.platform.publicDnsShopEnabled === true;
+  const dnsPendingTotal = (dnsOrdersData?.orders ?? []).filter((o) => o.status === "pending").length;
+  // La recherche du header suit l'onglet actif (file B2C VPN / file DNS / peers).
+  const searchValue = tab === "dns" ? dnsOrderQuery : tab === "orders" ? orderQuery : peerQuery;
+  const searchPlaceholder =
+    tab === "dns" ? t("platformDns.orders.search") : tab === "orders" ? t("platformVpn.orders.search") : t("platformVpn.peers.search");
+  const onSearchChange = (event: ChangeEvent<HTMLInputElement>) => {
+    if (tab === "dns") setDnsOrderQuery(event.target.value);
+    else if (tab === "orders") setOrderQuery(event.target.value);
+    else setPeerQuery(event.target.value);
+  };
+
   return (
     <div className="space-y-4 sm:space-y-6">
       <PageHeader
@@ -332,6 +414,9 @@ export default function PlatformVpnView() {
                 void queryClient.invalidateQueries({ queryKey: OVERVIEW_KEY });
                 void queryClient.invalidateQueries({ queryKey: PEERS_KEY });
                 void queryClient.invalidateQueries({ queryKey: ORDERS_KEY });
+                // N°347 — la file DNS et l'état de la vitrine /dns suivent.
+                void queryClient.invalidateQueries({ queryKey: DNS_ORDERS_KEY });
+                void queryClient.invalidateQueries({ queryKey: PLATFORM_SETTINGS_KEY });
               }}
             >
               <Radio className="size-4" aria-hidden />
@@ -340,11 +425,11 @@ export default function PlatformVpnView() {
             <div className="relative">
               <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
               <Input
-                value={tab === "orders" ? orderQuery : peerQuery}
-                onChange={(event) => (tab === "orders" ? setOrderQuery(event.target.value) : setPeerQuery(event.target.value))}
-                placeholder={tab === "orders" ? t("platformVpn.orders.search") : t("platformVpn.peers.search")}
+                value={searchValue}
+                onChange={onSearchChange}
+                placeholder={searchPlaceholder}
                 className="hidden h-10 w-40 pl-9 sm:block sm:w-56"
-                aria-label={tab === "orders" ? t("platformVpn.orders.search") : t("platformVpn.peers.search")}
+                aria-label={searchPlaceholder}
               />
             </div>
             <div className="flex items-center gap-2">
@@ -420,11 +505,15 @@ export default function PlatformVpnView() {
         </Card>
       )}
 
+      {/* Quatre onglets : défilement horizontal sur petit écran (miroir du
+          pattern TabsList de platform-settings-view). */}
       <Tabs value={tab} onValueChange={setTab}>
-        <TabsList>
+        <TabsList className="max-w-full justify-start overflow-x-auto">
           <TabsTrigger value="overview">{t("platformVpn.tab.overview")}</TabsTrigger>
           <TabsTrigger value="peers">{tf("platformVpn.tab.peers", { n: String(peersData?.peers.length ?? pool?.slotsUsed ?? 0) })}</TabsTrigger>
           <TabsTrigger value="orders">{tf("platformVpn.tab.orders", { n: String(ordersData?.orders.length ?? 0) })}</TabsTrigger>
+          {/* N°347 — file des commandes de l'abonnement DNS « TOURACO ». */}
+          <TabsTrigger value="dns">{tf("platformDns.tab.dns", { n: String(dnsOrdersData?.orders.length ?? 0) })}</TabsTrigger>
         </TabsList>
 
         {/* ═══ Onglet 1 : Aperçu & comptes (octroi) ═══ */}
@@ -739,6 +828,155 @@ export default function PlatformVpnView() {
             )}
           </Card>
         </TabsContent>
+
+        {/* ═══ Onglet 4 : Commandes DNS — abonnement TOURACO (vitrine /dns) ═══ */}
+        <TabsContent value="dns" className="space-y-4 sm:space-y-6">
+          {/* État de la vitrine /dns (affichage simple — le levier d'ouverture
+              vit dans Paramètres plateforme, à côté du toggle VPN N°301 ;
+              la fermeture n'annule rien : les droits courent jusqu'à leur terme). */}
+          {dnsSettingsData && (
+            <Card className="p-4">
+              <div className="flex flex-wrap items-center gap-3">
+                <Store className="size-5 text-muted-foreground" aria-hidden />
+                <div className="min-w-0 flex-1">
+                  <p className="flex flex-wrap items-center gap-2 text-sm font-medium">
+                    {t("platformDns.shop.title")}
+                    <Badge
+                      variant="outline"
+                      className={
+                        dnsShopOpen ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400" : ""
+                      }
+                    >
+                      {dnsShopOpen ? t("platformDns.shop.open") : t("platformDns.shop.closed")}
+                    </Badge>
+                    {dnsPendingTotal > 0 && (
+                      <span className="text-xs text-muted-foreground">
+                        {tf("platformDns.shop.pendingHint", { n: String(dnsPendingTotal) })}
+                      </span>
+                    )}
+                  </p>
+                  <p className="mt-0.5 text-xs text-muted-foreground">{t("platformDns.shop.note")}</p>
+                </div>
+                <span className="text-xs text-muted-foreground">{t("platformDns.shop.manage")}</span>
+              </div>
+            </Card>
+          )}
+
+          {/* File des commandes (miroir « Commandes B2C » — pending en tête). */}
+          <Card className="gap-0 py-0">
+            {dnsOrdersLoading ? (
+              <LoadingRows rows={6} />
+            ) : filteredDnsOrders.length === 0 ? (
+              <div className="p-6">
+                <EmptyState
+                  icon={ShieldCheck}
+                  title={(dnsOrdersData?.orders.length ?? 0) === 0 ? t("platformDns.orders.empty") : t("platformDns.orders.noMatch")}
+                />
+              </div>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>{t("platformDns.orders.ref")}</TableHead>
+                    <TableHead>{t("platformDns.orders.email")}</TableHead>
+                    <TableHead>{t("platformDns.orders.plan")}</TableHead>
+                    <TableHead>{t("platformDns.orders.amount")}</TableHead>
+                    <TableHead className="hidden lg:table-cell">{t("platformDns.orders.payMethod")}</TableHead>
+                    <TableHead className="hidden lg:table-cell">{t("platformDns.orders.kind")}</TableHead>
+                    <TableHead>{t("platformDns.orders.status")}</TableHead>
+                    <TableHead className="hidden xl:table-cell">{t("platformDns.orders.term")}</TableHead>
+                    <TableHead className="hidden xl:table-cell">{t("platformDns.orders.created")}</TableHead>
+                    <TableHead className="hidden xl:table-cell">{t("platformDns.orders.resolvedBy")}</TableHead>
+                    <TableHead className="text-right">{t("vpn.actions")}</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredDnsOrders.map((order) => (
+                    <TableRow key={order.id}>
+                      <TableCell>
+                        <div className="font-mono text-xs font-medium">{order.ref}</div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="text-sm">{order.email}</div>
+                        {order.errorMsg && (
+                          <div className="max-w-48 text-xs text-amber-600">
+                            {tf("platformDns.orders.errorHint", { error: order.errorMsg })}
+                          </div>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <div className="text-sm">{dnsPlanLabel(order.planId, order.months)}</div>
+                        <div className="text-xs text-muted-foreground">
+                          {tf("platformDns.orders.months", { n: String(order.months) })}
+                        </div>
+                      </TableCell>
+                      <TableCell className="tabular-nums">{formatCurrency(order.amountFcfa, currency, lang)}</TableCell>
+                      <TableCell className="hidden lg:table-cell">
+                        <Badge variant="outline" className="border-muted bg-muted text-muted-foreground">
+                          {t(`platformDns.orders.pay.${order.payMethod}`) === `platformDns.orders.pay.${order.payMethod}`
+                            ? order.payMethod
+                            : t(`platformDns.orders.pay.${order.payMethod}`)}
+                        </Badge>
+                      </TableCell>
+                      {/* Genre : vente classique ou renouvellement (l'échéance
+                          étendue vit sur la CIBLE, la ligne reste une facturation). */}
+                      <TableCell className="hidden lg:table-cell">
+                        <div className="text-sm">
+                          {order.kind === "renewal" ? t("platformDns.orders.kind.renewal") : t("platformDns.orders.kind.sale")}
+                        </div>
+                        {order.kind === "renewal" && order.renewTargetRef && (
+                          <div className="font-mono text-xs text-muted-foreground">
+                            {tf("platformDns.orders.kindTarget", { ref: order.renewTargetRef })}
+                          </div>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <OrderStateBadge status={order.status} keyPrefix="platformDns.orders.status" />
+                      </TableCell>
+                      <TableCell className="hidden text-xs text-muted-foreground xl:table-cell">
+                        {order.expiresAt ? formatDate(order.expiresAt, lang) : "—"}
+                      </TableCell>
+                      <TableCell className="hidden text-xs text-muted-foreground xl:table-cell">
+                        {formatDate(order.createdAt, lang)}
+                      </TableCell>
+                      <TableCell
+                        className="hidden max-w-40 truncate text-xs text-muted-foreground xl:table-cell"
+                        title={order.errorMsg ?? undefined}
+                      >
+                        {order.resolvedBy || "—"}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-2">
+                          {order.status === "pending" && (
+                            <Button
+                              size="sm"
+                              className="h-8"
+                              disabled={dnsResolveMutation.isPending}
+                              onClick={() => setConfirm({ kind: "dnsMarkPaid", dnsOrder: order })}
+                            >
+                              {t("platformDns.orders.confirmPaid")}
+                            </Button>
+                          )}
+                          {["pending", "paid", "provisioned"].includes(order.status) && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="h-8 text-red-600 hover:text-red-700"
+                              disabled={dnsResolveMutation.isPending}
+                              onClick={() => setConfirm({ kind: "dnsCancel", dnsOrder: order })}
+                            >
+                              {t("platformDns.orders.cancel")}
+                            </Button>
+                          )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
+          </Card>
+        </TabsContent>
       </Tabs>
 
       {/* ─── Dialog résultat de réconciliation ─── */}
@@ -895,6 +1133,58 @@ export default function PlatformVpnView() {
                   }}
                 >
                   {t("platformVpn.orders.cancel")}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </>
+          )}
+          {/* N°347 — confirmations DNS (markPaid → activation AUTO, cancel
+              sans suppression). */}
+          {confirm?.kind === "dnsMarkPaid" && confirm.dnsOrder && (
+            <>
+              <AlertDialogHeader>
+                <AlertDialogTitle>{t("platformDns.orders.confirmPaidTitle")}</AlertDialogTitle>
+                <AlertDialogDescription>
+                  {tf("platformDns.orders.confirmPaidDesc", {
+                    ref: confirm.dnsOrder.ref,
+                    amount: formatCurrency(confirm.dnsOrder.amountFcfa, currency, lang),
+                    months: String(confirm.dnsOrder.months),
+                    email: confirm.dnsOrder.email,
+                  })}
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={(event) => {
+                    event.preventDefault();
+                    dnsResolveMutation.mutate({ id: confirm.dnsOrder!.id, action: "markPaid" });
+                    setConfirm(null);
+                  }}
+                >
+                  {t("platformDns.orders.confirmPaid")}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </>
+          )}
+          {confirm?.kind === "dnsCancel" && confirm.dnsOrder && (
+            <>
+              <AlertDialogHeader>
+                <AlertDialogTitle>{t("platformDns.orders.cancelTitle")}</AlertDialogTitle>
+                <AlertDialogDescription>
+                  {tf("platformDns.orders.cancelDesc", { ref: confirm.dnsOrder.ref })}
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
+                <AlertDialogAction
+                  className="bg-red-600 text-white hover:bg-red-700"
+                  onClick={(event) => {
+                    event.preventDefault();
+                    dnsResolveMutation.mutate({ id: confirm.dnsOrder!.id, action: "cancel" });
+                    setConfirm(null);
+                  }}
+                >
+                  {t("platformDns.orders.cancel")}
                 </AlertDialogAction>
               </AlertDialogFooter>
             </>

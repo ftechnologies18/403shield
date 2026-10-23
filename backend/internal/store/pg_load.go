@@ -47,6 +47,7 @@ func (p *PG) Load() (db *model.DB, found bool, err error) {
 		VpnPeers:          []model.VpnPeer{},
 		VpnGuests:         []model.VpnGuest{},
 		PublicVpnOrders:   []model.PublicVpnOrder{},
+		PublicDnsOrders:   []model.PublicDnsOrder{},
 		PppSecrets:        []model.PppSecret{},
 		TunnelClients:     []model.TunnelClient{},
 	}
@@ -96,6 +97,7 @@ func (p *PG) Load() (db *model.DB, found bool, err error) {
 		{"vpn_peers", func() error { return loadInto(p, &db.VpnPeers, vpnPeerSpec) }},
 		{"vpn_guests", func() error { return loadInto(p, &db.VpnGuests, vpnGuestSpec) }},
 		{"public_vpn_orders", func() error { return loadInto(p, &db.PublicVpnOrders, publicVpnOrderSpec) }},
+		{"public_dns_orders", func() error { return loadInto(p, &db.PublicDnsOrders, publicDnsOrderSpec) }},
 		{"ppp_secrets", func() error { return loadInto(p, &db.PppSecrets, pppSecretSpec) }},
 		{"tunnel_clients", func() error { return loadInto(p, &db.TunnelClients, tunnelClientSpec) }},
 		{"dns_profiles", func() error { return loadInto(p, &db.DnsProfiles, dnsProfileSpec) }},
@@ -167,7 +169,7 @@ func (p *PG) loadSettings(db *model.DB) error {
                         platform_name, platform_register_open, platform_register_key, auto_import_router_users,
                         join_button, cyber_enabled, portal_style, portal_welcome, portal_promos, portal_socials, portal_slides, portal_services, portal_ticker, portal_whatsapp, portal_key,
                         log_retention_days, wg_vpn_enabled, wg_vpn_locked, platform_public_vpn_shop,
-                        platform_wg_vpn_quota_gb
+                        platform_wg_vpn_quota_gb, platform_public_dns_shop
                  FROM settings`)
 	if err != nil {
 		return err
@@ -203,6 +205,8 @@ func (p *PG) loadSettings(db *model.DB) error {
 			platformPublicVpnShop bool
 			// N°311 - quota mensuel VPN par peer (compte principal, defaut 50 Go).
 			platformWgVpnQuotaGB int
+			// N°347 - ouverture de la vitrine DNS /dns (compte principal, defaut FERMEE).
+			platformPublicDnsShop bool
 			// N°55 - mode hospitalité du portail (style/bienvenue/promos/socials).
 			portalStyle, portalWelcome, portalPromos, portalSocials string
 			// N°136 - slides du carrousel commercial (JSON d'URLs https ≤ 3).
@@ -228,7 +232,7 @@ func (p *PG) loadSettings(db *model.DB) error {
 			&subPlanID, &subStatus, &subPeriodStart, &subPeriodEnd, &subLastAmount,
 			&subRouterSlots, &subLastPaidAt, &lastTick, &lastSweep,
 			&platformName, &platformRegisterOpen, &platformRegisterKey, &autoImport,
-			&joinButton, &cyberEnabled, &portalStyle, &portalWelcome, &portalPromos, &portalSocials, &portalSlides, &portalServices, &portalTicker, &portalWhatsapp, &portalKey, &logRetentionDays, &wgVpnEnabled, &wgVpnLocked, &platformPublicVpnShop, &platformWgVpnQuotaGB); err != nil {
+			&joinButton, &cyberEnabled, &portalStyle, &portalWelcome, &portalPromos, &portalSocials, &portalSlides, &portalServices, &portalTicker, &portalWhatsapp, &portalKey, &logRetentionDays, &wgVpnEnabled, &wgVpnLocked, &platformPublicVpnShop, &platformWgVpnQuotaGB, &platformPublicDnsShop); err != nil {
 			return err
 		}
 		if accID == "" {
@@ -268,6 +272,9 @@ func (p *PG) loadSettings(db *model.DB) error {
 			// N°311 - même pattern : valeur lue EXPLICITE (colonne NOT NULL
 			// DEFAULT 50) — le quota mensuel VPN survit aux redémarrages.
 			settings.Platform.WgVpnMonthlyQuotaGB = &platformWgVpnQuotaGB
+			// N°347 - même pattern : valeur lue EXPLICITE (colonne NOT NULL
+			// DEFAULT FALSE) — l'ouverture de la vitrine DNS survit aux redémarrages.
+			settings.Platform.PublicDnsShop = &platformPublicDnsShop
 		}
 		// Audit purge - valeur lue EXPLICITE (colonne NOT NULL) : le
 		// reglage survit aux redemarrages (le pointeur est pose).

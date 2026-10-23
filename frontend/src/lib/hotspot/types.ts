@@ -951,6 +951,38 @@ export interface PublicVpnOrder {
   paidAt?: string;
 }
 
+/** N°347 — commande de l'abonnement DNS « TOURACO » (GET /api/admin/dns/orders,
+ * miroir PublicVpnOrder du canal B2C N°301) : cycle pending → paid →
+ * provisioned | cancelled | expired. Montants FCFA int (baseAmountFcfa = net
+ * catalogue, amountFcfa = montant débité). Champ par champ du modèle Go
+ * publicdnsorder.go : kind "sale"|"renewal" (une renewal étend la commande
+ * visée par renewTargetRef), errorMsg = dernier échec de provisioning (rejoué
+ * par le balayage), resolvedBy = acteur de la résolution manuelle ou libellé
+ * du canal automatique (webhook/poll). AUCUN peer à provisionner : le droit
+ * EST l'échéance (la plus lointaine des commandes provisionnées de l'e-mail). */
+export interface PublicDnsOrder {
+  id: string;
+  ref: string;
+  email: string;
+  phone: string;
+  planId: string;
+  months: number;
+  baseAmountFcfa: number;
+  amountFcfa: number;
+  payMethod: string;
+  kind?: string;
+  renewTargetRef?: string;
+  paidVia?: string;
+  gatewayRef: string;
+  status: string;
+  expiresAt: string;
+  errorMsg?: string;
+  resolvedBy?: string;
+  createdAt: string;
+  updatedAt: string;
+  paidAt?: string;
+}
+
 /** N°301 — GET /api/admin/vpn/reconcile : cloud ↔ wg-mini (manquants + fantômes). */
 export interface PlatformVpnReconcile {
   reachable: boolean;
@@ -2243,6 +2275,8 @@ export interface PlatformSettingsResponse {
     registerKeySet: boolean;
     /** N°301 — la vitrine B2C 403Shield VPN (/vpn) est-elle ouverte ? */
     publicVpnShopEnabled?: boolean;
+    /** N°347 — la vitrine de l'abonnement DNS « TOURACO » (/dns) est-elle ouverte ? */
+    publicDnsShopEnabled?: boolean;
     /** N°311 — quota mensuel de trafic par peer VPN vendu (Go, rx+tx ; 0 = illimité, défaut 50). */
     wgVpnMonthlyQuotaGb?: number;
   };
@@ -2258,6 +2292,9 @@ export interface PlatformSettingsUpdatePayload {
   registerKey?: string;
   /** N°301 — ouverture/fermeture de la vitrine B2C 403Shield VPN (/vpn). */
   publicVpnShop?: boolean;
+  /** N°347 — ouverture/fermeture de la vitrine de l'abonnement DNS « TOURACO » (/dns).
+   * La fermeture n'annule rien : les droits provisionnés courent jusqu'à leur terme. */
+  publicDnsShop?: boolean;
   /** N°311 — quota mensuel VPN (Go ; 0 = illimité, 0–10000). */
   wgVpnMonthlyQuotaGb?: number;
 }

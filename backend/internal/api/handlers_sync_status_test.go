@@ -115,8 +115,8 @@ func TestSyncStatusContract(t *testing.T) {
 	// + dns_profiles + dns_events ; N°342 : + vpn_guests ; N°346 :
 	// + dns_home_bindings).
 	tables, ok := out["tables"].([]any)
-	if !ok || len(tables) != 47 {
-		t.Fatalf("47 tables attendues (46 différentielles + settings — N°182 : sites, N°199 : volume_days, N°200 : monthly_journals, N°290 : cyber_postes, N°291 : vpn_peers, N°293 : ppp_secrets, N°301 : public_vpn_orders, N°313 : tunnel_clients, N°339 : dns_profiles + dns_events, N°342 : vpn_guests, N°346 : dns_home_bindings), obtenu %v", len(tables))
+	if !ok || len(tables) != 48 {
+		t.Fatalf("48 tables attendues (47 différentielles + settings — N°182 : sites, N°199 : volume_days, N°200 : monthly_journals, N°290 : cyber_postes, N°291 : vpn_peers, N°293 : ppp_secrets, N°301 : public_vpn_orders, N°313 : tunnel_clients, N°339 : dns_profiles + dns_events, N°342 : vpn_guests, N°346 : dns_home_bindings, N°347 : public_dns_orders), obtenu %v", len(tables))
 	}
 	findTable := func(name string) map[string]any {
 		for _, e := range tables {

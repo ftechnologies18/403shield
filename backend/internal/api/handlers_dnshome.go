@@ -83,6 +83,9 @@ func (a *API) handleDnsHomeList(w http.ResponseWriter, r *http.Request) {
 	for _, b := range model.DnsHomeBindingsOfEmail(db, client.Email) {
 		rows = append(rows, dnsHomeBindingRow(db, b))
 	}
+	// N°347 — borne EFFECTIVE des logements (abonnement « TOURACO » actif
+	// → 15 ; sinon tier gratuit INTACT — 5). Résolution sous verrou.
+	quotas := model.DnsQuotasForEmail(db, client.Email)
 	a.store.Unlock()
 	writeJSON(w, http.StatusOK, map[string]any{
 		"myIp":         clientIP(r),
@@ -90,7 +93,7 @@ func (a *API) handleDnsHomeList(w http.ResponseWriter, r *http.Request) {
 		"resolverHost": dnsDotZone(),
 		"udp53Enabled": udp53Enabled.Load(),
 		"bindings":     rows,
-		"limits":       map[string]any{"maxBindings": model.MaxDnsHomeBindingsPerEmail},
+		"limits":       map[string]any{"maxBindings": quotas.MaxHomeBindings},
 	})
 }
 
@@ -178,10 +181,14 @@ func (a *API) handleDnsHomeClaim(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusOK, row)
 		return
 	}
-	if len(model.DnsHomeBindingsOfEmail(db, client.Email)) >= model.MaxDnsHomeBindingsPerEmail {
+	// N°347 — borne EFFECTIVE des logements : abonnement « TOURACO » actif
+	// → 15 maisons (domicile + bureau + maison de famille…) ; sinon tier
+	// gratuit INTACT (5). Résolution sous le verrou du store.
+	maxHome := model.DnsQuotasForEmail(db, client.Email).MaxHomeBindings
+	if len(model.DnsHomeBindingsOfEmail(db, client.Email)) >= maxHome {
 		a.store.Unlock()
 		writeErrCode(w, http.StatusConflict, "dns_home_full",
-			"Limite de "+itoa(model.MaxDnsHomeBindingsPerEmail)+" logements atteinte pour ce compte", nil)
+			"Limite de "+itoa(maxHome)+" logements atteinte pour ce compte", nil)
 		return
 	}
 	now := model.NowISO()

@@ -847,6 +847,36 @@ func (p *PG) ensureSchema() error {
 		`CREATE UNIQUE INDEX IF NOT EXISTS idx_public_vpn_orders_ref   ON public_vpn_orders (ref)`,
 		`CREATE INDEX IF NOT EXISTS idx_public_vpn_orders_status ON public_vpn_orders (status)`,
 		`CREATE INDEX IF NOT EXISTS idx_public_vpn_orders_email  ON public_vpn_orders (email)`,
+		// N°347 — commandes de l'abonnement DNS « TOURACO » (vitrine /dns) :
+		// le droit vit sur l'E-MAIL (l'entitlement = la plus lointaine
+		// échéance provisionnée), aucun réseau à provisionner — la table ne
+		// porte que la facturation et le cycle de vie (parité
+		// publicVpnOrderSpec : l'ordre des colonnes concorde).
+		`CREATE TABLE IF NOT EXISTS public_dns_orders (
+                        id               TEXT PRIMARY KEY,
+                        ref              TEXT NOT NULL,
+                        email            TEXT NOT NULL,
+                        phone            TEXT NOT NULL DEFAULT '',
+                        plan_id          TEXT NOT NULL,
+                        months           INTEGER NOT NULL DEFAULT 1,
+                        base_amount_fcfa INTEGER NOT NULL DEFAULT 0,
+                        amount_fcfa      INTEGER NOT NULL DEFAULT 0,
+                        pay_method       TEXT NOT NULL DEFAULT '',
+                        kind             TEXT NOT NULL DEFAULT 'sale',
+                        renew_target_ref TEXT NOT NULL DEFAULT '',
+                        paid_via         TEXT NOT NULL DEFAULT '',
+                        gateway_ref      TEXT NOT NULL DEFAULT '',
+                        status           TEXT NOT NULL DEFAULT 'pending',
+                        expires_at       TEXT NOT NULL DEFAULT '',
+                        error_msg        TEXT NOT NULL DEFAULT '',
+                        resolved_by      TEXT NOT NULL DEFAULT '',
+                        created_at       TEXT NOT NULL,
+                        updated_at       TEXT NOT NULL,
+                        paid_at          TEXT NOT NULL DEFAULT ''
+                )`,
+		`CREATE UNIQUE INDEX IF NOT EXISTS idx_public_dns_orders_ref   ON public_dns_orders (ref)`,
+		`CREATE INDEX IF NOT EXISTS idx_public_dns_orders_status ON public_dns_orders (status)`,
+		`CREATE INDEX IF NOT EXISTS idx_public_dns_orders_email  ON public_dns_orders (email)`,
 		// N°301 — verrou grossiste du module VPN par compte (défaut NON
 		// verrouillé : comportement N°291 préservé, zéro migration).
 		`ALTER TABLE settings ADD COLUMN IF NOT EXISTS wg_vpn_locked BOOLEAN NOT NULL DEFAULT FALSE`,
@@ -870,6 +900,11 @@ func (p *PG) ensureSchema() error {
 		// load, UPSERT sync — doivent porter le MÊME nom, test
 		// TestSettingsColonnesPariteSchemaLoadSync en sentinelle).
 		`ALTER TABLE settings ADD COLUMN IF NOT EXISTS platform_wg_vpn_quota_gb INTEGER NOT NULL DEFAULT 50`,
+		// N°347 — ouverture de la vitrine DNS /dns (compte principal
+		// uniquement, défaut fermé : opt-in strict — miroir
+		// platform_public_vpn_shop ; leçon N°302 : le nom concorde dans les
+		// TROIS listes — migration ci, SELECT loadSettings, UPSERT syncSettings).
+		`ALTER TABLE settings ADD COLUMN IF NOT EXISTS platform_public_dns_shop BOOLEAN NOT NULL DEFAULT FALSE`,
 		// N°293 — ABONNÉS PPPoE (chantier ⑥ Phase A — cf. model/pppsecret.go)
 		// : registre cloud des secrets d'un pppoe-server EXISTANT (D2), le
 		// transport est agent ppp_* (D1 — zéro cred, zéro port). Unicité PAR

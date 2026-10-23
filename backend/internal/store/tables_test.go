@@ -65,8 +65,8 @@ func TestSyncKnownTablesConcordance(t *testing.T) {
 	// public_vpn_orders ; N°313 : + tunnel_clients ; N°339 : + dns_profiles + dns_events ;
 	// N°342 : + vpn_guests ; N°346 : + dns_home_bindings).
 	steps := syncSteps(db)
-	if len(steps) != 46 {
-		t.Fatalf("46 tables différentielles attendues dans le plan de synchro, obtenues %d", len(steps))
+	if len(steps) != 47 {
+		t.Fatalf("47 tables différentielles attendues dans le plan de synchro, obtenues %d", len(steps))
 	}
 	inPlan := map[string]bool{}
 	for _, st := range steps {

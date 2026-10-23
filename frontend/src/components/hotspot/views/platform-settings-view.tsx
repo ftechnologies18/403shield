@@ -315,6 +315,10 @@ export default function PlatformSettingsView() {
                 est opt-in strict — l'exploitant décide de ne pas concurrencer
                 ses revendeurs sans l'avoir choisi. */}
             <PublicVpnShopCard data={data} onDone={invalidate} />
+            {/* N°347 — vitrine de l'abonnement DNS « TOURACO » (/dns) : même
+                geste d'exploitant, juste à côté du toggle VPN — la fermeture
+                n'annule rien (les droits provisionnés courent jusqu'à leur terme). */}
+            <PublicDnsShopCard data={data} onDone={invalidate} />
             {/* N°311 — quota mensuel de trafic par peer VPN vendu (garde-fou
                 egress du tier Always Free OCI) : borne globale pilotable, la
                 baisse agit au passage du balayage suivant (≤ 15 min). */}
@@ -541,6 +545,60 @@ function PublicVpnShopCard({ data, onDone }: { data: PlatformSettingsResponse; o
           />
         </div>
         <p className="text-xs text-muted-foreground">{t("platformSettings.vpnShopCloseNote")}</p>
+      </CardContent>
+      <CardFooter className="px-4 sm:px-6">
+        <Button size="sm" onClick={() => mutation.mutate()} disabled={!dirty || mutation.isPending}>
+          {mutation.isPending ? t("common.saving") : t("common.save")}
+        </Button>
+      </CardFooter>
+    </Card>
+  );
+}
+
+/* ─── N°347 — Vitrine de l'abonnement DNS « TOURACO » (/dns) — miroir strict
+     de la carte VPN N°301 : le produit DNS s'appelle TOURACO (jamais « baobab ») ─── */
+function PublicDnsShopCard({ data, onDone }: { data: PlatformSettingsResponse; onDone: () => void }) {
+  const { t } = useI18n();
+  const [open, setOpen] = useState(data.platform.publicDnsShopEnabled === true);
+
+  const mutation = useMutation({
+    mutationFn: () => updatePlatformSettings({ publicDnsShop: open }),
+    onSuccess: () => {
+      toast.success(open ? t("platformSettings.dnsShopOpenToast") : t("platformSettings.dnsShopClosedToast"));
+      onDone();
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+
+  const dirty = open !== (data.platform.publicDnsShopEnabled === true);
+
+  return (
+    <Card className="gap-4 py-4 sm:py-6">
+      <CardHeader className="px-4 sm:px-6">
+        <CardTitle className="flex items-center gap-2 text-base">
+          <span className="flex size-8 items-center justify-center rounded-lg bg-primary/15 text-primary">
+            <ShieldCheck className="size-4" />
+          </span>
+          {t("platformSettings.dnsShop")}
+        </CardTitle>
+        <CardDescription>{t("platformSettings.dnsShopDesc")}</CardDescription>
+      </CardHeader>
+      <CardContent className="grid gap-4 px-4 sm:px-6">
+        <div className="flex items-center justify-between rounded-lg border p-3">
+          <div className="min-w-0 pr-3">
+            <p className="text-sm font-medium">{t("platformSettings.dnsShopOpen")}</p>
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              {t("platformSettings.dnsShopOpenHint")}
+            </p>
+          </div>
+          <Switch
+            checked={open}
+            onCheckedChange={setOpen}
+            disabled={mutation.isPending}
+            aria-label={t("platformSettings.dnsShopOpen")}
+          />
+        </div>
+        <p className="text-xs text-muted-foreground">{t("platformSettings.dnsShopCloseNote")}</p>
       </CardContent>
       <CardFooter className="px-4 sm:px-6">
         <Button size="sm" onClick={() => mutation.mutate()} disabled={!dirty || mutation.isPending}>

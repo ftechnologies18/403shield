@@ -92,6 +92,35 @@ func (a *API) handleDnsShieldMe(w http.ResponseWriter, r *http.Request) {
 	for _, p := range model.DnsProfilesOfEmail(db, client.Email) {
 		rows = append(rows, dnsProfileRow(p, base))
 	}
+	// N°347 — l'abonnement « TOURACO » de CE compte : l'entitlement effectif
+	// (la plus lointaine échéance provisionnée non échue), les commandes
+	// actives (cibles du renouvellement 1-clic) et les bornes EFFECTIVES
+	// (un abonné voit 25/600, un compte gratuit 10/200 — résolution sous
+	// verrou, une requête, aucune recopie : un terme franchi retombe
+	// immédiatement au tier gratuit).
+	quotas := model.DnsQuotasForEmail(db, client.Email)
+	expiresAt, subActive := model.DnsSubscriptionOfEmail(db, client.Email)
+	nowISO := model.NowISO()
+	subOrders := []map[string]any{}
+	for i := range db.PublicDnsOrders {
+		o := &db.PublicDnsOrders[i]
+		if !strings.EqualFold(o.Email, client.Email) || o.Status != model.PublicDnsOrderProvisioned {
+			continue
+		}
+		if o.ExpiresAt != "" && o.ExpiresAt < nowISO {
+			continue // échue : le balayage horaire la marquera « expired »
+		}
+		row := map[string]any{
+			"ref": o.Ref, "months": o.Months, "expiresAt": o.ExpiresAt,
+			"kind": o.Kind, "createdAt": o.CreatedAt,
+		}
+		if plan := model.ResolvePublicDnsPlan(o.PlanID); plan != nil {
+			row["planId"] = plan.ID
+			row["planLabel"] = plan.Label
+			row["periodLabel"] = plan.PeriodLabel
+		}
+		subOrders = append(subOrders, row)
+	}
 	a.store.Unlock()
 	// N°343 — l'état RÉEL de l'agrégat de menaces (URLhaus/OpenPhish,
 	// balayage 6 h) : la console affiche le compte servi par le
@@ -107,8 +136,17 @@ func (a *API) handleDnsShieldMe(w http.ResponseWriter, r *http.Request) {
 			"updatedAt": threatAt.Format(time.RFC3339),
 		},
 		"limits": map[string]any{
-			"maxProfiles": model.MaxDnsProfilesPerEmail,
-			"maxRules":    model.MaxDnsRulesPerList,
+			"maxProfiles": quotas.MaxProfiles,
+			"maxRules":    quotas.MaxRules,
+		},
+		// N°347 — l'abonnement « TOURACO » : état, échéance et cibles du
+		// renouvellement 1-clic (la console /dns affiche le statut et propose
+		// le geste sur CHAQUE commande active — POST /api/tunnel/dns/orders/
+		// {ref}/renew).
+		"subscription": map[string]any{
+			"active":    subActive,
+			"expiresAt": expiresAt,
+			"orders":    subOrders,
 		},
 		"setupUrlFormat": base + "/dns-query/{publicId}",
 		// N°345 — le bloc setup de l'onboarding appareils : les QUATRE clés
@@ -187,16 +225,9 @@ func (a *API) handleDnsShieldProfileCreate(w http.ResponseWriter, r *http.Reques
 		writeErr(w, http.StatusBadRequest, "Niveau inconnu (off, threats ou family)")
 		return
 	}
-	block, ok := model.NormalizeDnsRules(req.BlockRules)
-	if !ok {
-		writeErr(w, http.StatusBadRequest, "Liste bloquer invalide (domaines minuscules simples, 200 max)")
-		return
-	}
-	allow, ok := model.NormalizeDnsRules(req.AllowRules)
-	if !ok {
-		writeErr(w, http.StatusBadRequest, "Liste autoriser invalide (domaines minuscules simples, 200 max)")
-		return
-	}
+	// N°347 — les listes de règles ne sont plus normalisées ICI : la borne
+	// dépend de l'abonnement « TOURACO » du compte (600 vs 200) — la
+	// résolution se fait sous le verrou, AVANT NormalizeDnsRulesWithMax.
 	curfewSpec, err := dnsCurfewSpec(req.Curfew)
 	if err != nil {
 		writeErr(w, http.StatusBadRequest, err.Error())
@@ -211,10 +242,26 @@ func (a *API) handleDnsShieldProfileCreate(w http.ResponseWriter, r *http.Reques
 		writeErr(w, http.StatusUnauthorized, "Session invalide — reconnectez-vous")
 		return
 	}
-	if len(model.DnsProfilesOfEmail(db, client.Email)) >= model.MaxDnsProfilesPerEmail {
+	// N°347 — bornes EFFECTIVES du compte (abonnement TOURACO actif →
+	// capacités étendues ; sinon tier gratuit INTACT — résolution sous
+	// verrou, une requête, aucun cache à invalider).
+	quotas := model.DnsQuotasForEmail(db, client.Email)
+	if len(model.DnsProfilesOfEmail(db, client.Email)) >= quotas.MaxProfiles {
 		a.store.Unlock()
 		writeErrCode(w, http.StatusConflict, "dns_profiles_full",
-			"Limite de "+itoa(model.MaxDnsProfilesPerEmail)+" profils atteinte pour ce compte", nil)
+			"Limite de "+itoa(quotas.MaxProfiles)+" profils atteinte pour ce compte", nil)
+		return
+	}
+	block, ok := model.NormalizeDnsRulesWithMax(req.BlockRules, quotas.MaxRules)
+	if !ok {
+		a.store.Unlock()
+		writeErr(w, http.StatusBadRequest, "Liste bloquer invalide (domaines minuscules simples, "+itoa(quotas.MaxRules)+" max)")
+		return
+	}
+	allow, ok := model.NormalizeDnsRulesWithMax(req.AllowRules, quotas.MaxRules)
+	if !ok {
+		a.store.Unlock()
+		writeErr(w, http.StatusBadRequest, "Liste autoriser invalide (domaines minuscules simples, "+itoa(quotas.MaxRules)+" max)")
 		return
 	}
 	now := model.NowISO()
@@ -262,16 +309,9 @@ func (a *API) handleDnsShieldProfileUpdate(w http.ResponseWriter, r *http.Reques
 		writeErr(w, http.StatusBadRequest, "Niveau inconnu (off, threats ou family)")
 		return
 	}
-	block, ok := model.NormalizeDnsRules(req.BlockRules)
-	if !ok {
-		writeErr(w, http.StatusBadRequest, "Liste bloquer invalide (domaines minuscules simples, 200 max)")
-		return
-	}
-	allow, ok := model.NormalizeDnsRules(req.AllowRules)
-	if !ok {
-		writeErr(w, http.StatusBadRequest, "Liste autoriser invalide (domaines minuscules simples, 200 max)")
-		return
-	}
+	// N°347 — miroir du create : la borne de listes dépend de l'abonnement
+	// « TOURACO » (600 vs 200) — normalisation sous le verrou, après la
+	// résolution du quota du compte.
 	curfewSpec, err := dnsCurfewSpec(req.Curfew)
 	if err != nil {
 		writeErr(w, http.StatusBadRequest, err.Error())
@@ -290,6 +330,19 @@ func (a *API) handleDnsShieldProfileUpdate(w http.ResponseWriter, r *http.Reques
 	if p == nil || !strings.EqualFold(p.OwnerEmail, client.Email) {
 		a.store.Unlock()
 		writeErr(w, http.StatusNotFound, "Profil introuvable")
+		return
+	}
+	quotas := model.DnsQuotasForEmail(db, client.Email)
+	block, ok := model.NormalizeDnsRulesWithMax(req.BlockRules, quotas.MaxRules)
+	if !ok {
+		a.store.Unlock()
+		writeErr(w, http.StatusBadRequest, "Liste bloquer invalide (domaines minuscules simples, "+itoa(quotas.MaxRules)+" max)")
+		return
+	}
+	allow, ok := model.NormalizeDnsRulesWithMax(req.AllowRules, quotas.MaxRules)
+	if !ok {
+		a.store.Unlock()
+		writeErr(w, http.StatusBadRequest, "Liste autoriser invalide (domaines minuscules simples, "+itoa(quotas.MaxRules)+" max)")
 		return
 	}
 	p.Name, p.Level = name, req.Level

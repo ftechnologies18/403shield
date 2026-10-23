@@ -24,6 +24,17 @@ export const frPlatformSettings: Record<string, string> = {
 "platformSettings.vpnShopOpenToast": "Vitrine VPN ouverte — /vpn vend",
 "platformSettings.vpnShopClosedToast": "Vitrine VPN fermée (les accès en service restent actifs)",
 
+// N°347 — vitrine de l'abonnement DNS « TOURACO » (/dns).
+"platformSettings.dnsShop": "Vitrine DNS TOURACO (/dns)",
+"platformSettings.dnsShopDesc":
+  "L'abonnement TOURACO étend les capacités du bouclier DNS (profils, règles, logements « toute la maison », rétention du journal) depuis la vitrine publique /dns — sans compte, paiement GeniusPay, activation automatique. Opt-in strict — fermée par défaut.",
+"platformSettings.dnsShopOpen": "Vitrine /dns ouverte",
+"platformSettings.dnsShopOpenHint": "La vitrine /dns accepte les commandes",
+"platformSettings.dnsShopCloseNote":
+  "La fermeture n'annule AUCUNE commande : les droits provisionnés courent jusqu'à leur terme (à l'expiration, les quotas retombent au niveau gratuit — rien n'est jamais supprimé).",
+"platformSettings.dnsShopOpenToast": "Vitrine DNS ouverte — /dns vend TOURACO",
+"platformSettings.dnsShopClosedToast": "Vitrine DNS fermée (les droits provisionnés courent jusqu'à leur terme)",
+
 // N°311 — quota mensuel de trafic des peers VPN vendus (garde-fou egress).
 "platformSettings.vpnQuota": "Quota mensuel VPN",
 "platformSettings.vpnQuotaDesc":

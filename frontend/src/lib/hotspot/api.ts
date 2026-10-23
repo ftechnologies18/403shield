@@ -36,6 +36,7 @@ import type {
   PlatformVpnOverview,
   PlatformVpnPeersResponse,
   PlatformVpnReconcile,
+  PublicDnsOrder,
   PublicVpnOffers,
   PublicVpnOrder,
   PublicVpnOrderCreated,
@@ -1223,6 +1224,31 @@ export async function resolvePlatformVpnOrder(id: string, action: "markPaid" | "
  * (manquants + fantômes — le « wg-peer.sh list en SSH » en un bouton). */
 export async function fetchPlatformVpnReconcile(): Promise<PlatformVpnReconcile> {
   return api<PlatformVpnReconcile>("/api/admin/vpn/reconcile", { timeoutMs: 30_000 });
+}
+
+/* — N°347 : commandes de l'abonnement DNS « TOURACO » (console plateforme) — */
+/* Miroir strict du canal B2C VPN N°301 : même file (pending en tête), même
+ * geste de résolution (markPaid → provisioning AUTO / cancel), mêmes timeouts
+ * — seul le produit change : le droit TOURACO n'a AUCUN peer à poser (le droit
+ * EST l'échéance), l'annulation fait retomber les quotas au gratuit sans rien
+ * supprimer. */
+
+/** fetchPlatformDnsOrders — N°347 : la file des commandes de l'abonnement DNS
+ * « TOURACO » (vitrine /dns — pending en tête, plafonnée à 200 par le serveur). */
+export async function fetchPlatformDnsOrders(): Promise<{ orders: PublicDnsOrder[] }> {
+  return api<{ orders: PublicDnsOrder[] }>("/api/admin/dns/orders", { timeoutMs: 30_000 });
+}
+
+/** resolvePlatformDnsOrder — N°347 : confirmation manuelle (markPaid →
+ * provisioning auto : « abonnement TOURACO activé jusqu'au … ») ou annulation
+ * (cancel : si provisionnée, le droit cesse et les quotas retombent au niveau
+ * gratuit — RIEN n'est supprimé, les profils/logements restent). */
+export async function resolvePlatformDnsOrder(id: string, action: "markPaid" | "cancel"): Promise<{ ok: boolean; message: string; status?: string }> {
+  return api<{ ok: boolean; message: string; status?: string }>(`/api/admin/dns/orders/${encodeURIComponent(id)}/resolve`, {
+    method: "POST",
+    body: { action },
+    timeoutMs: 45_000,
+  });
 }
 
 /* — N°301 : vitrine B2C publique (/api/public/vpn/* — SANS auth, apiAnon) — */

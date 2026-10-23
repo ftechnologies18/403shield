@@ -11,12 +11,15 @@ import { landingCopy } from "./landing-copy";
    référence des données structurées (marché primaire).
    ============================================================ */
 
-type ProductPageKey = "hotspot" | "vpn" | "tunnels";
+/* N°347 — dns rejoint les pages produit (vitrine du bouclier DNS
+   TOURACO) : le segment dns ne vit que dans landing-copy. */
+type ProductPageKey = "hotspot" | "vpn" | "tunnels" | "dns";
 
-const PRICING_SEGMENT: Record<ProductPageKey, "hotspot" | "tunnels"> = {
+const PRICING_SEGMENT: Record<ProductPageKey, "hotspot" | "tunnels" | "dns"> = {
   hotspot: "hotspot",
   vpn: "tunnels",
   tunnels: "tunnels",
+  dns: "dns",
 };
 
 export function ProductJsonLd({ page }: { page: ProductPageKey }) {
@@ -25,7 +28,15 @@ export function ProductJsonLd({ page }: { page: ProductPageKey }) {
   const segment =
     copy.pricing.segments.find((s) => s.id === PRICING_SEGMENT[page]) ??
     copy.pricing.segments[0];
-  const plans = page === "vpn" ? segment.plans.slice(0, 2) : segment.plans;
+  /* N°347 — dns : le tiers Gratuit (0 F) n'est pas une OFFRE du produit
+     TOURACO — les données structurées ne portent que les formules payées
+     (mensuel/annuel), comme le VPN n'expose que ses deux formules. */
+  const plans =
+    page === "vpn"
+      ? segment.plans.slice(0, 2)
+      : page === "dns"
+        ? segment.plans.filter((p) => (Number(p.price.replace(/[^\d]/g, "")) || 0) > 0)
+        : segment.plans;
 
   const productLd = {
     "@context": "https://schema.org",

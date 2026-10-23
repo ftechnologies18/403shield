@@ -111,6 +111,14 @@ func (a *API) authMiddleware(next http.Handler) http.Handler {
 		// le préfixe ne capte RIEN de console (/api/admin/vpn/* et
 		// /api/vpn/* ne partagent pas ce préfixe).
 		publicVpnShop := strings.HasPrefix(path, "/api/public/vpn/")
+		// N°347 — vitrine B2C de l'abonnement DNS « TOURACO » : 4 routes
+		// publiques (GET catalogue, POST commande, GET statut par ref, POST
+		// récupération self-service — miroir exact du canal VPN N°301).
+		// L'appariement e-mail+référence et les quotas IP dédiés
+		// (a.dnsOrder / a.dnsStatus / a.dnsRecover) bornent l'abus ; le
+		// préfixe ne capte RIEN de console (/api/admin/dns/* et
+		// /api/tunnel/dns/* ne partagent pas ce préfixe).
+		publicDnsShop := strings.HasPrefix(path, "/api/public/dns/")
 		// N°313 — module tunnel (console séparée, Programme Tunnel) :
 		// les DEUX routes d'authentification par code e-mail sont
 		// publiques (passwordless — l'e-mail fait l'identité, le code
@@ -119,7 +127,7 @@ func (a *API) authMiddleware(next http.Handler) http.Handler {
 		// (garde rôle « tunnel » ci-dessous) NI quelque route console
 		// que ce soit.
 		publicTunnelAuth := strings.HasPrefix(path, "/api/tunnel/auth/")
-		if path == "/api/auth/login" || path == "/api/auth/register" || path == "/api/reseller/login" || path == "/api/webhooks/wave" || path == "/api/webhooks/geniuspay" || path == "/api/webhooks/telegram" || path == "/api/vitals" || strings.HasPrefix(path, "/api/join/") || publicWifi || publicMedia || publicPromoTrack || publicPasswordReset || publicChat || publicVpnShop || publicTunnelAuth || !strings.HasPrefix(path, "/api/") {
+		if path == "/api/auth/login" || path == "/api/auth/register" || path == "/api/reseller/login" || path == "/api/webhooks/wave" || path == "/api/webhooks/geniuspay" || path == "/api/webhooks/telegram" || path == "/api/vitals" || strings.HasPrefix(path, "/api/join/") || publicWifi || publicMedia || publicPromoTrack || publicPasswordReset || publicChat || publicVpnShop || publicDnsShop || publicTunnelAuth || !strings.HasPrefix(path, "/api/") {
 			next.ServeHTTP(w, r)
 			return
 		}

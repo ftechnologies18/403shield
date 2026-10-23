@@ -79,6 +79,8 @@ const (
 	TableVpnGuests = "vpn_guests"
 	// N°301 — commandes VPN B2C « vente directe plateforme » (vitrine /vpn).
 	TablePublicVpnOrders = "public_vpn_orders"
+	// N°347 — commandes de l'abonnement DNS « TOURACO » (vitrine /dns).
+	TablePublicDnsOrders = "public_dns_orders"
 	// N°293 — abonnés PPPoE (chantier ⑥, unicité PAR ROUTEUR).
 	TablePppSecrets = "ppp_secrets"
 	// N°313 — clients légers de la console tunnel (Programme Tunnel, D-T2).
@@ -135,6 +137,7 @@ var syncKnownTables = map[string]bool{
 	TableVpnPeers:             true,
 	TableVpnGuests:            true,
 	TablePublicVpnOrders:      true,
+	TablePublicDnsOrders:      true,
 	TablePppSecrets:           true,
 	TableTunnelClients:        true,
 	TableDnsProfiles:          true,

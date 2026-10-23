@@ -24,6 +24,17 @@ export const enPlatformSettings: Record<string, string> = {
 "platformSettings.vpnShopOpenToast": "VPN shop open — /vpn is selling",
 "platformSettings.vpnShopClosedToast": "VPN shop closed (in-service access stays active)",
 
+// N°347 — "TOURACO" DNS subscription shop (/dns).
+"platformSettings.dnsShop": "TOURACO DNS shop (/dns)",
+"platformSettings.dnsShopDesc":
+  "The TOURACO subscription extends the DNS shield's capacities (profiles, rules, whole-home bindings, journal retention) from the public /dns shop — no account needed, GeniusPay payment, automatic activation. Strict opt-in — closed by default.",
+"platformSettings.dnsShopOpen": "/dns shop open",
+"platformSettings.dnsShopOpenHint": "The /dns shop accepts orders",
+"platformSettings.dnsShopCloseNote":
+  "Closing does NOT cancel any order: provisioned entitlements run until their term (at expiry, quotas fall back to the free tier — nothing is ever deleted).",
+"platformSettings.dnsShopOpenToast": "DNS shop open — /dns is selling TOURACO",
+"platformSettings.dnsShopClosedToast": "DNS shop closed (provisioned entitlements run until their term)",
+
 // N°311 — monthly traffic quota for sold VPN peers (egress guard).
 "platformSettings.vpnQuota": "Monthly VPN quota",
 "platformSettings.vpnQuotaDesc":

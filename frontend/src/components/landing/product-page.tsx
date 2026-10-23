@@ -61,7 +61,7 @@ import { Reveal } from "./reveal";
 import { fraunces, manrope } from "./landing-fonts";
 import "./landing-clay.css";
 
-export type ProductPageKey = "hotspot" | "vpn" | "tunnels";
+export type ProductPageKey = "hotspot" | "vpn" | "tunnels" | "dns";
 
 /* N°332-B — table statique demandée par le plan : champ icon
    EXPLICITE dans la copy (fin du title.includes fragile — le
@@ -83,11 +83,13 @@ const SECTION_ICONS: Record<ProductPageCopy["features"]["sections"][number]["ico
 /* N°332-B — chaque page puise SES plans dans pricing.segments
    (source unique) : hotspot → segment console ; vpn → les deux
    formules VPN du segment tunnels ; tunnels → le segment complet
-   (VPN + Accès Pro — « un tunnel, deux usages »). */
-const PRICING_SEGMENT: Record<ProductPageKey, "hotspot" | "tunnels"> = {
+   (VPN + Accès Pro — « un tunnel, deux usages »). N°347 — dns → le
+   segment dns (Gratuit pour toujours + TOURACO mensuel/annuel). */
+const PRICING_SEGMENT: Record<ProductPageKey, "hotspot" | "tunnels" | "dns"> = {
   hotspot: "hotspot",
   vpn: "tunnels",
   tunnels: "tunnels",
+  dns: "dns",
 };
 
 function PageCta({
@@ -191,6 +193,8 @@ export default function ProductPage({ page, onSignIn, onSignUp }: ProductPagePro
 
   const segment =
     copy.pricing.segments.find((s) => s.id === PRICING_SEGMENT[page]) ?? copy.pricing.segments[0];
+  /* N°347 — dns : le segment ENTIER (Gratuit + TOURACO mensuel + annuel)
+     — le tiers gratuit est une vraie formule de la grille, pas une note. */
   const plans = page === "vpn" ? segment.plans.slice(0, 2) : segment.plans;
 
   const toggleLang = () => setLang(lang === "fr" ? "en" : "fr");

@@ -503,7 +503,14 @@ export interface DnsMeResponse {
   email: string;
   profiles: DnsProfile[];
   threats: { domains: number; updatedAt: string };
+  /** N°347 — bornes EFFECTIVES du compte : 25/600 si l'abonnement TOURACO
+   * est actif, 10/200 sinon (résolu par e-mail côté serveur, sous le
+   * verrou — la console affiche ces valeurs, jamais de bornes en dur). */
   limits: { maxProfiles: number; maxRules: number };
+  /** N°347 — l'abonnement DNS « TOURACO » : entitlement effectif (la plus
+   * lointaine échéance provisionnée non échue) + les commandes actives du
+   * compte, cibles du renouvellement 1-clic. */
+  subscription: DnsSubscription;
   setupUrlFormat: string;
   setup: DnsSetup;
 }
@@ -627,6 +634,107 @@ export interface DnsProfilePayload {
 /** N°339 — profils + agrégat de menaces + bornes du compte. */
 export async function dnsMe(token: string): Promise<DnsMeResponse> {
   return apiFetch<DnsMeResponse>("/api/dnsshield/me", { token });
+}
+
+// ---------------------------------------------------------------------------
+// N°347 — ABONNEMENT DNS « TOURACO » (contrat handlers_dnsshield.go /
+// handlers_public_dns.go) : le bloc subscription du /me, le renouvellement
+// 1-clic authentifié et le catalogue/statut PUBLIC de la vitrine (le service
+// DNS porte le nom de l'oiseau guetteur africain — TOURACO).
+// ---------------------------------------------------------------------------
+
+/** N°347 — une commande provisionnée NON échue de CE compte (cible du
+ * renouvellement 1-clic ; planId/planLabel/periodLabel posés quand la
+ * formule est résolue côté backend). */
+export interface DnsSubscriptionOrder {
+  ref: string;
+  months: number;
+  expiresAt: string;
+  kind: string;
+  createdAt: string;
+  planId?: string;
+  planLabel?: string;
+  periodLabel?: string;
+}
+
+/** N°347 — le bloc subscription de /api/dnsshield/me : active=true dès
+ * qu'un droit provisionné couvre maintenant ; expiresAt = la plus lointaine
+ * échéance (vide si inactif) ; orders = les commandes actives du compte. */
+export interface DnsSubscription {
+  active: boolean;
+  expiresAt: string;
+  orders: DnsSubscriptionOrder[];
+}
+
+/** N°347 — réponse du renouvellement 1-clic : commande pending créée +
+ * paiement (online=true et paymentUrl non vide → GeniusPay ; sinon canal
+ * manual — la référence est à régler, la plateforme confirme). */
+export interface DnsRenewResponse {
+  ref: string;
+  status: string;
+  amountFcfa: number;
+  payMethod: string;
+  paymentUrl: string;
+  online: boolean;
+}
+
+/** N°347 — renouvellement 1-clic de l'abonnement TOURACO (JWT tunnel, quota
+ * tunnelAction ; corps {planId, payMethod, phone?, website?} — le champ
+ * website est le honeypot, rempli = robot → succès factice côté backend). */
+export async function tunnelDnsRenew(
+  ref: string,
+  token: string,
+  body: { planId: string; payMethod: string; phone?: string; website?: string },
+): Promise<DnsRenewResponse> {
+  return apiFetch<DnsRenewResponse>(
+    `/api/tunnel/dns/orders/${encodeURIComponent(ref)}/renew`,
+    { method: "POST", token, body },
+  );
+}
+
+/** N°347 — une formule du catalogue public : montants PAR MOYEN (frais
+ * répercutés côté backend — la formule annuelle fait environ 2 mois offerts). */
+export interface PublicDnsOfferPlan {
+  id: string;
+  label: string;
+  periodLabel: string;
+  months: number;
+  baseFcfa: number;
+  cardFcfa?: number;
+  waveFcfa?: number;
+}
+
+/** N°347 — catalogue de la vitrine DNS (SANS auth — même base API) :
+ * enabled=false quand la vente n'est pas ouverte (rien ne fuite). */
+export interface PublicDnsOffers {
+  enabled: boolean;
+  onlinePayment?: boolean;
+  plans: PublicDnsOfferPlan[];
+}
+
+/** N°347 — statut public MINIMAL d'une commande DNS par référence (poll de
+ * retour GeniusPay — le GET finalise côté serveur si le webhook a déjà
+ * convergé ; jamais d'e-mail dans la réponse). */
+export interface PublicDnsOrderStatus {
+  ref: string;
+  status: string;
+  months: number;
+  planLabel?: string;
+  periodLabel?: string;
+  expiresAt?: string;
+}
+
+/** N°347 — catalogue public des formules TOURACO (SANS auth, cacheable). */
+export async function fetchPublicDnsOffers(): Promise<PublicDnsOffers> {
+  return apiFetch<PublicDnsOffers>("/api/public/dns/offers");
+}
+
+/** N°347 — statut public d'une commande DNS (miroir du canal VPN N°316 —
+ * réutilisé par la console pour le bandeau de retour de paiement). */
+export async function fetchPublicDnsOrderStatus(ref: string): Promise<PublicDnsOrderStatus> {
+  return apiFetch<PublicDnsOrderStatus>(
+    `/api/public/dns/order/${encodeURIComponent(ref)}`,
+  );
 }
 
 export async function dnsProfileCreate(

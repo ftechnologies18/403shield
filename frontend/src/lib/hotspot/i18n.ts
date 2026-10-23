@@ -40,6 +40,7 @@ import { frPaywall } from "./i18n-fr/paywall";
 import { frPlatform } from "./i18n-fr/platform";
 import { frPlatformLogs } from "./i18n-fr/platform-logs";
 import { frPlatformChat } from "./i18n-fr/platform-chat";
+import { frPlatformDns } from "./i18n-fr/platform-dns";
 import { frPlatformSettings } from "./i18n-fr/platform-settings";
 import { frPlatformTeam } from "./i18n-fr/platform-team";
 import { frPlatformVpn } from "./i18n-fr/platform-vpn";
@@ -108,6 +109,7 @@ const fr: Record<string, string> = {
   ...frPlatform,
   ...frPlatformLogs,
   ...frPlatformChat,
+  ...frPlatformDns,
   ...frPlatformSettings,
   ...frPlatformTeam,
   ...frPlatformVpn,

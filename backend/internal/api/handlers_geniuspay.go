@@ -612,6 +612,14 @@ func (a *API) handleGeniusPayWebhook(w http.ResponseWriter, r *http.Request) {
 		a.handleGeniusPayWebhookVpnOrder(w, event, refMeta, gatewayRef, amount)
 		return
 	}
+	// N°347 — ABONNEMENT DNS « TOURACO » : les refs MCD- désignent des
+	// COMMANDES DNS (public_dns_orders) — même routage dédié AVANT
+	// l'appariement BillingRequests (miroir MCV- : le droit EST l'échéance,
+	// aucun réseau à provisionner).
+	if strings.HasPrefix(strings.TrimSpace(refMeta), "MCD-") {
+		a.handleGeniusPayWebhookDnsOrder(w, event, refMeta, gatewayRef, amount)
+		return
+	}
 
 	a.store.Lock()
 	db := a.store.Data()

@@ -178,6 +178,17 @@ func validDnsRuleDomain(d string) bool {
 // domaine est invalide ou si la liste dépasse MaxDnsRulesPerList (le
 // refus est honnête : toute la liste d'un coup, jamais de tri silencieux).
 func NormalizeDnsRules(raw string) (string, bool) {
+	return NormalizeDnsRulesWithMax(raw, MaxDnsRulesPerList)
+}
+
+// NormalizeDnsRulesWithMax — N°347 — NormalizeDnsRules avec borne PARAMÉTRÉE :
+// l'abonnement TOURACO relève la limite à DnsQuotasTouraco.MaxRules (600) —
+// le handler console résout la borne par e-mail (entitlement) avant
+// d'appeler ; la validation de chaque domaine est strictement la même.
+func NormalizeDnsRulesWithMax(raw string, max int) (string, bool) {
+	if max < 1 {
+		max = MaxDnsRulesPerList
+	}
 	fields := strings.FieldsFunc(raw, func(r rune) bool { return r == '\n' || r == '\r' || r == ',' || r == ' ' || r == '\t' })
 	seen := map[string]bool{}
 	out := make([]string, 0, len(fields))
@@ -195,7 +206,7 @@ func NormalizeDnsRules(raw string) (string, bool) {
 		seen[d] = true
 		out = append(out, d)
 	}
-	if len(out) > MaxDnsRulesPerList {
+	if len(out) > max {
 		return "", false
 	}
 	return strings.Join(out, "\n"), true
@@ -263,7 +274,38 @@ func DnsProfilesOfEmail(db *DB, email string) []*DnsProfile {
 // comme la suppression d'un profil. Retour : le nombre d'événements purgés
 // (tracé par l'appelant si non nul — preuve d'audit).
 func PurgeDnsEvents(db *DB, now time.Time) int {
-	cutoff := now.AddDate(0, 0, -DnsEventRetentionDays).Format(time.RFC3339)
+	// N°347 — rétention et borne PAR PROPRIÉTAIRE : un abonné TOURACO
+	// actif conserve 90 jours / 3000 événements par profil, un compte
+	// gratuit 30 j / 1000 (bornes historiques — INTACTES). Le droit se
+	// calcule à CHAQUE passage sur les commandes provisionnées non
+	// échues : un terme franchi retombe immédiatement au tier gratuit,
+	// aucune recopie, aucune colonne à migrer. Un événement dont le
+	// profil a disparu (cas défensif : la cascade de suppression les
+	// emporte normalement) suit le tier gratuit.
+	subbed := DnsActiveSubscribers(db)
+	cutoff := map[string]string{}
+	capOf := map[string]int{}
+	for i := range db.DnsProfiles {
+		q := DnsQuotasFree
+		if subbed[strings.ToLower(db.DnsProfiles[i].OwnerEmail)] {
+			q = DnsQuotasTouraco
+		}
+		cutoff[db.DnsProfiles[i].ID] = now.AddDate(0, 0, -q.RetentionDays).Format(time.RFC3339)
+		capOf[db.DnsProfiles[i].ID] = q.MaxEvents
+	}
+	freeCutoff := now.AddDate(0, 0, -DnsQuotasFree.RetentionDays).Format(time.RFC3339)
+	cutoffOf := func(pid string) string {
+		if c, ok := cutoff[pid]; ok {
+			return c
+		}
+		return freeCutoff
+	}
+	capOfPid := func(pid string) int {
+		if c, ok := capOf[pid]; ok && c > 0 {
+			return c
+		}
+		return DnsQuotasFree.MaxEvents
+	}
 	// Les événements sont en ordre d'insertion (plus récents en QUEUE) : la
 	// borne par profil se compte en REMONTANT depuis la fin, puis le filtre
 	// final parcourt dans l'ordre pour reconstruire la tranche conservée.
@@ -271,7 +313,7 @@ func PurgeDnsEvents(db *DB, now time.Time) int {
 	keepFromEnd := map[int]bool{}
 	for i := len(db.DnsEvents) - 1; i >= 0; i-- {
 		pid := db.DnsEvents[i].ProfileID
-		if counts[pid] < MaxDnsEventsPerProfile {
+		if counts[pid] < capOfPid(pid) {
 			counts[pid]++
 			keepFromEnd[i] = true // cet indice est dans la fenêtre conservée
 		}
@@ -280,7 +322,7 @@ func PurgeDnsEvents(db *DB, now time.Time) int {
 	purged := 0
 	for i := range db.DnsEvents {
 		e := db.DnsEvents[i]
-		if !keepFromEnd[i] || e.CreatedAt < cutoff {
+		if !keepFromEnd[i] || e.CreatedAt < cutoffOf(e.ProfileID) {
 			purged++
 			continue
 		}

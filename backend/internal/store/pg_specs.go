@@ -269,6 +269,25 @@ var publicVpnOrderSpec = entitySpec[model.PublicVpnOrder]{
 	hashOf: hashEntity[model.PublicVpnOrder],
 }
 
+// publicDnsOrderSpec — N°347 : commandes de l'abonnement DNS « TOURACO »
+// (vitrine publique /dns). Même discipline que publicVpnOrderSpec : l'ordre
+// cols/scan/args reste strictement aligné sur le DDL pg_schema.go. Aucun
+// secret ici (le droit vit sur l'e-mail + l'échéance — rien à chiffrer).
+var publicDnsOrderSpec = entitySpec[model.PublicDnsOrder]{
+	table: "public_dns_orders",
+	cols:  []string{"id", "ref", "email", "phone", "plan_id", "months", "base_amount_fcfa", "amount_fcfa", "pay_method", "kind", "renew_target_ref", "paid_via", "gateway_ref", "status", "expires_at", "error_msg", "resolved_by", "created_at", "updated_at", "paid_at"},
+	idOf:  func(x *model.PublicDnsOrder) string { return x.ID },
+	scan: func(r *sql.Rows) (model.PublicDnsOrder, error) {
+		var x model.PublicDnsOrder
+		err := r.Scan(&x.ID, &x.Ref, &x.Email, &x.Phone, &x.PlanID, &x.Months, &x.BaseAmountFcfa, &x.AmountFcfa, &x.PayMethod, &x.Kind, &x.RenewTargetRef, &x.PaidVia, &x.GatewayRef, &x.Status, &x.ExpiresAt, &x.ErrorMsg, &x.ResolvedBy, &x.CreatedAt, &x.UpdatedAt, &x.PaidAt)
+		return x, err
+	},
+	args: func(x *model.PublicDnsOrder) []any {
+		return []any{x.ID, x.Ref, x.Email, x.Phone, x.PlanID, x.Months, x.BaseAmountFcfa, x.AmountFcfa, x.PayMethod, x.Kind, x.RenewTargetRef, x.PaidVia, x.GatewayRef, x.Status, x.ExpiresAt, x.ErrorMsg, x.ResolvedBy, x.CreatedAt, x.UpdatedAt, x.PaidAt}
+	},
+	hashOf: hashEntity[model.PublicDnsOrder],
+}
+
 // pppSecretSpec — N°293 : abonnés PPPoE (chantier ⑥ Phase A, unicité PAR
 // ROUTEUR — contrairement aux peers VPN dont le nom est global au wg0).
 // Même discipline que vpnPeerSpec : l'ordre cols/scan/args reste

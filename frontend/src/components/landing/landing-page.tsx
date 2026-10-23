@@ -260,10 +260,12 @@ export default function LandingPage({ onSignIn, onSignUp }: LandingPageProps) {
   const reduce = useReducedMotion();
 
   const [active, setActive] = useState("top");
-  /* N°122 — comptoir de tarifs affiché. N°324 — 2 segments : l'abonnement
-     console « hotspot » (défaut — mono-mode, le foyer n'existe plus) et la
-     boutique « tunnels » (N°321 — CTA liens internes /checkout?plan=). */
-  const [priceMode, setPriceMode] = useState<"hotspot" | "tunnels">("hotspot");
+  /* N°122 — comptoir de tarifs affiché. N°324 — l'abonnement
+     console « hotspot » (défaut — mono-mode, le foyer n'existe plus) et
+     la boutique « tunnels » (N°321). N°347 — 3e segment « dns » : le
+     bouclier DNS (gratuit pour toujours + TOURACO) rejoint le
+     comparateur de la home. */
+  const [priceMode, setPriceMode] = useState<"hotspot" | "tunnels" | "dns">("hotspot");
 
   useEffect(() => {
     /* N°332-A — "isp" rejoint les sections observées : l'ancre était

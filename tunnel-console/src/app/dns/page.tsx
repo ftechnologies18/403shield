@@ -23,6 +23,16 @@
 //       · Box/routeurs → le PROCHAIN jalon (UDP/53) annoncé tel quel —
 //                        jamais de promesse en avance sur la réalité.
 //
+// N°347 — ABONNEMENT « TOURACO » : la carte d'état de l'abonnement DNS en
+// tête de page (actif : badge + échéance + commandes renouvelables 1-clic ;
+// inactif : tier gratuit + encart de découverte TOURACO), la modale de
+// renouvellement (formules du catalogue public /api/public/dns/offers,
+// Wave/carte GeniusPay, honeypot website — miroir du flux /me N°334-B) et
+// le bandeau de retour de paiement (?order=MCD-… pollé via le statut
+// public jusqu'à « provisioned », puis rafraîchissement du /me). Les
+// compteurs de la page suivent les bornes EFFECTIVES du /me (25/600 pour
+// un abonné TOURACO — plus aucune capacité codée en dur).
+//
 // THEME : clair « console » (miroir /pro N°337 — mkdns-page), accents
 // émeraude, wordmark aurora. Modales : bottom-sheet mobile + Escape +
 // focus au titre (même confort que /me et /pro).
@@ -31,11 +41,14 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Ban,
+  Bird,
   CalendarClock,
   Check,
   Compass,
   Copy,
+  CreditCard,
   Download,
+  ExternalLink,
   Globe,
   Laptop,
   Loader2,
@@ -63,7 +76,10 @@ import {
   dnsProfileDelete,
   dnsProfileEvents,
   dnsProfileUpdate,
+  fetchPublicDnsOffers,
+  fetchPublicDnsOrderStatus,
   getToken,
+  tunnelDnsRenew,
   type DnsEventsResponse,
   type DnsHomeResponse,
   type DnsMeResponse,
@@ -71,6 +87,9 @@ import {
   type DnsProfilePayload,
   type DnsProbeResponse,
   type DnsProbeStatusResponse,
+  type DnsSubscriptionOrder,
+  type PublicDnsOfferPlan,
+  type PublicDnsOffers,
 } from "@/lib/api";
 
 // ---------------------------------------------------------------------------
@@ -139,6 +158,43 @@ function levelInfo(level: string): { label: string; tone: string; desc: string }
 function rulesCount(rules: string): number {
   if (!rules) return 0;
   return rules.split("\n").filter((l) => l.trim() !== "").length;
+}
+
+/** N°347 — jours restants avant une échéance (null si illisible). */
+function daysLeft(iso: string): number | null {
+  if (!iso) return null;
+  try {
+    const ms = new Date(iso).getTime() - Date.now();
+    if (Number.isNaN(ms)) return null;
+    return Math.ceil(ms / 86_400_000);
+  } catch {
+    return null;
+  }
+}
+
+function formatFcfa(n: number): string {
+  return n.toLocaleString("fr-FR") + " FCFA";
+}
+
+// N°347 — capacités PRODUIT : l'encart de découverte TOURACO et les replis
+// d'affichage pendant les chargements. Les valeurs EFFECTIVES du compte
+// viennent toujours du serveur (/me → limits, /home → maxBindings) — la
+// rétention du journal n'est pas servie, elle se déduit de l'état
+// d'abonnement (90 j abonné, 30 j gratuit, miroir de la résolution backend).
+const TOURACO_CAPACITES = { profils: 25, regles: 600, logements: 15, journalJours: 90 };
+const GRATUIT_CAPACITES = { profils: 10, regles: 200, logements: 5, journalJours: 30 };
+
+// N°347 — vitrine publique du bouclier DNS : LE canal d'achat d'une
+// souscription NEUVE (la console ne renouvelle que l'existant — doctrine
+// « un seul canal B2C », miroir /shop → 403shield.ftci.fr/checkout).
+const VITRINE_DNS_URL = "https://403shield.ftci.fr/dns";
+
+/** N°347 — montant effectif d'une formule selon le moyen choisi (frais
+ * répercutés côté backend ; repli sur le tarif de base si absent). */
+function planAmount(plan: PublicDnsOfferPlan, method: string): number {
+  if (method === "wave" && typeof plan.waveFcfa === "number") return plan.waveFcfa;
+  if (method === "card" && typeof plan.cardFcfa === "number") return plan.cardFcfa;
+  return plan.baseFcfa;
 }
 
 function curfewLabel(p: DnsProfile): string | null {
@@ -265,6 +321,27 @@ export default function DnsPage() {
   const [formError, setFormError] = useState("");
   const [formLoading, setFormLoading] = useState(false);
 
+  // N°347 — ABONNEMENT « TOURACO » : renouvellement 1-clic (miroir du flux
+  // /me N°334-B) + retour de paiement GeniusPay (?order=MCD-…) + catalogue
+  // public des formules (SANS auth).
+  const [renewFor, setRenewFor] = useState<DnsSubscriptionOrder | null>(null);
+  const [subscribeOpen, setSubscribeOpen] = useState(false);
+  const [renewPlan, setRenewPlan] = useState<string>("dns-month");
+  const [renewMethod, setRenewMethod] = useState<string>("wave");
+  const [renewPhone, setRenewPhone] = useState("");
+  // Honeypot « website » : champ invisible, jamais rempli par un humain —
+  // un bot qui le remplit reçoit un succès factice côté backend.
+  const [renewWebsite, setRenewWebsite] = useState("");
+  const [renewLoading, setRenewLoading] = useState(false);
+  const [renewError, setRenewError] = useState("");
+  const [renewNotice, setRenewNotice] = useState("");
+  const renewHeadRef = useRef<HTMLHeadingElement | null>(null);
+  // Catalogue public des formules (chargé UNE fois au montage).
+  const [offers, setOffers] = useState<PublicDnsOffers | null>(null);
+  // Retour GeniusPay : référence + statut pollé (pending → provisioned).
+  const [returnOrder, setReturnOrder] = useState("");
+  const [returnStatus, setReturnStatus] = useState("");
+
   const load = useCallback(async () => {
     const token = getToken();
     if (!token) {
@@ -306,8 +383,70 @@ export default function DnsPage() {
   }, [me, hProfileId]);
 
   useEffect(() => {
+    // N°347 — retour de paiement GeniusPay : ?order=MCD-… → bandeau de
+    // suivi (poll du statut public ci-dessous) ; l'URL est nettoyée pour
+    // qu'un rafraîchissement manuel ne re-déclenche pas le bandeau.
+    const params = new URLSearchParams(window.location.search);
+    const ref = (params.get("order") ?? "").trim();
+    if (ref) {
+      setReturnOrder(ref);
+      setReturnStatus("pending");
+      window.history.replaceState({}, "", window.location.pathname);
+    }
     void load();
   }, [load]);
+
+  // N°347 — catalogue public (une fois au montage : endpoint cacheable,
+  // indépendant du /me — un échec réseau est silencieux, la modale le
+  // signalera à l'ouverture avec ses replis produit).
+  useEffect(() => {
+    let live = true;
+    fetchPublicDnsOffers()
+      .then((o) => {
+        if (live) setOffers(o);
+      })
+      .catch(() => {
+        /* silencieux : la modale retombe sur un message honnête */
+      });
+    return () => {
+      live = false;
+    };
+  }, []);
+
+  // N°347 — poll léger du statut de la commande de retour : toutes les 4 s
+  // pendant ≤ 2 min (le GET public finalise AUSSI côté serveur si le webhook
+  // GeniusPay a déjà convergé — même source unique). « provisioned » →
+  // message de succès + rafraîchissement du /me (capacités étendues).
+  useEffect(() => {
+    if (!returnOrder) return;
+    let live = true;
+    const poll = async () => {
+      try {
+        const st = await fetchPublicDnsOrderStatus(returnOrder);
+        if (!live) return;
+        setReturnStatus(st.status);
+        if (st.status === "provisioned") {
+          live = false;
+          void load();
+        } else if (st.status === "cancelled" || st.status === "expired") {
+          live = false;
+        }
+      } catch {
+        /* réseau/404 : le bandeau reste (bouton Rafraîchir maintenant) */
+      }
+    };
+    void poll();
+    const iv = setInterval(() => void poll(), 4000);
+    const stop = setTimeout(() => {
+      live = false;
+      clearInterval(iv);
+    }, 2 * 60 * 1000);
+    return () => {
+      live = false;
+      clearInterval(iv);
+      clearTimeout(stop);
+    };
+  }, [returnOrder, load]);
 
   // Escape ferme les modales (même confort que /me et /pro).
   useEffect(() => {
@@ -315,6 +454,8 @@ export default function DnsPage() {
       if (e.key === "Escape") {
         setInstallFor(null);
         setEventsFor(null);
+        setRenewFor(null);
+        setSubscribeOpen(false);
       }
     };
     window.addEventListener("keydown", onKey);
@@ -328,6 +469,11 @@ export default function DnsPage() {
   useEffect(() => {
     if (eventsFor) eventsHeadRef.current?.focus();
   }, [eventsFor]);
+  // N°347 — focus au titre de la modale abonnement (renouvellement ou
+  // découverte TOURACO).
+  useEffect(() => {
+    if (renewFor || subscribeOpen) renewHeadRef.current?.focus();
+  }, [renewFor, subscribeOpen]);
 
   const openCreate = () => {
     setEditId(null);
@@ -415,6 +561,75 @@ export default function DnsPage() {
       setEvents({ events: [] });
     } finally {
       setEventsLoading(false);
+    }
+  };
+
+  // ── N°347 — Abonnement TOURACO : renouvellement 1-clic ──────────────
+
+  const openRenew = (o: DnsSubscriptionOrder) => {
+    setSubscribeOpen(false);
+    setRenewFor(o);
+    // La formule par défaut suit celle de la commande ciblée quand elle est
+    // encore au catalogue (un abonné annuel renouvelle en annuel d'emblée).
+    const connues = offers?.plans ?? [];
+    setRenewPlan(o.planId && connues.some((p) => p.id === o.planId) ? o.planId : "dns-month");
+    setRenewMethod("wave");
+    setRenewError("");
+    setRenewNotice("");
+  };
+
+  // Mode souscription (compte non abonné) : même modale, le geste part vers
+  // la vitrine publique — le renew n'existe pas sans commande active.
+  const openSubscribe = () => {
+    setRenewFor(null);
+    setSubscribeOpen(true);
+    setRenewError("");
+    setRenewNotice("");
+  };
+
+  const closeSubModal = () => {
+    setRenewFor(null);
+    setSubscribeOpen(false);
+  };
+
+  const submitRenew = async () => {
+    const token = getToken();
+    if (!renewFor || !token) return;
+    if (renewMethod === "wave" && renewPhone.replace(/\D/g, "").length < 8) {
+      setRenewError("Un numéro de téléphone valide est requis pour payer par Wave.");
+      return;
+    }
+    setRenewLoading(true);
+    setRenewError("");
+    setRenewNotice("");
+    try {
+      const out = await tunnelDnsRenew(renewFor.ref, token, {
+        planId: renewPlan,
+        payMethod: renewMethod,
+        phone: renewPhone || undefined,
+        website: renewWebsite || undefined, // honeypot — rempli = robot
+      });
+      if (out.online && out.paymentUrl) {
+        // GeniusPay : le paiement se règle chez le prestataire — le retour
+        // ramène ici (?order=MCD-…) et le bandeau de suivi prend le relais.
+        window.location.href = out.paymentUrl;
+        return;
+      }
+      // Canal manuel : la référence est à régler, la plateforme confirme
+      // l'encaissement (miroir du flux VPN /me — honnête et traçable).
+      setRenewNotice(
+        "Commande " +
+          out.ref +
+          " enregistrée (" +
+          formatFcfa(out.amountFcfa) +
+          ", canal manuel). Réglez la commande — la plateforme confirmera l'encaissement, votre échéance s'étendra automatiquement.",
+      );
+      closeSubModal();
+      void load();
+    } catch (err) {
+      setRenewError(err instanceof Error ? err.message : "Renouvellement impossible — réessayez");
+    } finally {
+      setRenewLoading(false);
     }
   };
 
@@ -508,6 +723,34 @@ export default function DnsPage() {
   const resolverIp = me?.setup?.resolverIp || home?.resolverIp || "";
   const profiles = me?.profiles ?? [];
 
+  // N°347 — l'abonnement « TOURACO » de CE compte (défensif : un backend non
+  // encore redéployé ne renvoie pas le bloc — la carte retombe alors sur le
+  // tier gratuit, la page ne casse pas).
+  const sub = me?.subscription;
+  const subActive = Boolean(sub?.active);
+  const subOrders = sub?.orders ?? [];
+  // Bornes EFFECTIVES du compte (serveur : 25/600/15 pour un abonné TOURACO)
+  // avec replis produit uniquement pendant les chargements.
+  const maxProfiles =
+    me?.limits.maxProfiles ?? (subActive ? TOURACO_CAPACITES.profils : GRATUIT_CAPACITES.profils);
+  const maxRules =
+    me?.limits.maxRules ?? (subActive ? TOURACO_CAPACITES.regles : GRATUIT_CAPACITES.regles);
+  const maxBindings =
+    home?.limits.maxBindings ?? (subActive ? TOURACO_CAPACITES.logements : GRATUIT_CAPACITES.logements);
+  // La rétention du journal n'est pas servie : elle se déduit de l'état
+  // d'abonnement (miroir exact de la résolution backend par e-mail).
+  const journalJours = subActive ? TOURACO_CAPACITES.journalJours : GRATUIT_CAPACITES.journalJours;
+  // Les formules au catalogue (repli vide : la modale affiche un message
+  // honnête au lieu de prix inventés).
+  const plans = offers?.enabled ? (offers?.plans ?? []) : [];
+  // N°347 — habillage du bandeau de retour de paiement : provisioned =
+  // succès, cancelled/expired = échec, tout le reste (pending, paid, réseau)
+  // reste en « vérification en cours ».
+  const retourSucces = returnStatus === "provisioned";
+  const retourEchec = returnStatus === "cancelled" || returnStatus === "expired";
+  // N°347 — jours restants sur l'échéance de l'abonnement (null si illisible).
+  const subJours = sub?.expiresAt ? daysLeft(sub.expiresAt) : null;
+
   return (
     <div className="mkdns-page flex min-h-screen flex-col bg-[#f5f6f8] text-slate-800">
       {/* ── Header ─────────────────────────────────────────────── */}
@@ -545,6 +788,57 @@ export default function DnsPage() {
       </header>
 
       <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-6 sm:px-6 sm:py-8">
+        {/* ── N°347 — Bandeau de retour de paiement GeniusPay ───── */}
+        {returnOrder ? (
+          <div
+            role="status"
+            className={
+              "mb-6 rounded-2xl border p-4 text-sm " +
+              (retourSucces
+                ? "border-emerald-600/40 bg-emerald-500/10 text-emerald-800"
+                : retourEchec
+                  ? "border-amber-400 bg-amber-50 text-amber-800"
+                  : "border-sky-500/30 bg-sky-500/10 text-sky-800")
+            }
+          >
+            <p className="flex items-center gap-2 font-semibold">
+              {retourSucces ? (
+                <Check className="h-4 w-4 shrink-0" aria-hidden />
+              ) : retourEchec ? (
+                <Ban className="h-4 w-4 shrink-0" aria-hidden />
+              ) : (
+                <Loader2 className="h-4 w-4 shrink-0 animate-spin" aria-hidden />
+              )}
+              {retourSucces
+                ? `Commande ${returnOrder} activée — abonnement TOURACO à jour`
+                : retourEchec
+                  ? `Paiement non abouti pour la commande ${returnOrder}`
+                  : `Paiement de la commande ${returnOrder}`}
+            </p>
+            <p
+              className={
+                "mt-1 leading-relaxed " +
+                (retourSucces ? "text-emerald-700/80" : retourEchec ? "text-amber-700/80" : "text-sky-700/80")
+              }
+            >
+              {retourSucces
+                ? "Votre échéance est étendue et vos capacités aussi — la carte « Abonnement TOURACO » ci-dessous reflète l'état réel."
+                : retourEchec
+                  ? "Aucun montant n'a été débité. Vous pouvez relancer le renouvellement depuis la carte « Abonnement TOURACO » ci-dessous."
+                  : "Vérification en cours… Si votre paiement est confirmé, vos capacités s'étendent ci-dessous — sinon dans quelques instants (le retour de la banque peut prendre une minute)."}
+            </p>
+            {!retourSucces && !retourEchec ? (
+              <button
+                type="button"
+                onClick={() => void load()}
+                className="mt-2 font-semibold underline underline-offset-2"
+              >
+                Rafraîchir maintenant
+              </button>
+            ) : null}
+          </div>
+        ) : null}
+
         {/* ── Hero ─────────────────────────────────────────────── */}
         <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
           <h1 className="text-xl font-bold tracking-tight text-slate-900 sm:text-2xl">
@@ -599,19 +893,196 @@ export default function DnsPage() {
           ) : null}
         </section>
 
+        {/* ── N°347 — Abonnement TOURACO ───────────────────────── */}
+        {me ? (
+          <section
+            id="abonnement"
+            className="mt-6 scroll-mt-20 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7"
+          >
+            {subActive ? (
+              <>
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <h2 className="flex flex-wrap items-center gap-2 text-lg font-bold tracking-tight text-slate-900">
+                      <Bird className="h-5 w-5 text-emerald-600" aria-hidden />
+                      Abonnement TOURACO
+                      <span className="rounded-full border border-emerald-600/40 bg-emerald-500/10 px-2.5 py-1 text-[11px] font-semibold text-emerald-700">
+                        actif
+                      </span>
+                    </h2>
+                    <p className="mt-1.5 max-w-2xl text-sm leading-relaxed text-slate-600">
+                      {sub?.expiresAt ? (
+                        <>
+                          Couvert jusqu&apos;au {formatDate(sub.expiresAt)}
+                          {subJours !== null
+                            ? ` — ${subJours} jour${subJours > 1 ? "s" : ""} restant${subJours > 1 ? "s" : ""}`
+                            : ""}
+                          . Les mois d&apos;un renouvellement s&apos;ajoutent à votre échéance restante — rien ne se perd.
+                        </>
+                      ) : (
+                        "Droit actif sans terme connu — le renouvellement pose une échéance."
+                      )}
+                    </p>
+                  </div>
+                </div>
+                <div className="mt-4 grid gap-2 sm:grid-cols-4">
+                  <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                    <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Profils</p>
+                    <p className="mt-0.5 text-base font-bold tabular-nums text-slate-900">
+                      {profiles.length}/{maxProfiles}
+                    </p>
+                  </div>
+                  <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                    <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Règles par liste</p>
+                    <p className="mt-0.5 text-base font-bold tabular-nums text-slate-900">{maxRules}</p>
+                  </div>
+                  <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                    <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Logements</p>
+                    <p className="mt-0.5 text-base font-bold tabular-nums text-slate-900">
+                      {home ? `${home.bindings.length}/` : ""}
+                      {maxBindings}
+                    </p>
+                  </div>
+                  <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                    <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Journal</p>
+                    <p className="mt-0.5 text-base font-bold tabular-nums text-slate-900">{journalJours} jours</p>
+                  </div>
+                </div>
+                <h3 className="mt-5 text-sm font-bold uppercase tracking-wide text-slate-500">
+                  Vos commandes actives
+                </h3>
+                {subOrders.length > 0 ? (
+                  <ul className="mt-2 divide-y divide-slate-100 rounded-xl border border-slate-200">
+                    {subOrders.map((o) => {
+                      const echeanceJours = daysLeft(o.expiresAt);
+                      return (
+                        <li key={o.ref} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
+                          <div className="min-w-0">
+                            <p className="text-sm font-semibold text-slate-800">
+                              {o.planLabel ?? "Abonnement TOURACO"}{" "}
+                              <span className="font-mono font-normal text-slate-500">· {o.ref}</span>
+                            </p>
+                            <p
+                              className={
+                                "text-xs " +
+                                (echeanceJours !== null && echeanceJours <= 7 && echeanceJours >= 0
+                                  ? "font-semibold text-amber-600"
+                                  : "text-slate-500")
+                              }
+                            >
+                              {o.periodLabel ?? (o.months ? `${o.months} mois` : "—")}
+                              {o.kind === "renewal" ? " · renouvellement" : ""}
+                              {o.expiresAt
+                                ? ` · jusqu'au ${formatDate(o.expiresAt)}` +
+                                  (echeanceJours !== null && echeanceJours >= 0
+                                    ? ` (${echeanceJours} j)`
+                                    : "")
+                                : ""}
+                            </p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => openRenew(o)}
+                            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 px-3.5 py-2 text-sm font-semibold text-slate-600 transition hover:border-emerald-300 hover:text-emerald-700"
+                          >
+                            <CalendarClock className="h-4 w-4" aria-hidden />
+                            Renouveler
+                          </button>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                ) : (
+                  <p className="mt-2 rounded-xl border border-dashed border-slate-300 bg-slate-50 px-3.5 py-3 text-sm text-slate-500">
+                    Aucune commande active listée pour le moment — votre droit reste actif tel
+                    que décrit ci-dessus.
+                  </p>
+                )}
+              </>
+            ) : (
+              <>
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <h2 className="flex flex-wrap items-center gap-2 text-lg font-bold tracking-tight text-slate-900">
+                      <Bird className="h-5 w-5 text-slate-400" aria-hidden />
+                      Bouclier DNS — tier gratuit
+                      <span className="rounded-full border border-slate-300 bg-slate-100 px-2.5 py-1 text-[11px] font-semibold text-slate-600">
+                        sans abonnement
+                      </span>
+                    </h2>
+                    <p className="mt-1.5 max-w-2xl text-sm leading-relaxed text-slate-600">
+                      Votre foyer est déjà filtré contre les menaces vivantes. Vos capacités
+                      actuelles, telles que servies par le bouclier :
+                    </p>
+                  </div>
+                </div>
+                <div className="mt-4 grid gap-2 sm:grid-cols-4">
+                  <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                    <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Profils</p>
+                    <p className="mt-0.5 text-base font-bold tabular-nums text-slate-900">
+                      {profiles.length}/{maxProfiles}
+                    </p>
+                  </div>
+                  <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                    <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Règles par liste</p>
+                    <p className="mt-0.5 text-base font-bold tabular-nums text-slate-900">{maxRules}</p>
+                  </div>
+                  <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                    <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Logements</p>
+                    <p className="mt-0.5 text-base font-bold tabular-nums text-slate-900">
+                      {home ? `${home.bindings.length}/` : ""}
+                      {maxBindings}
+                    </p>
+                  </div>
+                  <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                    <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Journal</p>
+                    <p className="mt-0.5 text-base font-bold tabular-nums text-slate-900">{journalJours} jours</p>
+                  </div>
+                </div>
+                <div className="mt-4 rounded-xl border border-emerald-600/30 bg-emerald-500/5 p-4">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div className="min-w-0 max-w-2xl">
+                      <p className="flex items-center gap-2 text-sm font-bold text-slate-900">
+                        <Bird className="h-4 w-4 text-emerald-600" aria-hidden />
+                        TOURACO — la vigie du foyer
+                      </p>
+                      <p className="mt-1 text-sm leading-relaxed text-slate-600">
+                        Du nom de l&apos;oiseau guetteur africain : {TOURACO_CAPACITES.profils} profils,
+                        {" "}
+                        {TOURACO_CAPACITES.regles} règles par liste, {TOURACO_CAPACITES.logements} logements
+                        (domicile, bureau, maison de famille) et un journal conservé{" "}
+                        {TOURACO_CAPACITES.journalJours} jours. À l&apos;expiration rien n&apos;est supprimé
+                        — seules les créations au-delà des bornes gratuites redeviennent refusées.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={openSubscribe}
+                      className="inline-flex shrink-0 items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700"
+                    >
+                      <Bird className="h-4 w-4" aria-hidden />
+                      Découvrir TOURACO
+                    </button>
+                  </div>
+                </div>
+              </>
+            )}
+          </section>
+        ) : null}
+
         {/* ── Barre profils ────────────────────────────────────── */}
         <section className="mt-6 flex flex-wrap items-center justify-between gap-3">
           <h2 className="text-lg font-bold tracking-tight text-slate-900">
             Vos profils{" "}
             <span className="ml-1 text-sm font-medium text-slate-500">
               ({profiles.length}
-              {me ? `/${me.limits.maxProfiles}` : ""})
+              {me ? `/${maxProfiles}` : ""})
             </span>
           </h2>
           <button
             type="button"
             onClick={openCreate}
-            disabled={Boolean(me && profiles.length >= me.limits.maxProfiles)}
+            disabled={Boolean(me && profiles.length >= maxProfiles)}
             className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-300"
           >
             <Plus className="h-4 w-4" />
@@ -772,7 +1243,7 @@ export default function DnsPage() {
                     className="mt-1.5 w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 font-mono text-xs outline-none transition focus:border-emerald-400 focus:bg-white"
                   />
                   <span className="mt-1 block text-[11px] text-slate-400">
-                    Bloquer « example.com » couvre aussi ses sous-domaines. {me?.limits.maxRules ?? 200} max.
+                    Bloquer « example.com » couvre aussi ses sous-domaines. {maxRules} max.
                   </span>
                 </label>
                 <label className="block">
@@ -1461,7 +1932,7 @@ export default function DnsPage() {
                 </h2>
                 <p className="mt-0.5 text-xs text-slate-500">
                   Les 100 plus récents. Les sites autorisés ne sont JAMAIS consignés (journal
-                  minimal) ; purge à 30 jours.
+                  minimal) ; purge à {journalJours} jours.
                 </p>
               </div>
               <button
@@ -1507,6 +1978,280 @@ export default function DnsPage() {
               )}
             </div>
           </div>
+        </div>
+      ) : null}
+
+      {/* ── Modale N°347 : renouvellement / découverte TOURACO ──── */}
+      {renewFor || subscribeOpen ? (
+        <div
+          className="fixed inset-0 z-50 flex items-end justify-center bg-slate-900/50 p-0 backdrop-blur-sm sm:items-center sm:p-6"
+          role="dialog"
+          aria-modal="true"
+          aria-label={renewFor ? "Renouveler l'abonnement TOURACO" : "Découvrir l'abonnement TOURACO"}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) closeSubModal();
+          }}
+        >
+          <div className="max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-t-3xl bg-white shadow-2xl sm:rounded-3xl">
+            <div className="sticky top-0 z-10 flex items-start justify-between gap-3 border-b border-slate-100 bg-white/95 px-5 py-4 backdrop-blur sm:px-7">
+              <div className="min-w-0">
+                <h2
+                  ref={renewHeadRef}
+                  tabIndex={-1}
+                  className="text-lg font-bold tracking-tight text-slate-900 outline-none"
+                >
+                  {renewFor ? `Renouveler ${renewFor.ref}` : "L'abonnement TOURACO"}
+                </h2>
+                <p className="mt-0.5 text-xs leading-relaxed text-slate-500">
+                  {renewFor
+                    ? "Vos profils, règles et logements sont conservés — seule l'échéance s'étend." +
+                      (renewFor.expiresAt ? ` Actuellement couvert jusqu'au ${formatDate(renewFor.expiresAt)}.` : "")
+                    : "La vigie du foyer : le bouclier DNS aux capacités étendues, du nom de l'oiseau guetteur africain."}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={closeSubModal}
+                aria-label="Fermer"
+                className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="px-5 py-5 sm:px-7">
+              {renewFor ? (
+                <>
+                  {/* Formules — montants PAR MOYEN (frais répercutés côté
+                      backend ; l'annuelle fait environ 2 mois offerts). */}
+                  <fieldset>
+                    <legend className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      Formule
+                    </legend>
+                    <div className="mt-2 grid gap-2">
+                      {plans.length === 0 ? (
+                        <p className="rounded-xl border border-amber-300 bg-amber-50 px-3.5 py-3 text-sm leading-relaxed text-amber-800">
+                          Catalogue momentanément indisponible
+                          {offers && !offers.enabled
+                            ? " (la vente de l'abonnement DNS n'est pas ouverte pour le moment)"
+                            : ""}{" "}
+                          — réessayez dans un instant.
+                        </p>
+                      ) : (
+                        plans.map((p) => {
+                          const on = renewPlan === p.id;
+                          return (
+                            <label
+                              key={p.id}
+                              className={
+                                "flex min-h-11 cursor-pointer items-center justify-between gap-3 rounded-xl border px-4 py-3 text-sm transition " +
+                                (on
+                                  ? "border-emerald-600 bg-emerald-500/10 text-slate-900"
+                                  : "border-slate-200 bg-slate-50 text-slate-700 hover:border-slate-300")
+                              }
+                            >
+                              <span className="flex min-w-0 items-center gap-2">
+                                <input
+                                  type="radio"
+                                  name="renew-plan"
+                                  value={p.id}
+                                  checked={on}
+                                  onChange={() => setRenewPlan(p.id)}
+                                  className="accent-emerald-600"
+                                />
+                                <span className="truncate">
+                                  {p.label}
+                                  <span className="ml-1 text-xs font-normal text-slate-500">({p.periodLabel})</span>
+                                </span>
+                              </span>
+                              <span className="shrink-0 text-right">
+                                <span className="block font-semibold tabular-nums">
+                                  {formatFcfa(planAmount(p, renewMethod))}
+                                </span>
+                                <span className="block text-[11px] font-normal text-slate-500">
+                                  Wave {formatFcfa(p.waveFcfa ?? p.baseFcfa)} · carte{" "}
+                                  {formatFcfa(p.cardFcfa ?? p.baseFcfa)}
+                                </span>
+                              </span>
+                            </label>
+                          );
+                        })
+                      )}
+                    </div>
+                  </fieldset>
+
+                  <fieldset className="mt-5">
+                    <legend className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      Moyen de paiement
+                    </legend>
+                    <div className="mt-2 grid grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setRenewMethod("wave")}
+                        aria-pressed={renewMethod === "wave"}
+                        className={
+                          "flex min-h-11 items-center justify-center gap-2 rounded-xl border px-4 text-sm font-semibold transition " +
+                          (renewMethod === "wave"
+                            ? "border-emerald-600 bg-emerald-500/10 text-slate-900"
+                            : "border-slate-200 bg-slate-50 text-slate-700 hover:border-slate-300")
+                        }
+                      >
+                        <Smartphone className="h-4 w-4" aria-hidden />
+                        Wave
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setRenewMethod("card")}
+                        aria-pressed={renewMethod === "card"}
+                        className={
+                          "flex min-h-11 items-center justify-center gap-2 rounded-xl border px-4 text-sm font-semibold transition " +
+                          (renewMethod === "card"
+                            ? "border-emerald-600 bg-emerald-500/10 text-slate-900"
+                            : "border-slate-200 bg-slate-50 text-slate-700 hover:border-slate-300")
+                        }
+                      >
+                        <CreditCard className="h-4 w-4" aria-hidden />
+                        Carte
+                      </button>
+                    </div>
+                    {renewMethod === "wave" ? (
+                      <div className="mt-3">
+                        <label htmlFor="renew-phone" className="text-xs font-medium text-slate-600">
+                          Numéro Wave à débiter
+                        </label>
+                        <input
+                          id="renew-phone"
+                          type="tel"
+                          inputMode="tel"
+                          autoComplete="tel"
+                          placeholder="07 00 00 00 00"
+                          value={renewPhone}
+                          onChange={(e) => setRenewPhone(e.target.value)}
+                          className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:border-emerald-400 focus:bg-white focus:outline-none"
+                        />
+                      </div>
+                    ) : null}
+                  </fieldset>
+
+                  {/* Honeypot « website » : champ hors écran, non tabulable et
+                      ignoré par les lecteurs d'écran — rempli = robot, le
+                      backend répond un succès factice (pattern join N°27). */}
+                  <input
+                    type="text"
+                    name="website"
+                    value={renewWebsite}
+                    onChange={(e) => setRenewWebsite(e.target.value)}
+                    tabIndex={-1}
+                    autoComplete="off"
+                    aria-hidden="true"
+                    className="absolute -left-[9999px] h-0 w-0 opacity-0"
+                  />
+
+                  {renewError ? (
+                    <p className="mt-4 rounded-xl border border-red-200 bg-red-50 px-3.5 py-2.5 text-sm text-red-700">
+                      {renewError}
+                    </p>
+                  ) : null}
+
+                  <button
+                    type="button"
+                    onClick={() => void submitRenew()}
+                    disabled={renewLoading || plans.length === 0}
+                    className="mt-5 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 text-sm font-bold text-white shadow-sm transition hover:bg-emerald-700 disabled:opacity-60"
+                  >
+                    {renewLoading ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : null}
+                    {renewLoading ? "Création du paiement…" : "Renouveler maintenant"}
+                  </button>
+                  <p className="mt-3 text-center text-[11px] leading-relaxed text-slate-500">
+                    Paiement sécurisé par GeniusPay (Wave / carte). Sans moyen en ligne, la commande
+                    passe en canal manuel — la plateforme confirmera l&apos;encaissement.
+                  </p>
+                </>
+              ) : (
+                <>
+                  {/* Mode souscription : le renew n'existe pas sans commande
+                      active — le canal d'achat d'un droit NEUF est la vitrine
+                      publique (doctrine « un seul canal B2C »). */}
+                  <div className="grid gap-2">
+                    {plans.length > 0 ? (
+                      plans.map((p) => (
+                        <div key={p.id} className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+                          <div className="flex flex-wrap items-baseline justify-between gap-2">
+                            <p className="text-sm font-semibold text-slate-900">
+                              {p.label}
+                              <span className="font-normal text-slate-500"> · {p.periodLabel}</span>
+                            </p>
+                            <p className="text-sm font-bold tabular-nums text-emerald-700">
+                              {formatFcfa(p.baseFcfa)}
+                            </p>
+                          </div>
+                          <p className="mt-0.5 text-xs text-slate-500">
+                            Wave {formatFcfa(p.waveFcfa ?? p.baseFcfa)} · carte{" "}
+                            {formatFcfa(p.cardFcfa ?? p.baseFcfa)}
+                          </p>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-3 text-sm leading-relaxed text-slate-600">
+                        Les formules et montants exacts sont affichés sur la boutique au moment du
+                        paiement.
+                      </p>
+                    )}
+                  </div>
+                  <ul className="mt-4 grid gap-2 sm:grid-cols-2">
+                    <li className="rounded-xl border border-emerald-600/30 bg-emerald-500/5 px-3.5 py-2.5 text-sm text-slate-700">
+                      <strong className="tabular-nums">{TOURACO_CAPACITES.profils} profils</strong>{" "}
+                      (contre {maxProfiles} aujourd&apos;hui)
+                    </li>
+                    <li className="rounded-xl border border-emerald-600/30 bg-emerald-500/5 px-3.5 py-2.5 text-sm text-slate-700">
+                      <strong className="tabular-nums">{TOURACO_CAPACITES.regles} règles</strong> par
+                      liste (contre {maxRules})
+                    </li>
+                    <li className="rounded-xl border border-emerald-600/30 bg-emerald-500/5 px-3.5 py-2.5 text-sm text-slate-700">
+                      <strong className="tabular-nums">{TOURACO_CAPACITES.logements} logements</strong>{" "}
+                      (domicile, bureau, maison de famille)
+                    </li>
+                    <li className="rounded-xl border border-emerald-600/30 bg-emerald-500/5 px-3.5 py-2.5 text-sm text-slate-700">
+                      Journal de blocage conservé{" "}
+                      <strong className="tabular-nums">{TOURACO_CAPACITES.journalJours} jours</strong>
+                    </li>
+                  </ul>
+                  <a
+                    href={VITRINE_DNS_URL}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-5 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 text-sm font-bold text-white shadow-sm transition hover:bg-emerald-700"
+                  >
+                    Souscrire sur la boutique 403Shield
+                    <ExternalLink className="h-4 w-4" aria-hidden />
+                  </a>
+                  <p className="mt-3 text-center text-[11px] leading-relaxed text-slate-500">
+                    La souscription se fait sur la vitrine publique 403Shield. Une fois le droit
+                    actif, cet écran gère votre abonnement : échéance, capacités étendues et
+                    renouvellement en un clic.
+                  </p>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {/* ── N°347 — Notification canal manuel (miroir /me) ───────── */}
+      {renewNotice ? (
+        <div
+          role="status"
+          className="fixed inset-x-0 bottom-4 z-40 mx-auto w-fit max-w-[92vw] rounded-xl border border-emerald-600/40 bg-white/95 px-5 py-3 text-sm text-emerald-800 shadow-lg"
+        >
+          {renewNotice}
+          <button
+            type="button"
+            onClick={() => setRenewNotice("")}
+            aria-label="Fermer"
+            className="ml-3 text-emerald-700 hover:text-emerald-900"
+          >
+            <X className="inline h-3.5 w-3.5" aria-hidden />
+          </button>
         </div>
       ) : null}
     </div>

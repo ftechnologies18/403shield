@@ -26,6 +26,15 @@
 //
 // Honeypot « website » invisible sur les deux POST — rempli = robot : le
 // backend part en silence.
+//
+// N°347 — la caisse devient BIPRODUIT : le VPN B2C (réfs MCV-) et le
+// bouclier DNS TOURACO (réfs MCD-) partagent ce MÊME composant (extension
+// propre, pas un fork). Le produit vient de ?product=dns (liens de la page
+// /dns) OU du préfixe de la référence ?order=MCD-… (retour GeniusPay DNS) ;
+// un sélecteur d'onglets permet de basculer — catalogue, dialog d'achat et
+// FAQ suivent l'onglet actif, le suivi de commande suit le PRÉFIXE de la
+// référence (une commande MCD- s'affiche avec les libellés DNS même si
+// l'onglet actif est VPN).
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -56,21 +65,56 @@ import {
   fetchPublicVpnOrderStatus,
   PublicVpnApiError,
   recoverPublicVpnConf,
-  type PublicVpnOfferPlan,
   type PublicVpnOffers,
   type PublicVpnOrderStatus,
 } from "@/lib/public-vpn";
+/* N°347 — canal public du bouclier DNS TOURACO (miroir du canal VPN). */
+import {
+  createPublicDnsOrder,
+  fetchPublicDnsOffers,
+  fetchPublicDnsOrderStatus,
+  PublicDnsApiError,
+  recoverPublicDnsActivation,
+  type PublicDnsOffers,
+  type PublicDnsOrderStatus,
+} from "@/lib/public-dns";
 import { landingCopy, type Lang } from "../landing/landing-copy";
 import { EnterpriseHeader } from "../landing/enterprise-header";
 import { LandingFooter } from "../landing/landing-footer";
 import { Reveal } from "../landing/reveal";
 import { fraunces, manrope } from "../landing/landing-fonts";
-import { checkoutCopy, type CheckoutLang } from "./checkout-copy";
+import {
+  checkoutCopy,
+  type CheckoutLang,
+  type CheckoutProduct,
+} from "./checkout-copy";
 import "../landing/landing-clay.css";
 
 /** Console 403Shield — entrée unique de l'application (N°323 : la racine
  * redirige vers /login, pattern dash.cloudflare.com). */
 const CONSOLE_LOGIN_URL = "https://console.403shield.ftci.fr/login";
+
+/** N°347 — console DNS (profils, listes, couvre-feux, logements, journal) :
+ * la même console tunnel, section /dns — modèle OVH « on commande sur www,
+ * on gère dans le manager » (miroir de tunnelPublicBaseURL()+"/dns" côté
+ * backend ; constante au même titre que CONSOLE_LOGIN_URL). */
+const CONSOLE_DNS_URL = "https://console.403shield.ftci.fr/dns";
+
+/** N°347 — produit d'une référence de commande : MCD- → bouclier DNS
+ * TOURACO, tout le reste (MCV-) → VPN. Le suivi de commande route vers la
+ * bonne API publique par ce seul préfixe. */
+function refProduct(ref: string): CheckoutProduct {
+  return ref.startsWith("MCD-") ? "dns" : "vpn";
+}
+
+/** N°347 — code métier d'une erreur pubFetch (writeErrCode) sans cast
+ * gratuit : les deux canaux publics exposent le même champ. */
+function apiErrorCode(err: unknown): string | undefined {
+  if (err instanceof PublicVpnApiError || err instanceof PublicDnsApiError) {
+    return err.code;
+  }
+  return undefined;
+}
 
 function scrollTo(id: string) {
   document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -82,23 +126,35 @@ function fmtFcfa(n?: number): string {
 }
 
 export interface CheckoutPageProps {
-  /** Référence MCV-… issue de l'URL (?order=, préservée par les 308 GeniusPay)
-   * — lance le suivi de commande. */
+  /** Référence MCV-/MCD-… issue de l'URL (?order=, préservée par les 308
+   * GeniusPay) — lance le suivi de commande. */
   initialOrderRef?: string;
   /** Formule préselectionnée (?plan=, liens des cartes tarifs de la vitrine)
-   * — ouvre la caisse dès que le catalogue la confirme. */
+   * — ouvre la caisse dès que le catalogue la confirme (vpn-b2c-month ou
+   * dns-month/dns-year selon l'onglet). */
   initialPlanId?: string;
+  /** N°347 — produit initial (?product=dns, liens de la page /dns) ; le
+   * préfixe de ?order=MCD-… prime tout autant (retour GeniusPay DNS). */
+  initialProduct?: string;
 }
 
 export default function CheckoutPage({
   initialOrderRef = "",
   initialPlanId = "",
+  initialProduct = "",
 }: CheckoutPageProps) {
   const lang = useHotspotStore((s) => s.lang) as Lang;
   const setLang = useHotspotStore((s) => s.setLang);
   const copy = landingCopy[lang];
-  const c = checkoutCopy[lang as CheckoutLang];
+  const cl = checkoutCopy[lang as CheckoutLang];
   const router = useRouter();
+
+  /* N°347 — produit affiché : ?product= PUIS préfixe de ?order= (une commande
+     DNS ouverte par son lien de retour affiche l'onglet DNS d'office). */
+  const [product, setProduct] = useState<CheckoutProduct>(
+    initialProduct === "dns" || refProduct(initialOrderRef) === "dns" ? "dns" : "vpn"
+  );
+  const c = cl[product];
 
   const toggleLang = () => setLang(lang === "fr" ? "en" : "fr");
 
@@ -118,13 +174,18 @@ export default function CheckoutPage({
   };
 
   /* ─── Catalogue public (quasi statique : rafraîchi 60 s) ─── */
-  const [offers, setOffers] = useState<PublicVpnOffers | null>(null);
+  /* N°347 — un catalogue PAR produit, mis en cache par onglet : la bascule
+     n'affiche JAMAIS les formules VPN sous l'onglet DNS (et réciproquement). */
+  const [offersByProduct, setOffersByProduct] = useState<
+    Record<CheckoutProduct, PublicVpnOffers | PublicDnsOffers | null>
+  >({ vpn: null, dns: null });
   useEffect(() => {
     let alive = true;
     const load = async () => {
       try {
-        const res = await fetchPublicVpnOffers();
-        if (alive) setOffers(res);
+        const res =
+          product === "dns" ? await fetchPublicDnsOffers() : await fetchPublicVpnOffers();
+        if (alive) setOffersByProduct((prev) => ({ ...prev, [product]: res }));
       } catch {
         /* réseau : on garde l'état précédent (null → fermé, message honnête) */
       }
@@ -135,7 +196,9 @@ export default function CheckoutPage({
       alive = false;
       window.clearInterval(timer);
     };
-  }, []);
+  }, [product]);
+
+  const offers = offersByProduct[product];
 
   const shopOpen = offers?.enabled === true;
   const plans = offers?.plans ?? [];
@@ -153,15 +216,22 @@ export default function CheckoutPage({
 
   /* ─── Suivi de commande (poll 5 s tant que non résolu) ─── */
   const [trackingRef, setTrackingRef] = useState(initialOrderRef);
-  const [orderStatus, setOrderStatus] = useState<PublicVpnOrderStatus | null>(null);
+  const [orderStatus, setOrderStatus] = useState<
+    PublicVpnOrderStatus | PublicDnsOrderStatus | null
+  >(null);
   useEffect(() => {
     if (!trackingRef) return;
     let alive = true;
     const resolved = (s?: string) =>
       s === "provisioned" || s === "cancelled" || s === "expired";
+    /* N°347 — l'API de suivi suit le PRÉFIXE de la référence : MCD- → canal
+       DNS, MCV- → canal VPN (l'onglet actif n'y change rien). */
+    const isDns = trackingRef.startsWith("MCD-");
     const poll = async () => {
       try {
-        const res = await fetchPublicVpnOrderStatus(trackingRef);
+        const res = isDns
+          ? await fetchPublicDnsOrderStatus(trackingRef)
+          : await fetchPublicVpnOrderStatus(trackingRef);
         if (!alive) return;
         setOrderStatus(res);
         if (resolved(res.status)) window.clearInterval(timer);
@@ -176,6 +246,14 @@ export default function CheckoutPage({
       window.clearInterval(timer);
     };
   }, [trackingRef]);
+
+  /* N°347 — libellés du suivi = produit de la RÉFÉRENCE suivie (pas de
+     l'onglet actif) : un retour GeniusPay MCD- s'affiche en mots DNS. */
+  const trackProduct: CheckoutProduct = trackingRef ? refProduct(trackingRef) : product;
+  const cTrack = cl[trackProduct];
+  /* L'IP tunnel n'existe que dans le statut VPN (le statut DNS ne transporte
+     jamais d'IP) : le garde « in » rétrécit l'union proprement. */
+  const trackedIpv4 = orderStatus && "ipv4" in orderStatus ? orderStatus.ipv4 : undefined;
 
   /* ─── Retour de paiement (?order=) : scroll doux vers le suivi ─── */
   useEffect(() => {
@@ -211,18 +289,42 @@ export default function CheckoutPage({
     setBuyOpen(true);
   };
 
+  /* N°347 — bascule d'onglet produit : on repart d'un tunnel d'achat propre
+     (formule, canal manuel, erreurs) — l'e-mail et le téléphone restent (même
+     acheteur), le suivi de commande n'est pas touché (il suit sa référence). */
+  const switchProduct = (p: CheckoutProduct) => {
+    if (p === product) return;
+    setProduct(p);
+    setBuyOpen(false);
+    setBuyPlan("");
+    setManualRef("");
+    setBuyError("");
+  };
+
   const submitOrder = async () => {
     setBuyBusy(true);
     setBuyError("");
     try {
-      const res = await createPublicVpnOrder({
-        email: email.trim(),
-        phone: payMethod === "wave" ? phone.trim() : undefined,
-        planId: buyPlan,
-        payMethod,
-        website: buyHoneypot.current?.value ?? "",
-      });
-      if (res.paymentUrl) {
+      /* N°347 — mêmes champs, deux canaux : la commande VPN livre une
+         configuration WireGuard (MCV-), la commande DNS porte un droit
+         TOURACO (MCD-) ; le honeypot voyage dans les deux. */
+      const res =
+        product === "dns"
+          ? await createPublicDnsOrder({
+              email: email.trim(),
+              phone: payMethod === "wave" ? phone.trim() : undefined,
+              planId: buyPlan,
+              payMethod,
+              website: buyHoneypot.current?.value ?? "",
+            })
+          : await createPublicVpnOrder({
+              email: email.trim(),
+              phone: payMethod === "wave" ? phone.trim() : undefined,
+              planId: buyPlan,
+              payMethod,
+              website: buyHoneypot.current?.value ?? "",
+            });
+      if (res.online && res.paymentUrl) {
         // Laisse le statut suivre la commande au retour (success_url porte la ref).
         setTrackingRef(res.ref);
         window.location.href = res.paymentUrl;
@@ -232,8 +334,9 @@ export default function CheckoutPage({
       setManualRef(res.ref);
       setTrackingRef(res.ref);
     } catch (err) {
-      const e = err as PublicVpnApiError;
-      setBuyError(e.code === "order_pending_exists" ? c.buy.errPending : e.message);
+      setBuyError(
+        apiErrorCode(err) === "order_pending_exists" ? c.buy.errPending : (err as Error).message
+      );
     } finally {
       setBuyBusy(false);
     }
@@ -244,7 +347,18 @@ export default function CheckoutPage({
     setRecoverError("");
     setRecoverDone(false);
     try {
-      await recoverPublicVpnConf(recoverEmail.trim(), recoverRef.trim());
+      /* N°347 — l'API de récupération suit le PRÉFIXE de la référence saisie
+         (MCD- → activation DNS, MCV- → configuration VPN), honeypot compris
+         pour le canal DNS (le backend le lit sur les deux POST). */
+      if (recoverRef.trim().startsWith("MCD-")) {
+        await recoverPublicDnsActivation(
+          recoverEmail.trim(),
+          recoverRef.trim(),
+          recoverHoneypot.current?.value ?? ""
+        );
+      } else {
+        await recoverPublicVpnConf(recoverEmail.trim(), recoverRef.trim());
+      }
       setRecoverDone(true);
     } catch (err) {
       setRecoverError((err as Error).message);
@@ -253,19 +367,19 @@ export default function CheckoutPage({
     }
   };
 
-  const selectedPlan: PublicVpnOfferPlan | undefined = plans.find((p) => p.id === buyPlan);
+  const selectedPlan = plans.find((p) => p.id === buyPlan);
 
   const statusView = (() => {
     const s = orderStatus?.status ?? "pending";
     if (s === "provisioned")
-      return { icon: <CheckCircle2 size={20} aria-hidden />, title: c.status.provisioned, desc: c.status.provisionedDesc };
+      return { icon: <CheckCircle2 size={20} aria-hidden />, title: cTrack.status.provisioned, desc: cTrack.status.provisionedDesc };
     if (s === "paid")
-      return { icon: <Loader2 size={20} className="animate-spin" aria-hidden />, title: c.status.paid, desc: c.status.paidDesc };
+      return { icon: <Loader2 size={20} className="animate-spin" aria-hidden />, title: cTrack.status.paid, desc: cTrack.status.paidDesc };
     if (s === "cancelled")
-      return { icon: <X size={20} aria-hidden />, title: c.status.cancelled, desc: c.status.cancelledDesc };
+      return { icon: <X size={20} aria-hidden />, title: cTrack.status.cancelled, desc: cTrack.status.cancelledDesc };
     if (s === "expired")
-      return { icon: <Timer size={20} aria-hidden />, title: c.status.expired, desc: c.status.expiredDesc };
-    return { icon: <Timer size={20} aria-hidden />, title: c.status.pending, desc: c.status.pendingDesc };
+      return { icon: <Timer size={20} aria-hidden />, title: cTrack.status.expired, desc: cTrack.status.expiredDesc };
+    return { icon: <Timer size={20} aria-hidden />, title: cTrack.status.pending, desc: cTrack.status.pendingDesc };
   })();
 
   return (
@@ -320,7 +434,28 @@ export default function CheckoutPage({
           </div>
         </section>
 
-        {/* ═══ SUIVI DE COMMANDE (retour GeniusPay ?order=MCV-…) ═══ */}
+        {/* ═══ N°347 — SÉLECTEUR DE PRODUIT : une caisse, deux produits (VPN
+            B2C / bouclier DNS TOURACO). La bascule recharge le bon catalogue
+            et rouvre un tunnel d'achat propre ; le suivi de commande suit
+            toujours le préfixe de SA référence. Pilule clay du sélecteur de
+            la home (mkl-mode-toggle). ═══ */}
+        <Reveal delay={0.05}>
+          <div className="mkl-mode-toggle" role="group" aria-label={cl.switch.label}>
+            {(["vpn", "dns"] as const).map((p) => (
+              <button
+                key={p}
+                type="button"
+                aria-pressed={product === p}
+                className={`mkl-mode-btn ${product === p ? "is-active" : ""}`}
+                onClick={() => switchProduct(p)}
+              >
+                <span className="mkl-mode-lbl">{cl.switch[p]}</span>
+              </button>
+            ))}
+          </div>
+        </Reveal>
+
+        {/* ═══ SUIVI DE COMMANDE (retour GeniusPay ?order=MCV-/MCD-…) ═══ */}
         {trackingRef !== "" && (
           <section id="suivi" style={{ paddingTop: 32 }}>
             <div className="mkl-wrap">
@@ -331,9 +466,9 @@ export default function CheckoutPage({
                     <i />
                     <i />
                   </div>
-                  <h2 style={{ fontSize: "1.5rem", margin: "0 0 6px" }}>{c.status.title}</h2>
+                  <h2 style={{ fontSize: "1.5rem", margin: "0 0 6px" }}>{cTrack.status.title}</h2>
                   <p style={{ color: "rgba(18, 59, 58, 0.72)", margin: "0 0 20px" }}>
-                    {c.status.desc}
+                    {cTrack.status.desc}
                   </p>
                   <div className="flex flex-wrap items-stretch gap-3">
                     <div className="rounded-2xl border border-[rgba(18,59,58,0.15)] bg-white/70 px-4 py-3 shadow-sm">
@@ -353,20 +488,36 @@ export default function CheckoutPage({
                     </div>
                   </div>
                   {orderStatus?.status === "provisioned" && (
-                    <div className="mt-3 flex flex-wrap gap-3">
-                      <div className="rounded-2xl border border-[rgba(18,59,58,0.15)] bg-white/70 px-4 py-2.5 shadow-sm">
-                        <p className="font-mono text-sm font-semibold text-[var(--mkl-teal-dark)]">
-                          {orderStatus.ipv4 ?? "—"}
-                        </p>
-                        <p className="text-[11px] text-[rgba(18,59,58,0.55)]">{c.status.ip}</p>
-                      </div>
+                    <div className="mt-3 flex flex-wrap items-stretch gap-3">
+                      {/* N°347 — l'IP tunnel n'existe que pour le VPN ; le droit
+                          DNS s'ouvre dans la console /dns (CTA dédié). */}
+                      {trackProduct === "vpn" && (
+                        <div className="rounded-2xl border border-[rgba(18,59,58,0.15)] bg-white/70 px-4 py-2.5 shadow-sm">
+                          <p className="font-mono text-sm font-semibold text-[var(--mkl-teal-dark)]">
+                            {trackedIpv4 ?? "—"}
+                          </p>
+                          <p className="text-[11px] text-[rgba(18,59,58,0.55)]">{cTrack.status.ip}</p>
+                        </div>
+                      )}
                       {orderStatus.expiresAt && (
                         <div className="rounded-2xl border border-[rgba(18,59,58,0.15)] bg-white/70 px-4 py-2.5 shadow-sm">
                           <p className="text-sm font-semibold text-[var(--mkl-ink)]">
                             {orderStatus.expiresAt.slice(0, 10)}
                           </p>
-                          <p className="text-[11px] text-[rgba(18,59,58,0.55)]">{c.status.term}</p>
+                          <p className="text-[11px] text-[rgba(18,59,58,0.55)]">{cTrack.status.term}</p>
                         </div>
+                      )}
+                      {trackProduct === "dns" && cTrack.status.consoleCta && (
+                        <a
+                          href={CONSOLE_DNS_URL}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="mkl-btn mkl-btn-teal self-center"
+                        >
+                          {cTrack.status.consoleCta}
+                          <ArrowRight className="size-4" aria-hidden />
+                          <span className="sr-only"> — nouvel onglet</span>
+                        </a>
                       )}
                     </div>
                   )}
@@ -407,10 +558,10 @@ export default function CheckoutPage({
                     </ul>
                     <p className="mt-5 text-sm">
                       <Link
-                        href="/vpn"
+                        href={product === "dns" ? "/dns" : "/vpn"}
                         className="font-semibold text-[var(--mkl-teal-dark)] underline underline-offset-4"
                       >
-                        {copy.header.nav.tunnels} →
+                        {product === "dns" ? cl.switch.dns : copy.header.nav.tunnels} →
                       </Link>
                     </p>
                   </div>
@@ -513,7 +664,7 @@ export default function CheckoutPage({
                         required
                         value={recoverRef}
                         onChange={(e) => setRecoverRef(e.target.value)}
-                        placeholder="MCV-…"
+                        placeholder={product === "dns" ? "MCD-…" : "MCV-…"}
                         disabled={recoverBusy}
                         className="font-mono"
                       />

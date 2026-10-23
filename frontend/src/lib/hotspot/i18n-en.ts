@@ -35,6 +35,7 @@ import { enPaywall } from "./i18n-en/paywall";
 import { enPlatform } from "./i18n-en/platform";
 import { enPlatformLogs } from "./i18n-en/platform-logs";
 import { enPlatformChat } from "./i18n-en/platform-chat";
+import { enPlatformDns } from "./i18n-en/platform-dns";
 import { enPlatformSettings } from "./i18n-en/platform-settings";
 import { enPlatformTeam } from "./i18n-en/platform-team";
 import { enPlatformVpn } from "./i18n-en/platform-vpn";
@@ -89,6 +90,7 @@ export const enDict: Record<string, string> = {
   ...enPlatform,
   ...enPlatformLogs,
   ...enPlatformChat,
+  ...enPlatformDns,
   ...enPlatformSettings,
   ...enPlatformTeam,
   ...enPlatformVpn,

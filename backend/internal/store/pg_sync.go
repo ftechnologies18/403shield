@@ -186,6 +186,10 @@ func syncSteps(db *model.DB) []syncStep {
 		{publicVpnOrderSpec.table, func(hashes, pending map[string]map[string]uint64) tableApplier {
 			return diffTable(hashes, pending, publicVpnOrderSpec, db.PublicVpnOrders)
 		}},
+		// N°347 — commandes de l'abonnement DNS « TOURACO » (vitrine /dns).
+		{publicDnsOrderSpec.table, func(hashes, pending map[string]map[string]uint64) tableApplier {
+			return diffTable(hashes, pending, publicDnsOrderSpec, db.PublicDnsOrders)
+		}},
 		// N°293 — abonnés PPPoE (chantier ⑥ Phase A, unicité PAR ROUTEUR).
 		{pppSecretSpec.table, func(hashes, pending map[string]map[string]uint64) tableApplier {
 			return diffTable(hashes, pending, pppSecretSpec, db.PppSecrets)
@@ -486,11 +490,15 @@ func (p *PG) syncSettings(ctx context.Context, tx *sql.Tx, db *model.DB, pending
 		var platOpen bool
 		var platKey string
 		var platShop bool
+		// N°347 — ouverture de la vitrine DNS /dns (compte principal,
+		// défaut FERMÉ — même discipline que platShop N°301).
+		var platDnsShop bool
 		// N°311 — quota mensuel VPN : valeur EFFECTIVE (nil = défaut 50 Go) ;
 		// les lignes non-principales écrivent la valeur neutre (défaut).
 		platQuota := model.DefaultWgVpnMonthlyQuotaGB
 		if s.Platform != nil {
 			platName, platOpen, platKey, platShop = s.Platform.Name, s.Platform.RegisterOpen, s.Platform.RegisterKey, s.Platform.PublicVpnShopEnabled()
+			platDnsShop = s.Platform.PublicDnsShopEnabled()
 			platQuota = s.Platform.WgVpnMonthlyQuotaEffective()
 		}
 		_, err := tx.ExecContext(ctx,
@@ -501,8 +509,8 @@ func (p *PG) syncSettings(ctx context.Context, tx *sql.Tx, db *model.DB, pending
                                platform_name, platform_register_open, platform_register_key, auto_import_router_users, join_button, cyber_enabled,
                                portal_style, portal_welcome, portal_promos, portal_socials, portal_slides, portal_services, portal_ticker, portal_whatsapp, portal_key,
                                log_retention_days, wg_vpn_enabled, wg_vpn_locked, platform_public_vpn_shop,
-                               platform_wg_vpn_quota_gb)
-                         VALUES ($1, $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33, $34, $35, $36, $37, $38, $39, $40, $41, $42)
+                               platform_wg_vpn_quota_gb, platform_public_dns_shop)
+                         VALUES ($1, $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33, $34, $35, $36, $37, $38, $39, $40, $41, $42, $43)
                          ON CONFLICT (id) DO UPDATE SET
                            account_id                = EXCLUDED.account_id,
                            tenant_name               = EXCLUDED.tenant_name,
@@ -545,7 +553,8 @@ func (p *PG) syncSettings(ctx context.Context, tx *sql.Tx, db *model.DB, pending
                            wg_vpn_enabled           = EXCLUDED.wg_vpn_enabled,
                            wg_vpn_locked            = EXCLUDED.wg_vpn_locked,
                            platform_public_vpn_shop = EXCLUDED.platform_public_vpn_shop,
-                           platform_wg_vpn_quota_gb = EXCLUDED.platform_wg_vpn_quota_gb`,
+                           platform_wg_vpn_quota_gb = EXCLUDED.platform_wg_vpn_quota_gb,
+                           platform_public_dns_shop = EXCLUDED.platform_public_dns_shop`,
 			accID, s.Tenant.Name, s.Tenant.Currency, s.Tenant.Timezone,
 			s.Plan.Name, s.Plan.MaxRouters, s.Plan.MaxUsers,
 			s.Tenant.WaveLink, s.Tenant.DNSName, s.Tenant.LogoURL, s.Tenant.BannerURL,
@@ -559,7 +568,7 @@ func (p *PG) syncSettings(ctx context.Context, tx *sql.Tx, db *model.DB, pending
 			s.Tenant.PortalServices,
 			s.Tenant.PortalTicker,
 			s.Tenant.PortalWhatsapp,
-			s.Tenant.PortalKey, s.Tenant.LogRetentionDaysEffective(), s.Tenant.WgVpnModuleEnabled(), s.Tenant.WgVpnModuleLocked(), platShop, platQuota)
+			s.Tenant.PortalKey, s.Tenant.LogRetentionDaysEffective(), s.Tenant.WgVpnModuleEnabled(), s.Tenant.WgVpnModuleLocked(), platShop, platQuota, platDnsShop)
 		if err != nil {
 			return false, fmt.Errorf("pg sync settings (%s) : %w", accID, err)
 		}
@@ -613,8 +622,12 @@ func settingsRowHash(accID string, s model.Settings) uint64 {
 	var platOpen bool
 	var platKey string
 	var platShop bool
+	// N°347 — ouverture de la vitrine DNS : entre dans l'empreinte dès
+	// la naissance (leçon N°291/301 : une bascule SEULE doit répliquer).
+	var platDnsShop bool
 	if s.Platform != nil {
 		platName, platOpen, platKey, platShop = s.Platform.Name, s.Platform.RegisterOpen, s.Platform.RegisterKey, s.Platform.PublicVpnShopEnabled()
+		platDnsShop = s.Platform.PublicDnsShopEnabled()
 	}
 	return hashEntity(&[]any{
 		accID,
@@ -639,6 +652,7 @@ func settingsRowHash(accID string, s model.Settings) uint64 {
 		s.Tenant.PortalStyle, s.Tenant.PortalWelcome, s.Tenant.PortalPromos, s.Tenant.PortalSocials,
 		s.Tenant.PortalSlides, s.Tenant.PortalServices, s.Tenant.PortalTicker,
 		s.Tenant.PortalWhatsapp, s.Tenant.PortalKey, s.Tenant.LogRetentionDaysEffective(),
+		platDnsShop,
 	})
 }
 
@@ -871,6 +885,7 @@ func (p *PG) rebuildHashes(db *model.DB) {
 		vpnPeerSpec.table:          hashRows(db.VpnPeers, vpnPeerSpec),
 		vpnGuestSpec.table:         hashRows(db.VpnGuests, vpnGuestSpec),
 		publicVpnOrderSpec.table:   hashRows(db.PublicVpnOrders, publicVpnOrderSpec),
+		publicDnsOrderSpec.table:   hashRows(db.PublicDnsOrders, publicDnsOrderSpec),
 		tunnelClientSpec.table:     hashRows(db.TunnelClients, tunnelClientSpec),
 		dnsProfileSpec.table:       hashRows(db.DnsProfiles, dnsProfileSpec),
 		dnsEventSpec.table:         hashRows(db.DnsEvents, dnsEventSpec),

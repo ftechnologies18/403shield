@@ -88,8 +88,8 @@ func TestSyncHealthJSONMode(t *testing.T) {
 	if h.Sync != nil || h.Neon != nil {
 		t.Fatalf("en mode JSON, sync et neon doivent être absents : %+v %+v", h.Sync, h.Neon)
 	}
-	if len(h.Tables) != 47 {
-		t.Fatalf("47 tables attendues (46 différentielles + settings — N°103 : line_quality, N°133 : chat ×2 + devices, N°182 : sites, N°199 : volume_days, N°200 : monthly_journals, N°290 : cyber_postes, N°291 : vpn_peers, N°293 : ppp_secrets, N°301 : public_vpn_orders, N°313 : tunnel_clients, N°339 : dns_profiles + dns_events, N°342 : vpn_guests, N°346 : dns_home_bindings), obtenues %d", len(h.Tables))
+	if len(h.Tables) != 48 {
+		t.Fatalf("48 tables attendues (47 différentielles + settings — N°103 : line_quality, N°133 : chat ×2 + devices, N°182 : sites, N°199 : volume_days, N°200 : monthly_journals, N°290 : cyber_postes, N°291 : vpn_peers, N°293 : ppp_secrets, N°301 : public_vpn_orders, N°313 : tunnel_clients, N°339 : dns_profiles + dns_events, N°342 : vpn_guests, N°346 : dns_home_bindings, N°347 : public_dns_orders), obtenues %d", len(h.Tables))
 	}
 
 	// Une mutation mémoire apparaît dans les lignes, sans réplique (mirrored
@@ -119,8 +119,8 @@ func TestSyncHealthJSONMode(t *testing.T) {
 // ici doit faire échouer le compte).
 func TestLiveTableRowsConcordance(t *testing.T) {
 	rows := liveTableRows(BuildEmptyState())
-	if len(rows) != 47 {
-		t.Fatalf("47 entrées attendues (46 différentielles + settings — N°103 : line_quality, N°133 : chat ×2 + devices, N°182 : sites, N°199 : volume_days, N°200 : monthly_journals, N°290 : cyber_postes, N°291 : vpn_peers, N°293 : ppp_secrets, N°301 : public_vpn_orders, N°313 : tunnel_clients, N°339 : dns_profiles + dns_events, N°342 : vpn_guests, N°346 : dns_home_bindings), obtenues %d", len(rows))
+	if len(rows) != 48 {
+		t.Fatalf("48 entrées attendues (47 différentielles + settings — N°103 : line_quality, N°133 : chat ×2 + devices, N°182 : sites, N°199 : volume_days, N°200 : monthly_journals, N°290 : cyber_postes, N°291 : vpn_peers, N°293 : ppp_secrets, N°301 : public_vpn_orders, N°313 : tunnel_clients, N°339 : dns_profiles + dns_events, N°342 : vpn_guests, N°346 : dns_home_bindings, N°347 : public_dns_orders), obtenues %d", len(rows))
 	}
 	seen := map[string]bool{}
 	for _, th := range rows {

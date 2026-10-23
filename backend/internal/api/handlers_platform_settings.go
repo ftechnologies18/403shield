@@ -50,6 +50,9 @@ func (a *API) handlePlatformSettingsGet(w http.ResponseWriter, r *http.Request) 
 			"registerKeySet": cfg.RegisterKey != "",
 			// N°301 — état d'ouverture de la vitrine B2C MikCloud VPN.
 			"publicVpnShopEnabled": cfg.PublicVpnShopEnabled(),
+			// N°347 — état d'ouverture de la vitrine de l'abonnement
+			// DNS « TOURACO » (/dns).
+			"publicDnsShopEnabled": cfg.PublicDnsShopEnabled(),
 			// N°311 — quota mensuel de trafic par peer VPN vendu (Go,
 			// rx+tx confondus ; 0 = illimité, défaut 50).
 			"wgVpnMonthlyQuotaGb": cfg.WgVpnMonthlyQuotaEffective(),
@@ -73,6 +76,7 @@ func (a *API) handlePlatformSettingsPut(w http.ResponseWriter, r *http.Request) 
 		RegisterOpen      *bool   `json:"registerOpen"`
 		RegisterKey       *string `json:"registerKey"`
 		PublicVpnShop     *bool   `json:"publicVpnShop"`
+		PublicDnsShop     *bool   `json:"publicDnsShop"`
 		WgVpnMonthlyQuota *int    `json:"wgVpnMonthlyQuotaGb"`
 	}
 	if err := decodeBody(r, &req); err != nil {
@@ -124,6 +128,14 @@ func (a *API) handlePlatformSettingsPut(w http.ResponseWriter, r *http.Request) 
 	if req.PublicVpnShop != nil {
 		cfg.PublicVpnShop = req.PublicVpnShop
 	}
+	// N°347 — ouverture/fermeture de la vitrine de l'abonnement DNS
+	// « TOURACO » (/dns) : geste d'exploitant, opt-in strict (miroir
+	// PublicVpnShop). La FERMETURE n'annule RIEN : les droits
+	// provisionnés courent jusqu'à leur terme (les quotas étendus
+	// restent servis — même doctrine « jamais de coupure sournoise »).
+	if req.PublicDnsShop != nil {
+		cfg.PublicDnsShop = req.PublicDnsShop
+	}
 	// N°311 — quota mensuel de trafic par peer VPN vendu (Go, rx+tx
 	// confondus) : le garde-fou egress du tier Always Free OCI. Baisse du
 	// quota : les cumuls déjà au-dessus de la NOUVELLE borne seront
@@ -150,6 +162,7 @@ func (a *API) handlePlatformSettingsPut(w http.ResponseWriter, r *http.Request) 
 			"registerOpen":         cfg.RegisterOpen,
 			"registerKeySet":       cfg.RegisterKey != "",
 			"publicVpnShopEnabled": cfg.PublicVpnShopEnabled(),
+			"publicDnsShopEnabled": cfg.PublicDnsShopEnabled(),
 			"wgVpnMonthlyQuotaGb":  cfg.WgVpnMonthlyQuotaEffective(),
 		},
 	})

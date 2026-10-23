@@ -7,8 +7,35 @@
 // vitrine. Promesses RÉELLES uniquement (fulltunnel wg0 VM, livraison e-mail,
 // récupération self-service, terme réglé à l'avance, espace 403Shield pour
 // gérer et renouveler). Langue pilotée par le store global de la vitrine.
+//
+// N°347 — la caisse devient BIPRODUIT : le VPN B2C (réfs MCV-) et le bouclier
+// DNS TOURACO (réfs MCD-) partagent le MÊME composant de page — la copie est
+// donc structurée PAR PRODUIT (checkoutCopy[lang][product]) : chaque produit
+// garde son hero, son catalogue, son dialog d'achat, ses écrans de suivi et
+// sa FAQ. « switch » porte les libellés du sélecteur d'onglets. Promesses
+// DNS : le bouclier est UTILISABLE GRATUITEMENT, TOURACO étend les capacités
+// — c'est un DROIT porté par l'e-mail (pas une conf livrée), l'activation
+// part par e-mail dès confirmation, le gratuit n'est jamais coupé.
 
 export type CheckoutLang = "fr" | "en";
+
+/* N°347 — produit affiché par la caisse (onglets VPN / DNS). */
+export type CheckoutProduct = "vpn" | "dns";
+
+/* N°347 — libellés du sélecteur de produit (visibles dans les DEUX états). */
+export interface CheckoutSwitchCopy {
+  /** aria-label du groupe d'onglets. */
+  label: string;
+  vpn: string;
+  dns: string;
+}
+
+/* N°347 — copie d'une langue : sélecteur + un bloc par produit. */
+export interface CheckoutLangCopy {
+  switch: CheckoutSwitchCopy;
+  vpn: CheckoutCopy;
+  dns: CheckoutCopy;
+}
 
 export interface CheckoutCopy {
   topbar: { space: string };
@@ -74,7 +101,10 @@ export interface CheckoutCopy {
     expired: string;
     expiredDesc: string;
     term: string;
-    ip: string;
+    /** VPN uniquement (IP tunnel) — le statut DNS ne porte jamais d'IP. */
+    ip?: string;
+    /** N°347 — DNS : libellé du CTA console de l'écran « provisioned ». */
+    consoleCta?: string;
   };
   recover: {
     kicker: string;
@@ -90,7 +120,8 @@ export interface CheckoutCopy {
   faq: { title: string; items: { q: string; a: string }[] };
 }
 
-const fr: CheckoutCopy = {
+/* Copie VPN (N°323 — inchangée, produit historique de la caisse). */
+const frVpn: CheckoutCopy = {
   topbar: {
     space: "Mon espace VPN",
   },
@@ -225,7 +256,8 @@ const fr: CheckoutCopy = {
   },
 };
 
-const en: CheckoutCopy = {
+/* Copie VPN (N°323 — inchangée, produit historique de la caisse). */
+const enVpn: CheckoutCopy = {
   topbar: {
     space: "My VPN space",
   },
@@ -361,4 +393,311 @@ const en: CheckoutCopy = {
   },
 };
 
-export const checkoutCopy: Record<CheckoutLang, CheckoutCopy> = { fr, en };
+/* ============================================================
+   N°347 — COPIE DNS : LE BOUCLIER DNS TOURACO (réfs MCD-)
+   ------------------------------------------------------------
+   Même gabarit que le VPN, promesses adaptées au produit : ce
+   n'est pas une configuration qui est livrée, c'est un DROIT
+   (capacités étendues) porté par l'e-mail — l'activation part
+   par e-mail dès confirmation, la gestion vit dans la console
+   DNS (console.403shield.ftci.fr/dns). Le gratuit n'est jamais
+   coupé : à l'expiration, les quotas retombent, les profils
+   restent.
+   ============================================================ */
+
+const frDns: CheckoutCopy = {
+  topbar: {
+    space: "Ma console DNS",
+  },
+  hero: {
+    badge: "403Shield Bouclier DNS — caisse sécurisée · powered by FTech CI",
+    title1: "Votre internet, nettoyé",
+    titleAccent: "à la source.",
+    title2: "",
+    lead:
+      "TOURACO étend votre bouclier DNS 403Shield : 25 profils, 600 règles par liste, 15 logements et 90 jours de journal — publicité, traçage, pornographie et malware bloqués avant même d'arriver, la box comprise. Sans compte à créer : le droit est porté par votre e-mail.",
+    cta: "Choisir ma formule",
+    ctaSecondary: "Renvoyer mon activation",
+    hint:
+      "Le bouclier DNS reste utilisable gratuitement — TOURACO étend les capacités. Paiement Wave ou carte.",
+  },
+  catalog: {
+    kicker: "Tarifs simples",
+    title: "Deux formules, un seul bouclier",
+    lead:
+      "Paiement Wave ou carte bancaire (FCFA). L'activation est automatique : vos capacités TOURACO s'appliquent à votre e-mail dès l'encaissement confirmé.",
+    monthly: { name: "TOURACO Mensuel", tagline: "Sans engagement, mois par mois", per: "1 mois" },
+    yearly: { name: "TOURACO Annuel", tagline: "Payez 10 mois, 2 offerts", per: "12 mois" },
+    pop: "2 mois offerts",
+    bullets: [
+      "25 profils de filtrage (publicité, traçage, pornographie, malware)",
+      "600 règles par liste bloquer / autoriser",
+      "15 logements — domicile, bureau, maison de famille",
+      "Journal des requêtes 90 jours",
+      "Le droit suit votre e-mail — le gratuit n'est jamais coupé",
+    ],
+    cta: "Souscrire",
+    closedTitle: "La vente directe arrive bientôt",
+    closedDesc:
+      "L'abonnement TOURACO est en cours d'ouverture. Le bouclier DNS reste utilisable gratuitement dans la console — revenez bientôt pour étendre vos capacités.",
+    onlineNote: "Paiement en ligne sécurisé (Wave / carte).",
+    manualNote:
+      "Règlement par virement : votre droit TOURACO est activé dès confirmation de l'équipe 403Shield.",
+    waveAmount: "Prix Wave (remise mobile money incluse)",
+    cardAmount: "Prix carte (frais inclus)",
+  },
+  buy: {
+    title: "Souscrire TOURACO",
+    desc:
+      "Vos capacités étendues s'appliquent à votre e-mail dès le paiement confirmé — l'e-mail d'activation résume tout et pointe vers votre console DNS.",
+    email: "Adresse e-mail (elle porte le droit TOURACO)",
+    emailPlaceholder: "vous@exemple.com",
+    phone: "Téléphone Wave (requis pour payer par Wave)",
+    phonePlaceholder: "225 07 00 00 00 00",
+    phoneHint: "Format international, sans espaces ni +.",
+    method: "Moyen de paiement",
+    methodWave: "Wave",
+    methodCard: "Carte bancaire",
+    submit: "Payer et activer",
+    submitting: "Création de la commande…",
+    waveAmount: "Prix Wave (remise mobile money incluse)",
+    cardAmount: "Prix carte (frais inclus)",
+    redirected: "Redirection vers la page de paiement…",
+    manualTitle: "Commande enregistrée",
+    manualDesc:
+      "Réglez par virement en indiquant la référence ci-dessous : dès confirmation par l'équipe 403Shield, l'activation TOURACO part par e-mail — vos profils et réglages restent inchangés.",
+    ref: "Référence de commande",
+    errPending: "Une commande est déjà en attente pour cet e-mail",
+    close: "Fermer",
+  },
+  status: {
+    title: "Suivi de commande",
+    desc:
+      "Statut actualisé en continu — vos capacités TOURACO s'appliquent automatiquement dès l'encaissement confirmé.",
+    pending: "En attente de paiement",
+    pendingDesc:
+      "Réglez la commande sur la page de paiement ouverte dans un autre onglet, puis revenez ici.",
+    paid: "Paiement confirmé",
+    paidDesc: "Activation de vos capacités — quelques secondes…",
+    provisioned: "TOURACO est actif",
+    provisionedDesc:
+      "L'e-mail d'activation a été envoyé à votre adresse. Vos capacités étendues (25 profils, 600 règles, 15 logements, journal 90 jours) sont actives jusqu'au terme — profils, listes et couvre-feux se gèrent dans la console DNS.",
+    cancelled: "Commande annulée",
+    cancelledDesc:
+      "Le paiement n'a pas abouti ou la commande a été annulée. Vous pouvez en créer une nouvelle.",
+    expired: "Droit arrivé à terme",
+    expiredDesc:
+      "Le droit TOURACO a atteint sa date de fin : les capacités retombent aux quotas gratuits, rien n'est coupé. Souscrivez à nouveau quand vous voulez.",
+    term: "Capacités étendues jusqu'au",
+    consoleCta: "Ouvrir la console DNS",
+  },
+  recover: {
+    kicker: "Self-service",
+    title: "Renvoyer mon activation",
+    desc:
+      "Égaré l'e-mail d'activation ? Indiquez votre adresse et la référence de la commande (MCD-…) : l'e-mail d'activation vous est renvoyé immédiatement.",
+    email: "Adresse e-mail de la commande",
+    ref: "Référence (MCD-…)",
+    submit: "Renvoyer mon activation",
+    submitting: "Envoi…",
+    done: "Si cette commande existe, l'e-mail d'activation a été envoyé à votre adresse.",
+    note:
+      "L'activation n'est JAMAIS affichée sur cette page : elle part uniquement par e-mail, à l'adresse de la commande.",
+  },
+  faq: {
+    title: "Questions fréquentes",
+    items: [
+      {
+        q: "Comment j'active TOURACO ?",
+        a:
+          "Il n'y a rien à installer de plus : le droit TOURACO s'applique à votre e-mail dès le paiement confirmé. L'e-mail d'activation résume vos nouvelles capacités et vous ouvre la console DNS, où vivent vos profils.",
+      },
+      {
+        q: "Où gérer mes profils et mes règles ?",
+        a:
+          "Dans la console DNS (console.403shield.ftci.fr/dns) : connectez-vous avec votre e-mail (un code à 6 chiffres suffit, sans mot de passe) — profils, listes bloquer / autoriser, couvre-feux, logements et journal y vivent.",
+      },
+      {
+        q: "Que reçois-je exactement ?",
+        a:
+          "Un e-mail d'activation contenant vos capacités TOURACO, votre référence de commande (MCD-…) et la date de fin de validité. Cette même page peut vous le renvoyer à tout moment pendant la durée de votre formule.",
+      },
+      {
+        q: "Et si je perds l'e-mail d'activation ?",
+        a:
+          "La récupération est self-service : indiquez votre adresse et la référence de la commande, l'e-mail d'activation est renvoyé immédiatement.",
+      },
+      {
+        q: "Que se passe-t-il à la fin de la période ?",
+        a:
+          "Aucune coupure : vos profils, vos listes et vos couvre-feux restent en place, seules les capacités retombent aux quotas gratuits (10 profils, 200 règles, 5 logements, journal 30 jours). Aucune reconduction tacite, aucun prélèvement caché.",
+      },
+      {
+        q: "Le bouclier DNS gratuit reste-t-il gratuit ?",
+        a:
+          "Oui, pour toujours. TOURACO étend les capacités de ce que vous utilisez déjà — souscrire ou non ne change rien au filtrage de base.",
+      },
+      {
+        q: "Puis-je être remboursé ?",
+        a:
+          "Le bouclier est testable gratuitement avant tout achat. En cas de problème technique non résolu par le support dans les 7 jours, l'équipe annule la commande — contactez le support avec votre référence.",
+      },
+    ],
+  },
+};
+
+const enDns: CheckoutCopy = {
+  topbar: {
+    space: "My DNS console",
+  },
+  hero: {
+    badge: "403Shield DNS Shield — secure checkout · powered by FTech CI",
+    title1: "Your internet, cleaned",
+    titleAccent: "at the source.",
+    title2: "",
+    lead:
+      "TOURACO extends your 403Shield DNS shield: 25 profiles, 600 rules per list, 15 homes and a 90-day log — ads, trackers, porn and malware blocked before they even arrive, box included. No account to create: the right is carried by your email.",
+    cta: "Choose my plan",
+    ctaSecondary: "Resend my activation",
+    hint:
+      "The DNS shield stays free to use — TOURACO extends the capacities. Pay with Wave or card.",
+  },
+  catalog: {
+    kicker: "Simple pricing",
+    title: "Two plans, one shield",
+    lead:
+      "Pay with Wave or bank card (XOF). Activation is automatic: your TOURACO capacities apply to your email as soon as payment is confirmed.",
+    monthly: { name: "TOURACO Monthly", tagline: "No commitment, month by month", per: "1 month" },
+    yearly: { name: "TOURACO Yearly", tagline: "Pay 10 months, 2 offered", per: "12 months" },
+    pop: "2 months free",
+    bullets: [
+      "25 filtering profiles (ads, trackers, porn, malware)",
+      "600 rules per block / allow list",
+      "15 homes — house, office, family house",
+      "90-day query log",
+      "The right follows your email — the free tier is never cut off",
+    ],
+    cta: "Subscribe",
+    closedTitle: "Direct sales coming soon",
+    closedDesc:
+      "The TOURACO subscription is opening up. The DNS shield remains free to use in the console — come back soon to extend your capacities.",
+    onlineNote: "Secure online payment (Wave / card).",
+    manualNote:
+      "Pay by transfer: your TOURACO right is activated as soon as the 403Shield team confirms.",
+    waveAmount: "Wave price (mobile money discount included)",
+    cardAmount: "Card price (fees included)",
+  },
+  buy: {
+    title: "Subscribe to TOURACO",
+    desc:
+      "Your extended capacities apply to your email as soon as payment is confirmed — the activation email sums it up and opens your DNS console.",
+    email: "Email address (it carries the TOURACO right)",
+    emailPlaceholder: "you@example.com",
+    phone: "Wave phone (required to pay with Wave)",
+    phonePlaceholder: "225 07 00 00 00 00",
+    phoneHint: "International format, no spaces or +.",
+    method: "Payment method",
+    methodWave: "Wave",
+    methodCard: "Bank card",
+    submit: "Pay and activate",
+    submitting: "Creating the order…",
+    waveAmount: "Wave price (mobile money discount included)",
+    cardAmount: "Card price (fees included)",
+    redirected: "Redirecting to the payment page…",
+    manualTitle: "Order recorded",
+    manualDesc:
+      "Pay by transfer quoting the reference below: as soon as the 403Shield team confirms, the TOURACO activation email is sent — your profiles and settings stay unchanged.",
+    ref: "Order reference",
+    errPending: "An order is already pending for this email",
+    close: "Close",
+  },
+  status: {
+    title: "Order tracking",
+    desc:
+      "Status refreshed continuously — your TOURACO capacities apply automatically once payment is confirmed.",
+    pending: "Awaiting payment",
+    pendingDesc:
+      "Complete the payment on the page opened in the other tab, then come back here.",
+    paid: "Payment confirmed",
+    paidDesc: "Activating your capacities — a few seconds…",
+    provisioned: "TOURACO is live",
+    provisionedDesc:
+      "The activation email was sent to your address. Your extended capacities (25 profiles, 600 rules, 15 homes, 90-day log) are live until the term — profiles, lists and curfews are managed in the DNS console.",
+    cancelled: "Order cancelled",
+    cancelledDesc:
+      "Payment did not complete or the order was cancelled. You can create a new one.",
+    expired: "Right reached its term",
+    expiredDesc:
+      "The TOURACO right reached its end date: capacities fall back to the free quotas, nothing is cut off. Subscribe again whenever you want.",
+    term: "Extended capacities until",
+    consoleCta: "Open the DNS console",
+  },
+  recover: {
+    kicker: "Self-service",
+    title: "Resend my activation",
+    desc:
+      "Lost the activation email? Enter your address and the order reference (MCD-…): the activation email is resent to you immediately.",
+    email: "Order email address",
+    ref: "Reference (MCD-…)",
+    submit: "Resend my activation",
+    submitting: "Sending…",
+    done: "If this order exists, the activation email was sent to your address.",
+    note:
+      "The activation is NEVER displayed on this page: it only leaves by email, to the order's address.",
+  },
+  faq: {
+    title: "Frequently asked questions",
+    items: [
+      {
+        q: "How do I activate TOURACO?",
+        a:
+          "There is nothing more to install: the TOURACO right applies to your email as soon as payment is confirmed. The activation email sums up your new capacities and opens the DNS console, where your profiles live.",
+      },
+      {
+        q: "Where do I manage my profiles and rules?",
+        a:
+          "In the DNS console (console.403shield.ftci.fr/dns): sign in with your email (a 6-digit code suffices — no password) — profiles, block/allow lists, curfews, homes and the log live there.",
+      },
+      {
+        q: "What exactly do I receive?",
+        a:
+          "An activation email containing your TOURACO capacities, your order reference (MCD-…) and the end date of validity. This same page can resend it at any time during your plan.",
+      },
+      {
+        q: "What if I lose the activation email?",
+        a:
+          "Recovery is self-service: enter your address and the order reference, the activation email is resent immediately.",
+      },
+      {
+        q: "What happens at the end of the period?",
+        a:
+          "No cut-off: your profiles, lists and curfews stay in place — only the capacities fall back to the free quotas (10 profiles, 200 rules, 5 homes, 30-day log). No automatic renewal, no hidden charge.",
+      },
+      {
+        q: "Does the free DNS shield stay free?",
+        a:
+          "Yes, forever. TOURACO extends the capacities of what you already use — subscribing or not changes nothing to the base filtering.",
+      },
+      {
+        q: "Can I get a refund?",
+        a:
+          "The shield is testable for free before any purchase. For an unresolved technical issue within 7 days, the team cancels the order — contact support with your reference.",
+      },
+    ],
+  },
+};
+
+/* N°347 — accès par langue PUIS par produit : le composant de caisse pioche
+   checkoutCopy[lang][product] (le sélecteur vit à checkoutCopy[lang].switch). */
+export const checkoutCopy: Record<CheckoutLang, CheckoutLangCopy> = {
+  fr: {
+    switch: { label: "Produit à commander", vpn: "VPN B2C", dns: "Bouclier DNS TOURACO" },
+    vpn: frVpn,
+    dns: frDns,
+  },
+  en: {
+    switch: { label: "Product to order", vpn: "B2C VPN", dns: "DNS Shield TOURACO" },
+    vpn: enVpn,
+    dns: enDns,
+  },
+};

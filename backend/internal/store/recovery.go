@@ -333,6 +333,9 @@ func mergeRecovered(dst, src *model.DB) int {
 	n += mergeSlice(&dst.VpnPeers, src.VpnPeers, vpnPeerSpec.idOf)
 	n += mergeSlice(&dst.VpnGuests, src.VpnGuests, vpnGuestSpec.idOf) // N°342 — invités (Accès Invité)
 	n += mergeSlice(&dst.PublicVpnOrders, src.PublicVpnOrders, publicVpnOrderSpec.idOf)
+	// N°347 — commandes DNS TOURACO (vitrine /dns) : fusion par ID (parité
+	// des autres registres de facturation).
+	n += mergeSlice(&dst.PublicDnsOrders, src.PublicDnsOrders, publicDnsOrderSpec.idOf)
 	n += mergeSlice(&dst.PppSecrets, src.PppSecrets, pppSecretSpec.idOf)
 	n += mergeSlice(&dst.TunnelClients, src.TunnelClients, tunnelClientSpec.idOf)
 	n += mergeSlice(&dst.DnsProfiles, src.DnsProfiles, dnsProfileSpec.idOf)             // N°339 — bouclier DNS

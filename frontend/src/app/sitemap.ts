@@ -19,6 +19,8 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: `${SITE}/hotspot`, changeFrequency: "monthly", priority: 0.9 },
     { url: `${SITE}/vpn`, changeFrequency: "monthly", priority: 0.9 },
     { url: `${SITE}/tunnels`, changeFrequency: "monthly", priority: 0.9 },
+    /* N°347 — vitrine du bouclier DNS TOURACO (gratuit + abonnement). */
+    { url: `${SITE}/dns`, changeFrequency: "monthly", priority: 0.9 },
     { url: `${SITE}/checkout`, changeFrequency: "monthly", priority: 0.7 },
     { url: `${SITE}/legal/confidentialite`, changeFrequency: "yearly", priority: 0.3 },
   ];

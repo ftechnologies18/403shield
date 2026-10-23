@@ -152,6 +152,14 @@ func main() {
 	// un flux injoignable ne vide jamais l'agrégat précédent. Aucune écriture
 	// store (état rebuildable, jamais persisté).
 	go engine.RunDnsThreatsSweepForever()
+	// N°347 — balayage horaire du canal B2C de l'abonnement DNS « TOURACO »
+	// (vitrine /dns — miroir strict du balayage VPN N°301, SANS le
+	// réseau) : termes des commandes provisionnées (le droit cesse, les
+	// quotas retombent au tier gratuit — rien n'est supprimé), annulation
+	// des pending non réglées (48 h), REJEU des « paid » dont le
+	// provisioning a échoué — la promesse « activation auto » ne se perd
+	// jamais.
+	go engine.RunPublicDnsSweepForever()
 	// N°345 — serveur DoT :853 (RFC 7858) : l'onboarding ANDROID « DNS
 	// privé » (un nom d'hôte, jamais une URL) — routage SNI par profil
 	// (<publicId>.dns.403shield.ftci.fr, certificat joker). Absence de

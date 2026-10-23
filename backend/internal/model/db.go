@@ -91,6 +91,12 @@ type DB struct {
 	// au nom du compte principal (AccountID = AccountMainID), cette table ne
 	// porte que la facturation et le cycle de vie B2C.
 	PublicVpnOrders []PublicVpnOrder `json:"publicVpnOrders"`
+	// N°347 — commandes de l'abonnement DNS « TOURACO » (vitrine publique
+	// /dns, cf. publicdnsorder.go) : le droit vit sur l'E-MAIL (l'échéance
+	// la plus lointaine des commandes provisionnées — l'entitlement),
+	// aucun réseau à provisionner, cette table porte la facturation et
+	// le cycle de vie du droit.
+	PublicDnsOrders []PublicDnsOrder `json:"publicDnsOrders"`
 	// N°293 — abonnés PPPoE (chantier ⑥, Phase A : gestion d'un
 	// pppoe-server EXISTANT via commandes agent ppp_* — D1/D2 de N°289).
 	// Segment ISP transverse (hotspot/homenet) : aucun garde d'usage.
@@ -395,6 +401,7 @@ func (db *DB) CloneDeep() *DB {
 	clone.VpnPeers = append([]VpnPeer(nil), db.VpnPeers...)
 	clone.VpnGuests = append([]VpnGuest(nil), db.VpnGuests...)
 	clone.PublicVpnOrders = append([]PublicVpnOrder(nil), db.PublicVpnOrders...)
+	clone.PublicDnsOrders = append([]PublicDnsOrder(nil), db.PublicDnsOrders...)
 	clone.PppSecrets = append([]PppSecret(nil), db.PppSecrets...)
 	clone.TunnelClients = append([]TunnelClient(nil), db.TunnelClients...)
 	clone.PasswordResets = append([]PasswordReset(nil), db.PasswordResets...)

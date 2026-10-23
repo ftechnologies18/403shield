@@ -312,13 +312,14 @@ export interface LandingCopy {
         Cybercafé » : le module cybercafé est inclus dans l'abonnement
         (N°290) — le foyer, lui, n'existe plus (N°324). */
     modesLabel: string;
-    /** N°122 — tarifs segmentés par mode : chaque mode a ses 3 formules.
+    /** N°122 — tarifs segmentés par mode : chaque mode a ses formules.
         N°321 — 3e segment « tunnels » (boutique dédiée, CTA liens externes).
         N°322 — le segment « homenet » est retiré (tarif foyer lié aux cartes
         Hotspot). N°324 — le mode HomeNet est SUPPRIMÉ du système : grille
-        console mono-mode Hotspot, plus aucune mention foyer. */
+        console mono-mode Hotspot, plus aucune mention foyer. N°347 — 3e
+        segment « dns » : le bouclier DNS (gratuit pour toujours + TOURACO). */
     segments: {
-      id: "hotspot" | "tunnels";
+      id: "hotspot" | "tunnels" | "dns";
       label: string;
       hint: string;
       audience?: string[];
@@ -370,6 +371,9 @@ export interface LandingCopy {
   pages: {
     hotspot: ProductPageCopy;
     vpn: ProductPageCopy;
+    /* N°347 — page produit du bouclier DNS TOURACO (/dns) : le gratuit
+       pour toujours + l'abonnement TOURACO (segment « dns » ci-dessus). */
+    dns: ProductPageCopy;
     tunnels: ProductPageCopy;
   };
 }
@@ -434,6 +438,15 @@ const fr: LandingCopy = {
               desc: "SafeWiFi DNS Quad9, Shield anti-piratage WiFi, FamilyGuard couvre-feu et AntiVPN.",
               href: "/#protection",
               badge: "Auto-réparation",
+              icon: "shield",
+            },
+            /* N°347 — bouclier DNS TOURACO : filtrage résolveur pour la
+               maison (gratuit + abonnement), page produit /dns. */
+            {
+              title: "Bouclier DNS TOURACO",
+              desc: "Publicité, traçage, pornographie et malware bloqués au résolveur — toute la maison, la box comprise.",
+              href: "/dns#profils",
+              badge: "Dès 0 FCFA",
               icon: "shield",
             },
             {
@@ -962,6 +975,66 @@ const fr: LandingCopy = {
           },
         ],
       },
+      /* N°347 — segment bouclier DNS : le gratuit pour toujours + TOURACO
+         (mensuel 1 000 / annuel 10 000 FCFA — constantes produit publiques
+         du backend handlers_public_dns.go). Le CTA Gratuit ouvre la CONSOLE
+         /dns (les profils s'y créent sans payer), les CTA TOURACO pointent
+         la caisse du site avec formule présélectionnée (?product=dns&plan=).
+         Doctrine SOURCE UNIQUE : ces tarifs vivent ICI, pas en dur dans la
+         page /dns. */
+      {
+        id: "dns",
+        label: "Bouclier DNS",
+        hint: "Le filtrage DNS 403Shield est UTILISABLE GRATUITEMENT (10 profils, 200 règles par liste, 5 logements, journal 30 jours). L'abonnement TOURACO étend les capacités — le gratuit n'est jamais coupé.",
+        plans: [
+          {
+            name: "Gratuit",
+            price: "0",
+            period: "FCFA · pour toujours",
+            tagline: "Toute la maison protégée, sans payer",
+            cta: "Ouvrir la console DNS",
+            highlight: false,
+            href: "https://console.403shield.ftci.fr/dns",
+            features: [
+              "10 profils de filtrage",
+              "200 règles par liste bloquer / autoriser",
+              "5 logements (box et lignes)",
+              "Journal des requêtes 30 jours",
+            ],
+          },
+          {
+            name: "TOURACO Annuel",
+            price: "10 000",
+            period: "FCFA / an",
+            tagline: "12 mois au prix de 10",
+            badge: "2 mois offerts",
+            highlight: true,
+            href: "/checkout?product=dns&plan=dns-year",
+            cta: "Souscrire TOURACO",
+            features: [
+              "25 profils de filtrage",
+              "600 règles par liste",
+              "15 logements — domicile, bureau, famille",
+              "Journal des requêtes 90 jours",
+            ],
+          },
+          {
+            name: "TOURACO Mensuel",
+            price: "1 000",
+            period: "FCFA / mois",
+            tagline: "Sans engagement, mois par mois",
+            cta: "Souscrire TOURACO",
+            highlight: false,
+            href: "/checkout?product=dns&plan=dns-month",
+            features: [
+              "25 profils de filtrage",
+              "600 règles par liste",
+              "15 logements — domicile, bureau, famille",
+              "Journal des requêtes 90 jours",
+            ],
+          },
+        ],
+      },
     ],
     currencyNote:
       "Frais de paiement répercutés sur le prix de liste : carte +6 %, Wave −3 % (remise mobile money). Abonnement console : essai 60 jours sans carte bancaire. Tunnels WireGuard (VPN & Accès Pro) : prix catalogue boutique, remise mobile money incluse.",
@@ -1001,12 +1074,13 @@ const fr: LandingCopy = {
   },
   footer: {
     tagline:
-      "La suite sécurité réseau cloud : Hotspot, protection, cybercafé, PPPoE et tunnels WireGuard — VPN & Accès Pro — powered by FTech CI.",
+      "La suite sécurité réseau cloud : Hotspot, protection, cybercafé, PPPoE, tunnels WireGuard et bouclier DNS TOURACO — powered by FTech CI.",
     columns: [
       {
         title: "Produit",
         links: [
           { label: "Hotspot & Cybercafé", href: "/hotspot" },
+          { label: "Bouclier DNS — TOURACO", href: "/dns" },
           { label: "VPN — Tunnels WireGuard", href: "/vpn" },
           { label: "Accès Pro — Tunnels WireGuard", href: "/tunnels" },
           { label: "Protection cloud", href: "/#protection" },
@@ -1375,6 +1449,192 @@ const fr: LandingCopy = {
         secondaryHref: "https://console.403shield.ftci.fr",
       },
     },
+    /* N°347 — /dns : vitrine du bouclier DNS TOURACO (miroir de la structure
+       vpn). Les tarifs vivent dans pricing.segments (segment « dns »), la
+       page n'en porte AUCUN en dur. Le bouclier est UTILISABLE
+       GRATUITEMENT — TOURACO (droit porté par l'e-mail) étend les
+       capacités : aucune coupure du gratuit à l'expiration. */
+    dns: {
+      meta: {
+        title: "403Shield Bouclier DNS TOURACO — publicité, traçage et malware bloqués avant la page",
+        description:
+          "Le résolveur DNS maison 403Shield (DoH, DoT et UDP/53) filtre publicité, traçage, pornographie et malware pour toute la maison — la box comprise. Gratuit pour commencer ; TOURACO étend les capacités : 1 000 FCFA/mois ou 10 000 FCFA/an.",
+      },
+      hero: {
+        badge: "Bouclier DNS · TOURACO",
+        title1: "Un internet propre,",
+        titleAccent: "à la source.",
+        title2: "",
+        subtitle:
+          "Publicité, traçage, pornographie, malware : le bouclier DNS 403Shield les bloque AVANT qu'ils n'arrivent — sur chaque appareil, et jusque dans la box. Commencez gratuitement, étendez quand vous voulez avec TOURACO : vos profils, vos règles, vos couvre-feux.",
+        ctaPrimary: "Souscrire TOURACO",
+        ctaPrimaryHref: "/checkout?product=dns",
+        ctaSecondary: "Protéger gratuitement ma maison",
+        ctaSecondaryHref: "https://console.403shield.ftci.fr/dns",
+        trust: [
+          "Gratuit pour toujours — 10 profils, 5 logements",
+          "Résolveur DNS maison — DoH, DoT et UDP/53",
+          "Filtres malware/phishing rafraîchis toutes les 6 h",
+          "Marche chez tous les FAI, y compris Starlink",
+        ],
+      },
+      features: {
+        eyebrow: "Pourquoi le bouclier DNS 403Shield",
+        title: "Le web arrive déjà propre.",
+        sections: [
+          {
+            id: "profils",
+            icon: "palette",
+            kicker: "Vos profils, vos règles",
+            title: "Un profil par enfant, un profil par usage.",
+            body: "Dix profils gratuits, pas un seul imposé : la tablette des petits en filtrage renforcé, l'adolescent avec ses exceptions négociées, votre téléphone en mode traçage seul. Chaque profil porte ses listes bloquer/autoriser et ses couvre-feux — un internet sur mesure, maison.",
+            bullets: [
+              "10 profils gratuits — 25 avec TOURACO",
+              "Listes bloquer / autoriser par profil",
+              "Couvre-feux : nuit, devoirs, heures de sommeil",
+              "Filtrage publicité, traçage, pornographie, malware",
+            ],
+          },
+          {
+            id: "menaces",
+            icon: "cctv",
+            kicker: "Menaces vivantes",
+            title: "Un filtre jamais périmé.",
+            body: "Les listes malware et phishing sont agrégées des sources URLhaus et OpenPhish, puis rafraîchies toutes les six heures : le site piégé ouvert ce matin est déjà bloqué l'après-midi. Le bouclier vit avec les menaces, pas avec la photo d'hier.",
+            bullets: [
+              "Agrégation URLhaus + OpenPhish",
+              "Rafraîchissement toutes les 6 heures",
+              "Blocage malware et phishing automatique",
+              "Aucune liste à maintenir vous-même",
+            ],
+          },
+          {
+            id: "toute-la-maison",
+            icon: "router",
+            kicker: "Toute la maison",
+            title: "La box filtre, tout le monde est protégé.",
+            body: "Le DNS se règle au niveau du routeur : la TV, les consoles, les enceintes connectées et les invités passent par le bouclier sans rien installer nulle part. Les appareils qui ne se configuruent pas — ou qui changent de DNS en cachette — suivent la maison.",
+            bullets: [
+              "DNS au niveau de la box : TV, consoles, invités",
+              "Rien à installer sur chaque appareil",
+              "15 logements avec TOURACO : domicile, bureau, famille",
+              "Détection du détournement FAI du port 53",
+            ],
+          },
+          {
+            id: "tous-appareils",
+            icon: "globe",
+            kicker: "Tous vos appareils",
+            title: "Android, iPhone, Mac, navigateurs.",
+            body: "En dehors de la maison, chaque appareil garde son bouclier : DoT natif sur Android, profil .mobileconfig d'un clic sur iPhone et Mac, DoH dans les navigateurs. Les guides pas à pas vivent dans la console — cinq minutes par appareil, pas davantage.",
+            bullets: [
+              "Android : DoT natif en deux réglages",
+              "iPhone / Mac : profil .mobileconfig d'un clic",
+              "Navigateurs : DoH chez vous et à l'extérieur",
+              "Guides pas à pas dans la console DNS",
+            ],
+          },
+        ],
+      },
+      note: {
+        title: "Un droit, pas une contrainte.",
+        body: "TOURACO est porté par votre e-mail : aucune coupure du gratuit à l'expiration — vos profils restent, seules les capacités retombent (10 profils, 200 règles par liste, 5 logements, journal 30 jours). Souscrivez quand vous en avez besoin, renouvelez en un clic depuis la console DNS.",
+      },
+      steps: {
+        eyebrow: "Comment ça marche",
+        title: "Protégé en trois gestes.",
+        items: [
+          {
+            title: "Créez vos profils dans la console",
+            desc: "Gratuit, sans carte : dix profils, vos listes et vos couvre-feux, tout de suite.",
+          },
+          {
+            title: "Installez sur vos appareils",
+            desc: "Guides pas à pas dans la console : Android, iPhone, Mac, navigateurs — et la box pour toute la maison.",
+          },
+          {
+            title: "Étendez avec TOURACO",
+            desc: "Quand il vous faut plus (25 profils, 600 règles, 15 logements) : même e-mail, activation dès le paiement confirmé.",
+          },
+        ],
+      },
+      pricing: {
+        eyebrow: "Tarifs",
+        navLabel: "Tarifs",
+        title: "Gratuit pour toujours, TOURACO pour aller plus loin.",
+        subtitle:
+          "Le bouclier DNS est utilisable gratuitement, sans limite de temps. TOURACO étend les capacités — l'annuel offre 2 mois. Prix en FCFA, payables Wave ou carte.",
+      },
+      faq: {
+        eyebrow: "Questions fréquentes",
+        navLabel: "FAQ",
+        title: "Ce qu'on demande avant de brancher la maison.",
+        items: [
+          {
+            q: "Est-ce que ça remplace un VPN ?",
+            a:
+              "Non — les deux se complètent. Le bouclier DNS filtre CE qui arrive (publicité, traçage, malware) sans changer votre IP ni chiffrer tout le trafic ; le VPN chiffre le trajet et masque votre adresse. Beaucoup de foyers gardent le DNS à la maison et le VPN dehors.",
+          },
+          {
+            q: "Que se passe-t-il à l'expiration de TOURACO ?",
+            a:
+              "Rien n'est coupé : vos profils, vos listes et vos couvre-feux restent en place. Seules les capacités retombent aux quotas gratuits (10 profils, 200 règles par liste, 5 logements, journal 30 jours) — et vous pouvez resouscrire à tout moment.",
+          },
+          {
+            q: "Le bouclier DNS reste-t-il gratuit ?",
+            a:
+              "Oui, pour toujours. Le filtrage publicité, traçage, pornographie et malware avec 10 profils n'a ni limite de temps ni carte bancaire — TOURACO n'est jamais obligatoire.",
+          },
+          {
+            q: "Ça marche chez quel FAI ?",
+            a:
+              "Tous : Orange, MTN, Moov, Starlink, la 4G du téléphone… Le bouclier fonctionne par DoH/DoT chiffrés — et pour la box, par notre serveur UDP/53 avec détection du détournement FAI du port 53.",
+          },
+          {
+            q: "Est-ce que ça ralentit internet ?",
+            a:
+              "Non : les requêtes partent vers notre résolveur dédié, et les réponses sont mises en cache. Le filtrage se joue en millisecondes, invisibles à la navigation.",
+          },
+          {
+            q: "Mes enfants peuvent-ils le contourner ?",
+            a:
+              "Le mode « toute la maison » applique le bouclier au niveau de la box : changer le DNS sur un appareil ne suffit plus, et le détournement FAI du port 53 est détecté. Ajoutez les couvre-feux par profil — et le journal 90 jours de TOURACO pour voir ce qui reste tenté.",
+          },
+          {
+            q: "Comment j'installe sur la box ?",
+            a:
+              "La console DNS propose un guide box en quatre étapes avec les commandes prêtes à copier, et une sonde de ligne qui vérifie que votre logement est bien protégé — rien à inventer.",
+          },
+        ],
+      },
+      guides: {
+        eyebrow: "Guides liés",
+        title: "Le bouclier pas à pas.",
+        allLabel: "Tous les guides",
+        items: [
+          {
+            title: "Ouvrir votre console 403Shield",
+            desc: "Connexion par code e-mail, sans mot de passe — la maison des profils DNS.",
+            href: "/docs/guides/tunnels/console-tunnels",
+          },
+          {
+            title: "Espace client final",
+            desc: "Le portail par code e-mail : achats, échéances et renouvellement.",
+            href: "/docs/guides/annexes/portail-client",
+          },
+        ],
+      },
+      share: "Partager cette page",
+      cta: {
+        kicker: "Prêt à nettoyer votre internet ?",
+        title: "La maison protégée dès ce soir.",
+        body: "Commencez gratuitement dans la console — ou étendez tout de suite avec TOURACO : 25 profils, 600 règles, 15 logements, journal 90 jours. Même e-mail, activation dès le paiement confirmé.",
+        primary: "Souscrire TOURACO",
+        primaryHref: "/checkout?product=dns",
+        secondary: "J'utilise déjà le bouclier — ma console",
+        secondaryHref: "https://console.403shield.ftci.fr/dns",
+      },
+    },
     tunnels: {
       meta: {
         title: "403Shield Tunnels WireGuard — VPN IP fixe France & Accès Pro : routeurs, caméras, NAS",
@@ -1605,6 +1865,15 @@ const en: LandingCopy = {
               desc: "SafeWiFi Quad9 DNS, Shield WiFi anti-hacking, FamilyGuard curfew, and AntiVPN.",
               href: "/#protection",
               badge: "Self-healing",
+              icon: "shield",
+            },
+            /* N°347 — DNS shield TOURACO: resolver filtering for the
+               household (free + subscription), product page /dns. */
+            {
+              title: "DNS Shield TOURACO",
+              desc: "Ads, trackers, porn and malware blocked at the resolver — the whole house, box included.",
+              href: "/dns#profils",
+              badge: "From 0 FCFA",
               icon: "shield",
             },
             {
@@ -2131,6 +2400,65 @@ const en: LandingCopy = {
           },
         ],
       },
+      /* N°347 — DNS shield segment: free forever + TOURACO (monthly 1,000 /
+         yearly 10,000 FCFA — real backend product constants). The Free CTA
+         opens the CONSOLE /dns (profiles are created there, unpaid); the
+         TOURACO CTAs point at the site checkout with the plan
+         preselected (?product=dns&plan=). Single-source doctrine: these
+         prices live HERE, never hardcoded in the /dns page. */
+      {
+        id: "dns",
+        label: "DNS Shield",
+        hint: "The 403Shield DNS filtering shield is FREE TO USE (10 profiles, 200 rules per list, 5 homes, 30-day log). The TOURACO subscription extends the capacities — the free tier is never cut off.",
+        plans: [
+          {
+            name: "Free",
+            price: "0",
+            period: "FCFA · forever",
+            tagline: "The whole house protected, for nothing",
+            cta: "Open the DNS console",
+            highlight: false,
+            href: "https://console.403shield.ftci.fr/dns",
+            features: [
+              "10 filtering profiles",
+              "200 rules per block / allow list",
+              "5 homes (boxes and lines)",
+              "30-day query log",
+            ],
+          },
+          {
+            name: "TOURACO Yearly",
+            price: "10,000",
+            period: "FCFA / year",
+            tagline: "12 months for the price of 10",
+            badge: "2 months free",
+            highlight: true,
+            href: "/checkout?product=dns&plan=dns-year",
+            cta: "Subscribe to TOURACO",
+            features: [
+              "25 filtering profiles",
+              "600 rules per list",
+              "15 homes — house, office, family house",
+              "90-day query log",
+            ],
+          },
+          {
+            name: "TOURACO Monthly",
+            price: "1,000",
+            period: "FCFA / month",
+            tagline: "No commitment, month by month",
+            cta: "Subscribe to TOURACO",
+            highlight: false,
+            href: "/checkout?product=dns&plan=dns-month",
+            features: [
+              "25 filtering profiles",
+              "600 rules per list",
+              "15 homes — house, office, family house",
+              "90-day query log",
+            ],
+          },
+        ],
+      },
     ],
     currencyNote:
       "Payment fees passed through the list price: card +6%, Wave −3% (mobile money discount). Console subscription: 60-day free trial, no credit card. WireGuard tunnels (VPN & Pro Access): shop catalogue prices, mobile money discount included.",
@@ -2170,12 +2498,13 @@ const en: LandingCopy = {
   },
   footer: {
     tagline:
-      "The cloud network-security suite: Hotspot, protection, cybercafé, PPPoE and WireGuard tunnels — VPN & Pro Access — powered by FTech CI.",
+      "The cloud network-security suite: Hotspot, protection, cybercafé, PPPoE, WireGuard tunnels and the TOURACO DNS shield — powered by FTech CI.",
     columns: [
       {
         title: "Product",
         links: [
           { label: "Hotspot & Cybercafé", href: "/hotspot" },
+          { label: "DNS Shield — TOURACO", href: "/dns" },
           { label: "VPN — WireGuard tunnels", href: "/vpn" },
           { label: "Pro Access — WireGuard tunnels", href: "/tunnels" },
           { label: "Cloud protection", href: "/#protection" },
@@ -2542,6 +2871,192 @@ const en: LandingCopy = {
         primaryHref: "/checkout",
         secondary: "I already have a VPN — my account",
         secondaryHref: "https://console.403shield.ftci.fr",
+      },
+    },
+    /* N°347 — /dns : DNS shield TOURACO product page (mirror of the vpn
+       entry). Prices live in pricing.segments (segment "dns") — the page
+       carries NONE of them hardcoded. The shield is FREE TO USE — TOURACO
+       (a right carried by the email) extends the capacities: the free
+       tier is never cut off at expiry. */
+    dns: {
+      meta: {
+        title: "403Shield DNS Shield TOURACO — ads, trackers and malware blocked before the page",
+        description:
+          "The 403Shield home DNS resolver (DoH, DoT and UDP/53) filters ads, trackers, porn and malware for the whole house — box included. Free to start; TOURACO extends the capacities: 1,000 FCFA/month or 10,000 FCFA/year.",
+      },
+      hero: {
+        badge: "DNS Shield · TOURACO",
+        title1: "A clean internet,",
+        titleAccent: "at the source.",
+        title2: "",
+        subtitle:
+          "Ads, trackers, porn, malware: the 403Shield DNS shield blocks them BEFORE they arrive — on every device, all the way into the box. Start for free, extend whenever you want with TOURACO: your profiles, your rules, your curfews.",
+        ctaPrimary: "Subscribe to TOURACO",
+        ctaPrimaryHref: "/checkout?product=dns",
+        ctaSecondary: "Protect my home for free",
+        ctaSecondaryHref: "https://console.403shield.ftci.fr/dns",
+        trust: [
+          "Free forever — 10 profiles, 5 homes",
+          "Home resolver — DoH, DoT and UDP/53",
+          "Malware/phishing filters refreshed every 6 h",
+          "Works with every ISP, Starlink included",
+        ],
+      },
+      features: {
+        eyebrow: "Why the 403Shield DNS shield",
+        title: "The web arrives already clean.",
+        sections: [
+          {
+            id: "profils",
+            icon: "palette",
+            kicker: "Your profiles, your rules",
+            title: "One profile per child, one per use.",
+            body: "Ten free profiles, none imposed: the little ones' tablet on reinforced filtering, the teenager with negotiated exceptions, your phone on trackers-only mode. Each profile carries its own block/allow lists and its curfews — a made-to-measure internet for the household.",
+            bullets: [
+              "10 free profiles — 25 with TOURACO",
+              "Block / allow lists per profile",
+              "Curfews: nights, homework, bedtime",
+              "Ads, trackers, porn and malware filtering",
+            ],
+          },
+          {
+            id: "menaces",
+            icon: "cctv",
+            kicker: "Live threats",
+            title: "A filter that never goes stale.",
+            body: "The malware and phishing lists are aggregated from URLhaus and OpenPhish, then refreshed every six hours: the booby-trapped site opened this morning is already blocked by the afternoon. The shield lives with the threats, not with yesterday's snapshot.",
+            bullets: [
+              "URLhaus + OpenPhish aggregation",
+              "Refreshed every 6 hours",
+              "Automatic malware and phishing blocking",
+              "No list to maintain yourself",
+            ],
+          },
+          {
+            id: "toute-la-maison",
+            icon: "router",
+            kicker: "The whole house",
+            title: "The box filters, everyone is protected.",
+            body: "DNS is set at the router level: the TV, consoles, connected speakers and guests go through the shield without installing anything anywhere. Devices that cannot be configured — or that quietly switch DNS — follow the house.",
+            bullets: [
+              "DNS at the box level: TV, consoles, guests",
+              "Nothing to install on each device",
+              "15 homes with TOURACO: house, office, family house",
+              "ISP port-53 hijack detection",
+            ],
+          },
+          {
+            id: "tous-appareils",
+            icon: "globe",
+            kicker: "All your devices",
+            title: "Android, iPhone, Mac, browsers.",
+            body: "Away from home, every device keeps its shield: native DoT on Android, a one-click .mobileconfig profile on iPhone and Mac, DoH in browsers. Step-by-step guides live in the console — five minutes per device, no more.",
+            bullets: [
+              "Android: native DoT in two settings",
+              "iPhone / Mac: one-click .mobileconfig profile",
+              "Browsers: DoH at home and away",
+              "Step-by-step guides in the DNS console",
+            ],
+          },
+        ],
+      },
+      note: {
+        title: "A right, not a lock-in.",
+        body: "TOURACO is carried by your email: the free tier is never cut off at expiry — your profiles stay, only the capacities fall back (10 profiles, 200 rules per list, 5 homes, 30-day log). Subscribe when you need it, renew in one click from the DNS console.",
+      },
+      steps: {
+        eyebrow: "How it works",
+        title: "Protected in three moves.",
+        items: [
+          {
+            title: "Create your profiles in the console",
+            desc: "Free, no card: ten profiles, your lists and your curfews, right away.",
+          },
+          {
+            title: "Install on your devices",
+            desc: "Step-by-step guides in the console: Android, iPhone, Mac, browsers — and the box for the whole house.",
+          },
+          {
+            title: "Extend with TOURACO",
+            desc: "When you need more (25 profiles, 600 rules, 15 homes): same email, activation as soon as payment is confirmed.",
+          },
+        ],
+      },
+      pricing: {
+        eyebrow: "Pricing",
+        navLabel: "Pricing",
+        title: "Free forever, TOURACO to go further.",
+        subtitle:
+          "The DNS shield is free to use, with no time limit. TOURACO extends the capacities — the yearly plan gives 2 months. Prices in FCFA, payable with Wave or card.",
+      },
+      faq: {
+        eyebrow: "Frequently asked questions",
+        navLabel: "FAQ",
+        title: "What we're asked before wiring the house.",
+        items: [
+          {
+            q: "Does it replace a VPN?",
+            a:
+              "No — the two complement each other. The DNS shield filters WHAT arrives (ads, trackers, malware) without changing your IP or encrypting all your traffic; the VPN encrypts the path and hides your address. Many households keep the DNS at home and the VPN outside.",
+          },
+          {
+            q: "What happens when TOURACO expires?",
+            a:
+              "Nothing is cut off: your profiles, lists and curfews stay in place. Only the capacities fall back to the free quotas (10 profiles, 200 rules per list, 5 homes, 30-day log) — and you can subscribe again at any time.",
+          },
+          {
+            q: "Does the DNS shield stay free?",
+            a:
+              "Yes, forever. Ads, trackers, porn and malware filtering with 10 profiles has no time limit and no credit card — TOURACO is never mandatory.",
+          },
+          {
+            q: "Which ISPs does it work with?",
+            a:
+              "All of them: Orange, MTN, Moov, Starlink, phone 4G… The shield works over encrypted DoH/DoT — and for the box, over our UDP/53 server with ISP port-53 hijack detection.",
+          },
+          {
+            q: "Does it slow the internet down?",
+            a:
+              "No: queries go to our dedicated resolver, and answers are cached. Filtering plays out in milliseconds, invisible while browsing.",
+          },
+          {
+            q: "Can my kids get around it?",
+            a:
+              "The whole-house mode applies the shield at the box: changing the DNS on a device is no longer enough, and ISP port-53 hijacking is detected. Add per-profile curfews — and TOURACO's 90-day log to see what was still attempted.",
+          },
+          {
+            q: "How do I set it up on the box?",
+            a:
+              "The DNS console offers a four-step box guide with ready-to-copy commands, and a line probe that checks your home is really protected — nothing to invent.",
+          },
+        ],
+      },
+      guides: {
+        eyebrow: "Related guides",
+        title: "The shield, step by step.",
+        allLabel: "All guides",
+        items: [
+          {
+            title: "Open your 403Shield console",
+            desc: "Login by email code, no password — the home of the DNS profiles.",
+            href: "/docs/guides/tunnels/console-tunnels",
+          },
+          {
+            title: "End-client space",
+            desc: "The email-code portal: purchases, due dates and renewal.",
+            href: "/docs/guides/annexes/portail-client",
+          },
+        ],
+      },
+      share: "Share this page",
+      cta: {
+        kicker: "Ready to clean your internet?",
+        title: "The house protected tonight.",
+        body: "Start for free in the console — or extend right away with TOURACO: 25 profiles, 600 rules, 15 homes, 90-day log. Same email, activation as soon as payment is confirmed.",
+        primary: "Subscribe to TOURACO",
+        primaryHref: "/checkout?product=dns",
+        secondary: "I already use the shield — my console",
+        secondaryHref: "https://console.403shield.ftci.fr/dns",
       },
     },
     tunnels: {

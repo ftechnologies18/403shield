@@ -59,9 +59,17 @@ type API struct {
 	dnsQuery     *signupLimiter // N°339 — résolveur DoH public (routes /dns-query/{publicId})
 	dotQuery     *signupLimiter // N°345 — résolveur DoT :853 (par IP, miroir des bornes DoH)
 	udp53Query   *signupLimiter // N°346 — résolveur maison UDP/53+TCP/53 (par IP source, miroir des bornes DoH/DoT)
-	tunnelCodes  map[string]*tunnelCodeEntry
-	tunnelMu     sync.Mutex
-	vitals       *telemetry.Collector // B2 — Core Web Vitals (nil = collecte désactivée)
+	// N°347 — quotas du canal public de l'abonnement DNS « TOURACO » (vitrine
+	// /dns, par IP — miroir exact du canal VPN N°301) : création SERRÉE (un
+	// e-mail d'activation RÉEL part au provisioning), récupération TRÈS
+	// SERRÉE (re-livraison par e-mail), poll de statut LARGE (page ouverte :
+	// une requête toutes les 5 s).
+	dnsOrder    *signupLimiter
+	dnsStatus   *signupLimiter
+	dnsRecover  *signupLimiter
+	tunnelCodes map[string]*tunnelCodeEntry
+	tunnelMu    sync.Mutex
+	vitals      *telemetry.Collector // B2 — Core Web Vitals (nil = collecte désactivée)
 	// N°72 — bande passante sortante du jour (octets de corps de réponse
 	// par catégorie : agents / portail / medias / console / autre), exposée
 	// dans GET /api/admin/sync-status. Le quota Render (5 Go/mois gratuit)
@@ -167,7 +175,7 @@ func New(s *store.Store, jwtSecret string) *API {
 	// groupe serial rejoue l'inscription déjà passée — cf. signup_abuse.go.
 	// Les autres limiteurs S3 (join, reset) gardent les constantes : aucune
 	// suite E2E ne les traverse.
-	return &API{store: s, secret: jwtSecret, gws: map[string]routeros.Gateway{}, pinLock: newPinLimiter(), signup: signupLimiterFromEnv(os.Getenv), join: newSignupLimiter(), wifiClaim: newSignupLimiterLimits(20, 100), portalTrack: newSignupLimiterLimits(300, 3000), reset: newSignupLimiter(), chat: newSignupLimiterLimits(30, 400), vpnOrder: newSignupLimiterLimits(10, 40), vpnStatus: newSignupLimiterLimits(120, 3000), vpnRecover: newSignupLimiterLimits(5, 20), tunnelCode: newSignupLimiterLimits(6, 30), tunnelVerify: newSignupLimiterLimits(12, 120), tunnelAction: newSignupLimiterLimits(8, 40), dnsQuery: newSignupLimiterLimits(240, 6000), dotQuery: newSignupLimiterLimits(240, 6000), udp53Query: newSignupLimiterLimits(240, 6000), tunnelCodes: map[string]*tunnelCodeEntry{}, egress: newEgressStats(), readStateDone: map[string]time.Time{}, readAcc: map[string]*readStateAccum{}, readStateChunks: map[string]int{}, readStateFreshAt: map[string]time.Time{}, readStateFreshPending: map[string]bool{}, devicesDone: map[string]time.Time{}, attn: map[string]time.Time{}, watcherFailN: map[string]int{}, watcherFailAt: map[string]time.Time{}, tgPairings: map[string]telegramPairing{}, tgAccountCode: map[string]string{}}
+	return &API{store: s, secret: jwtSecret, gws: map[string]routeros.Gateway{}, pinLock: newPinLimiter(), signup: signupLimiterFromEnv(os.Getenv), join: newSignupLimiter(), wifiClaim: newSignupLimiterLimits(20, 100), portalTrack: newSignupLimiterLimits(300, 3000), reset: newSignupLimiter(), chat: newSignupLimiterLimits(30, 400), vpnOrder: newSignupLimiterLimits(10, 40), vpnStatus: newSignupLimiterLimits(120, 3000), vpnRecover: newSignupLimiterLimits(5, 20), dnsOrder: newSignupLimiterLimits(10, 40), dnsStatus: newSignupLimiterLimits(120, 3000), dnsRecover: newSignupLimiterLimits(5, 20), tunnelCode: newSignupLimiterLimits(6, 30), tunnelVerify: newSignupLimiterLimits(12, 120), tunnelAction: newSignupLimiterLimits(8, 40), dnsQuery: newSignupLimiterLimits(240, 6000), dotQuery: newSignupLimiterLimits(240, 6000), udp53Query: newSignupLimiterLimits(240, 6000), tunnelCodes: map[string]*tunnelCodeEntry{}, egress: newEgressStats(), readStateDone: map[string]time.Time{}, readAcc: map[string]*readStateAccum{}, readStateChunks: map[string]int{}, readStateFreshAt: map[string]time.Time{}, readStateFreshPending: map[string]bool{}, devicesDone: map[string]time.Time{}, attn: map[string]time.Time{}, watcherFailN: map[string]int{}, watcherFailAt: map[string]time.Time{}, tgPairings: map[string]telegramPairing{}, tgAccountCode: map[string]string{}}
 }
 
 // Handler — mux complet, protégé par le middleware d'authentification.
@@ -340,6 +348,16 @@ func (a *API) Handler() http.Handler {
 	mux.HandleFunc("POST /api/public/vpn/order", a.handlePublicVpnOrderCreate)
 	mux.HandleFunc("GET /api/public/vpn/order/{ref}", a.handlePublicVpnOrderStatus)
 	mux.HandleFunc("POST /api/public/vpn/recover", a.handlePublicVpnRecover)
+	// N°347 — CANAL B2C de l'abonnement DNS « TOURACO » (vitrine publique
+	// /dns, cf. handlers_public_dns.go) : QUATRE routes PUBLIQUES (whitelist
+	// middleware.go + quotas IP dédiés + honeypot — miroir exact du canal
+	// VPN N°301). L'acheteur n'a PAS de compte : la référence MCD- et
+	// l'e-mail font l'appariement, le droit EST l'échéance (aucun réseau à
+	// provisionner).
+	mux.HandleFunc("GET /api/public/dns/offers", a.handlePublicDnsOffers)
+	mux.HandleFunc("POST /api/public/dns/order", a.handlePublicDnsOrderCreate)
+	mux.HandleFunc("GET /api/public/dns/order/{ref}", a.handlePublicDnsOrderStatus)
+	mux.HandleFunc("POST /api/public/dns/recover", a.handlePublicDnsRecover)
 	// N°313 — module TUNNEL (Programme Tunnel, phase 1 : fondations de la
 	// console séparée, D-T2/D-T3) : auth passwordless par code e-mail
 	// (DEUX routes publiques — whitelist middleware.go + quotas IP dédiés
@@ -391,6 +409,11 @@ func (a *API) Handler() http.Handler {
 	mux.HandleFunc("DELETE /api/dnsshield/home/{id}", a.handleDnsHomeDelete)
 	mux.HandleFunc("POST /api/dnsshield/home/probe", a.handleDnsHomeProbeCreate)
 	mux.HandleFunc("GET /api/dnsshield/home/probe/{token}", a.handleDnsHomeProbeStatus)
+	// N°347 — renouvellement 1-clic de l'abonnement DNS « TOURACO » depuis la
+	// console /dns (JWT rôle tunnel, whitelist /api/tunnel/* ONLY — miroir
+	// POST /api/tunnel/orders/{ref}/renew N°314 ; cible appariée à l'e-mail
+	// du client, anti-énumération 404 uniforme).
+	mux.HandleFunc("POST /api/tunnel/dns/orders/{ref}/renew", a.handleTunnelDnsRenew)
 	// N°293 — PPPoE Phase A (chantier ⑥ de N°289, Option V lot 3) :
 	// abonnés PPPoE d'un pppoe-server EXISTANT (D2) pilotés par l'agent
 	// (D1 — commandes ppp_*, zéro cred, zéro port). Segment ISP TRANSVERSE
@@ -582,6 +605,12 @@ func (a *API) Handler() http.Handler {
 	mux.HandleFunc("GET /api/admin/vpn/orders", a.requireRole(3, a.handlePlatformVpnOrders))
 	mux.HandleFunc("POST /api/admin/vpn/orders/{id}/resolve", a.requireRole(3, a.handlePlatformVpnOrderResolve))
 	mux.HandleFunc("GET /api/admin/vpn/reconcile", a.requireRole(3, a.handlePlatformVpnReconcile))
+	// N°347 — console plateforme « abonnement DNS TOURACO » : le registre des
+	// commandes de la vitrine /dns (file pending du canal manual + historique,
+	// miroir exact de la file VPN N°301 — cf. handlers_public_dns.go). Gardes
+	// doublées dans les handlers (isPlatformAdmin — discipline /api/admin/*).
+	mux.HandleFunc("GET /api/admin/dns/orders", a.requireRole(3, a.handlePlatformDnsOrders))
+	mux.HandleFunc("POST /api/admin/dns/orders/{id}/resolve", a.requireRole(3, a.handlePlatformDnsOrderResolve))
 	mux.HandleFunc("POST /api/webhooks/wave", a.handleWaveWebhook)
 	// webhook d'encaissement GeniusPay (public, authentifié par signature HMAC).
 	mux.HandleFunc("POST /api/webhooks/geniuspay", a.handleGeniusPayWebhook)
