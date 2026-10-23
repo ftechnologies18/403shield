@@ -250,8 +250,21 @@ jobs:
 
           echo "── 3/5 systemd-resolved : ôter le stub 127.0.0.53:53 (LE PIÈGE UBUNTU) ──"
           if systemctl is-active systemd-resolved >/dev/null 2>&1; then
-            if ss -uln | grep -q '127.0.0.53:53'; then
-              echo "→ stub actif sur 127.0.0.53:53 — il bloque le bind :53 du backend"
+            # cicatrice 1re exécution : le stub écoute en réalité sur
+            # 127.0.0.53%lo:53 (suffixe d'interface ss) ET 127.0.0.54:53
+            # (second stub systemd) — un grep strict '127.0.0.53:53' ratait
+            # les DEUX, la branche « rien à faire » était prise alors que
+            # resolv.conf pointait encore vers le stub. Détection tolérante :
+            # l'une OU l'autre adresse, avec ou sans suffixe %, OU un
+            # pointeur resolv.conf vers 127.0.0.53 (écoute ou pas).
+            STUB_ON="$(ss -uln | grep -Eo '127\.0\.0\.5[34][:%][0-9]+' | sort -u | tr '\n' ' ' || true)"
+            if [ -n "$STUB_ON" ]; then
+              echo "→ stub actif sur : $STUB_ON— il bloque le bind :53 du backend"
+            fi
+            if grep -q '127.0.0.53' /etc/resolv.conf; then
+              echo "→ resolv.conf pointe encore vers le stub — reprise nécessaire"
+            fi
+            if [ -n "$STUB_ON" ] || grep -q '127.0.0.53' /etc/resolv.conf; then
               if grep -qE '^\s*DNSStubListener=' /etc/systemd/resolved.conf; then
                 sed -i 's/^\s*DNSStubListener=.*/DNSStubListener=no/' /etc/systemd/resolved.conf
               else
@@ -264,10 +277,10 @@ jobs:
               ln -sf /run/systemd/resolve/resolv.conf /etc/resolv.conf
               systemctl restart systemd-resolved
               sleep 2
-              ss -uln | grep -q '127.0.0.53:53' && { echo "✗ le stub écoute encore"; exit 1; }
-              echo "✓ stub désactivé, resolv.conf repointé"
+              ss -uln | grep -Eq '127\.0\.0\.5[34][:%]' && { echo "✗ le stub écoute encore"; exit 1; }
+              echo "✓ stub désactivé (127.0.0.53 + 127.0.0.54), resolv.conf repointé"
             else
-              echo "✓ aucun stub sur 127.0.0.53:53 — rien à faire"
+              echo "✓ ni stub en écoute ni pointeur — rien à faire"
             fi
             # La résolution système doit VIVRE après le repoint (sinon la VM
             # est cassée pour tout le reste — apt, journaliers, acme.sh).
