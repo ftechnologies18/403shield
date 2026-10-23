@@ -10,6 +10,154 @@ sous-marque FTech CI) ; l'historique ci-dessous conserve les noms d'époque.
 N°319 : le DÉPÔT GitHub lui-même devient `ftechnologies18/403shield`
 (anciennes URL redirigées en 301 par GitHub — web, git et API).
 
+## 2026-10-23 — N°346 — **BOUCLIER DNS PHASE 4 : « TOUTE LA MAISON » — serveur DNS classique UDP/53 + TCP/53 à routage par IP source, liaisons logement→profil, sonde de ligne (détection du détournement FAI du port 53), et le guide box dans la console** (box FAI, Starlink, routeurs perso : TV, consoles, objets connectés, invités — sans rien installer)
+
+### Le problème (le parc qui ne s'installe pas)
+- Après l'appareil (DoH N°339) et le téléphone (DoT N°345), reste TOUT CE
+  QUI NE S'INSTALLE JAMAIS : TV, consoles, objets connectés, invités. Ces
+  machines parlent LE DNS CLASSIQUE (RFC 1035, UDP/53) — configuré non pas
+  sur elles mais sur la BOX. Aucun profil, aucun navigateur, aucun
+  certificat : pointer les serveurs DNS de la box vers le bouclier, c'est
+  tout ce qu'un foyer peut faire.
+- **Le DNS classique n'a AUCUN champ d'identification** — ni SNI (DoT), ni
+  URL (DoH). L'IP SOURCE de la requête est la seule information
+  d'acheminement disponible : la liaison « IP publique du logement →
+  profil » (dns_home_bindings) devient la clé de voûte du jalon.
+- **Deux questions sans réponse** pour l'utilisateur : « quelle est
+  VRAIMENT l'IP de ma box ? » (la console ouverte en 4G lierait le
+  téléphone, pas la maison) et « mon FAI détourne-t-il le port 53 ? »
+  (proxy transparent : la requête n'arrive jamais, aucun diagnostic ne le
+  dit).
+
+### Ce qui a changé — backend (`internal/api/udp53_server.go`, `handlers_dnshome.go`)
+- **LE SERVEUR DNS CLASSIQUE :53** (UDP + TCP, stdlib pure — RFC 1035) :
+  la liaison route vers le profil, TOUTE la maison est filtrée. Le
+  chemin TCP est la moitié du serveur, pas un bonus : une réponse UDP
+  tronquée (TC=1, RFC 2181 §9) fait retenter le client en TCP — un
+  demi-serveur est un piège. Anti-amplification : réponses UDP bornées
+  (512 sans EDNS, taille EDNS annoncée, plafond 4096 — au-delà TC=1),
+  flot en vol borné (256), limiteur par IP source (miroir DoH/DoT),
+  connexions TCP jaugées (512) avec vie max 1 h.
+- **ANTI-OPEN-RESOLVER (la discipline du jalon)** : un résolveur DNS
+  public qui répond à tout le monde est un AMPLIFICATEUR DDoS. Ici : IP
+  sans liaison → REFUSED (réponse de la taille de la question). Jamais
+  de résolution pour des tiers. Profil inconnu/inactif → REFUSED : la
+  maison retombe honnêtement sur le DNS du FAI.
+- **LA SONDE `probe-<token>`** (détecteur de ligne) : jeton éphémère
+  15 min généré dans la console ; l'utilisateur lance UNE commande
+  (nslookup/dig) sur un appareil DU logement. Si la requête ARRIVE →
+  la ligne est propre ET l'IP source EST celle de la box (même console
+  ouverte en 4G) ; si elle n'arrive JAMAIS → le FAI détourne le port 53,
+  DoH/DoT restent la voie (la console le dit tel quel). La réponse A de
+  la sonde EST l'IP du résolveur — l'adresse à configurer sur la box.
+  Anti-énumération : sonde inconnue/expirée → REFUSED, strictement la
+  réponse d'une IP non liée (rien ne les distingue).
+- **Compteurs différés des liaisons** : la maison interroge à la dizaine
+  de requêtes par seconde — le store ne voit qu'un report par minute
+  (flush 60 s + à la lecture console : l'indicateur « protégée » est
+  frais au moment où le parent regarde). Les requêtes autorisées ne
+  sont JAMAIS consignées (journal minimal — seuls blocages et
+  couvre-feux passent par dnsLogEvent, miroir DoH/DoT).
+- **Fail-open intégral** : message incompréhensible → forward upstream
+  tel quel ; amont mort → silence UDP / fermeture TCP (la box retombe
+  sur le DNS du FAI configuré en secondaire — un filtre en panne ne
+  coupe pas Internet, il s'efface) ; port 53 occupé ou capabilities
+  absentes → désactivation franchement journalisée, le backend
+  (DoH, DoT, consoles) démarre toujours. `udp53Enabled` publie l'état
+  RÉEL à la console (doctrine « aucun faux chiffre »).
+- **La face console** (`handlers_dnshome.go`, 5 routes) : liaisons du
+  compte (jointure profil), revendication (défaut = l'IP de la requête
+  HTTP — le client navigue depuis chez lui), re-liaison (changement de
+  profil de la maison en un clic), détachement, sonde création + statut
+  en direct. Frontière : JWT tunnel + compte actif (miroir profils
+  N°339) ; IP d'un AUTRE compte → 409 honnête (l'existence seule, aucune
+  identité) ; `NormalizeDnsHomeIP` refuse loopback/privé/link-local
+  (une liaison 192.168.x.x est un symptôme de proxy mal configuré, pas
+  une maison) ; quota 5 logements/compte ; la suppression d'un profil
+  emporte ses liaisons (jamais une maison pointant un profil disparu).
+- **Modèle + store** : table `dns_home_bindings` (46e table
+  différentielle — IP UNIQUE, quota par e-mail, aucun secret : une IP
+  publique est une adresse d'acheminement, pas une clé, doctrine
+  PublicID), schéma idempotent, synchro différentielle, recovery merge,
+  health parité. `BuildNoError` + `BuildAnswerA` (wire, dnsshield).
+- **CGNAT documenté** : certains FAI partagent une IP publique entre
+  foyers — la liaison reste fonctionnelle mais le filtrage est celui du
+  profil lié, partagé par tous derrière cette IP. La console le dit
+  tel quel, aucune promesse mensongère.
+
+### Ce qui a changé — console (`tunnel-console/src/app/dns/page.tsx`)
+- **Section « Toute la maison »** : carte DNS 1 (l'IP du résolveur à
+  copier-coller dans la box) + filet « DNS 2 : celui du FAI », carte
+  sonde (commandes nslookup/dig prêtes, statut en direct — pending /
+  received avec l'IP révélée / expired), liste des logements liés
+  (profil appliqué, dernière requête vue, compteur, badge « protégée » /
+  « en attente de la box »), formulaire de liaison (IP pré-remplie
+  depuis chez soi, sélection du profil).
+- **Onglet Box de la modale d'installation** (il annonçait « jalon
+  N°346 en préparation » — il livre désormais) : guide 4 étapes — lier
+  le logement, ouvrir les réglages de la box (interface web, app FAI,
+  app Starlink), poser DNS 1, enregistrer. Lien vers la sonde et la
+  santé de la maison.
+- `api.ts` : types + 5 méthodes (list/claim/delete/probe×2) ; l'état
+  `udp53Enabled` et l'IP du résolveur vivent dans le bloc `setup` de
+  `/me` (additif — miroir N°345).
+
+### Ce qui a changé — ops (`ops-dns-udp53.yml`, `deploy-oracle.yml`)
+- **ops-dns-udp53.yml — LE GESTE D'ACTIVATION** (preflight lecture
+  seule | provision confirm=EXECUTER | verify) : ① Security Lists +
+  NSGs ingress UDP/53 ET TCP/53 (miroir TCP/853 N°345, relire-compter-
+  avant-PUT) ② iptables VM + persistance ③ **le piège Ubuntu** :
+  systemd-resolved écoute 127.0.0.53:53 par défaut et bloque le bind
+  :53 → DNSStubListener=no + repoint du symlink resolv.conf (SANS le
+  repoint, la résolution SYSTÈME de la VM casserait — vérifiée vivante
+  par getent avant tout redémarrage) ④ env DNS_UDP53_ADDR +
+  DNS_UDP53_RESOLVER_IP (l'IP que la console affiche — posée par le
+  geste, préservée par deploy-oracle) ⑤ restart + healthcheck patient
+  + preuve locale (ligne « N°346 UDP53 : en écoute » + ss :53 UDP ET
+  TCP) ⑥ **PREUVE RÉELLE DEPUIS LE RUNNER** : requête DNS classique
+  UDP/53 PUIS TCP/53 vers l'IP publique — REFUSED attendu des deux
+  (le serveur répond DONC atteignable, et REFUSE DONC pas un open
+  resolver ; timeout = chaîne cassée, NOERROR = amplificateur public —
+  les deux échouent le geste).
+- **AUCUN enregistrement DNS à poser** : la box reçoit l'IP
+  DIRECTEMENT (le DNS classique se configure par adresse, pas par
+  nom) ; l'A de `dns.403shield.ftci.fr` (N°345) sert le réchauffage
+  de secours de l'IP.
+- **deploy-oracle.yml** : la garde env étendue à
+  `DNS_UDP53_ADDR|DNS_UDP53_RESOLVER_IP` — un futur dégel du sentinel
+  ne les effacera jamais.
+
+### Intacts (contrats vérifiés par les portes)
+- Le résolveur DoH N°339/343 : AUCUNE ligne du chemin modifiée (le
+  serveur UDP/53 partage le moteur dnsshield — ordre de décision
+  figé identique sur les trois canaux — il ne le touche pas).
+- Le serveur DoT N°345 : inchangé (le cadrage TCP de udp53 est un
+  miroir, pas un partage de code avec dot_server.go).
+- Les routes existantes : additions pures (5 routes `/home`, bloc
+  `setup` additif dans `/me`, cascade à la suppression de profil).
+
+### Portes
+- Backend : gofmt 0 · go vet 0 · build OK · `go test ./...` complet
+  vert (24 tests N°346 : blocage, forward, REFUSED non-liée/inactive,
+  amont mort, sonde ×3, troncature TC=1, EDNS, TCP round-trip, flush
+  différé, liaisons ×8 dont re-liaison/quota/IP étrangère, cascade,
+  cycle de vie sonde, bloc setup /me) · `-race` ciblé
+  (api + dnsshield + model).
+- Smoke RÉEL sur binaire + console dev sur VRAI backend :
+  **24/24 PASS** — protocole : IP non liée → REFUSED, sonde UDP →
+  NOERROR + A = IP du résolveur, statut reçu, sonde TCP, sonde
+  inconnue → REFUSED ; navigateur : mur /login, section maison
+  rendue, IP du résolveur affichée, état vide, liaison créée
+  (203.0.113.42), badge « en attente de la box », vérif API
+  (1 liaison, profil joint), requête extérieure toujours REFUSED
+  (anti-open-resolver), sonde UI complète (lancer → commandes →
+  vraie requête dig → poll temps réel → « Ligne propre — requête
+  reçue de 127.0.0.1 »), onglet Box (guide 4 étapes), 0 erreur
+  console ; VLM PASS desktop 1280 + mobile 390.
+- Console : ESLint 0 · tsc 0 · `next build` 10/10 routes (dont
+  `/dns` étendue).
+- Workflow : YAML validé ×3 + syntaxe bash de chaque bloc `run`.
+
 ## 2026-10-22 — N°345 — **BOUCLIER DNS PHASE 3 : L'ONBOARDING APPAREILS — serveur DoT :853 à routage SNI par profil (Android « DNS privé »), générateur de profils .mobileconfig Apple, et console `/dns` avec les guides par système** (le premier écran du produit — l'API existait depuis N°339 sans interface)
 
 > Renumérotation (doctrine N°338→339, N°340→343) : ce jalon était annoncé
