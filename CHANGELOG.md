@@ -53,8 +53,10 @@ N°319 : le DÉPÔT GitHub lui-même devient `ftechnologies18/403shield`
 - **Compteurs** : metadata du hub « 36 guides illustrés » → « 37 » (SERP) +
   keywords DNS filtré/TOURACO + description enrichie « bouclier DNS » ;
   commentaires de comptage 36→37 (catalog, route guide, search-index). Hub,
-  en-têtes de section, sitemap (54 URLs), index ⌘K (37 entrées), og:image :
-  auto-générés depuis le catalogue — vérifiés dans le build.
+  en-têtes de section, sitemap (55 URLs — section + guide), index ⌘K
+  (37 entrées), og:image : auto-générés depuis le catalogue — vérifiés dans
+  le build ET en production (301 plat /docs/guides/dns-filtre → hiérarchique,
+  auto-dérivé du catalogue, réponse 301 constatée).
 
 ### Portes
 - frontend : lint 0 erreur (14 warnings pré-existants, localisés hors
@@ -65,6 +67,12 @@ N°319 : le DÉPÔT GitHub lui-même devient `ftechnologies18/403shield`
   guide sur « dns filtré » (anchors) · lien vitrine /dns → guide navigué ·
   mobile 390 : scrollWidth 390 (zéro overflow) · 0 erreur console · **VLM
   PASS** desktop 1280 + mobile 390.
+- **PRODUCTION vérifiée post-push (07dbfd5)** : CI SUCCESS · guide
+  /docs/guides/dns/dns-filtre 200 (titre servi) · index de section /dns 200 ·
+  sitemap 55 URLs (dns/dns-filtre présent) · index ⌘K 37 entrées · hub
+  « 37 guides illustrés » servi · carte « guides liés » présente sur la
+  vitrine /dns · 301 plat auto-dérivé constaté · og:image 200 · backend,
+  console et vitrine fermée ({enabled:false}) inchangés et sains.
 
 ### Suivra
 - L'ouverture de la vitrine `/dns` reste LE geste de l'exploitant (switch
