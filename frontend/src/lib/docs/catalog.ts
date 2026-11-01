@@ -1,9 +1,10 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // /docs/guides — catalogue des sections & agrégation (N°304, N°333-B).
 //
-// 36 guides console PUBLICS (statiques, /public/docs/<module>/ — dont la
+// 37 guides console PUBLICS (statiques, /public/docs/<module>/ — dont la
 // section Tunnels & Accès Pro et ses guides N°341 multi-appareils +
-// pair-à-pair, et N°342 Accès Invité) + le volet plateforme PRIVÉ (6 guides :
+// pair-à-pair, N°342 Accès Invité, et N°348 la section Bouclier DNS ·
+// TOURACO) + le volet plateforme PRIVÉ (6 guides :
 // métadonnées ici, contenu chargé à la demande par la route gated — voir
 // platform-meta.ts).
 // ─────────────────────────────────────────────────────────────────────────────
@@ -12,6 +13,7 @@ import { DEMARRER_GUIDES } from "./content/demarrer";
 import { SUPERVISION_GUIDES } from "./content/supervision";
 import { HOTSPOT_GUIDES } from "./content/hotspot";
 import { TUNNELS_GUIDES } from "./content/tunnels";
+import { DNS_GUIDES } from "./content/dns";
 import { PERSONNES_GUIDES } from "./content/personnes";
 import { INFRASTRUCTURE_GUIDES } from "./content/infrastructure";
 import { ANALYSE_GUIDES } from "./content/analyse";
@@ -46,6 +48,13 @@ export const DOC_SECTIONS: DocSection[] = [
     description:
       "Le pont privé WireGuard : VPN personnel à IP fixe France, Accès Pro pour routeurs, caméras et NAS, pair-à-pair entre vos appareils, invités expirables pour un tiers — et l'espace client sans mot de passe.",
     icon: "shield",
+  },
+  {
+    id: "dns",
+    title: "Bouclier DNS · TOURACO",
+    description:
+      "Le filtrage résolveur : les noms dangereux ou non voulus ne se traduisent plus — navigateurs, téléphones, box, TV et objets connectés, toute la maison sans rien installer sur les objets (N°348 : guide public « qu'est-ce que le DNS filtré ? »).",
+    icon: "globe",
   },
   {
     id: "personnes",
@@ -84,12 +93,13 @@ export const DOC_SECTIONS: DocSection[] = [
   },
 ];
 
-/** Guides publics (36) — servables en statique, jamais de contenu plateforme ici. */
+/** Guides publics (37) — servables en statique, jamais de contenu plateforme ici. */
 export const PUBLIC_GUIDES: Guide[] = [
   ...DEMARRER_GUIDES,
   ...SUPERVISION_GUIDES,
   ...HOTSPOT_GUIDES,
   ...TUNNELS_GUIDES,
+  ...DNS_GUIDES,
   ...PERSONNES_GUIDES,
   ...INFRASTRUCTURE_GUIDES,
   ...ANALYSE_GUIDES,

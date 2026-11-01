@@ -342,6 +342,6 @@ export const SUPERVISION_GUIDES: Guide[] = [
         a: "Oui, l'activation est par routeur — pratique pour protéger d'abord le site principal.",
       },
     ],
-    related: ["parc-routeurs", "outils-routeur", "tableau-de-bord"],
+    related: ["parc-routeurs", "outils-routeur", "dns-filtre"],
   },
 ];

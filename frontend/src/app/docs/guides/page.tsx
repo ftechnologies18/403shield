@@ -1,5 +1,6 @@
-// Hub public /docs/guides (N°304, N°333-C/D) — 36 guides d'exploitation
-// console gérant/propriétaire en 9 sections. Le volet plateforme (6 guides)
+// Hub public /docs/guides (N°304, N°333-C/D) — 37 guides d'exploitation
+// console gérant/propriétaire en 10 sections, dont le Bouclier DNS ·
+// TOURACO (N°348). Le volet plateforme (6 guides)
 // n'est PAS référencé ici : privé, accessible uniquement via le menu profil
 // de la sidebar.
 
@@ -13,7 +14,7 @@ export const metadata: Metadata = {
   alternates: { canonical: "/docs/guides" },
   title: "Guides 403Shield — documentation d'exploitation",
   description:
-    "36 guides illustrés pour exploiter 403Shield : compte, routeurs MikroTik (mode Agent), vouchers & ventes, sessions, revendeurs, tunnels & Accès Pro, rapports, protections — chaque fonction expliquée pas à pas avec captures d'écran réelles.",
+    "37 guides illustrés pour exploiter 403Shield : compte, routeurs MikroTik (mode Agent), vouchers & ventes, sessions, revendeurs, tunnels & Accès Pro, bouclier DNS, rapports, protections — chaque fonction expliquée pas à pas avec captures d'écran réelles.",
   keywords: [
     "403Shield",
     "guide MikroTik",
@@ -22,6 +23,8 @@ export const metadata: Metadata = {
     "documentation hotspot",
     "FAI Abidjan",
     "cybercafé",
+    "DNS filtré",
+    "TOURACO",
   ],
   openGraph: {
     title: "Guides 403Shield — documentation d'exploitation",

@@ -23,6 +23,7 @@ import {
   ChevronDown,
   FileText,
   Gauge,
+  Globe,
   ListTree,
   LogIn,
   Menu,
@@ -41,12 +42,13 @@ import type { GuideMetaLight } from "@/lib/docs/catalog";
 import { GUIDE_ANCHORS } from "./guide-view";
 import { DocsCommand } from "./docs-command";
 
-/* ── Icône par section (mapping complet 9/9 + plateforme, N°333-C) ────── */
+/* ── Icône par section (mapping complet 10/10 + plateforme, N°333-C, dns N°348) ─ */
 const SECTION_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
   demarrer: Rocket,
   supervision: Gauge,
   hotspot: Ticket,
   tunnels: ShieldCheck,
+  dns: Globe,
   personnes: Users,
   infrastructure: Router,
   analyse: BarChart3,

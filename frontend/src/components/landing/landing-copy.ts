@@ -1613,6 +1613,11 @@ const fr: LandingCopy = {
         allLabel: "Tous les guides",
         items: [
           {
+            title: "Qu'est-ce que le DNS filtré ?",
+            desc: "L'annuaire des noms, gardé pour vous — le bouclier expliqué de la box aux navigateurs (N°348).",
+            href: "/docs/guides/dns/dns-filtre",
+          },
+          {
             title: "Ouvrir votre console 403Shield",
             desc: "Connexion par code e-mail, sans mot de passe — la maison des profils DNS.",
             href: "/docs/guides/tunnels/console-tunnels",
@@ -3036,6 +3041,11 @@ const en: LandingCopy = {
         title: "The shield, step by step.",
         allLabel: "All guides",
         items: [
+          {
+            title: "What is filtered DNS?",
+            desc: "The directory of names, kept for you — the shield explained from the box to the browsers (N°348).",
+            href: "/docs/guides/dns/dns-filtre",
+          },
           {
             title: "Open your 403Shield console",
             desc: "Login by email code, no password — the home of the DNS profiles.",

@@ -106,7 +106,7 @@ export const TUNNELS_GUIDES: Guide[] = [
         a: "Depuis la boutique, avec un rappel par e-mail avant l'échéance — le renouvellement tient en 1 clic depuis l'espace client.",
       },
     ],
-    related: ["acces-pro", "console-tunnels", "ip-vpn-localisable", "vpn-wireguard"],
+    related: ["acces-pro", "console-tunnels", "dns-filtre", "ip-vpn-localisable"],
   },
 
   {

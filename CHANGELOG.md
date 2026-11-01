@@ -10,6 +10,67 @@ sous-marque FTech CI) ; l'historique ci-dessous conserve les noms d'époque.
 N°319 : le DÉPÔT GitHub lui-même devient `ftechnologies18/403shield`
 (anciennes URL redirigées en 301 par GitHub — web, git et API).
 
+## 2026-11-01 — N°349 — **GUIDE PUBLIC « QU'EST-CE QUE LE DNS FILTRÉ ? » — la 10e section du centre de guides ouvre le Bouclier DNS · TOURACO au grand public : l'annuaire des noms expliqué à la maison, la vitrine /dns maillée, le 37e guide** (le jalon annoncé « suivant » par N°347 — l'ouverture de la vitrine reste le geste de l'exploitant)
+
+> Renumérotation (doctrine N°345) : ce chantier était préparé sous le n° 348
+> quand une session concurrente a poussé N°348 (CHASSE JNB — runbook du pont
+> de chasse E5, docs uniquement) pendant la construction du guide ; le présent
+> jalon devient N°349, aucun numéro n'est consommé deux fois.
+
+### Le problème (un produit complet, jamais expliqué)
+- N°339→347 ont livré un bouclier DNS ENTIER : résolveur DoH, serveur DoT,
+  UDP/53 box, menaces vivantes, vitrine TOURACO et caisse GeniusPay. Mais le
+  centre de guides PUBLIC n'expliquait nulle part CE QU'EST le DNS filtré :
+  l'acheteur de la vitrine /dns (sans compte, sans contexte) n'avait aucune
+  page documentaire pour comprendre le produit AVANT de payer — le premier
+  réflexe d'un acheteur prudent restait sans réponse maison.
+- N°347 notait le jalon suivant : « guide public "qu'est-ce que le DNS
+  filtré ?" dans le centre de guides » — le présent jalon s'en acquitte.
+
+### Ce qui a changé — centre de guides (`frontend/src/lib/docs/`)
+- **10e section publique `dns`** « Bouclier DNS · TOURACO » (DOC_SECTIONS +
+  icône Globe, mapping sidebar 10/10) placée après Tunnels & Accès Pro —
+  routage 100 % dynamique existant, AUCUN répertoire de route nouveau : le
+  guide vit à `/docs/guides/dns/dns-filtre` (SSG par generateStaticParams).
+- **37e guide `dns-filtre`** « Qu'est-ce que le DNS filtré ? Le Bouclier DNS
+  expliqué à la maison » — gabarit Q&A 7 blocs complet : quoi (l'annuaire des
+  noms, qui répond change), différences ×4 (VPN personnel, SafeWiFi du
+  hotspot, extension navigateur, contrôle parental OS), reçoit ×5 (résolveur
+  PAR PROFIL, listes 200/600, menaces URLhaus/OpenPhish, journal 30/90 j,
+  droit sur l'e-mail), étapes ×5 (console /dns → profil → DoH navigateurs →
+  DoT Android → box + sonde de ligne), usages ×3, pièges ×4 (dont « le DNS
+  filtré n'est PAS un VPN » en warn), FAQ ×6. Contenu calé sur les capacités
+  RÉELLES : bornes dnsprofile.go/publicdnsorder.go (10/200/5/30 vs 25/600/15/
+  90), tarifs pricing.segments (0/1 000/10 000 FCFA), hôte DoT
+  `<profil>.dns.403shield.ftci.fr` (vérifié LIVE en prod : TCP :853 OPEN),
+  aucune capture (doctrine : jamais de faux écran — note de capture posée).
+- **Maillage bidirectionnel** : related du guide (protection, vitrine-vpn,
+  console-tunnels) + `dns-filtre` ajouté aux related de protection (supplée
+  tableau-de-bord, le lien le plus faible) et de vitrine-vpn (prend la 3e
+  carte rendue — l'acheteur VPN voit le bouclier) + vitrine `/dns` « guides
+  liés » FR/EN : le guide devient la PREMIÈRE carte (3 items + Tous les
+  guides). Le lien vitrine → guide a été CLIQUÉ et vérifié en navigateur.
+- **Compteurs** : metadata du hub « 36 guides illustrés » → « 37 » (SERP) +
+  keywords DNS filtré/TOURACO + description enrichie « bouclier DNS » ;
+  commentaires de comptage 36→37 (catalog, route guide, search-index). Hub,
+  en-têtes de section, sitemap (54 URLs), index ⌘K (37 entrées), og:image :
+  auto-générés depuis le catalogue — vérifiés dans le build.
+
+### Portes
+- frontend : lint 0 erreur (14 warnings pré-existants, localisés hors
+  chantier) · tsgo 0 · `next build` **68/68 pages** (SSG dns-filtre.html +
+  index de section) · sitemap + index ⌘K vérifiés dans les artefacts.
+- **SMOKE NAVIGATEUR réel** : guide rendu (sidebar section « Bouclier DNS ·
+  TOURACO 1 » + H1 + FAQ accordions) · palette ⌘K pleine texte retrouve le
+  guide sur « dns filtré » (anchors) · lien vitrine /dns → guide navigué ·
+  mobile 390 : scrollWidth 390 (zéro overflow) · 0 erreur console · **VLM
+  PASS** desktop 1280 + mobile 390.
+
+### Suivra
+- L'ouverture de la vitrine `/dns` reste LE geste de l'exploitant (switch
+  « Vitrine /dns » dans les paramètres plateforme — doctrine N°347
+  intacte : opt-in OFF par défaut, la fermeture n'annule rien).
+
 ## 2026-10-23 — N°347 — **BOUCLIER DNS PHASE 5 : LA VITRINE « TOURACO » — le bouclier DNS porte le nom de l'oiseau africain (il remplace le nom de code BAOBAB), l'abonnement TOURACO se vend sans compte depuis le site /dns, GeniusPay encaisse, le droit vit sur l'e-mail** (gratuit intact pour toujours, capacités étendues 25 profils · 600 règles · 15 logements · journal 90 j)
 
 ### Le nom d'abord (la décision de l'exploitant)
