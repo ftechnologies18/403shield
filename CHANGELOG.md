@@ -10,6 +10,48 @@ sous-marque FTech CI) ; l'historique ci-dessous conserve les noms d'époque.
 N°319 : le DÉPÔT GitHub lui-même devient `ftechnologies18/403shield`
 (anciennes URL redirigées en 301 par GitHub — web, git et API).
 
+## 2026-11-01 — N°348 — **CHASSE JNB : LE PONT E5 MORT 14 JOURS AVANT L'ÉCHÉANCE — le runbook acté sur la mort réelle du moteur 1 (dernier dispatch 17/10 17:05 UTC, run #2707) et la doctrine N°267 éprouvée en production : le moteur GitHub porte seul la chasse depuis 14 jours** (constat du 01/11 : A1 + micro toutes rouges, aucune capture, aucun tir, budget API intact)
+
+### Les faits (relevés par l'API GitHub le 01/11 — 400 derniers runs de `hunt-a1-jnb.yml`)
+- **Moteur 1 « pont E5 »** : la boucle `mikcloud-hunt-dispatch` v3 s'est tue
+  le **17/10/2026 à 17:05 UTC** (dernier `workflow_dispatch` — run #2707,
+  success) : 206 dispatchs le 17/10, 153 le 16/10, puis **silence total**.
+  Le runbook anticipait la mort au 31/10 (fin des crédits) : Oracle a
+  réclamé l'E5 **14 jours plus tôt** — `docs/CHASSE-JNB.md` §1 est corrigé
+  sur la réalité.
+- **Moteur 2 « GitHub »** : sain et actif — `hunt-parallel-jnb` #135
+  (01/11 01:19 UTC) et `hunt-a1-jnb` #2745 (31/10 23:18 UTC) portent tous
+  deux « auth OCI OK (JNB) — CHASSE ACTIVE » (coffre `OCI_*_JNB` complet —
+  les gestes 1-2 de la §3 ont été effectués). **Cadence effective
+  observée : ~1 run toutes les 3 à 6 h** contre un nominal `2-59/5` :
+  GitHub retarde/abandonne massivement les crons du dépôt (sonde nocturne
+  de ~03:1x-03:36 UTC systématiquement retardée de 1,5-2 h, majorité des
+  fenêtres de 5 min jamais exécutée) — limite de la plateforme GitHub,
+  constatée et consignée au runbook, pas un défaut du dispositif.
+- **Terrain (sondes gratuites, doctrine N°222)** : A1.Flex saturée sur les
+  5 placements (cibles #0/#1 placement auto, #2 FAULT-DOMAIN-1, #3
+  FAULT-DOMAIN-2, #4 FAULT-DOMAIN-3 → `OUT_OF_HOST_CAPACITY`) et le filet
+  micro **E2.1.Micro** (cible #5) rouge également — identique au 31/10
+  23:18 UTC et au 01/11 01:19 UTC.
+- **Aucune capture** : garde négative à chaque run (`mikcloud-jnb-a1` /
+  `mikcloud-jnb-micro` introuvables en tenancy JNB), aucune issue
+  `[JNB] A1 capturée`, les deux chasseurs toujours actifs — **aucun tir
+  parti, budget anti-429 préservé**.
+
+### Ce qui a changé — documentation uniquement
+- `docs/CHASSE-JNB.md` §1 : la ligne « Moteur 1 » porte la date de mort
+  RÉELLE (17/10 17:05 UTC, run #2707 en preuve) à la place de l'échéance
+  anticipée du 31/10 ; la colonne « Fin de vie » du moteur 2 précise qu'il
+  est le seul moteur depuis le 17/10 ; un encadré N°348 consigne la cadence
+  effective observée et l'état du terrain au 01/11.
+- Aucun code, aucun workflow, aucun secret, aucun schéma DB touchés — la
+  chasse continue sans intervention (la doctrine « coffre complet → chasse
+  réelle sans nouvelle intervention » reste vraie).
+
+### Portes
+- Commit de documentation pure (2 fichiers `.md`) — CI standard verte
+  attendue ; schéma DB : AUCUN.
+
 ## 2026-10-23 — N°347 — **BOUCLIER DNS PHASE 5 : LA VITRINE « TOURACO » — le bouclier DNS porte le nom de l'oiseau africain (il remplace le nom de code BAOBAB), l'abonnement TOURACO se vend sans compte depuis le site /dns, GeniusPay encaisse, le droit vit sur l'e-mail** (gratuit intact pour toujours, capacités étendues 25 profils · 600 règles · 15 logements · journal 90 j)
 
 ### Le nom d'abord (la décision de l'exploitant)

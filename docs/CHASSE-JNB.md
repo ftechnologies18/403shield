@@ -11,16 +11,30 @@
 
 | | Moteur 1 « instance » (pont E5) | Moteur 2 « GitHub » |
 |---|---|---|
-| Support | VM.Standard.E5.Flex 84.12.85.241 (crédits jusqu'au **31/10**) | Runners GitHub (dépôt public — gratuit illimité) |
+| Support | VM.Standard.E5.Flex 84.12.85.241 (crédits jusqu'au **31/10**) — **réclamée par Oracle le 17/10, 14 j avant l'échéance (N°348)** | Runners GitHub (dépôt public — gratuit illimité) |
 | Mécanique | boucle `mikcloud-hunt-dispatch` **v3** (systemd timer, 2-5 min, non-superposante N°250-c) → dispatch `hunt-a1-jnb.yml` | `hunt-parallel-jnb.yml` cron `2-59/5` 24/7 + crons nocturnes `hunt-a1-jnb.yml` (`11,36 20-23,0-3 * * *`) |
 | Installation / pilotage | `hunt-e5-arm.yml` (workflow_dispatch) | fichiers au dépôt — activés dès le push |
-| Fin de vie | 31/10 : Oracle réclame l'E5 → la boucle meurt avec la VM (si capture avant : auto-extinction à la victoire) | **permanent** — survit au 31/10 (doctrine N°267) |
+| Fin de vie | **MORTE le 17/10/2026 17:05 UTC** (dernier dispatch run #2707 — Oracle a réclamé l'E5 14 j avant la fin des crédits ; preuve N°348 : 359 dispatchs les 16-17/10 puis silence total de la boucle) | **permanent** — **seul moteur depuis le 17/10**, survit au 31/10 (doctrine N°267) |
 
 Doctrine de tir inchangée (N°222) : **sonder d'abord** (capacity-report —
 gratuit), **ne tirer que si un pool est AVAILABLE** ; tir en **IP publique
 éphémère** (l'IP réservée 84.12.85.241 du pont et l'IP prod
 84.235.228.160 ne sont jamais touchées). Filet micro N°241 : propriété du
 seul chasseur principal, cible #5.
+
+> **N°348 (constat du 01/11, 400 derniers runs relevés par l'API GitHub)** :
+> le moteur 2 est sain (« auth OCI OK (JNB) — CHASSE ACTIVE ») mais sa
+> **cadence effective est de ~1 run toutes les 3 à 6 h**, loin du nominal
+> `2-59/5` — GitHub retarde/abandonne massivement les crons du dépôt (la
+> sonde nocturne de ~03:1x-03:36 UTC arrive avec 1,5-2 h de retard, la
+> majorité des fenêtres de 5 min n'est jamais exécutée). Au 01/11 01:19 UTC
+> (run #135 parallèle) et au 31/10 23:18 UTC (run #2745 nocturne) : les 6
+> cibles **toutes rouges** (`OUT_OF_HOST_CAPACITY` — A1 sur les 5
+> placements + micro E2.1.Micro cible #5), **aucune capture** (garde
+> négative, aucune issue `[JNB] A1 capturée`, les deux chasseurs toujours
+> actifs), **aucun tir** — budget anti-429 intact. La probabilité de
+> coincer une fenêtre brève s'en trouve réduite ; c'est une limite de la
+> plateforme GitHub, pas un défaut du dispositif.
 
 > **N°270** : la sonde micro tolère les réponses **asynchrones** de l'API
 > capacité (observé en tenancy JNB, runs #62/#63 — réponse sans
