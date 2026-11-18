@@ -425,6 +425,7 @@ func (p *PG) ensureSchema() error {
                         amount_fcfa  INTEGER NOT NULL DEFAULT 0,
                         period_label TEXT NOT NULL DEFAULT '',
                         router_count INTEGER NOT NULL DEFAULT 0,
+                        months       INTEGER NOT NULL DEFAULT 0,
                         ref          TEXT NOT NULL DEFAULT '',
                         status       TEXT NOT NULL DEFAULT 'pending',
                         created_at   TEXT NOT NULL,
@@ -1040,6 +1041,10 @@ func (p *PG) ensureSchema() error {
 		// de paiement actif de la demande (wave | card).
 		`ALTER TABLE billing_requests ADD COLUMN IF NOT EXISTS base_amount_fcfa INTEGER NOT NULL DEFAULT 0`,
 		`ALTER TABLE billing_requests ADD COLUMN IF NOT EXISTS pay_method TEXT NOT NULL DEFAULT ''`,
+		// N°350 — durée choisie par le client sur la formule mensuelle
+		// (1·2·3·6·12 mois, paiement Wave ponctuel). 0 = demande antérieure
+		// (1 période — 12 mois si formule annuelle).
+		`ALTER TABLE billing_requests ADD COLUMN IF NOT EXISTS months INTEGER NOT NULL DEFAULT 0`,
 		// P0/P1 (audit Mikhmon) — migrations des champs des tables existantes.
 		`ALTER TABLE profiles ADD COLUMN IF NOT EXISTS exp_mode TEXT NOT NULL DEFAULT 'notify'`,
 		`ALTER TABLE profiles ADD COLUMN IF NOT EXISTS grace_period_min INTEGER NOT NULL DEFAULT 0`,

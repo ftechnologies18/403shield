@@ -10,6 +10,83 @@ sous-marque FTech CI) ; l'historique ci-dessous conserve les noms d'époque.
 N°319 : le DÉPÔT GitHub lui-même devient `ftechnologies18/403shield`
 (anciennes URL redirigées en 301 par GitHub — web, git et API).
 
+## 2026-11-18 — N°350 — **L'ABONNEMENT MENSUEL À LA DURÉE AU CHOIX DU CLIENT : 1·2·3·6·12 MOIS D'UN COUP — la formule Hotspot Mensuel laisse le client choisir pour combien de mois il s'abonne, paie N mois en UNE transaction Wave et l'activation empile exactement N mois** (décision exploitant : tarif linéaire sans remise, paiement Wave ponctuel seul concerné — la carte Stripe reste au cycle d'1 mois, la formule annuelle « 1 an » inchangée)
+
+### Le problème (une demande client figée à 1 période)
+- Le moteur d'activation savait DÉJÀ empiler N mois (`applySubscriptionLocked`
+  — la fiche client et la file de facturation plateforme permettent 1-36
+  mois) mais le chemin CLIENT ne transmettait jamais de durée : POST
+  /api/subscription créait une demande figée à « 1 mois » (ou « 1 an ») et
+  les webhooks codaient `months = 1|12` en dur — le client mensuel devait
+  renouveler à chaque échéance, un mois à la fois.
+- Demande de l'exploitant : « lorsque le client choisit la formule mensuelle,
+  lui permettre de choisir pour combien de mois il souhaite s'abonner ».
+
+### Ce qui a changé — backend
+- **`BillingRequest.Months`** (model/billing.go) : durée souscrite en mois de
+  plateforme ; **0 = demande antérieure ou posée par la plateforme** (1
+  période — 12 si formule annuelle). Colonne PostgreSQL
+  `billing_requests.months INTEGER NOT NULL DEFAULT 0` (CREATE + ALTER
+  idempotent + spec de sync pg_specs.go — rétro-compatible, aucune donnée
+  existante touchée).
+- **POST /api/subscription** accepte `{"planId", "months"}` : grille client
+  **1·2·3·6·12** validée serveur (`clientMonthlyDurations`) sur la formule
+  MENSUELLE uniquement (annuel + months>1 → 400 `bad_duration` ; hors grille
+  → 400) ; **défaut 1** (corps sans `months` inchangé — compat frontends
+  antérieurs). **Tarif linéaire** : base = prix × routeurs × mois, frais
+  GeniusPay sur LA transaction (le frais fixe de 100 F n'est payé qu'UNE
+  fois pour N mois — ex. 6 mois / 1 routeur : base 15 000 F, Wave 15 600 F).
+  L'appariement des demandes en attente se fait PAR durée (une demande de
+  6 mois ne se confond pas avec un renouvellement mensuel : réutilisation si
+  identique, remplacement sinon) ; réponse enrichie de `months`.
+- **Activation aux règles de la demande** : webhook Wave,
+  `finalizeBillingSuccess` (webhook GeniusPay payment.success) et la
+  résolution de file plateforme appliquent `monthsOfRequest(br)` — la durée
+  CHOISIE du client ; le DÉFAUT de la file honore la demande (une demande de
+  6 mois activée sans précision active 6 mois, pas 1). Libellés « N mois »
+  propagés aux journaux d'activité et reçus e-mail
+  (`periodLabelOfRequest`) ; une demande annuelle reste « 1 an ».
+- **Stripe VOLONTAIREMENT inchangé** : le prélèvement carte reste au cycle
+  d'1 mois (une durée récurrente de N mois débiterait N mois à CHAQUE
+  échéance — confusion client évitée) ; l'initiation carte REMPLACE une
+  demande multi-mois en attente (appariement sur la base, comportement
+  existant).
+
+### Ce qui a changé — console (app gestionnaire `/app/settings/subscription`)
+- **Sélecteur de durée** sur la carte mensuelle : chips 1·2·3·6·12 mois
+  (même grille que le serveur), total affiché qui suit la sélection
+  (« Votre parc actuel : 15 000 FCFA / 6 mois ») + note « tarif linéaire,
+  sans engagement ».
+- **Dialogue de confirmation** : montant × durée ; bouton Wave au montant
+  exact — l'aperçu N mois passe par un miroir EXACT de handlers_pricing.go
+  (le montant AUTORITATIF reste la réponse POST /api/subscription) ;
+  **bouton carte masqué au-delà d'1 mois**, remplacé par la note « le
+  prélèvement automatique par carte reste au cycle d'1 mois ». Bilingue
+  FR/EN (`sub.duration.*`, `sub.periodLabel.nmois`,
+  `sub.dialog.cardCycleNote`) ; type `SubscribeResponse.months`.
+
+### Portes
+- backend : gofmt 0 · go vet 0 · **go test ./... tous packages OK** (dont
+  internal/api — nouvelle suite `subscription_months_test.go` : grille
+  acceptée/refusée, défaut 1 mois, annuel verrouillé, appariement par durée
+  (réutilisation/remplacement), **webhook Wave d'une demande de 6 mois →
+  période EXACTEMENT 6 mois (AddDate) au montant 15 000 F, idempotence du
+  webhook rejoué**).
+- frontend : lint 0 erreur (14 warnings pré-existants, hors chantier) ·
+  tsgo 0 · `next build` **68/68 pages**.
+- **SMOKE NAVIGATEUR réel** (backend Go local :4000, store JSON + dev
+  proxé MIKCLOUD_DEV_API_PROXY) : chips rendues, total 15 000 F / 6 mois,
+  dialogue « 15 000 F / 6 mois » + Wave 15 600 F + note carte à la place du
+  bouton, soumission → toast « Demande enregistrée — 15 600 FCFA / 6 mois »
+  → **demande stockée months=6, base 15000, wave 15600, pending** ·
+  0 erreur console.
+- schéma DB : colonne `billing_requests.months` (défaut 0) — posée au
+  redémarrage du binaire par `ensureSchema` (jamais d'ALTER manuel à chaud,
+  leçon N°302) ; les répliques Supabase/Neon suivent par la reverse-sync
+  nocturne (dump/restore 03:00 UTC), rien à faire côté exploitant.
+- sentinel RENDER-DEPLOY-FROZEN intact ; déploiement backend VM Oracle par
+  push `main` (deploy-oracle.yml), frontends par webhook Vercel.
+
 ## 2026-11-01 — N°349 — **GUIDE PUBLIC « QU'EST-CE QUE LE DNS FILTRÉ ? » — la 10e section du centre de guides ouvre le Bouclier DNS · TOURACO au grand public : l'annuaire des noms expliqué à la maison, la vitrine /dns maillée, le 37e guide** (le jalon annoncé « suivant » par N°347 — l'ouverture de la vitrine reste le geste de l'exploitant)
 
 > Renumérotation (doctrine N°345) : ce chantier était préparé sous le n° 348

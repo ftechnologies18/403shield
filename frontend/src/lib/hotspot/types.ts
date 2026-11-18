@@ -1818,6 +1818,9 @@ export interface SubscribeResponse {
   listAmountFcfa?: number;
   routerCount: number;
   periodLabel: string;
+  /** N°350 — durée choisie sur la formule mensuelle (1·2·3·6·12 mois, paiement
+   * Wave ponctuel ; la carte récurrente reste au cycle d'1 mois). */
+  months?: number;
   /** Lien de paiement Wave de la PLATEFORME, pré-composé avec le montant ("" si non configuré). */
   waveLink: string;
   /** Toujours true : la demande attend l'encaissement puis l'activation plateforme. */

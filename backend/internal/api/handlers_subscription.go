@@ -106,6 +106,50 @@ func planAmount(p model.SaasPlan, routerCount int) int {
 	return p.PriceFcfa
 }
 
+// clientMonthlyDurations — durées proposées au client sur la formule
+// MENSUELLE (N°350) : les chips de la console (1·2·3·6·12 mois) et la
+// validation serveur partagent cette grille. Le prélèvement carte reste au
+// cycle d'1 mois (pas de multi-mois récurrent) ; la formule annuelle n'est
+// pas concernée (période « 1 an » inchangée).
+var clientMonthlyDurations = []int{1, 2, 3, 6, 12}
+
+// isValidClientMonths — la durée fait-elle partie de la grille client ?
+func isValidClientMonths(m int) bool {
+	for _, d := range clientMonthlyDurations {
+		if m == d {
+			return true
+		}
+	}
+	return false
+}
+
+// monthsOfRequest — durée d'activation (mois de plateforme) d'une demande de
+// facturation : N°350 — la durée CHOISIE par le client sur la formule
+// mensuelle ; 0 = demande antérieure (ou posée par un chemin qui n'en porte
+// pas) → 1 période du plan (12 mois si formule annuelle).
+func monthsOfRequest(br model.BillingRequest) int {
+	if br.Months > 0 {
+		return br.Months
+	}
+	if model.IsAnnualPlanID(br.PlanID) {
+		return 12
+	}
+	return 1
+}
+
+// periodLabelOfRequest — libellé de période d'une demande : la durée choisie
+// (« 6 mois ») quand elle est portée ; une formule annuelle reste « 1 an »
+// (sa période couvre 12 mois d'un seul tenant — cohérent avec le handler).
+func periodLabelOfRequest(br model.BillingRequest) string {
+	if model.IsAnnualPlanID(br.PlanID) {
+		return "1 an"
+	}
+	if br.Months > 1 {
+		return fmt.Sprintf("%d mois", br.Months)
+	}
+	return periodLabelOf(br.PlanID)
+}
+
 // trialPeriodEnd — N°324 : fin de l'essai — 60 jours (mono-mode Hotspot ;
 // l'essai segmenté 30 j foyer est retiré avec le mode. Historique : N°122
 // segmentation, N°123 réduction 90 → 60 jours).
@@ -195,9 +239,14 @@ func wavePayLink() string {
 // journal (type billing) et l'ACTIVATION reste réservée à la plateforme
 // (PUT /api/admin/accounts/{id}/subscription), après encaissement confirmé.
 // Corps : {"planId":"hotspot-mensuel"|"hotspot-annuel"|"homenet-mensuel"|
-// "homenet-annuel"} — la formule doit être celle du MODE du compte (N°122 :
-// un compte Hotspot ne souscrit pas au tarif HomeNet, et réciproquement ;
-// les identifiants historiques restent acceptés et résolvent au mode).
+// "homenet-annuel", "months":1|2|3|6|12} — la formule doit être celle du
+// MODE du compte (N°122 : un compte Hotspot ne souscrit pas au tarif
+// HomeNet, et réciproquement ; les identifiants historiques restent acceptés
+// et résolvent au mode). N°350 — « months » (facultatif, défaut 1) : durée
+// choisie sur la formule MENSUELLE uniquement (grille 1·2·3·6·12), tarif
+// linéaire (prix × routeurs × mois), paiement Wave ponctuel — le prélèvement
+// carte (POST /api/subscription/stripe) reste au cycle d'1 mois et REMPLACE
+// une demande multi-mois en attente.
 func (a *API) handleSubscriptionPost(w http.ResponseWriter, r *http.Request) {
 	acc := accountScope(r)
 	if c := claimsFrom(r); c != nil && c.Acc == "" {
@@ -209,6 +258,7 @@ func (a *API) handleSubscriptionPost(w http.ResponseWriter, r *http.Request) {
 	}
 	var req struct {
 		PlanID string `json:"planId"`
+		Months int    `json:"months"` // N°350 — durée (formule mensuelle)
 	}
 	if err := decodeBody(r, &req); err != nil {
 		writeErr(w, http.StatusBadRequest, "Corps de requête invalide")
@@ -220,6 +270,22 @@ func (a *API) handleSubscriptionPost(w http.ResponseWriter, r *http.Request) {
 	plan, ok := model.ResolvePlan(strings.TrimSpace(req.PlanID), accUsage)
 	if !ok {
 		writeErr(w, http.StatusBadRequest, "Formule inconnue (hotspot-mensuel | hotspot-annuel)")
+		return
+	}
+	// N°350 — durée : grille client 1·2·3·6·12 sur la formule MENSUELLE
+	// uniquement ; défaut 1 (absent/0/négatif — compat frontends antérieurs).
+	months := req.Months
+	if months <= 0 {
+		months = 1
+	}
+	if !plan.PerRouter && months > 1 {
+		writeErrCode(w, http.StatusBadRequest, "bad_duration",
+			"La durée ne s'applique qu'à la formule mensuelle — la formule annuelle couvre déjà 1 an", nil)
+		return
+	}
+	if plan.PerRouter && !isValidClientMonths(months) {
+		writeErrCode(w, http.StatusBadRequest, "bad_duration",
+			"Durée invalide — choisissez parmi 1, 2, 3, 6 ou 12 mois", nil)
 		return
 	}
 	// N°324 — mono-mode : la garde wrong_mode devient défensive morte (tout
@@ -240,10 +306,12 @@ func (a *API) handleSubscriptionPost(w http.ResponseWriter, r *http.Request) {
 	// la base (net cible) et le prix de liste carte accompagnent la demande —
 	// l'initiation carte bascule le montant (POST /api/subscription/stripe)
 	// et l'activation manuelle plateforme reste au net (exemption admin).
-	payPr := payPricingOf(planAmount(plan, routerCount))
+	// N°350 — tarif linéaire : la base de la demande = 1 période × mois
+	// choisis (les frais s'appliquent à LA transaction, pas au mois).
+	payPr := payPricingOf(planAmount(plan, routerCount) * months)
 	base := payPr.BaseFcfa
 	amount := payPr.WaveFcfa
-	periodLabel := "1 mois"
+	periodLabel := fmt.Sprintf("%d mois", months)
 	if plan.Period == "an" {
 		periodLabel = "1 an"
 	}
@@ -269,16 +337,19 @@ func (a *API) handleSubscriptionPost(w http.ResponseWriter, r *http.Request) {
 		if db.BillingRequests[i].AccountID == acc && db.BillingRequests[i].Status == "pending" {
 			// Appariement sur la BASE (indépendant du moyen) : une demande
 			// basculée carte reste réutilisable, renormalisée sur le moyen
-			// par défaut (Wave).
+			// par défaut (Wave). N°350 : la DURÉE participe à l'appariement
+			// (une demande de 6 mois ne se confond pas avec un renouvellement
+			// mensuel — base différente, mais la garde est explicite).
 			br := &db.BillingRequests[i]
 			baseReq := br.BaseAmountFcfa
 			if baseReq <= 0 {
 				baseReq = br.AmountFcfa // demande antérieure aux frais : base = net historique
 			}
-			if br.PlanID == plan.ID && baseReq == base {
-				if br.AmountFcfa != amount || br.PayMethod != "wave" {
+			if br.PlanID == plan.ID && baseReq == base && monthsOfRequest(*br) == months {
+				if br.AmountFcfa != amount || br.PayMethod != "wave" || br.Months != months {
 					br.AmountFcfa = amount
 					br.PayMethod = "wave"
+					br.Months = months
 					changed = true
 				}
 				ref = br.Ref // réutilisation, même référence
@@ -297,7 +368,7 @@ func (a *API) handleSubscriptionPost(w http.ResponseWriter, r *http.Request) {
 		db.BillingRequests = append([]model.BillingRequest{{
 			ID: model.NewID("breq-"), AccountID: acc, PlanID: plan.ID, PlanName: plan.Name,
 			AmountFcfa: amount, BaseAmountFcfa: base, PayMethod: "wave",
-			PeriodLabel: periodLabel, RouterCount: routerCount,
+			PeriodLabel: periodLabel, RouterCount: routerCount, Months: months,
 			Ref: ref, Status: "pending", CreatedAt: model.NowISO(),
 		}}, db.BillingRequests...)
 		changed = true
@@ -337,6 +408,7 @@ func (a *API) handleSubscriptionPost(w http.ResponseWriter, r *http.Request) {
 		"baseAmountFcfa": base,
 		"listAmountFcfa": payPr.ListFcfa,
 		"routerCount":    routerCount,
+		"months":         months,
 		"periodLabel":    periodLabel,
 		"ref":            ref,
 		"waveLink":       waveLink,

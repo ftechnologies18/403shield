@@ -610,17 +610,17 @@ var activitySpec = entitySpec[model.Activity]{
 // billingRequestSpec — demandes de souscription / renouvellement (facturation).
 var billingRequestSpec = entitySpec[model.BillingRequest]{
 	table: "billing_requests",
-	cols:  []string{"id", "account_id", "plan_id", "plan_name", "amount_fcfa", "base_amount_fcfa", "pay_method", "period_label", "router_count", "ref", "gateway_ref", "status", "created_at", "resolved_at", "resolved_by", "note", "paid_via"},
+	cols:  []string{"id", "account_id", "plan_id", "plan_name", "amount_fcfa", "base_amount_fcfa", "pay_method", "period_label", "router_count", "months", "ref", "gateway_ref", "status", "created_at", "resolved_at", "resolved_by", "note", "paid_via"},
 	idOf:  func(x *model.BillingRequest) string { return x.ID },
 	scan: func(r *sql.Rows) (model.BillingRequest, error) {
 		var x model.BillingRequest
 		err := r.Scan(&x.ID, &x.AccountID, &x.PlanID, &x.PlanName, &x.AmountFcfa, &x.BaseAmountFcfa, &x.PayMethod, &x.PeriodLabel,
-			&x.RouterCount, &x.Ref, &x.GatewayRef, &x.Status, &x.CreatedAt, &x.ResolvedAt, &x.ResolvedBy, &x.Note, &x.PaidVia)
+			&x.RouterCount, &x.Months, &x.Ref, &x.GatewayRef, &x.Status, &x.CreatedAt, &x.ResolvedAt, &x.ResolvedBy, &x.Note, &x.PaidVia)
 		return x, err
 	},
 	args: func(x *model.BillingRequest) []any {
 		return []any{x.ID, x.AccountID, x.PlanID, x.PlanName, x.AmountFcfa, x.BaseAmountFcfa, x.PayMethod, x.PeriodLabel,
-			x.RouterCount, x.Ref, x.GatewayRef, x.Status, x.CreatedAt, x.ResolvedAt, x.ResolvedBy, x.Note, x.PaidVia}
+			x.RouterCount, x.Months, x.Ref, x.GatewayRef, x.Status, x.CreatedAt, x.ResolvedAt, x.ResolvedBy, x.Note, x.PaidVia}
 	},
 	hashOf: hashEntity[model.BillingRequest],
 }

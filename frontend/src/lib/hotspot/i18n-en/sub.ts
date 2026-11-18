@@ -28,7 +28,12 @@ export const enSub: Record<string, string> = {
   "sub.period.mois": "month",
   "sub.period.an": "year",
   "sub.periodLabel.mois": "1 month",
+  "sub.periodLabel.nmois": "{n} months",
   "sub.periodLabel.an": "1 year",
+  // N°350 — durée choisie sur la formule mensuelle (1·2·3·6·12 mois).
+  "sub.duration.label": "Subscription length",
+  "sub.duration.hint": "Pay several months at once — linear pricing, no commitment.",
+  "sub.dialog.cardCycleNote": "Card auto-debit stays on a 1-month cycle — for a longer duration, pay by Wave.",
   "sub.feat.ess1": "All 403Shield features",
   "sub.feat.ess2": "Telegram / WhatsApp / Email notifications",
   "sub.feat.ess3": "Data quotas (GB) on vouchers",

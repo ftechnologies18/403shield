@@ -411,7 +411,7 @@ func (a *API) finalizePayRequest(acc, ref, gatewayRef string) bool {
 	payLabel := payMethodLabel(br.PayMethod)
 	a.logActivity(db, br.AccountID, "billing",
 		fmt.Sprintf("Paiement %s confirmé via GeniusPay — demande %s encaissée, abonnement %s activé (%d FCFA / %s)",
-			payLabel, br.Ref, label, applied, periodLabelOf(br.PlanID)))
+			payLabel, br.Ref, label, applied, periodLabelOfRequest(br)))
 	a.store.Save()
 	a.store.Unlock()
 	return true
@@ -450,10 +450,9 @@ func (a *API) cancelPayRequest(acc, ref, note string) bool {
 // passe la demande à « done » et renvoie (souscription, libellé, montant).
 func (a *API) finalizeBillingSuccess(db *model.DB, idx int, paidVia, resolvedBy, note string) (model.Subscription, string, int) {
 	br := db.BillingRequests[idx]
-	months := 1
-	if model.IsAnnualPlanID(br.PlanID) {
-		months = 12
-	}
+	// N°350 — la durée CHOISIE du client (1·2·3·6·12 mois) est appliquée
+	// telle quelle ; repli historique 1 période (12 si formule annuelle).
+	months := monthsOfRequest(br)
 	slots := br.RouterCount
 	if rc := accountRouterCount(db, br.AccountID); rc > slots {
 		slots = rc
@@ -478,7 +477,7 @@ func (a *API) finalizeBillingSuccess(db *model.DB, idx int, paidVia, resolvedBy,
 	a.queueReceiptEmail(db, receiptEmailData{
 		AccountID:    brNow.AccountID,
 		PlanLabel:    label,
-		PeriodLabel:  periodLabelOf(brNow.PlanID),
+		PeriodLabel:  periodLabelOfRequest(brNow),
 		AmountFcfa:   applied,
 		Method:       payMethodLabel(brNow.PayMethod),
 		Ref:          brNow.Ref,
@@ -703,7 +702,7 @@ func (a *API) handleGeniusPayWebhook(w http.ResponseWriter, r *http.Request) {
 	payLabel := payMethodLabel(br.PayMethod)
 	a.logActivity(db, br.AccountID, "billing",
 		fmt.Sprintf("Paiement %s confirmé via GeniusPay — demande %s encaissée, abonnement %s activé (%d FCFA / %s)",
-			payLabel, br.Ref, label, applied, periodLabelOf(br.PlanID)))
+			payLabel, br.Ref, label, applied, periodLabelOfRequest(br)))
 	a.store.Save()
 	a.store.Unlock()
 

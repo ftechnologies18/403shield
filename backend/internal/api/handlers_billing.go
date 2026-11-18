@@ -204,12 +204,12 @@ func (a *API) handleAdminBillingRequestResolve(w http.ResponseWriter, r *http.Re
 	}
 
 	// action == « activate » : mêmes règles que la fiche client (source unique).
+	// N°350 — défaut : la durée CHOISIE par le client sur SA demande (une
+	// demande de 6 mois activée sans précision honore les 6 mois payés) ;
+	// repli historique 1 période (12 si formule annuelle).
 	months := req.Months
 	if months <= 0 {
-		months = 1
-		if model.IsAnnualPlanID(br.PlanID) {
-			months = 12
-		}
+		months = monthsOfRequest(br)
 	}
 	slots := req.Slots
 	if slots <= 0 {
@@ -229,18 +229,20 @@ func (a *API) handleAdminBillingRequestResolve(w http.ResponseWriter, r *http.Re
 	db.BillingRequests[idx].PaidVia = "manual"
 	db.BillingRequests[idx].Note = strings.TrimSpace(req.Note)
 
+	// Libellé de période des mois EFFECTIVEMENT appliqués (1-36 possibles,
+	// durée choisie N°350 par défaut) — reçu ET journal d'activité.
+	appliedLabel := strconv.Itoa(months) + " mois"
+	if months == 12 {
+		appliedLabel = "1 an"
+	}
+
 	// N°146 — reçu de paiement : uniquement si la plateforme a ENCAISSÉ
-	// (markPaid) — une extension offerte n'est pas un paiement. Le libellé
-	// de période suit les mois effectivement appliqués (1-36 possibles).
+	// (markPaid) — une extension offerte n'est pas un paiement.
 	if req.MarkPaid {
-		periodLabel := strconv.Itoa(months) + " mois"
-		if months == 12 {
-			periodLabel = "1 an"
-		}
 		a.queueReceiptEmail(db, receiptEmailData{
 			AccountID:    br.AccountID,
 			PlanLabel:    label,
-			PeriodLabel:  periodLabel,
+			PeriodLabel:  appliedLabel,
 			AmountFcfa:   amount,
 			Method:       payMethodLabel(br.PayMethod),
 			Ref:          br.Ref,
@@ -256,7 +258,7 @@ func (a *API) handleAdminBillingRequestResolve(w http.ResponseWriter, r *http.Re
 	}
 	a.logActivityBy(r, db, br.AccountID, "billing",
 		fmt.Sprintf("Demande de renouvellement %s traitée par la plateforme — abonnement %s activé%s (%d FCFA / %s)",
-			br.Ref, label, paid, amount, periodLabelOf(br.PlanID)))
+			br.Ref, label, paid, amount, appliedLabel))
 	a.store.Save()
 	a.store.Unlock()
 
@@ -432,10 +434,9 @@ func (a *API) handleWaveWebhook(w http.ResponseWriter, r *http.Request) {
 
 	// Succès : activation aux règles de la plateforme (source unique) puis
 	// clôture de la demande (PaidVia wave — encaissement automatique).
-	months := 1
-	if model.IsAnnualPlanID(br.PlanID) {
-		months = 12
-	}
+	// N°350 — la durée CHOISIE du client (1·2·3·6·12 mois) est appliquée
+	// telle quelle ; repli historique 1 période (12 si annuelle).
+	months := monthsOfRequest(br)
 	slots := br.RouterCount
 	if rc := accountRouterCount(db, br.AccountID); rc > slots {
 		slots = rc
@@ -450,13 +451,13 @@ func (a *API) handleWaveWebhook(w http.ResponseWriter, r *http.Request) {
 	db.BillingRequests[idx].PaidVia = "wave"
 	a.logActivity(db, br.AccountID, "billing",
 		fmt.Sprintf("Paiement Wave confirmé — demande %s encaissée, abonnement %s activé (%d FCFA / %s)",
-			ref, label, applied, periodLabelOf(br.PlanID)))
+			ref, label, applied, periodLabelOfRequest(br)))
 	// N°146 — reçu de paiement transactionnel (goroutine : le webhook
 	// Wave reçoit sa confirmation immédiatement, l'e-mail suit).
 	a.queueReceiptEmail(db, receiptEmailData{
 		AccountID:    br.AccountID,
 		PlanLabel:    label,
-		PeriodLabel:  periodLabelOf(br.PlanID),
+		PeriodLabel:  periodLabelOfRequest(br),
 		AmountFcfa:   applied,
 		Method:       "Wave",
 		Ref:          br.Ref,

@@ -30,7 +30,12 @@ export const frSub: Record<string, string> = {
   "sub.period.mois": "mois",
   "sub.period.an": "an",
   "sub.periodLabel.mois": "1 mois",
+  "sub.periodLabel.nmois": "{n} mois",
   "sub.periodLabel.an": "1 an",
+  // N°350 — durée choisie sur la formule mensuelle (1·2·3·6·12 mois).
+  "sub.duration.label": "Durée d'abonnement",
+  "sub.duration.hint": "Payez plusieurs mois d'un coup — tarif linéaire, sans engagement.",
+  "sub.dialog.cardCycleNote": "Le prélèvement automatique par carte reste au cycle d'1 mois — pour une durée longue, réglez par Wave.",
   "sub.feat.ess1": "Toutes les fonctionnalités 403Shield",
   "sub.feat.ess2": "Notifications Telegram / WhatsApp / Email",
   "sub.feat.ess3": "Quotas data (Go) sur les vouchers",

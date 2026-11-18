@@ -22,8 +22,15 @@ type BillingRequest struct {
 	// remise mobile money) ou "card" (prix de liste). Basculé à chaque
 	// initiation ; le webhook fixe le moyen effectivement payé.
 	PayMethod   string `json:"payMethod,omitempty"`
-	PeriodLabel string `json:"periodLabel"` // « 1 mois » | « 1 an »
+	PeriodLabel string `json:"periodLabel"` // « 1 mois » | « N mois » (N°350) | « 1 an »
 	RouterCount int    `json:"routerCount"` // assiette au moment de la demande
+	// Months — durée SOUSCRITE en mois de plateforme (N°350 : le client
+	// choisit 1·2·3·6·12 mois sur la formule mensuelle ; paiement Wave
+	// ponctuel uniquement — le prélèvement carte reste au cycle d'1 mois).
+	// L'activation (webhook/file/fiche) empile exactement cette durée.
+	// 0 = demande antérieure à N°350 ou posée par la plateforme : 1
+	// période du plan (12 mois si formule annuelle).
+	Months int `json:"months,omitempty"`
 	// Ref — référence de paiement publique (MC-XXXXXXXX), renvoyée au client
 	// et attendue dans le webhook Wave pour l'appariement automatique.
 	Ref string `json:"ref"`
