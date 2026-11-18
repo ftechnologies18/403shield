@@ -8,11 +8,14 @@
 //   • Formules — SubscriptionCard existante (Essentiel vs Illimité, paiement) ;
 //   • Historique de facturation — factures payées (MC-2026-0001), chacune
 //     consultable/téléchargeable (facture HTML print-friendly → PDF navigateur).
+//     N°352 — la facture s'ouvre par LIEN SIGNÉ court terme (10 min) : le
+//     nouvel onglet de window.open ne peut pas porter l'en-tête Authorization.
 
 import { useQuery } from "@tanstack/react-query";
 import { CreditCard, Download, FileText, ReceiptText } from "lucide-react";
+import { toast } from "sonner";
 
-import { fetchBillingHistory, invoiceURL } from "@/lib/hotspot/api";
+import { fetchBillingHistory, fetchInvoiceLink, invoiceURL } from "@/lib/hotspot/api";
 import { useI18n } from "@/lib/hotspot/i18n";
 import type { InvoiceRow, SubscriptionView } from "@/lib/hotspot/types";
 import { formatCurrency, formatDate } from "@/lib/hotspot/format";
@@ -140,6 +143,30 @@ function StatusCard({ view }: { view?: SubscriptionView }) {
 }
 
 /* ─── Historique de facturation ─── */
+
+/* N°352 — ouverture d'une facture : l'onglet est ouvert SYNCHRONE avec le
+ * clic (le fetch du lien signé qui suit est asynchrone : sans cela, les
+ * bloqueurs de popups jugeraient l'ouverture non sollicitée), puis dirigé
+ * vers la facture munie de son jeton « t » — le seul moyen d'authentifier
+ * une navigation window.open (aucun en-tête Authorization possible). */
+function openInvoiceTab(t: ReturnType<typeof useI18n>["t"], id: string) {
+  const tab = window.open("", "_blank");
+  fetchInvoiceLink(id)
+    .then((link) => {
+      const url = invoiceURL(id, link.token);
+      if (tab) {
+        tab.opener = null; // hygiène «noopener » (about:blank est même origine)
+        tab.location.href = url;
+      } else if (!window.open(url, "_blank", "noopener,noreferrer")) {
+        toast.error(t("subView.invoiceError"));
+      }
+    })
+    .catch(() => {
+      tab?.close();
+      toast.error(t("subView.invoiceError"));
+    });
+}
+
 function HistoryCard({
   invoices,
   loading,
@@ -197,7 +224,7 @@ function HistoryCard({
                   variant="outline"
                   size="sm"
                   className="shrink-0"
-                  onClick={() => window.open(invoiceURL(inv.id), "_blank", "noopener")}
+                  onClick={() => openInvoiceTab(t, inv.id)}
                 >
                   <Download className="size-4" />
                   {t("subView.invoice")}

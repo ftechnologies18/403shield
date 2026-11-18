@@ -10,6 +10,80 @@ sous-marque FTech CI) ; l'historique ci-dessous conserve les noms d'époque.
 N°319 : le DÉPÔT GitHub lui-même devient `ftechnologies18/403shield`
 (anciennes URL redirigées en 301 par GitHub — web, git et API).
 
+## 2026-11-18 — N°352 — **FACTURE IMPRIMABLE RÉPARÉE : le bouton « Facture » de l'historique de facturation ouvrait un onglet muet « {"error":"Token d'authentification manquant"} » — la facture HTML s'ouvre désormais par LIEN SIGNÉ court terme (10 min), le seul moyen d'authentifier une navigation window.open qui ne peut PAS porter l'en-tête Authorization**
+
+### Le problème (un bouton Facture cassé depuis sa naissance)
+- Rapport exploitant : « /api/billing/invoice/ lorsqu'on essaie d'imprimer la
+  facture on a le message suivant : {"error":"Token d'authentification
+  manquant"} ». La facture HTML print-friendly (M, commit d03e517 du 31/08)
+  s'ouvrait par `window.open(invoiceURL(id))` — une navigation de premier
+  niveau : le navigateur y envoie cookies et en-têtes standard, JAMAIS
+  l'en-tête `Authorization: Bearer` du JWT console (le token vit dans le
+  store zustand et n'est posé que par le wrapper `api()` des fetch). Le
+  middleware d'authentification répondait donc 401 avant même d'atteindre le
+  handler — le bug était présent depuis la livraison de la vue Abonnement,
+  invisible tant qu'aucun client n'avait tenté d'imprimer un justificatif.
+- Non-réponses écartées : rendre la route publique (les factures portent nom,
+  e-mail, téléphone, montants — une fuite de justificatifs par ID deviné,
+  même la doctrine PublicID ne couvre pas ça) ; le token JWT en query string
+  (valable 24 h, atterrissent dans l'historique du navigateur et les journaux
+  serveur) ; blob URL après fetch authentifié (fragile sur les onglets
+  ouverts hors geste utilisateur, titre/print incohérents selon navigateurs).
+
+### Ce qui a changé — backend
+- **`GET /api/billing/invoice-link/{id}`** (JWT, compte de portée) : émet le
+  lien signé d'UNE facture RÉSOLUE (done) du compte — 404 sinon (facture
+  d'autrui, demande pending, identifiant inconnu). Réponse
+  `{token, expiresAt}`.
+- **Jeton HMAC-SHA256 court terme** (`signInvoiceToken`/`verifyInvoiceToken`,
+  secret JWT du service, TTL `invoiceLinkTTL` = 10 min — assez pour ouvrir,
+  recharger et imprimer sur mobile lent, trop court pour qu'un lien retrouvé
+  dans un historique de navigateur serve) : format
+  `<expUnix>.<accountID>.<hexSig>` où la signature couvre la PAIRE
+  facture+compte ET l'expiration — un jeton ne peut être ni rejoué sur une
+  autre facture (la signature lie la facture du chemin), ni au bénéfice du
+  compte d'autrui, ni après expiration (comparaison `hmac.Equal` à temps
+  constant). Zéro état en base, miroir des liens de factures Stripe.
+- **`GET /api/billing/invoice/{id}?t=<jeton>`** : le middleware laisse passer
+  UNIQUEMENT ce GET avec `t` présent (`publicInvoiceLink` — le préfixe
+  « /api/billing/invoice/ » au slash final ne capte PAS invoice-link qui
+  reste derrière le JWT) ; le handler vérifie le jeton, en tire le compte de
+  portée et rend la facture SANS AUCUN en-tête. Le chemin historique à
+  en-tête JWT est inchangé (appels API console, support plateforme) ; sans
+  jeton NI en-tête, le 401 « Token d'authentification manquant » demeure
+  (défense en profondeur).
+- **Page d'erreur HTML lisible** (`writeInvoiceLinkError`, 401) : le lien
+  périmé s'ouvre dans un NOUVEL onglet — un JSON brut y serait illisible ;
+  la page explique les 10 minutes et renvoie à la console (vue Abonnement).
+
+### Ce qui a changé — console
+- **Bouton « Facture »** (vue Abonnement, historique) : l'onglet est ouvert
+  SYNCHRONE avec le clic (le fetch du lien signé est asynchrone — sans ça,
+  les bloqueurs de popups jugeraient l'ouverture non sollicitée), puis dirigé
+  vers `invoiceURL(id, token)` ; `opener` coupé (hygiène noopener), repli
+  `window.open` direct si le premier onglet a été bloqué, toast
+  `subView.invoiceError` (FR/EN) et fermeture de l'onglet vide en cas
+  d'échec (session expirée, réseau).
+- `fetchInvoiceLink` (api.ts) + type `InvoiceLink` (types.ts) ;
+  `invoiceURL(id, token?)` assemble la query proprement (XTransformPort
+  sandbox conservé, même garde localhost que buildUrl).
+
+### Portes
+- gofmt 0 · go vet 0 · go test ./... TOUS packages OK (NOUVELLE suite
+  `billing_invoice_link_test.go` : parcours complet émission→ouverture sans
+  en-tête → HTML avec MC-2026-0001 et le montant ; émission et facture nue
+  toujours derrière le JWT — le 401 du rapport reproduit ; jeton falsifié /
+  d'une autre facture / expiré / malformé → 401 page HTML ; portée par
+  compte — la facture d'autrui ne fuit pas, la demande pending ne délivre
+  pas de lien) · tsgo 0 · eslint 0 · next build 68/68 · SMOKE BINAIRE RÉEL
+  (mikcloud-server local :4000, compte inscrit par /api/auth/register,
+  facture done 6 mois/15 000 F amorcée en base puis relance) : lien émis
+  avec JWT, facture ouverte SANS en-tête via ?t= → 200 HTML « MC-2026-0001 ·
+  15 000 FCFA · 6 mois », jeton falsifié → 401 « invalide ou expiré »,
+  chemin nu → 401 inchangé.
+- Schéma DB : aucun changement (aucune table — le jeton est purement
+  cryptographique) ; sentinel RENDER-DEPLOY-FROZEN intact.
+
 ## 2026-11-18 — N°351 — **GRILLE DE DURÉES ÉLARGIE 1·2·3·4·6·8·12 MOIS ET LA DURÉE CHOISIE S'APPLIQUE AUX DEUX MOYENS DE PAIEMENT — le client qui choisit 6 mois peut régler par Wave (remise mobile money) OU par carte en UNE transaction au prix de liste, et l'activation empile exactement N mois dans les deux cas** (décision exploitant : tarif linéaire inchangé, la carte multi-mois se règle en ponctuel — la récurrence carte reste au cycle d'1 mois, la formule annuelle « 1 an » inchangée)
 
 ### Le problème (une grille resserrée et une carte bloquée à 1 mois)

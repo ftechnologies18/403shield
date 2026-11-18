@@ -2370,6 +2370,15 @@ export interface InvoiceRow {
   issuedAt: string;
 }
 
+/** N°352 — lien signé court terme (10 min) d'une facture : le nouvel onglet
+ * de window.open ne peut pas porter l'en-tête Authorization, le jeton « t »
+ * fait l'authentification à l'ouverture de la facture imprimable. */
+export interface InvoiceLink {
+  token: string;
+  /** Expiration du lien (RFC3339). */
+  expiresAt: string;
+}
+
 /* ─── N°27 — Inscriptions publiques par QR code (liens + demandes) ─── */
 
 /** État dérivé d'un lien d'inscription : revoked > expired > exhausted > active. */

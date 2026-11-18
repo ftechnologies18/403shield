@@ -14,4 +14,7 @@ export const enSubView: Record<string, string> = {
   "subView.paidWave": "Paid via Wave",
   "subView.paidManual": "Paid via platform",
   "subView.invoice": "Invoice",
+  // N°352 — invoice open failure (signed link): expired session, network,
+  // or popup blocker.
+  "subView.invoiceError": "Couldn't open the invoice — please retry from the console.",
 };

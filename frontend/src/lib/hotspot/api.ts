@@ -28,6 +28,7 @@ import type {
   ChatConversationsResponse,
   FleetActionResponse,
   FleetOverview,
+  InvoiceLink,
   InvoiceRow,
   PlatformActivityRow,
   PlatformOverview,
@@ -573,12 +574,28 @@ export async function fetchBillingHistory(): Promise<InvoiceRow[]> {
   return api<InvoiceRow[]>("/api/billing/history");
 }
 
-/** invoiceURL — lien vers la facture HTML print-friendly (ouvrir dans un nouvel onglet). */
-export function invoiceURL(id: string): string {
+/** N°352 — fetchInvoiceLink : lien signé court terme (10 min) d'UNE facture
+ * résolue. La facture s'ouvre ensuite en nouvel onglet via ?t=<jeton> : le
+ * window.open du navigateur ne peut PAS porter l'en-tête Authorization, le
+ * jeton HMAC (compte + facture + expiration) fait l'authentification. */
+export async function fetchInvoiceLink(id: string): Promise<InvoiceLink> {
+  return api<InvoiceLink>(`/api/billing/invoice-link/${id}`);
+}
+
+/** invoiceURL — lien vers la facture HTML print-friendly (ouvrir dans un
+ * nouvel onglet) ; N°352 : jeton signé optionnel en query « t ». */
+export function invoiceURL(id: string, token?: string): string {
   const base = (process.env.NEXT_PUBLIC_API_BASE || "").replace(/\/$/, "");
-  if (base) return `${base}/api/billing/invoice/${id}`;
-  // Mode passerelle sandbox : le port du backend transite par le proxy local.
-  return `/api/billing/invoice/${id}?XTransformPort=4000`;
+  const params = new URLSearchParams();
+  // Mode passerelle sandbox (localhost) — même garde que buildUrl : en prod
+  // Vercel, les URLs relatives passent par le rewrite vercel.json.
+  const isSandbox =
+    typeof window !== "undefined" &&
+    (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1");
+  if (!base && isSandbox) params.set("XTransformPort", GATEWAY_PORT);
+  if (token) params.set("t", token);
+  const qs = params.toString();
+  return `${base}/api/billing/invoice/${id}${qs ? `?${qs}` : ""}`;
 }
 
 /* ─── N°27 — WiFi jetable : console (authentifiée) + page publique (anonyme) ─── */

@@ -14,4 +14,7 @@ export const frSubView: Record<string, string> = {
   "subView.paidWave": "Payé via Wave",
   "subView.paidManual": "Payé via la plateforme",
   "subView.invoice": "Facture",
+  // N°352 — échec d'ouverture de la facture (lien signé) : session expirée,
+  // réseau, ou bloqueur de popups.
+  "subView.invoiceError": "Impossible d'ouvrir la facture — réessayez depuis la console.",
 };

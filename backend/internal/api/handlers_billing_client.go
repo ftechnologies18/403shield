@@ -13,10 +13,14 @@
 package api
 
 import (
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"html"
 	"net/http"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -113,12 +117,131 @@ func (a *API) handleBillingHistory(w http.ResponseWriter, r *http.Request) {
 // Facture HTML print-friendly
 // ---------------------------------------------------------------------------
 
+// invoiceLinkTTL — durée de vie d'un lien de facture signé (N°352) : assez
+// long pour ouvrir l'onglet, recharger et lancer l'impression (réseau mobile
+// lent), assez court pour qu'un lien retrouvé dans un historique de
+// navigateur ou un journal serveur soit inutilisable vite.
+const invoiceLinkTTL = 10 * time.Minute
+
+// signInvoiceToken — jeton signé d'une facture (N°352) : le nouvel onglet
+// ouvert par window.open ne peut PAS porter l'en-tête Authorization, la
+// facture s'ouvre donc par un lien court terme à la Stripe. Format
+// « <expUnixSeconds>.<accountID>.<hexSig> » où la signature HMAC-SHA256
+// (secret JWT du service) couvre la PAIRE facture+compte ET l'expiration :
+// un jeton ne peut être ni rejoué sur une autre facture, ni pour le compte
+// d'autrui, ni après expiration. Aucun état en base — vérification pure.
+func signInvoiceToken(secret, invoiceID, accountID string, exp time.Time) string {
+	expUnix := exp.Unix()
+	mac := hmac.New(sha256.New, []byte(secret))
+	fmt.Fprintf(mac, "facture|%s|%s|%d", invoiceID, accountID, expUnix)
+	return fmt.Sprintf("%d.%s.%s", expUnix, accountID, hex.EncodeToString(mac.Sum(nil)))
+}
+
+// verifyInvoiceToken — valide un jeton de facture contre la facture du
+// chemin : expiration dans le futur ET signature recalculée identique
+// (comparaison à temps constant). Retourne l'identifiant de compte porté
+// par le jeton (le porteur n'a pas de claims : c'est le jeton qui fait
+// l'authentification ET l'autorisation de portée).
+func verifyInvoiceToken(secret, token, invoiceID string) (string, bool) {
+	parts := strings.Split(token, ".")
+	if len(parts) != 3 {
+		return "", false
+	}
+	expUnix, err := strconv.ParseInt(parts[0], 10, 64)
+	if err != nil || time.Now().Unix() > expUnix {
+		return "", false
+	}
+	accountID := parts[1]
+	if accountID == "" {
+		return "", false
+	}
+	mac := hmac.New(sha256.New, []byte(secret))
+	fmt.Fprintf(mac, "facture|%s|%s|%d", invoiceID, accountID, expUnix)
+	sig, err := hex.DecodeString(parts[2])
+	if err != nil || !hmac.Equal(sig, mac.Sum(nil)) {
+		return "", false
+	}
+	return accountID, true
+}
+
+// handleBillingInvoiceLink — GET /api/billing/invoice-link/{id} (JWT,
+// compte de portée) : émet le lien signé de 10 min d'UNE facture RÉSOLUE
+// du compte (N°352). Le frontend ouvre ensuite /api/billing/invoice/{id}?t=
+// <jeton> dans un nouvel onglet — le jeton y fait l'authentification.
+func (a *API) handleBillingInvoiceLink(w http.ResponseWriter, r *http.Request) {
+	acc := accountScope(r)
+	id := r.PathValue("id")
+	a.store.Lock()
+	found := false
+	for i := range a.store.Data().BillingRequests {
+		if br := &a.store.Data().BillingRequests[i]; br.ID == id && br.AccountID == acc && br.Status == "done" {
+			found = true
+			break
+		}
+	}
+	a.store.Unlock()
+	if !found {
+		writeErr(w, http.StatusNotFound, "Facture introuvable")
+		return
+	}
+	exp := time.Now().UTC().Add(invoiceLinkTTL)
+	writeJSON(w, http.StatusOK, map[string]any{
+		"token":     signInvoiceToken(a.secret, id, acc, exp),
+		"expiresAt": exp.Format(time.RFC3339),
+	})
+}
+
+// writeInvoiceLinkError — page d'erreur HTML conviviale (N°352) : le lien
+// signé est ouvert dans un NOUVEL ONGLET, un JSON brut y serait illisible.
+func writeInvoiceLinkError(w http.ResponseWriter) {
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.WriteHeader(http.StatusUnauthorized)
+	fmt.Fprintf(w, `<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lien de facture expiré — 403Shield</title>
+<style>
+  body { font-family: -apple-system, "Segoe UI", Roboto, Arial, sans-serif; background: #f4f7f5; color: #1a2b26; display: flex; min-height: 100vh; align-items: center; justify-content: center; padding: 24px; }
+  .box { max-width: 420px; background: #fff; border-radius: 12px; padding: 32px; box-shadow: 0 2px 12px rgba(0,0,0,.06); text-align: center; }
+  h1 { font-size: 18px; color: #14532d; margin-bottom: 12px; }
+  p { font-size: 14px; line-height: 1.7; color: #33453e; }
+</style>
+</head>
+<body>
+  <div class="box">
+    <h1>Lien de facture invalide ou expiré</h1>
+    <p>Pour la sécurité de vos justificatifs de paiement, les liens de
+    facture ne sont valables que 10 minutes. Rouvrez la facture depuis
+    votre console 403Shield — vue « Abonnement », historique de
+    facturation.</p>
+  </div>
+</body>
+</html>`)
+}
+
 // handleBillingInvoice — GET /api/billing/invoice/{id} : facture complète au
 // format HTML imprimable (window.print() → PDF navigateur). Le client peut
 // la consulter et la télécharger ; la plateforme (support) y a aussi accès.
+// N°352 — deux chemins d'authentification : l'en-tête JWT (appels API,
+// inchangé) OU le paramètre « t » (lien signé de 10 min émis par
+// /api/billing/invoice-link/{id} — window.open ne peut pas porter
+// l'en-tête Authorization, c'est le jeton qui porte compte + facture).
 func (a *API) handleBillingInvoice(w http.ResponseWriter, r *http.Request) {
 	acc := accountScope(r)
 	id := r.PathValue("id")
+	if t := r.URL.Query().Get("t"); t != "" {
+		// Lien signé (N°352) : le jeton fait l'authentification ET la
+		// portée — la signature couvre la facture du chemin, le compte
+		// embarqué et l'expiration (jamais rejouable ailleurs ni après TTL).
+		from, ok := verifyInvoiceToken(a.secret, t, id)
+		if !ok {
+			writeInvoiceLinkError(w)
+			return
+		}
+		acc = from
+	}
 	a.store.Lock()
 	db := a.store.Data()
 	var br *model.BillingRequest

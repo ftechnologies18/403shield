@@ -517,7 +517,11 @@ func (a *API) Handler() http.Handler {
 	mux.HandleFunc("POST /api/subscription/stripe/cancel", a.requireRole(3, a.handleSubscriptionStripeCancel))
 	// M — facturation client : historique des factures + facture imprimable
 	// (HTML print-friendly). Accessibles aux comptes expirés ET suspendus.
+	// N°352 — la facture s'ouvre en nouvel onglet par LIEN SIGNÉ court
+	// terme (window.open ne porte pas l'en-tête Authorization) : émission
+	// du lien derrière le JWT, ouverture par le jeton « ?t= ».
 	mux.HandleFunc("GET /api/billing/history", a.handleBillingHistory)
+	mux.HandleFunc("GET /api/billing/invoice-link/{id}", a.handleBillingInvoiceLink)
 	mux.HandleFunc("GET /api/billing/invoice/{id}", a.handleBillingInvoice)
 	mux.HandleFunc("POST /api/admin/wipe", a.requireRole(3, a.handleWipe))
 	mux.HandleFunc("POST /api/admin/reload", a.requireRole(3, a.handleReload))

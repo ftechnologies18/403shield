@@ -127,7 +127,16 @@ func (a *API) authMiddleware(next http.Handler) http.Handler {
 		// (garde rôle « tunnel » ci-dessous) NI quelque route console
 		// que ce soit.
 		publicTunnelAuth := strings.HasPrefix(path, "/api/tunnel/auth/")
-		if path == "/api/auth/login" || path == "/api/auth/register" || path == "/api/reseller/login" || path == "/api/webhooks/wave" || path == "/api/webhooks/geniuspay" || path == "/api/webhooks/telegram" || path == "/api/vitals" || strings.HasPrefix(path, "/api/join/") || publicWifi || publicMedia || publicPromoTrack || publicPasswordReset || publicChat || publicVpnShop || publicDnsShop || publicTunnelAuth || !strings.HasPrefix(path, "/api/") {
+		// N°352 — facture imprimable par lien signé : le nouvel onglet
+		// de window.open ne peut PAS porter l'en-tête Authorization,
+		// le paramètre « t » (HMAC secret + expiration 10 min, émis
+		// par /api/billing/invoice-link/{id} derrière le JWT) fait
+		// l'authentification — vérification DANS le handler (le jeton
+		// porte la paire facture+compte, rejouable nulle part ailleurs).
+		// Le préfixe « /api/billing/invoice/ » (slash final) ne capte
+		// PAS /api/billing/invoice-link/{id} qui RESTE derrière le JWT.
+		publicInvoiceLink := r.Method == http.MethodGet && strings.HasPrefix(path, "/api/billing/invoice/") && r.URL.Query().Get("t") != ""
+		if path == "/api/auth/login" || path == "/api/auth/register" || path == "/api/reseller/login" || path == "/api/webhooks/wave" || path == "/api/webhooks/geniuspay" || path == "/api/webhooks/telegram" || path == "/api/vitals" || strings.HasPrefix(path, "/api/join/") || publicWifi || publicMedia || publicPromoTrack || publicPasswordReset || publicChat || publicVpnShop || publicDnsShop || publicTunnelAuth || publicInvoiceLink || !strings.HasPrefix(path, "/api/") {
 			next.ServeHTTP(w, r)
 			return
 		}
