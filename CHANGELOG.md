@@ -10,6 +10,95 @@ sous-marque FTech CI) ; l'historique ci-dessous conserve les noms d'époque.
 N°319 : le DÉPÔT GitHub lui-même devient `ftechnologies18/403shield`
 (anciennes URL redirigées en 301 par GitHub — web, git et API).
 
+## 2026-11-18 — N°351 — **GRILLE DE DURÉES ÉLARGIE 1·2·3·4·6·8·12 MOIS ET LA DURÉE CHOISIE S'APPLIQUE AUX DEUX MOYENS DE PAIEMENT — le client qui choisit 6 mois peut régler par Wave (remise mobile money) OU par carte en UNE transaction au prix de liste, et l'activation empile exactement N mois dans les deux cas** (décision exploitant : tarif linéaire inchangé, la carte multi-mois se règle en ponctuel — la récurrence carte reste au cycle d'1 mois, la formule annuelle « 1 an » inchangée)
+
+### Le problème (une grille resserrée et une carte bloquée à 1 mois)
+- N°350 livrait la durée au choix mais avec DEUX limites votées ensemble ce
+  jour-là : la grille 1·2·3·6·12 laissait des trous (pas de 4 ni de 8 mois,
+  précisément les durées intermédiaires demandées ensuite), et le bouton
+  carte DISPARAISSAIT au-delà d'1 mois (note « le prélèvement automatique
+  par carte reste au cycle d'1 mois — pour une durée longue, réglez par
+  Wave ») : le client multi-mois sans Wave se retrouvait sans chemin de
+  paiement en ligne.
+- La raison technique de N°350 restait valide : un abonnement RÉCURRENT
+  GeniusPay au montant N mois débiterait N mois à CHAQUE échéance (l'API
+  n'exprime pas un cycle de N mois) — mais elle ne s'applique pas à un
+  paiement PONCTUEL, que l'intégration sait déjà encaisser (le webhook
+  payment.success confronte le montant Wave ⇄ prix de liste sur la même
+  base et `finalizeBillingSuccess` applique `monthsOfRequest`).
+
+### Ce qui a changé — backend
+- **Grille élargie** : `clientMonthlyDurations = 1·2·3·4·6·8·12` (4 et 8
+  ajoutés) — même validation, même message ; tarif linéaire inchangé
+  (base = prix × routeurs × mois, frais GeniusPay sur LA transaction : ex.
+  4 mois/1 routeur = base 10 000 F, carte 10 750 F, Wave 10 450 F ;
+  8 mois = base 20 000 F, carte 21 400 F, Wave 20 775 F).
+- **POST /api/subscription/stripe accepte `months`** (facultatif, défaut 1 —
+  compat paywall-overlay et frontends antérieurs, le flux récurrent 1 mois
+  et l'annuel sont INCHANGÉS). La durée est validée AVANT la vérification
+  des clés GeniusPay (un hors-grille reçoit un 400 `bad_duration` propre,
+  même hors production ; annuel + months>1 → 400, comme côté Wave).
+- **months > 1 → paiement carte PONCTUEL** (`handleSubscriptionStripeOnce`)
+  : la DEMANDE de facturation est posée aux règles de POST /api/subscription
+  (appariement PAR durée — réutilisation d'une demande identique basculée
+  carte au prix de liste, remplacement sinon), puis UNE transaction
+  `/payments` (module carte Stripe de GeniusPay) est initiée au prix de
+  liste de LA transaction N mois ; sa confirmation (webhook payment.success
+  SIGNÉ — appariement metadata.ref, confrontation Wave ⇄ liste déjà
+  générique — ou filet GET /api/subscription/pay/status) active
+  EXACTEMENT N mois. **AUCUNE fiche GeniusPaySub récurrente n'est créée** :
+  l'échéance suivante d'une durée longue est un NOUVEAU choix du client.
+  La garde « un seul prélèvement automatique » ne s'applique pas au
+  ponctuel (miroir du chemin Wave, qui n'a pas de garde équivalente).
+  Réponse enrichie : `cycle:"once"`, `months`, `periodLabel`.
+- **Webhook et activation inchangés** : `finalizeBillingSuccess` applique
+  `monthsOfRequest` depuis N°350 ; la confrontation de montant accepte déjà
+  le prix de liste dérivé de la même base (bascule Wave ⇄ carte) — aucune
+  modification du chemin d'encaissement.
+
+### Ce qui a changé — console (app gestionnaire `/app/settings/subscription`)
+- **Chips 1·2·3·4·6·8·12 mois** (même grille que le serveur), total
+  dynamique inchangé (« Votre parc actuel : 15 000 FCFA / 6 mois »).
+- **Bouton carte TOUJOURS visible** : à 1 mois « Carte bancaire (auto) ·
+  montant » (prélèvement récurrent, inchangé) ; au-delà « Carte bancaire ·
+  montant » (transaction ponctuelle) — la note de cycle N°350
+  (`sub.dialog.cardCycleNote`, bouton masqué) est retirée. L'aperçu N mois
+  passe par un miroir EXACT de handlers_pricing.go étendu à la carte
+  (`cardPreviewOfBase` — gross-up des frais sur LA transaction ; le montant
+  autoritatif reste la réponse POST /api/subscription/stripe).
+- Retour de Stripe (`?stripe=return`) : la requête abonnement est aussi
+  invalidée (une transaction ponctuelle n'a pas de fiche récurrente à
+  resynchroniser — c'est le webhook/la requête qui porte l'activation).
+  Bilingue FR/EN (`sub.dialog.payCardOnceAmt`, `sub.stripe.oncePending`) ;
+  types `StripeCreateResponse` (cycle `"once"`, `months`, `periodLabel`).
+
+### Portes
+- backend : gofmt 0 · go vet 0 · **go test ./... tous packages OK** (dont
+  internal/api 74 s — grille élargie acceptée/refusée dans
+  `subscription_months_test.go` ; nouvelle suite `subscription_card_once_test.go` :
+  validation stripe AVANT les clés (400 hors grille / 400 annuel verrouillé /
+  503 sans clés sur durée valide), appariement PAR durée de la branche
+  ponctuelle (réutilisation d'une demande Wave identique basculée carte,
+  remplacement d'une autre durée, AUCUNE fiche récurrente), **webhook
+  payment.success SIGNÉ d'une demande 8 mois payée au prix de liste →
+  période EXACTEMENT 8 mois (AddDate) au montant 20 000 F, idempotence du
+  rejoué**).
+- frontend : lint 0 erreur (14 warnings pré-existants, hors chantier) ·
+  tsgo 0 · `next build` **68/68 pages**.
+- **SMOKE NAVIGATEUR réel** (backend Go local :4000 + dev proxé, clés
+  GeniusPay factices, proxy refusé pour un échec d'initiation rapide) :
+  chips 1·2·3·4·6·8·12 rendues, total « 15 000 FCFA / 6 mois », dialogue
+  « 15 000 FCFA / 6 mois » + Wave 15 600 F + **Carte bancaire 16 075 F**,
+  clic carte → **toast « Paiement carte initié (6 mois) — réglez le montant
+  affiché pour activer votre durée » + dialogue fermé + demande stockée
+  months=6/base 15000/carte 16075/pending**, toast d'erreur serveur propre
+  sur 503 (run sans clés), 0 erreur console.
+- schéma DB : aucun changement (la colonne `billing_requests.months` de
+  N°350 porte déjà la durée des demandes carte) — rien à faire côté
+  exploitant, répliques au reverse-sync nocturne.
+- sentinel RENDER-DEPLOY-FROZEN intact ; déploiement backend VM Oracle par
+  push `main` (deploy-oracle.yml), frontends par webhook Vercel.
+
 ## 2026-11-18 — N°350 — **L'ABONNEMENT MENSUEL À LA DURÉE AU CHOIX DU CLIENT : 1·2·3·6·12 MOIS D'UN COUP — la formule Hotspot Mensuel laisse le client choisir pour combien de mois il s'abonne, paie N mois en UNE transaction Wave et l'activation empile exactement N mois** (décision exploitant : tarif linéaire sans remise, paiement Wave ponctuel seul concerné — la carte Stripe reste au cycle d'1 mois, la formule annuelle « 1 an » inchangée)
 
 ### Le problème (une demande client figée à 1 période)

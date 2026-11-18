@@ -3,9 +3,10 @@
 // Carte Abonnement SaaS — tarifs du catalogue (N°324 : mono-mode Hotspot,
 // le serveur renvoie la grille unique — Mensuel 2 500 F/mois/routeur,
 // Annuel 25 000 F/an illimité).
-// N°350 — durée au choix sur la formule MENSUELLE (chips 1·2·3·6·12 mois,
-// tarif linéaire, paiement Wave ponctuel) ; le prélèvement carte reste au
-// cycle d'1 mois et la formule annuelle n'est pas concernée.
+// N°350 — durée au choix sur la formule MENSUELLE (chips, tarif linéaire) ;
+// N°351 — grille élargie 1·2·3·4·6·8·12 mois et durée aux DEUX moyens de
+// paiement : Wave ponctuel (remise mobile money) OU carte en UNE transaction
+// au prix de liste (la récurrence carte reste au cycle d'1 mois).
 // VERROU FACTURATION : la souscription n'active RIEN côté client — choisir
 // une formule enregistre une demande, renvoie le montant et le lien de
 // paiement Wave de la PLATEFORME (WAVE_PAY_LINK) ; l'activation de la
@@ -74,15 +75,17 @@ export function useStripeSub() {
 // annuelle — les prix viennent du catalogue serveur (segmentés par mode).
 const COMPARISON_ROUTERS = [1, 2, 5, 10];
 
-// N°350 — durées proposées sur la formule mensuelle : mêmes valeurs que la
-// validation serveur (clientMonthlyDurations, handlers_subscription.go) —
-// 1·2·3·6·12 mois, tarif linéaire (prix × routeurs × mois).
-const MONTHLY_DURATIONS = [1, 2, 3, 6, 12] as const;
+// N°350/N°351 — durées proposées sur la formule mensuelle : mêmes valeurs
+// que la validation serveur (clientMonthlyDurations, handlers_subscription.go)
+// — 1·2·3·4·6·8·12 mois, tarif linéaire (prix × routeurs × mois), aux DEUX
+// moyens de paiement.
+const MONTHLY_DURATIONS = [1, 2, 3, 4, 6, 8, 12] as const;
 
 // Miroir EXACT de handlers_pricing.go (frais GeniusPay) : l'aperçu du
 // dialogue pour une durée de PLUSIEURS mois (la tarification serveur
 // view.pricing ne couvre qu'une période). Le montant AUTORITATIF reste la
-// réponse POST /api/subscription — calculée par la même formule côté Go.
+// réponse POST /api/subscription (Wave) ou POST /api/subscription/stripe
+// (carte) — calculés par la même formule côté Go.
 const PAY_FEES_FIXED_FCFA = 100;
 const PAY_FEES_CARD_RATE = 0.06;
 const PAY_FEES_WAVE_DISCOUNT = 0.03;
@@ -97,6 +100,13 @@ function roundUpStepFcfa(v: number): number {
 function wavePreviewOfBase(base: number): number {
   const list = roundUpStepFcfa((base + PAY_FEES_FIXED_FCFA) / (1 - PAY_FEES_CARD_RATE));
   return roundUpStepFcfa(list * (1 - PAY_FEES_WAVE_DISCOUNT));
+}
+
+// N°351 — aperçu du PRIX DE LISTE CARTE pour une base nette donnée (gross-up
+// des frais carte sur LA transaction — miroir de cardListPriceFcfa) : la
+// durée choisie s'applique aussi au paiement carte (une transaction N mois).
+function cardPreviewOfBase(base: number): number {
+  return roundUpStepFcfa((base + PAY_FEES_FIXED_FCFA) / (1 - PAY_FEES_CARD_RATE));
 }
 
 // Caractéristiques des formules — clés i18n (traduites FR/EN) — N°324 :
@@ -118,18 +128,22 @@ export function SubscriptionCard() {
   const [confirmPlan, setConfirmPlan] = useState<SaasPlan | null>(null);
   const [cancelStripeOpen, setCancelStripeOpen] = useState(false);
   // N°350 — durée sélectionnée sur la formule mensuelle (persiste entre les
-  // ouvertures du dialogue ; la grille est 1·2·3·6·12).
+  // ouvertures du dialogue ; la grille est 1·2·3·4·6·8·12).
   const [monthlyMonths, setMonthlyMonths] = useState<number>(1);
 
   // Retour de Stripe Checkout : la facture peut n'être réglée que quelques
   // secondes après la redirection — on déclenche la resynchronisation, le
   // polling du hook useStripeSub finalise l'affichage (statut pending).
+  // N°351 — l'abonnement lui-même est aussi invalidé : une transaction
+  // PONCTUELLE multi-mois (cycle « once ») n'a pas de fiche récurrente, c'est
+  // le webhook/la requête abonnement qui porte l'activation.
   useEffect(() => {
     if (typeof window === "undefined") return;
     const sp = new URLSearchParams(window.location.search);
     if (sp.get("stripe") === "return") {
       toast.info(t("sub.stripe.returning", "Retour de Stripe — vérification du paiement en cours…"), { duration: 6000 });
       queryClient.invalidateQueries({ queryKey: STRIPE_QUERY_KEY });
+      queryClient.invalidateQueries({ queryKey: SUBSCRIPTION_QUERY_KEY });
     }
   }, []);
 
@@ -194,14 +208,17 @@ export function SubscriptionCard() {
   // Abonnement RÉCURRENT par carte (Stripe via GeniusPay) : création puis
   // redirection vers la page de paiement sécurisée Stripe ; chaque facture
   // payée active/empile automatiquement la période (webhook signé).
+  // N°351 — la durée choisie part avec la demande : months = 1 → récurrent
+  // (cycle mensuel) ; months > 1 → transaction carte PONCTUELLE de N mois
+  // (cycle « once », sans prélèvement automatique).
   const stripeMutation = useMutation({
-    mutationFn: (planId: string) =>
-      api<StripeCreateResponse>("/api/subscription/stripe", { method: "POST", body: { planId } }),
+    mutationFn: (input: { planId: string; months: number }) =>
+      api<StripeCreateResponse>("/api/subscription/stripe", { method: "POST", body: input }),
     onSuccess: (res) => {
       setConfirmPlan(null);
       queryClient.invalidateQueries({ queryKey: STRIPE_QUERY_KEY });
-      // Prélèvement automatique créé. Si GeniusPay renvoie une page de paiement
-      // (Checkout Stripe) ou un lien pour la première période, on y redirige
+      // Paiement carte créé. Si GeniusPay renvoie une page de paiement
+      // (Checkout Stripe) ou un lien pour la période souscrite, on y redirige
       // immédiatement ; sinon la demande reste à régler (bouton Wave).
       const target = res.redirectUrl || res.paymentUrl;
       if (target) {
@@ -209,7 +226,12 @@ export function SubscriptionCard() {
         window.location.href = target;
         return;
       }
-      toast.info(t("sub.stripe.autoOnly", "Prélèvement automatique activé — réglez la première période pour l'activer."), { duration: 8000 });
+      toast.info(
+        res.cycle === "once"
+          ? tf("sub.stripe.oncePending", { period: res.periodLabel ?? "" })
+          : t("sub.stripe.autoOnly", "Prélèvement automatique activé — réglez la première période pour l'activer."),
+        { duration: 8000 },
+      );
     },
     onError: (err: Error) => toast.error(err.message),
   });
@@ -251,10 +273,11 @@ export function SubscriptionCard() {
   // Répercussion des frais de paiement (stratégie validée) : montants par
   // moyen pour la formule confirmée — source de vérité serveur (view.pricing),
   // repli = prix catalogue si le backend ne l'expose pas encore.
-  // N°350 — la durée sélectionnée (formule mensuelle) multiplie la BASE
-  // (tarif linéaire) ; l'aperçu Wave de N mois passe par le miroir local des
-  // frais (une SEULE transaction de N mois — le frais fixe n'est payé qu'une
-  // fois) ; la carte reste au prix de liste d'UNE période (cycle mensuel).
+  // N°350/N°351 — la durée sélectionnée (formule mensuelle) multiplie la BASE
+  // (tarif linéaire) et s'applique aux DEUX moyens : les aperçus de N mois
+  // passent par le miroir local des frais (une SEULE transaction de N mois —
+  // le frais fixe n'est payé qu'une fois, Wave remisé / carte au prix de
+  // liste).
   const confirmMonths = confirmPlan?.perRouter ? monthlyMonths : 1;
   const confirmedPricing = confirmPlan
     ? view?.pricing?.find((p) => p.planId === confirmPlan.id)
@@ -264,7 +287,8 @@ export function SubscriptionCard() {
   const confirmedBase = unitBase * confirmMonths;
   const confirmedWave =
     confirmMonths === 1 ? confirmedPricing?.waveFcfa ?? unitBase : wavePreviewOfBase(confirmedBase);
-  const confirmedList = confirmedPricing?.listFcfa ?? unitBase;
+  const confirmedList =
+    confirmMonths === 1 ? confirmedPricing?.listFcfa ?? unitBase : cardPreviewOfBase(confirmedBase);
 
   if (isError) {
     // État d'erreur explicite (API injoignable / backend pas encore à jour) —
@@ -363,7 +387,7 @@ export function SubscriptionCard() {
 
       <CardContent className="space-y-4 px-4 sm:px-6">
         <div className="grid gap-4 sm:grid-cols-2">
-          {/* Formule mensuelle (par routeur) — N°350 : durée au choix */}
+          {/* Formule mensuelle (par routeur) — N°350/N°351 : durée au choix */}
           <PlanCard
             plan={monthly}
             routerCount={view.routerCount}
@@ -473,7 +497,8 @@ export function SubscriptionCard() {
           <AlertDialogFooter>
             <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
             {/* Wave (ponctuel, défaut) — montant avec remise mobile money −3 %.
-                N°350 : la durée choisie (1·2·3·6·12 mois) part avec la demande. */}
+                N°350/N°351 : la durée choisie (1·2·3·4·6·8·12 mois) part avec
+                la demande, quel que soit le moyen. */}
             <AlertDialogAction
               onClick={(event) => {
                 event.preventDefault();
@@ -493,27 +518,28 @@ export function SubscriptionCard() {
                 </>
               )}
             </AlertDialogAction>
-            {/* Carte bancaire — prélèvement automatique (Stripe via GeniusPay) —
-                prix de liste. N°350 : UNIQUEMENT au cycle d'1 mois — une durée
-                récurrente de N mois débiterait N mois à CHAQUE échéance ; le
-                bouton disparaît pour les durées longues au profit de la note. */}
-            {confirmMonths === 1 ? (
-              <Button
-                variant="outline"
-                onClick={(event) => {
-                  event.preventDefault();
-                  if (confirmPlan) stripeMutation.mutate(confirmPlan.id);
-                }}
-                disabled={subscribeMutation.isPending || stripeMutation.isPending}
-              >
-                <CreditCard className="size-4" />
-                {stripeMutation.isPending ? t("sub.dialog.pending") : tf("sub.dialog.payCardAmt", { amount: formatCurrency(confirmedList, "FCFA", lang) })}
-              </Button>
-            ) : (
-              <p className="max-w-[220px] text-right text-xs leading-snug text-muted-foreground">
-                {t("sub.dialog.cardCycleNote")}
-              </p>
-            )}
+            {/* Carte bancaire (Stripe via GeniusPay) — prix de liste.
+                N°351 — la durée choisie s'applique AUSSI à la carte : à 1 mois
+                c'est le prélèvement RÉCURRENT (auto) ; au-delà, une
+                transaction PONCTUELLE de N mois au prix de liste (sans
+                prélèvement automatique — l'échéance suivante sera un nouveau
+                choix). */}
+            <Button
+              variant="outline"
+              onClick={(event) => {
+                event.preventDefault();
+                if (confirmPlan)
+                  stripeMutation.mutate({ planId: confirmPlan.id, months: confirmMonths });
+              }}
+              disabled={subscribeMutation.isPending || stripeMutation.isPending}
+            >
+              <CreditCard className="size-4" />
+              {stripeMutation.isPending
+                ? t("sub.dialog.pending")
+                : confirmMonths > 1
+                  ? tf("sub.dialog.payCardOnceAmt", { amount: formatCurrency(confirmedList, "FCFA", lang) })
+                  : tf("sub.dialog.payCardAmt", { amount: formatCurrency(confirmedList, "FCFA", lang) })}
+            </Button>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -544,8 +570,8 @@ export function SubscriptionCard() {
 }
 
 // PlanCard — une formule du catalogue, avec état courant et CTA.
-// N°350 — la formule mensuelle (perRouter) reçoit en plus le SÉLECTEUR DE
-// DURÉE (chips 1·2·3·6·12 mois) : le total affiché suit la sélection.
+// N°350/N°351 — la formule mensuelle (perRouter) reçoit en plus le SÉLECTEUR
+// DE DURÉE (chips 1·2·3·4·6·8·12 mois) : le total affiché suit la sélection.
 function PlanCard({
   plan,
   routerCount,
@@ -618,8 +644,9 @@ function PlanCard({
         <p className="mt-2 rounded-md bg-muted/60 px-2.5 py-1.5 text-xs">{tf("sub.card.flat", { amount: formatCurrency(Math.round(plan.priceFcfa / 12), "FCFA", lang) })}</p>
       )}
 
-      {/* N°350 — sélecteur de durée (formule mensuelle uniquement) : la
-          demande partira pour la durée choisie, tarif linéaire. */}
+      {/* N°350/N°351 — sélecteur de durée (formule mensuelle uniquement) : la
+          demande partira pour la durée choisie, tarif linéaire, quel que soit
+          le moyen de paiement (Wave remisé / carte au prix de liste). */}
       {plan.perRouter && onMonthsChange ? (
         <div className="mt-3">
           <p className="text-xs font-medium text-muted-foreground">{t("sub.duration.label")}</p>

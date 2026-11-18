@@ -1,7 +1,9 @@
-// Tests N°350 — durée choisie par le client sur la formule mensuelle :
-// grille 1·2·3·6·12 (paiement Wave ponctuel), tarif linéaire (prix ×
-// routeurs × mois), appariement des demandes PAR durée, activation webhook
-// aux mois choisis et repli historique (Months=0 → 1 période, 12 si annuelle).
+// Tests N°350/N°351 — durée choisie par le client sur la formule mensuelle :
+// grille 1·2·3·4·6·8·12 (élargie N°351), tarif linéaire (prix × routeurs ×
+// mois), appariement des demandes PAR durée, activation webhook aux mois
+// choisis et repli historique (Months=0 → 1 période, 12 si annuelle).
+// N°351 — la durée s'applique aux DEUX moyens : Wave ponctuel (ci-dessous)
+// et carte ponctuelle au prix de liste (subscription_card_once_test.go).
 package api
 
 import (
@@ -61,9 +63,10 @@ func TestPeriodLabelOfRequest(t *testing.T) {
 }
 
 // TestSubscriptionPostMonths — la DEMANDE client porte la durée (N°350) :
-// grille 1·2·3·6·12 sur la formule mensuelle uniquement, tarif linéaire
-// (base = prix × routeurs × mois, frais sur LA transaction), réponse et
-// stockage cohérents, appariement par durée (réutilisation/remplacement).
+// grille 1·2·3·4·6·8·12 (élargie N°351) sur la formule mensuelle uniquement,
+// tarif linéaire (base = prix × routeurs × mois, frais sur LA transaction),
+// réponse et stockage cohérents, appariement par durée
+// (réutilisation/remplacement).
 func TestSubscriptionPostMonths(t *testing.T) {
 	st, ts := newTestServerWithStore(t)
 	tok, accID, _ := registerAccount(t, ts, "mois-350", "")
@@ -151,8 +154,8 @@ func TestSubscriptionPostMonths(t *testing.T) {
 		t.Fatalf("états des demandes = %v (ancienne cancellée, nouvelle pending attendues)", states)
 	}
 
-	// Grille : 1·2·3·6·12 acceptés.
-	for _, m := range []int{1, 2, 3, 6, 12} {
+	// Grille : 1·2·3·4·6·8·12 acceptés (élargie N°351 — 4 et 8 compris).
+	for _, m := range []int{1, 2, 3, 4, 6, 8, 12} {
 		code, out = doJSON(t, ts, "POST", "/api/subscription", tok,
 			map[string]any{"planId": "hotspot-mensuel", "months": m})
 		if code != http.StatusOK {
@@ -170,8 +173,8 @@ func TestSubscriptionPostMonths(t *testing.T) {
 		}
 	}
 
-	// Hors grille (5, 13, 99) → 400 bad_duration.
-	for _, m := range []int{5, 13, 99} {
+	// Hors grille (5, 7, 9, 10, 11, 13, 99) → 400 bad_duration.
+	for _, m := range []int{5, 7, 9, 10, 11, 13, 99} {
 		code, out = doJSON(t, ts, "POST", "/api/subscription", tok,
 			map[string]any{"planId": "hotspot-mensuel", "months": m})
 		if code != http.StatusBadRequest {

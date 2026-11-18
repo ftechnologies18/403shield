@@ -25,8 +25,9 @@ type BillingRequest struct {
 	PeriodLabel string `json:"periodLabel"` // « 1 mois » | « N mois » (N°350) | « 1 an »
 	RouterCount int    `json:"routerCount"` // assiette au moment de la demande
 	// Months — durée SOUSCRITE en mois de plateforme (N°350 : le client
-	// choisit 1·2·3·6·12 mois sur la formule mensuelle ; paiement Wave
-	// ponctuel uniquement — le prélèvement carte reste au cycle d'1 mois).
+	// choisit sa durée sur la formule mensuelle ; N°351 — elle s'applique
+	// aux DEUX moyens : paiement Wave ponctuel OU carte ponctuelle au prix
+	// de liste ; la récurrence carte reste au cycle d'1 mois).
 	// L'activation (webhook/file/fiche) empile exactement cette durée.
 	// 0 = demande antérieure à N°350 ou posée par la plateforme : 1
 	// période du plan (12 mois si formule annuelle).

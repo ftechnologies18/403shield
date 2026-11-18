@@ -16,7 +16,11 @@
 //   - POST /api/subscription/stripe/cancel : résiliation synchronisée chez
 //     GeniusPay — l'accès 403Shield reste actif jusqu'au terme payé ;
 //   - GET /api/subscription/stripe : état + resynchronisation (retour de
-//     paiement, webhook retardé…).
+//     paiement, webhook retardé…) ;
+//   - N°351 — months > 1 (formule mensuelle, grille 1·2·3·4·6·8·12) : la
+//     durée s'applique AUSSI à la carte, en une transaction PONCTUELLE au
+//     prix de liste (handleSubscriptionStripeOnce) — sans abonnement
+//     récurrent GeniusPay (un cycle de N mois n'y est pas exprimable).
 //
 // Garde P3 : souscrire reste possible pour un compte expiré OU suspendu —
 // c'est une voie de réactivation (middleware autorisant
@@ -43,20 +47,21 @@ import (
 // L'e-mail est requis par le module carte de GeniusPay ; le téléphone du
 // profil complète le dossier client. Réponse : {uuid, status, nextBilling,
 // redirectUrl, paymentUrl, ref, planId, planName, amountFcfa, cycle}.
+// N°351 — « months » (facultatif, défaut 1 — compat paywall et chemins
+// antérieurs) : la durée choisie sur la formule MENSUELLE s'applique AUSSI
+// à la carte. months = 1 (ou absent) → flux RÉCURRENT inchangé ; months > 1
+// (grille 1·2·3·4·6·8·12) → paiement carte PONCTUEL de la transaction
+// entière (handleSubscriptionStripeOnce), sans abonnement récurrent.
 func (a *API) handleSubscriptionStripePost(w http.ResponseWriter, r *http.Request) {
 	if c := claimsFrom(r); c != nil && c.Acc == "" {
 		// Admin plateforme (sans compte client) : pas d'auto-souscription.
 		writeErrCode(w, http.StatusForbidden, "forbidden", "Réservé aux comptes clients — la plateforme gère les abonnements", nil)
 		return
 	}
-	if _, _, ok := geniusPayKeys(); !ok {
-		writeErrCode(w, http.StatusServiceUnavailable, "geniuspay_disabled",
-			"Paiement par carte non configuré — contactez l'équipe 403Shield", nil)
-		return
-	}
 	var req struct {
 		PlanID string `json:"planId"`
 		Email  string `json:"email"`
+		Months int    `json:"months"` // N°351 — durée (formule mensuelle)
 	}
 	if err := decodeBody(r, &req); err != nil {
 		writeErrCode(w, http.StatusBadRequest, "bad_request", "Corps de requête invalide", nil)
@@ -76,6 +81,30 @@ func (a *API) handleSubscriptionStripePost(w http.ResponseWriter, r *http.Reques
 	if plan.Usage != stripeAccUsage {
 		writeErrCode(w, http.StatusBadRequest, "wrong_mode",
 			fmt.Sprintf("La formule %s est réservée aux comptes %s — choisissez une formule de votre mode", plan.Name, map[bool]string{true: "HomeNet", false: "Hotspot"}[plan.Usage == model.AccountUsageHomeNet]), nil)
+		return
+	}
+	// N°351 — durée : grille client 1·2·3·4·6·8·12 sur la formule
+	// MENSUELLE uniquement ; défaut 1 (absent/0/négatif — compat paywall
+	// et frontends antérieurs). Validée AVANT la vérification des clés
+	// GeniusPay : une durée hors grille reçoit un 400 propre, même hors
+	// production (mêmes règles et messages que POST /api/subscription).
+	months := req.Months
+	if months <= 0 {
+		months = 1
+	}
+	if !plan.PerRouter && months > 1 {
+		writeErrCode(w, http.StatusBadRequest, "bad_duration",
+			"La durée ne s'applique qu'à la formule mensuelle — la formule annuelle couvre déjà 1 an", nil)
+		return
+	}
+	if plan.PerRouter && !isValidClientMonths(months) {
+		writeErrCode(w, http.StatusBadRequest, "bad_duration",
+			"Durée invalide — choisissez parmi 1, 2, 3, 4, 6, 8 ou 12 mois", nil)
+		return
+	}
+	if _, _, ok := geniusPayKeys(); !ok {
+		writeErrCode(w, http.StatusServiceUnavailable, "geniuspay_disabled",
+			"Paiement par carte non configuré — contactez l'équipe 403Shield", nil)
 		return
 	}
 
@@ -103,12 +132,23 @@ func (a *API) handleSubscriptionStripePost(w http.ResponseWriter, r *http.Reques
 	}
 	if phone == "" {
 		writeErrCode(w, http.StatusUnprocessableEntity, "missing_phone",
-			"Renseignez votre numéro de téléphone (profil) pour le prélèvement automatique", nil)
+			"Renseignez votre numéro de téléphone (profil) pour payer par carte", nil)
 		return
 	}
 	if email == "" {
 		writeErrCode(w, http.StatusUnprocessableEntity, "missing_email",
-			"L'e-mail est requis pour le prélèvement automatique par carte", nil)
+			"L'e-mail est requis pour le paiement par carte", nil)
+		return
+	}
+
+	// N°351 — DURÉE DE PLUSIEURS MOIS PAR CARTE : paiement PONCTUEL de la
+	// transaction entière (prix de liste de LA transaction N mois), sans
+	// abonnement récurrent GeniusPay. La garde « un seul prélèvement
+	// automatique » ne s'applique pas : c'est un paiement une-fois, au
+	// même titre que le chemin Wave (POST /api/subscription/pay n'a pas
+	// de garde équivalente) — le client garde la main pour renouveler.
+	if months > 1 {
+		a.handleSubscriptionStripeOnce(w, acc, phone, name, email, plan, planID, months, routerCount)
 		return
 	}
 	// Un seul prélèvement automatique actif à la fois (re-souscription
@@ -308,6 +348,152 @@ func (a *API) handleSubscriptionStripePost(w http.ResponseWriter, r *http.Reques
 		"planName":    planName,
 		"amountFcfa":  amount,
 		"cycle":       cycle,
+	})
+}
+
+// ---------------------------------------------------------------------------
+// N°351 — carte PONCTUELLE multi-mois (months > 1)
+// ---------------------------------------------------------------------------
+
+// handleSubscriptionStripeOnce — paiement CARTE PONCTUEL d'une durée de
+// plusieurs mois (grille 1·2·3·4·6·8·12, formule mensuelle). Miroir du
+// chemin Wave au prix de liste carte :
+//   - la DEMANDE de facturation porte la durée (appariement PAR durée : une
+//     demande identique en attente est RÉUTILISÉE et basculée carte au prix
+//     de liste ; une autre durée ou formule est REMPLACÉE — mêmes règles que
+//     POST /api/subscription) ;
+//   - UNE transaction /payments (module carte Stripe de GeniusPay) est
+//     initiée au prix de liste de LA transaction N mois (frais carte sur le
+//     total — gross-up, frais fixe payé une seule fois) ;
+//   - sa confirmation (webhook payment.success SIGNÉ — appariement
+//     metadata.ref, confrontation du montant Wave ⇄ liste déjà générique —
+//     ou filet GET /api/subscription/pay/status) active EXACTEMENT N mois
+//     via finalizeBillingSuccess (monthsOfRequest) ;
+//   - AUCUN abonnement récurrent GeniusPay n'est créé : l'API n'exprime pas
+//     un cycle de N mois (un cycle monthly au montant N mois débiterait N
+//     mois à CHAQUE échéance). La récurrence carte reste au cycle d'1 mois
+//     (months = 1, flux précédent) ; l'échéance suivante d'une durée longue
+//     est un NOUVEAU choix du client (Wave ou carte).
+//
+// Si l'initiation échoue, la demande reste en attente au prix de liste : le
+// client peut retenter (carte) ou rebasculer Wave (POST /api/subscription
+// réutilise la même demande, le webhook accepte les deux montants).
+func (a *API) handleSubscriptionStripeOnce(w http.ResponseWriter, acc, phone, name, email string, plan model.SaasPlan, planID string, months, routerCount int) {
+	// Tarif linéaire N°350 : base = prix × routeurs (minimum 1) × mois ;
+	// prix de liste = gross-up des frais carte sur LA transaction entière
+	// (même formule que la première période du flux récurrent).
+	slots := routerCount
+	if slots < 1 {
+		slots = 1
+	}
+	base := plan.PriceFcfa * slots * months
+	amount := cardListPriceFcfa(base)
+	periodLabel := fmt.Sprintf("%d mois", months)
+	planName := fmt.Sprintf("403Shield %s (%d routeur(s))", plan.Name, slots)
+
+	// Demande de facturation — appariement PAR durée (miroir de POST
+	// /api/subscription) puis bascule sur le moyen carte (prix de liste).
+	ref := ""
+	a.store.Lock()
+	db := a.store.Data()
+	for i := range db.BillingRequests {
+		br := db.BillingRequests[i]
+		if br.AccountID != acc || br.Status != "pending" {
+			continue
+		}
+		matchBase := br.BaseAmountFcfa
+		if matchBase <= 0 {
+			matchBase = br.AmountFcfa // demande antérieure aux frais : base = net historique
+		}
+		if br.PlanID == planID && matchBase == base && monthsOfRequest(br) == months {
+			// Réutilisation — bascule sur le moyen carte (prix de liste) :
+			// une initiation Wave précédente devient obsolète.
+			if br.AmountFcfa != amount || br.PayMethod != "card" || br.Months != months {
+				db.BillingRequests[i].AmountFcfa = amount
+				db.BillingRequests[i].PayMethod = "card"
+				db.BillingRequests[i].Months = months
+				db.BillingRequests[i].GatewayRef = ""
+			}
+			ref = br.Ref // réutilisation (même référence)
+		} else {
+			db.BillingRequests[i].Status = "cancelled"
+			db.BillingRequests[i].ResolvedAt = model.NowISO()
+			db.BillingRequests[i].ResolvedBy = "client"
+			db.BillingRequests[i].Note = "Remplacée par une nouvelle demande du client"
+		}
+		break
+	}
+	if ref == "" {
+		ref = newPayRef(db)
+		db.BillingRequests = append([]model.BillingRequest{{
+			ID: model.NewID("breq-"), AccountID: acc, PlanID: planID, PlanName: plan.Name,
+			AmountFcfa: amount, BaseAmountFcfa: base, PayMethod: "card",
+			PeriodLabel: periodLabel, RouterCount: routerCount, Months: months,
+			Ref: ref, Status: "pending", CreatedAt: model.NowISO(),
+		}}, db.BillingRequests...)
+	}
+	a.logActivity(db, acc, "billing",
+		fmt.Sprintf("Paiement carte de %d mois initié (Stripe via GeniusPay) — %s, %d FCFA / %s, transaction PONCTUELLE sans prélèvement récurrent (réf. %s)",
+			months, planName, amount, periodLabel, ref))
+	a.store.Save()
+	a.store.Unlock()
+
+	// Transaction carte PONCTUELLE — metadata ref = appariement webhook
+	// (payment.success signé), comme le paiement de première période du flux
+	// récurrent. Le routage final reste à la discrétion de GeniusPay (carte
+	// si disponible, sinon Wave — le montant demandé est le prix de liste).
+	payURL, gatewayRef := "", ""
+	payPayload := geniusPayCreateReq{
+		Amount:        amount,
+		PaymentMethod: "card",
+		Description:   fmt.Sprintf("Abonnement 403Shield %s (%s) — réf %s", plan.Name, periodLabel, ref),
+		Customer:      &geniusPayCustomer{Name: name, Phone: phone, Email: email},
+		Metadata:      map[string]string{"ref": ref, "account_id": acc, "plan_id": planID, "source": "card-once"},
+	}
+	if appURL := strings.TrimRight(strings.TrimSpace(os.Getenv("APP_PUBLIC_URL")), "/"); appURL != "" {
+		payPayload.SuccessURL = appURL + "/?stripe=return"
+		payPayload.ErrorURL = appURL + "/?stripe=cancel"
+	}
+	if env, err := geniusPayCall(http.MethodPost, "/payments", payPayload); err == nil && env != nil {
+		var pay geniusPayPayment
+		if json.Unmarshal(env.Data, &pay) == nil {
+			payURL = pay.PaymentURL
+			if payURL == "" {
+				payURL = pay.CheckoutURL
+			}
+			gatewayRef = strings.TrimSpace(pay.Reference)
+		}
+	}
+	if gatewayRef != "" {
+		// Enregistrement de la référence marchande sur la demande (ré-ouverte
+		// sous verrou : la demande peut avoir été résolue entre-temps).
+		a.store.Lock()
+		db = a.store.Data()
+		for i := range db.BillingRequests {
+			if db.BillingRequests[i].AccountID == acc && strings.EqualFold(db.BillingRequests[i].Ref, ref) && db.BillingRequests[i].Status == "pending" {
+				db.BillingRequests[i].GatewayRef = gatewayRef
+				break
+			}
+		}
+		a.store.Save()
+		a.store.Unlock()
+	}
+
+	// cycle "once" — pas de fiche GeniusPaySub : le frontend redirige vers
+	// paymentUrl ; uuid volontairement vide (aucun prélèvement automatique).
+	writeJSON(w, http.StatusOK, map[string]any{
+		"uuid":        "",
+		"status":      "pending",
+		"nextBilling": "",
+		"redirectUrl": "", // présent uniquement si GeniusPay renvoie un Checkout (futur)
+		"paymentUrl":  payURL,
+		"ref":         ref,
+		"planId":      planID,
+		"planName":    planName,
+		"amountFcfa":  amount,
+		"cycle":       "once",
+		"months":      months,
+		"periodLabel": periodLabel,
 	})
 }
 

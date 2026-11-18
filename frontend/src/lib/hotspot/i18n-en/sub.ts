@@ -30,10 +30,15 @@ export const enSub: Record<string, string> = {
   "sub.periodLabel.mois": "1 month",
   "sub.periodLabel.nmois": "{n} months",
   "sub.periodLabel.an": "1 year",
-  // N°350 — durée choisie sur la formule mensuelle (1·2·3·6·12 mois).
+  // N°350/N°351 — durée choisie sur la formule mensuelle (1·2·3·4·6·8·12
+  // mois), aux DEUX moyens de paiement (Wave remisé / carte au prix de liste).
   "sub.duration.label": "Subscription length",
   "sub.duration.hint": "Pay several months at once — linear pricing, no commitment.",
-  "sub.dialog.cardCycleNote": "Card auto-debit stays on a 1-month cycle — for a longer duration, pay by Wave.",
+  // N°351 — la durée s'applique aussi à la CARTE (transaction ponctuelle au
+  // prix de liste) ; la note de cycle N°350 (Wave seul au-delà d'1 mois) est
+  // retirée avec le bouton masqué.
+  "sub.dialog.payCardOnceAmt": "Card · {amount}",
+  "sub.stripe.oncePending": "Card payment started ({period}) — pay the amount shown to activate your length.",
   "sub.feat.ess1": "All 403Shield features",
   "sub.feat.ess2": "Telegram / WhatsApp / Email notifications",
   "sub.feat.ess3": "Data quotas (GB) on vouchers",

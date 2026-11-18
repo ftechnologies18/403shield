@@ -107,11 +107,12 @@ func planAmount(p model.SaasPlan, routerCount int) int {
 }
 
 // clientMonthlyDurations — durées proposées au client sur la formule
-// MENSUELLE (N°350) : les chips de la console (1·2·3·6·12 mois) et la
-// validation serveur partagent cette grille. Le prélèvement carte reste au
-// cycle d'1 mois (pas de multi-mois récurrent) ; la formule annuelle n'est
-// pas concernée (période « 1 an » inchangée).
-var clientMonthlyDurations = []int{1, 2, 3, 6, 12}
+// MENSUELLE (N°350, élargie N°351) : les chips de la console
+// (1·2·3·4·6·8·12 mois) et la validation serveur partagent cette grille.
+// La durée s'applique aux DEUX moyens de paiement (Wave ponctuel ; carte en
+// UNE transaction au prix de liste — la récurrence carte reste au cycle
+// d'1 mois) ; la formule annuelle n'est pas concernée (« 1 an » inchangé).
+var clientMonthlyDurations = []int{1, 2, 3, 4, 6, 8, 12}
 
 // isValidClientMonths — la durée fait-elle partie de la grille client ?
 func isValidClientMonths(m int) bool {
@@ -239,14 +240,15 @@ func wavePayLink() string {
 // journal (type billing) et l'ACTIVATION reste réservée à la plateforme
 // (PUT /api/admin/accounts/{id}/subscription), après encaissement confirmé.
 // Corps : {"planId":"hotspot-mensuel"|"hotspot-annuel"|"homenet-mensuel"|
-// "homenet-annuel", "months":1|2|3|6|12} — la formule doit être celle du
+// "homenet-annuel", "months":1|2|3|4|6|8|12} — la formule doit être celle du
 // MODE du compte (N°122 : un compte Hotspot ne souscrit pas au tarif
 // HomeNet, et réciproquement ; les identifiants historiques restent acceptés
 // et résolvent au mode). N°350 — « months » (facultatif, défaut 1) : durée
-// choisie sur la formule MENSUELLE uniquement (grille 1·2·3·6·12), tarif
-// linéaire (prix × routeurs × mois), paiement Wave ponctuel — le prélèvement
-// carte (POST /api/subscription/stripe) reste au cycle d'1 mois et REMPLACE
-// une demande multi-mois en attente.
+// choisie sur la formule MENSUELLE uniquement (grille 1·2·3·4·6·8·12 élargie
+// N°351), tarif linéaire (prix × routeurs × mois). N°351 — la durée
+// s'applique aux DEUX moyens : paiement Wave ponctuel (ce chemin) OU carte
+// en UNE transaction au prix de liste (POST /api/subscription/stripe avec
+// months) ; la demande en attente est appariée PAR durée.
 func (a *API) handleSubscriptionPost(w http.ResponseWriter, r *http.Request) {
 	acc := accountScope(r)
 	if c := claimsFrom(r); c != nil && c.Acc == "" {
@@ -285,7 +287,7 @@ func (a *API) handleSubscriptionPost(w http.ResponseWriter, r *http.Request) {
 	}
 	if plan.PerRouter && !isValidClientMonths(months) {
 		writeErrCode(w, http.StatusBadRequest, "bad_duration",
-			"Durée invalide — choisissez parmi 1, 2, 3, 6 ou 12 mois", nil)
+			"Durée invalide — choisissez parmi 1, 2, 3, 4, 6, 8 ou 12 mois", nil)
 		return
 	}
 	// N°324 — mono-mode : la garde wrong_mode devient défensive morte (tout

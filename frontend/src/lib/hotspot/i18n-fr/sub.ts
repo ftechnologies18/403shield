@@ -32,10 +32,15 @@ export const frSub: Record<string, string> = {
   "sub.periodLabel.mois": "1 mois",
   "sub.periodLabel.nmois": "{n} mois",
   "sub.periodLabel.an": "1 an",
-  // N°350 — durée choisie sur la formule mensuelle (1·2·3·6·12 mois).
+  // N°350/N°351 — durée choisie sur la formule mensuelle (1·2·3·4·6·8·12
+  // mois), aux DEUX moyens de paiement (Wave remisé / carte au prix de liste).
   "sub.duration.label": "Durée d'abonnement",
   "sub.duration.hint": "Payez plusieurs mois d'un coup — tarif linéaire, sans engagement.",
-  "sub.dialog.cardCycleNote": "Le prélèvement automatique par carte reste au cycle d'1 mois — pour une durée longue, réglez par Wave.",
+  // N°351 — la durée s'applique aussi à la CARTE (transaction ponctuelle au
+  // prix de liste) ; la note de cycle N°350 (Wave seul au-delà d'1 mois) est
+  // retirée avec le bouton masqué.
+  "sub.dialog.payCardOnceAmt": "Carte bancaire · {amount}",
+  "sub.stripe.oncePending": "Paiement carte initié ({period}) — réglez le montant affiché pour activer votre durée.",
   "sub.feat.ess1": "Toutes les fonctionnalités 403Shield",
   "sub.feat.ess2": "Notifications Telegram / WhatsApp / Email",
   "sub.feat.ess3": "Quotas data (Go) sur les vouchers",

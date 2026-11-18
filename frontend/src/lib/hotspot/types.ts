@@ -1818,8 +1818,9 @@ export interface SubscribeResponse {
   listAmountFcfa?: number;
   routerCount: number;
   periodLabel: string;
-  /** N°350 — durée choisie sur la formule mensuelle (1·2·3·6·12 mois, paiement
-   * Wave ponctuel ; la carte récurrente reste au cycle d'1 mois). */
+  /** N°350/N°351 — durée choisie sur la formule mensuelle
+   * (1·2·3·4·6·8·12 mois, tarif linéaire) — aux DEUX moyens de paiement :
+   * Wave ponctuel (ce chemin) ou carte ponctuelle au prix de liste. */
   months?: number;
   /** Lien de paiement Wave de la PLATEFORME, pré-composé avec le montant ("" si non configuré). */
   waveLink: string;
@@ -1865,22 +1866,29 @@ export interface StripeSubView {
   subscription?: Pick<Subscription, "planId" | "status" | "periodStart" | "periodEnd">;
 }
 
-/** Réponse POST /api/subscription/stripe — abonnement récurrent créé :
- * paymentUrl = paiement EN LIGNE de la première période (carte si proposé,
- * sinon Wave) ; redirectUrl = page Stripe Checkout (si GeniusPay la renvoie) ;
- * les échéances suivantes sont débitées automatiquement par GeniusPay. */
+/** Réponse POST /api/subscription/stripe — paiement/abonnement carte (Stripe
+ * via GeniusPay). cycle "monthly"|"yearly" : abonnement RÉCURRENT créé
+ * (paymentUrl = paiement EN LIGNE de la première période ; les échéances
+ * suivantes sont débitées automatiquement par GeniusPay). N°351 —
+ * cycle "once" : transaction carte PONCTUELLE d'une durée de plusieurs mois
+ * (months > 1) — pas de fiche récurrente (uuid vide), la confirmation
+ * (webhook pay/status) active exactement N mois. */
 export interface StripeCreateResponse {
   uuid: string;
   status: string;
   nextBilling?: string;
   redirectUrl?: string;
   paymentUrl?: string;
-  /** Référence de la demande de facturation de la première période (MC-…). */
+  /** Référence de la demande de facturation de la période souscrite (MC-…). */
   ref?: string;
   planId: string;
   planName: string;
   amountFcfa: number;
-  cycle: "monthly" | "yearly";
+  cycle: "monthly" | "yearly" | "once";
+  /** N°351 — durée souscrite (cycle "once" : mois de la transaction ponctuelle). */
+  months?: number;
+  /** N°351 — libellé de période de la transaction ponctuelle (« 6 mois »). */
+  periodLabel?: string;
 }
 
 // ─── F6 — Trafic temps réel ───
