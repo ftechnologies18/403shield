@@ -1,20 +1,20 @@
 # wal-quota — dernier diagnostic automatique
 
-- Mesuré : 2026-11-25T14:34:30Z
-- Run : https://github.com/ftechnologies18/403shield/actions/runs/45635313258
+- Mesuré : 2026-11-26T14:00:45Z
+- Run : https://github.com/ftechnologies18/403shield/actions/runs/45834503586
 - Lecture : git fetch + docs/ops/wal-quota-latest.md (aucune API REST requise, N°297)
 
 ```text
 ═══ N°296 — wal-quota : diagnostic bucket mikcloud-wal ═══
 ═══ 1. Bucket (source de vérité) ═══
-objets: 10882 · total: 7.95 Go (plafond gratuit: 10 Go)
+objets: 10847 · total: 7.95 Go (plafond gratuit: 10 Go)
 basebackup: 8 objets · 82 Mo
-WAL: 10874 objets · 8060 Mo
-upload le plus ancien: 2026-11-18T00:00:25.467000+00:00 · plus récent: 2026-11-25T14:30:27.532000+00:00
+WAL: 10839 objets · 8055 Mo
+upload le plus ancien: 2026-11-19T00:00:24.409000+00:00 · plus récent: 2026-11-26T13:55:27.803000+00:00
 --- policy lifecycle active ---
 [{"action":"DELETE","is-enabled":true,"name":"expire-7d","object-name-filter":null,"target":"objects","time-amount":7,"time-unit":"DAYS"}]
 ═══ 2. Production WAL réelle (mesure 60 s) ═══
-WAL brut mesuré: 16.09 Mo/min ≈ 22.6 Go/jour BRUT
+WAL brut mesuré: 15.28 Mo/min ≈ 21.5 Go/jour BRUT
 --- réglages WAL actuels ---
 archive_mode | on | 
 archive_timeout | 60 | s
@@ -24,27 +24,27 @@ max_wal_size | 4096 | MB
 wal_compression | zstd | 
 wal_segment_size | 16777216 | B
 --- pg_stat_archiver ---
-archivés=68026 échecs=0 dernier_ok=2026-11-25 14:34:11.256579+00 dernier_ko=—
+archivés=69431 échecs=0 dernier_ok=2026-11-26 13:59:47.717929+00 dernier_ko=—
 ═══ 3. Top tables réécrites (upd | hot | dead | table | taille) ═══
-1916849 | 1911516 | 149 | devices | 472 kB
-986080 | 985445 | 37 | routers | 1168 kB
-968905 | 968322 | 534 | line_quality | 1000 kB
-907851 | 886964 | 1190 | hotspot_users | 4104 kB
-810026 | 771175 | 115 | sessions | 216 kB
-762184 | 762184 | 29 | health_checkpoint | 64 kB
-329597 | 399 | 83 | commands | 7696 kB
-133868 | 127959 | 28 | traffic | 320 kB
-88350 | 88341 | 14 | settings | 704 kB
-59560 | 59532 | 50 | volume_days | 240 kB
-3483 | 3481 | 9 | vpn_peers | 96 kB
+1966865 | 1961421 | 157 | devices | 496 kB
+1008267 | 1007632 | 40 | routers | 2040 kB
+991427 | 990830 | 50 | line_quality | 1016 kB
+934565 | 913303 | 972 | hotspot_users | 4104 kB
+834271 | 793995 | 52 | sessions | 232 kB
+778936 | 778936 | 16 | health_checkpoint | 64 kB
+336884 | 403 | 823 | commands | 7624 kB
+136899 | 130881 | 51 | traffic | 336 kB
+90296 | 90287 | 22 | settings | 704 kB
+61041 | 61012 | 48 | volume_days | 240 kB
+3541 | 3539 | 11 | vpn_peers | 96 kB
 143 | 143 | 12 | admin_users | 80 kB
 ═══ 4. pg_stat_statements — top émetteurs WAL cumulés ═══
 pg_stat_statements indisponible
 ═══ 5. Local / timers / disque ═══
-WAL local en attente d'upload: 2806 fichiers
-last_run=2026-11-25T14:30:27Z
-new=5 skip=2801 fail=0 disk=31%
-Wed 2026-11-25 14:35:00 UTC       31s Wed 2026-11-25 14:30:09 UTC      4min 19s ago mikcloud-wal-upload.timer      mikcloud-wal-upload.service
+WAL local en attente d'upload: 2878 fichiers
+last_run=2026-11-26T14:00:28Z
+new=5 skip=2878 fail=0 disk=31%
+Thu 2026-11-26 14:05:00 UTC 4min 17s Thu 2026-11-26 14:00:09 UTC          33s ago mikcloud-wal-upload.timer      mikcloud-wal-upload.service
 /dev/sda1        48G   15G   34G  31% /
 289M	/var/lib/postgresql/18/main/pg_wal
 ═══ DIAGNOSTIC TERMINÉ — aucun changement appliqué ═══
